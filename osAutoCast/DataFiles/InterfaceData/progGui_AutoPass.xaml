@@ -1,0 +1,53 @@
+﻿<Window x:Name="winAutoPass" x:Class="progGui_AutoPass"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:osAutoCast"
+        mc:Ignorable="d" Height="65" Width="280" ResizeMode="NoResize" WindowStyle="None" AllowsTransparency="True"
+        ShowInTaskbar="False" Topmost="True" Background="Transparent" WindowStartupLocation="CenterScreen" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
+
+    <Border BorderBrush="Black" BorderThickness="2,3,2,3" CornerRadius="0,0,20,20" Background="#FF9E9E9E"
+            SnapsToDevicePixels="True">
+        <Grid Width="276" Height="60" SnapsToDevicePixels="False">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="1*">
+                </RowDefinition>
+                <RowDefinition Height="28"/>
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <Canvas x:Name="lblContainer" Margin="6,2,6,2" Grid.Row="0" Grid.ColumnSpan="2" >
+                <Label Content="AutoPass" Width="{Binding ActualWidth, ElementName=lblContainer}"
+Height="{Binding ActualHeight, ElementName=lblContainer}" FontFamily="Trebuchet MS" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" Padding="5,0,5,0"/>
+                <!--<Label Content="Label" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" Width="{Binding ActualWidth, ElementName=lblContainer}"
+       Height="{Binding ActualHeight, ElementName=lblContainer}" VerticalAlignment="Center" HorizontalAlignment="Center" FontFamily="Trebuchet MS" FontSize="22" FontWeight="Bold"/>-->
+               
+
+            </Canvas>
+            <Border x:Name="apBorder" Grid.Row="1"
+        CornerRadius="0,0,20,20"
+        Background="#FF393939"
+        ClipToBounds="True" Height="28" VerticalAlignment="Bottom">
+                <local:OddLib_ProgressBar x:Name="OddProgBar_AP"
+                              HorizontalAlignment="Stretch" Height="28" IsAutoPass="True" Background="#FF393939" VerticalAlignment="Bottom" />
+            </Border>
+
+            <!--<Border CornerRadius="0,0,20,20"
+        Background="Transparent"
+        Grid.Row="1"
+        Height="38"
+        Width="370"
+        VerticalAlignment="Bottom">
+                <local:OddLib_ProgressBar x:Name="OddProgBar_AP"
+                              Height="38"
+                              Width="370"/>
+            </Border>-->
+            <!--<local:OddLib_ProgressBar x:Name="OddProgBar_AP" Height="38" Grid.Row="1" Margin="0,1,0,1"  />-->
+        </Grid>
+
+    </Border>
+    <!--<Canvas x:Name="progCanvas" Background="#FF222222" Width="105" Height="22"/>-->
+    <!-- <local:OddLib_ProgressBar x:Name="OddProgBar1" Width="110" Height="25" Background="#FF39393B"/>-->
+</Window>

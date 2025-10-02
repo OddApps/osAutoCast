@@ -1,0 +1,11 @@
+﻿<Window x:Name="winAutoCast" x:Class="progGui_AutoCast"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:osAutoCast"
+        mc:Ignorable="d" Height="25" Width="110" ResizeMode="NoResize" WindowStyle="None" ShowInTaskbar="False" Topmost="True">
+    <!--<Canvas x:Name="progCanvas" Background="#FF222222" Width="105" Height="22"/>-->
+    <local:OddLib_ProgressBar x:Name="OddProgBar1" Width="110" Height="25" Background="#FF39393B" BorderThickness="2"/>
+</Window>
+
