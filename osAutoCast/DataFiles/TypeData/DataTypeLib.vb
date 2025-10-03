@@ -8,6 +8,10 @@ Imports System.Windows.Threading
 
 Public Module DataTypeLib
 
+    <Runtime.CompilerServices.Extension()>
+    Public Function FirstOrDefault(Of TSource)(source As IEnumerable(Of TSource), predicate As Func(Of TSource, Boolean), defaultValue As TSource) As TSource
+
+    End Function
     Public Enum DetectOpts
         MonitorMouse
         MonitorMouseR
@@ -151,29 +155,25 @@ Public Class InjectInputData
 End Class
 
 Public Class ProgTextPos
-
     Public Property txtX As Integer
     Public Property txtY As Integer
 
     Public Sub New()
+        ' Default constructor
     End Sub
 
     Public Sub New(pGraphics As System.Drawing.Graphics, pGUI As System.Windows.Forms.Form)
-        Dim sizeF = pGraphics.MeasureString(progDispMsg, progFont_AC)
-
-        Me.txtX = (pGUI.Width - sizeF.Width) \ 2
-        Me.txtY = (pGUI.Height - sizeF.Height) \ 2
+        Dim sizeF = pGraphics.MeasureString(osFuncLib_Progress.progDispMsg, osFuncLib_Progress.progFont_AC)
+        Me.txtX = CInt(Math.Round(pGUI.Width - sizeF.Width) / 2)
+        Me.txtY = CInt(Math.Round(pGUI.Height - sizeF.Height) / 2)
     End Sub
 
     Public Sub New(pGraphics As System.Drawing.Graphics, pObj As Control)
-        Dim sizeF = pGraphics.MeasureString(progDispMsg, progFont_AP)
-
-        With CalcProgSize(TriggerType.AutoPass)
-            Me.txtX = (.Width - sizeF.Width) \ 2
-            Me.txtY = (.Height - sizeF.Height) \ 2
-        End With
+        Dim sizeF = pGraphics.MeasureString(osFuncLib_Progress.progDispMsg, osFuncLib_Progress.progFont_AP)
+        Dim size As System.Drawing.Size = osFuncLib_Progress.CalcProgSize(DataTypeLib.TriggerType.AutoPass)
+        Me.txtX = CInt(Math.Round(size.Width - sizeF.Width) / 2)
+        Me.txtY = CInt(Math.Round(size.Height - sizeF.Height) / 2)
     End Sub
-
 End Class
 
 Public Class ProgMsg
@@ -184,7 +184,7 @@ Public Class ProgMsg
     Public Sub New()
         txtComposed = GenFormattedText()
 
-        With FetchProgSizeReport(TriggerType.AutoCast)
+        With CoreDataLib.FetchProgSizeReport(TriggerType.AutoCast)
             txtLocation = New Point((.Item("pW") - txtComposed.Width) \ 2,
                                     (.Item("pH") - txtComposed.Height) \ 2)
         End With
@@ -193,14 +193,14 @@ Public Class ProgMsg
     Public Sub New(txtMsg As String, pType As TriggerType, Optional isAP As Boolean = False)
         txtComposed = GenFormattedText(txtMsg, isAP)
 
-        With FetchProgSizeReport(pType)
+        With CoreDataLib.FetchProgSizeReport(pType)
             txtLocation = New Point((.Item("pW") - txtComposed.Width) \ 2,
                                     (.Item("pH") - txtComposed.Height) \ 2)
         End With
     End Sub
 
     Private Function GenFormattedText() As FormattedText
-        Return New FormattedText(progDispMsg,
+        Return New FormattedText(osFuncLib_Progress.progDispMsg,
                                  Globalization.CultureInfo.CurrentCulture,
                                  FlowDirection.LeftToRight,
                                  New Typeface(New FontFamily("Segoe UI"),
@@ -320,9 +320,9 @@ Public Class PrefRecordIndex
 
     Public Sub SavePrefsFile()
 
-        osPrefStoreData.UpdatePrefStore()
+        CoreDataLib.osPrefStoreData.UpdatePrefStore()
 
-        Using pWriter As New IO.StreamWriter(osPrefFile, False)
+        Using pWriter As New IO.StreamWriter(CoreDataLib.osPrefFile, False)
             pWriter.WriteLine("PrefCatalog_")
 
             For Each prefRec As PrefRecord In Me.RecIdx
@@ -334,7 +334,7 @@ Public Class PrefRecordIndex
     End Sub
 
     Private Sub SavePrefsToFile()
-        Using pWriter As New IO.StreamWriter(osPrefFile, False)
+        Using pWriter As New IO.StreamWriter(CoreDataLib.osPrefFile, False)
             pWriter.WriteLine("PrefCatalog_")
 
             For Each prefRec As PrefRecord In Me.RecIdx

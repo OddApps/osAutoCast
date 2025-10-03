@@ -7,210 +7,201 @@ Public Class osPrefStore
 
     Implements INotifyPropertyChanged
 
+    Public osPrefStoreBindings As Dictionary(Of String, System.Windows.Forms.Binding)
+    Private _AutoPass_SafetyTimer As Integer
+    Private _AutoCast_Fuse As Integer
+    Private _AutoCast_RTC As Boolean
+    Private _MainOpts_apProgH As Integer
+    Private _MainOpts_apProgW As Integer
+    Private _MainOpts_apUiH As Integer
+    Private _MainOpts_apUiW As Integer
+    Private _MainOpts_acProgH As Integer
+    Private _MainOpts_acProgW As Integer
+    Private _VisualQuality As Integer
+
     Public Event PropertyChanged As PropertyChangedEventHandler Implements INotifyPropertyChanged.PropertyChanged
 
     Private Sub OnPropertyChanged(Optional propertyName As String = Nothing)
         RaiseEvent PropertyChanged(Me, New PropertyChangedEventArgs(propertyName))
     End Sub
 
-    Public osPrefStoreBindings As Dictionary(Of String, System.Windows.Forms.Binding)
-
-    'Public Sub GenPrefBinds()
-    '    osPrefStoreBindings = New Dictionary(Of String, Binding) From {
-    '        {"acFuse", New Binding("Value", osPrefStoreData, NameOf(AutoCast_Fuse), False, DataSourceUpdateMode.OnPropertyChanged)},
-    '        {"apSafetyTimer", New Binding("Value", osPrefStoreData, NameOf(AutoPass_SafetyTimer), False, DataSourceUpdateMode.OnPropertyChanged)},
-    '        {"acRTC", New Binding("Checked", osPrefStoreData, NameOf(AutoCast_RTC), False, DataSourceUpdateMode.OnPropertyChanged)}
-    '    }
-    'End Sub
-    Public Class PrefBindingDef
-        Public Property ControlProp As String
-        Public Property DataProp As String
-    End Class
-
     Public Function GetPrefBindDefs() As Dictionary(Of String, PrefBindingDef)
         Return New Dictionary(Of String, PrefBindingDef) From {
-        {"acFuse", New PrefBindingDef With {.ControlProp = "Text", .DataProp = NameOf(AutoCast_Fuse)}},
-        {"apSafetyTimer", New PrefBindingDef With {.ControlProp = "Text", .DataProp = NameOf(AutoPass_SafetyTimer)}},
-        {"acRTC", New PrefBindingDef With {.ControlProp = "Checked", .DataProp = NameOf(AutoCast_RTC)}}
-    }
+            {"acFuse", New PrefBindingDef With {.ControlProp = "Text", .DataProp = "AutoCast_Fuse"}},
+            {"apSafetyTimer", New PrefBindingDef With {.ControlProp = "Text", .DataProp = "AutoPass_SafetyTimer"}},
+            {"acRTC", New PrefBindingDef With {.ControlProp = "Checked", .DataProp = "AutoCast_RTC"}}
+        }
     End Function
+
     Public Sub GenPrefBinds()
         osPrefStoreBindings = New Dictionary(Of String, System.Windows.Forms.Binding) From {
-        {"acFuse", New System.Windows.Forms.Binding("Text", osPrefStoreData, NameOf(AutoCast_Fuse), False, Forms.DataSourceUpdateMode.OnPropertyChanged)},
-        {"apSafetyTimer", New System.Windows.Forms.Binding("Text", osPrefStoreData, NameOf(AutoPass_SafetyTimer), False, Forms.DataSourceUpdateMode.OnPropertyChanged)},
-        {"acRTC", New System.Windows.Forms.Binding("Checked", osPrefStoreData, NameOf(AutoCast_RTC), False, Forms.DataSourceUpdateMode.OnPropertyChanged)}
-    }
+            {"acFuse", New System.Windows.Forms.Binding("Text", CoreDataLib.osPrefStoreData, "AutoCast_Fuse", False, Forms.DataSourceUpdateMode.OnPropertyChanged)},
+            {"apSafetyTimer", New System.Windows.Forms.Binding("Text", CoreDataLib.osPrefStoreData, "AutoPass_SafetyTimer", False, Forms.DataSourceUpdateMode.OnPropertyChanged)},
+            {"acRTC", New System.Windows.Forms.Binding("Checked", CoreDataLib.osPrefStoreData, "AutoCast_RTC", False, Forms.DataSourceUpdateMode.OnPropertyChanged)}
+        }
     End Sub
 
     Public Sub UpdatePrefStore()
-        For Each pBindData In Me.osPrefStoreBindings.Values
-            With GenPrefObj(pBindData)
-                osPrefIndex.SavePref(.pType, .pName, .pVal)
-            End With
-        Next
+        Try
+            For Each pBind As System.Windows.Forms.Binding In osPrefStoreBindings.Values
+                Dim prefStoreData As PrefStoreData = GenPrefObj(pBind)
+                CoreDataLib.osPrefIndex.SavePref(prefStoreData.pType, prefStoreData.pName, Convert.ToString(prefStoreData.pVal))
+            Next
+        Finally
+            ' No explicit enumerator disposal needed in VB.NET For Each
+        End Try
     End Sub
 
     Public Function GetBindingValue(pBind As System.Windows.Forms.Binding) As Object
-        Dim prop = pBind.DataSource.GetType().GetProperty(pBind.BindingMemberInfo.BindingField)
-        If prop IsNot Nothing Then
-            Return prop.GetValue(pBind.DataSource)
-        End If
-        Return Nothing
+        Dim propertyInfo As PropertyInfo = pBind.DataSource.GetType().GetProperty(pBind.BindingMemberInfo.BindingField)
+        If propertyInfo Is Nothing Then Return Nothing
+        Return propertyInfo.GetValue(pBind.DataSource)
     End Function
 
     Public Function GenPrefObj(pBind As System.Windows.Forms.Binding) As PrefStoreData
-        Dim pStoreObj = pBind.BindingMemberInfo.BindingField.Split("_")
-
-        Return New PrefStoreData(pStoreObj(0), pStoreObj(1), GetBindingValue(pBind))
+        Dim strArray As String() = pBind.BindingMemberInfo.BindingField.Split("_"c)
+        Return New PrefStoreData(strArray(0), strArray(1), GetBindingValue(pBind))
     End Function
 
-    Private _AutoPass_SafetyTimer As Integer
+    ' Properties
     Public Property AutoPass_SafetyTimer As Integer
         Get
             Return _AutoPass_SafetyTimer
         End Get
         Set(value As Integer)
-            If _AutoPass_SafetyTimer <> value Then
-                _AutoPass_SafetyTimer = value
-                OnPropertyChanged(NameOf(_AutoPass_SafetyTimer))
-            End If
+            If _AutoPass_SafetyTimer = value Then Return
+            _AutoPass_SafetyTimer = value
+            OnPropertyChanged(NameOf(AutoPass_SafetyTimer))
         End Set
     End Property
 
-    Private _AutoCast_Fuse As Integer
     Public Property AutoCast_Fuse As Integer
         Get
             Return _AutoCast_Fuse
         End Get
         Set(value As Integer)
-            If _AutoCast_Fuse <> value Then
-                _AutoCast_Fuse = value
-                OnPropertyChanged(NameOf(AutoCast_Fuse))
-            End If
+            If _AutoCast_Fuse = value Then Return
+            _AutoCast_Fuse = value
+            OnPropertyChanged(NameOf(AutoCast_Fuse))
         End Set
     End Property
 
-    Private _AutoCast_RTC As Boolean
     Public Property AutoCast_RTC As Boolean
         Get
             Return _AutoCast_RTC
         End Get
         Set(value As Boolean)
-            If _AutoCast_RTC <> value Then
-                _AutoCast_RTC = value
-                OnPropertyChanged(NameOf(AutoCast_RTC))
-            End If
+            If _AutoCast_RTC = value Then Return
+            _AutoCast_RTC = value
+            OnPropertyChanged(NameOf(AutoCast_RTC))
         End Set
     End Property
 
-    Private _MainOpts_apProgH As Integer
     Public Property MainOpts_apProgH As Integer
         Get
             Return _MainOpts_apProgH
         End Get
         Set(value As Integer)
-            If _MainOpts_apProgH <> value Then
-                _MainOpts_apProgH = value
-                OnPropertyChanged(NameOf(MainOpts_apProgH))
-            End If
+            If _MainOpts_apProgH = value Then Return
+            _MainOpts_apProgH = value
+            OnPropertyChanged(NameOf(MainOpts_apProgH))
         End Set
     End Property
 
-    Private _MainOpts_apProgW As Integer
     Public Property MainOpts_apProgW As Integer
         Get
             Return _MainOpts_apProgW
         End Get
         Set(value As Integer)
-            If _MainOpts_apProgW <> value Then
-                _MainOpts_apProgW = value
-                OnPropertyChanged(NameOf(MainOpts_apProgW))
-            End If
+            If _MainOpts_apProgW = value Then Return
+            _MainOpts_apProgW = value
+            OnPropertyChanged(NameOf(MainOpts_apProgW))
         End Set
     End Property
 
-    Private _MainOpts_apUiH As Integer
     Public Property MainOpts_apUiH As Integer
         Get
             Return _MainOpts_apUiH
         End Get
         Set(value As Integer)
-            If _MainOpts_apUiH <> value Then
-                _MainOpts_apUiH = value
-                OnPropertyChanged(NameOf(MainOpts_apUiH))
-            End If
+            If _MainOpts_apUiH = value Then Return
+            _MainOpts_apUiH = value
+            OnPropertyChanged(NameOf(MainOpts_apUiH))
         End Set
     End Property
 
-    Private _MainOpts_apUiW As Integer
     Public Property MainOpts_apUiW As Integer
         Get
             Return _MainOpts_apUiW
         End Get
         Set(value As Integer)
-            If _MainOpts_apUiW <> value Then
-                _MainOpts_apUiW = value
-                OnPropertyChanged(NameOf(MainOpts_apUiW))
-            End If
+            If _MainOpts_apUiW = value Then Return
+            _MainOpts_apUiW = value
+            OnPropertyChanged(NameOf(MainOpts_apUiW))
         End Set
     End Property
 
-    Private _MainOpts_acProgH As Integer
     Public Property MainOpts_acProgH As Integer
         Get
             Return _MainOpts_acProgH
         End Get
         Set(value As Integer)
-            If _MainOpts_acProgH <> value Then
-                _MainOpts_acProgH = value
-                OnPropertyChanged(NameOf(MainOpts_acProgH))
-            End If
+            If _MainOpts_acProgH = value Then Return
+            _MainOpts_acProgH = value
+            OnPropertyChanged(NameOf(MainOpts_acProgH))
         End Set
     End Property
 
-    Private _MainOpts_acProgW As Integer
     Public Property MainOpts_acProgW As Integer
         Get
             Return _MainOpts_acProgW
         End Get
         Set(value As Integer)
-            If _MainOpts_acProgW <> value Then
-                _MainOpts_acProgW = value
-                OnPropertyChanged(NameOf(MainOpts_acProgW))
-            End If
+            If _MainOpts_acProgW = value Then Return
+            _MainOpts_acProgW = value
+            OnPropertyChanged(NameOf(MainOpts_acProgW))
         End Set
     End Property
 
-
-    Private _VisualQuality As Integer
     Public Property VisualQuality As Integer
         Get
             Return _VisualQuality
         End Get
         Set(value As Integer)
-            If _VisualQuality <> value Then
-                _VisualQuality = value
-                OnPropertyChanged(NameOf(VisualQuality))
-            End If
+            If _VisualQuality = value Then Return
+            _VisualQuality = value
+            OnPropertyChanged(NameOf(VisualQuality))
         End Set
     End Property
 
     Public Shared Function GetPrefBinds() As Dictionary(Of String, System.Windows.Forms.Binding)
         Return New Dictionary(Of String, System.Windows.Forms.Binding) From {
-            {"acFuse", New System.Windows.Forms.Binding("Value", osPrefStoreData, NameOf(AutoCast_Fuse), False, Forms.DataSourceUpdateMode.OnPropertyChanged)},
-            {"acRTC", New System.Windows.Forms.Binding("Checked", osPrefStoreData, NameOf(AutoCast_RTC), False, Forms.DataSourceUpdateMode.OnPropertyChanged)}
+            {"acFuse", New System.Windows.Forms.Binding("Value", CoreDataLib.osPrefStoreData, "AutoCast_Fuse", False, Forms.DataSourceUpdateMode.OnPropertyChanged)},
+            {"acRTC", New System.Windows.Forms.Binding("Checked", CoreDataLib.osPrefStoreData, "AutoCast_RTC", False, Forms.DataSourceUpdateMode.OnPropertyChanged)}
         }
     End Function
 
-    Public Class PrefStoreData
+    ' Nested Classes
+    Public Class PrefBindingDef
+        Public Property ControlProp As String
+        Public Property DataProp As String
+    End Class
 
+    Public Class PrefStoreData
         Public Property pType As String
         Public Property pName As String
+
+        Private _pVal As Object
         Public Property pVal As Object
+            Get
+                Return _pVal
+            End Get
+            Set(value As Object)
+                _pVal = value
+            End Set
+        End Property
 
         Public Sub New()
-
-
         End Sub
 
         Public Sub New(pT As String, pN As String, pV As Object)
@@ -218,10 +209,231 @@ Public Class osPrefStore
             Me.pName = pN
             Me.pVal = pV
         End Sub
-
     End Class
 
+
 End Class
+
+
+'Public Class osPrefStore
+
+'    Implements INotifyPropertyChanged
+
+'    Public Event PropertyChanged As PropertyChangedEventHandler Implements INotifyPropertyChanged.PropertyChanged
+
+'    Private Sub OnPropertyChanged(Optional propertyName As String = Nothing)
+'        RaiseEvent PropertyChanged(Me, New PropertyChangedEventArgs(propertyName))
+'    End Sub
+
+'    Public osPrefStoreBindings As Dictionary(Of String, System.Windows.Forms.Binding)
+
+'    'Public Sub GenPrefBinds()
+'    '    osPrefStoreBindings = New Dictionary(Of String, Binding) From {
+'    '        {"acFuse", New Binding("Value", osPrefStoreData, NameOf(AutoCast_Fuse), False, DataSourceUpdateMode.OnPropertyChanged)},
+'    '        {"apSafetyTimer", New Binding("Value", osPrefStoreData, NameOf(AutoPass_SafetyTimer), False, DataSourceUpdateMode.OnPropertyChanged)},
+'    '        {"acRTC", New Binding("Checked", osPrefStoreData, NameOf(AutoCast_RTC), False, DataSourceUpdateMode.OnPropertyChanged)}
+'    '    }
+'    'End Sub
+'    Public Class PrefBindingDef
+'        Public Property ControlProp As String
+'        Public Property DataProp As String
+'    End Class
+
+'    Public Function GetPrefBindDefs() As Dictionary(Of String, PrefBindingDef)
+'        Return New Dictionary(Of String, PrefBindingDef) From {
+'        {"acFuse", New PrefBindingDef With {.ControlProp = "Text", .DataProp = NameOf(AutoCast_Fuse)}},
+'        {"apSafetyTimer", New PrefBindingDef With {.ControlProp = "Text", .DataProp = NameOf(AutoPass_SafetyTimer)}},
+'        {"acRTC", New PrefBindingDef With {.ControlProp = "Checked", .DataProp = NameOf(AutoCast_RTC)}}
+'    }
+'    End Function
+'    Public Sub GenPrefBinds()
+'        osPrefStoreBindings = New Dictionary(Of String, System.Windows.Forms.Binding) From {
+'        {"acFuse", New System.Windows.Forms.Binding("Text", osPrefStoreData, NameOf(AutoCast_Fuse), False, Forms.DataSourceUpdateMode.OnPropertyChanged)},
+'        {"apSafetyTimer", New System.Windows.Forms.Binding("Text", osPrefStoreData, NameOf(AutoPass_SafetyTimer), False, Forms.DataSourceUpdateMode.OnPropertyChanged)},
+'        {"acRTC", New System.Windows.Forms.Binding("Checked", osPrefStoreData, NameOf(AutoCast_RTC), False, Forms.DataSourceUpdateMode.OnPropertyChanged)}
+'    }
+'    End Sub
+
+'    Public Sub UpdatePrefStore()
+'        For Each pBindData In Me.osPrefStoreBindings.Values
+'            With GenPrefObj(pBindData)
+'                osPrefIndex.SavePref(.pType, .pName, .pVal)
+'            End With
+'        Next
+'    End Sub
+
+'    Public Function GetBindingValue(pBind As System.Windows.Forms.Binding) As Object
+'        Dim prop = pBind.DataSource.GetType().GetProperty(pBind.BindingMemberInfo.BindingField)
+'        If prop IsNot Nothing Then
+'            Return prop.GetValue(pBind.DataSource)
+'        End If
+'        Return Nothing
+'    End Function
+
+'    Public Function GenPrefObj(pBind As System.Windows.Forms.Binding) As PrefStoreData
+'        Dim pStoreObj = pBind.BindingMemberInfo.BindingField.Split("_")
+
+'        Return New PrefStoreData(pStoreObj(0), pStoreObj(1), GetBindingValue(pBind))
+'    End Function
+
+'    Private _AutoPass_SafetyTimer As Integer
+'    Public Property AutoPass_SafetyTimer As Integer
+'        Get
+'            Return _AutoPass_SafetyTimer
+'        End Get
+'        Set(value As Integer)
+'            If _AutoPass_SafetyTimer <> value Then
+'                _AutoPass_SafetyTimer = value
+'                OnPropertyChanged(NameOf(_AutoPass_SafetyTimer))
+'            End If
+'        End Set
+'    End Property
+
+'    Private _AutoCast_Fuse As Integer
+'    Public Property AutoCast_Fuse As Integer
+'        Get
+'            Return _AutoCast_Fuse
+'        End Get
+'        Set(value As Integer)
+'            If _AutoCast_Fuse <> value Then
+'                _AutoCast_Fuse = value
+'                OnPropertyChanged(NameOf(AutoCast_Fuse))
+'            End If
+'        End Set
+'    End Property
+
+'    Private _AutoCast_RTC As Boolean
+'    Public Property AutoCast_RTC As Boolean
+'        Get
+'            Return _AutoCast_RTC
+'        End Get
+'        Set(value As Boolean)
+'            If _AutoCast_RTC <> value Then
+'                _AutoCast_RTC = value
+'                OnPropertyChanged(NameOf(AutoCast_RTC))
+'            End If
+'        End Set
+'    End Property
+
+'    Private _MainOpts_apProgH As Integer
+'    Public Property MainOpts_apProgH As Integer
+'        Get
+'            Return _MainOpts_apProgH
+'        End Get
+'        Set(value As Integer)
+'            If _MainOpts_apProgH <> value Then
+'                _MainOpts_apProgH = value
+'                OnPropertyChanged(NameOf(MainOpts_apProgH))
+'            End If
+'        End Set
+'    End Property
+
+'    Private _MainOpts_apProgW As Integer
+'    Public Property MainOpts_apProgW As Integer
+'        Get
+'            Return _MainOpts_apProgW
+'        End Get
+'        Set(value As Integer)
+'            If _MainOpts_apProgW <> value Then
+'                _MainOpts_apProgW = value
+'                OnPropertyChanged(NameOf(MainOpts_apProgW))
+'            End If
+'        End Set
+'    End Property
+
+'    Private _MainOpts_apUiH As Integer
+'    Public Property MainOpts_apUiH As Integer
+'        Get
+'            Return _MainOpts_apUiH
+'        End Get
+'        Set(value As Integer)
+'            If _MainOpts_apUiH <> value Then
+'                _MainOpts_apUiH = value
+'                OnPropertyChanged(NameOf(MainOpts_apUiH))
+'            End If
+'        End Set
+'    End Property
+
+'    Private _MainOpts_apUiW As Integer
+'    Public Property MainOpts_apUiW As Integer
+'        Get
+'            Return _MainOpts_apUiW
+'        End Get
+'        Set(value As Integer)
+'            If _MainOpts_apUiW <> value Then
+'                _MainOpts_apUiW = value
+'                OnPropertyChanged(NameOf(MainOpts_apUiW))
+'            End If
+'        End Set
+'    End Property
+
+'    Private _MainOpts_acProgH As Integer
+'    Public Property MainOpts_acProgH As Integer
+'        Get
+'            Return _MainOpts_acProgH
+'        End Get
+'        Set(value As Integer)
+'            If _MainOpts_acProgH <> value Then
+'                _MainOpts_acProgH = value
+'                OnPropertyChanged(NameOf(MainOpts_acProgH))
+'            End If
+'        End Set
+'    End Property
+
+'    Private _MainOpts_acProgW As Integer
+'    Public Property MainOpts_acProgW As Integer
+'        Get
+'            Return _MainOpts_acProgW
+'        End Get
+'        Set(value As Integer)
+'            If _MainOpts_acProgW <> value Then
+'                _MainOpts_acProgW = value
+'                OnPropertyChanged(NameOf(MainOpts_acProgW))
+'            End If
+'        End Set
+'    End Property
+
+
+'    Private _VisualQuality As Integer
+'    Public Property VisualQuality As Integer
+'        Get
+'            Return _VisualQuality
+'        End Get
+'        Set(value As Integer)
+'            If _VisualQuality <> value Then
+'                _VisualQuality = value
+'                OnPropertyChanged(NameOf(VisualQuality))
+'            End If
+'        End Set
+'    End Property
+
+'    Public Shared Function GetPrefBinds() As Dictionary(Of String, System.Windows.Forms.Binding)
+'        Return New Dictionary(Of String, System.Windows.Forms.Binding) From {
+'            {"acFuse", New System.Windows.Forms.Binding("Value", osPrefStoreData, NameOf(AutoCast_Fuse), False, Forms.DataSourceUpdateMode.OnPropertyChanged)},
+'            {"acRTC", New System.Windows.Forms.Binding("Checked", osPrefStoreData, NameOf(AutoCast_RTC), False, Forms.DataSourceUpdateMode.OnPropertyChanged)}
+'        }
+'    End Function
+
+'    Public Class PrefStoreData
+
+'        Public Property pType As String
+'        Public Property pName As String
+'        Public Property pVal As Object
+
+'        Public Sub New()
+
+
+'        End Sub
+
+'        Public Sub New(pT As String, pN As String, pV As Object)
+'            Me.pType = pT
+'            Me.pName = pN
+'            Me.pVal = pV
+'        End Sub
+
+'    End Class
+
+'End Class
 
 Public Class osPrefTracker(Of T As {Class, INotifyPropertyChanged})
 
@@ -282,18 +494,18 @@ Class osPrefLoader
     Public Sub New(ByRef objPrefDataHolder As PrefRecordIndex)
         If Not DoPrefsExist() Then CreateDefaultPrefs()
 
-        osPrefStoreData = New osPrefStore
+        CoreDataLib.osPrefStoreData = New osPrefStore
         objPrefDataHolder = PopulatePrefData()
     End Sub
 
     Private Function DoPrefsExist() As Boolean
-        Return File.Exists(osPrefFile)
+        Return File.Exists(CoreDataLib.osPrefFile)
     End Function
 
     Private Sub CreateDefaultPrefs()
-        Directory.CreateDirectory(osPrefDir)
+        Directory.CreateDirectory(CoreDataLib.osPrefDir)
 
-        File.WriteAllLines(osPrefFile, GenerateDefaultData())
+        File.WriteAllLines(CoreDataLib.osPrefFile, GenerateDefaultData())
     End Sub
 
     Private Function GenerateDefaultData() As List(Of String)
@@ -320,7 +532,7 @@ Class osPrefLoader
         Dim currentData As New List(Of PrefRecordData)
         Dim currentType As String = Nothing
 
-        Dim pFileData = IO.File.ReadAllLines(osPrefFile).ToList()
+        Dim pFileData = IO.File.ReadAllLines(CoreDataLib.osPrefFile).ToList()
 
         For Each prefLineData In pFileData.Select(Function(l) l.Trim())
             If isPrefHeader(prefLineData) Then
@@ -358,12 +570,12 @@ Class osPrefLoader
                             'End With
 
                             With PrefStoreProp(pRec, pRecData)
-                                .SetValue(osPrefStoreData, PrepPref(pRecData, .PropertyType))
+                                .SetValue(CoreDataLib.osPrefStoreData, PrepPref(pRecData, .PropertyType))
                             End With
                         Next
                     End Sub)
 
-        osPrefStoreData.GenPrefBinds()
+        CoreDataLib.osPrefStoreData.GenPrefBinds()
     End Sub
 
     Private Function VerifyRecordType(chkType As String, strPrefLine As String) As Boolean
@@ -424,7 +636,7 @@ Class osPrefLoader
     End Function
 
     Private Function PrefStoreTypes() As Type
-        Return osPrefStoreData.GetType()
+        Return CoreDataLib.osPrefStoreData.GetType()
     End Function
 
     Private Function PrefStoreProp(pRecord As PrefRecord, pRecData As PrefRecordData) As PropertyInfo

@@ -15,12 +15,12 @@ Public Class progGui_AutoPass
     Private pWidth As Integer
 
     Private Async Function AutoPass_Prep() As Task
-        ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.Reset)
-        ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.DispMsg, "Release Mouse To Begin")
+        CoreDataLib.ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.Reset)
+        CoreDataLib.ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.DispMsg, "Release Mouse To Begin")
 
-        Await InputMonSvc.AnticipateInput(InputAction.AP_Start)
+        Await CoreDataLib.InputMonSvc.AnticipateInput(InputAction.AP_Start)
 
-        ' ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.Reset)
+        ' CoreDataLib.ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.Reset)
 
         '  valSafetyTimer = GetSafetyTimer()
         '  invST = 1.0 / valSafetyTimer
@@ -45,12 +45,12 @@ Public Class progGui_AutoPass
 
         apProgressHandler = Sub(sender As Object, e As EventArgs)
                                 Try
-                                    objCancelState.ThrowIfCancellationRequested()
+                                    CoreDataLib.objCancelState.ThrowIfCancellationRequested()
 
-                                    Me.OddProgBar_AP.ProgressFraction = CalcProgress(apTimer.ElapsedMilliseconds, ProgInv)
+                                    Me.OddProgBar_AP.ProgressFraction = CalcProgress(apTimer.ElapsedMilliseconds, osFuncLib_Progress.ProgInv)
                                     ' Me.OddProgBar_AP.UpdateProgress(apTimer.ElapsedMilliseconds)
 
-                                    If apTimer.ElapsedMilliseconds >= ProgDuration Then
+                                    If apTimer.ElapsedMilliseconds >= osFuncLib_Progress.ProgDuration Then
                                         TerminateAutoPass(True)
                                     End If
 
@@ -70,22 +70,22 @@ Public Class progGui_AutoPass
         Dim retProgResult As ProgResult = Nothing
 
         If apComplete Then
-            If GetProgState() = ProgStatus.StartAP Then SetProgStatus(ProgAction.Complete,
+            If osFuncLib_Progress.GetProgState() = ProgStatus.StartAP Then osFuncLib_Progress.SetProgStatus(ProgAction.Complete,
                                                                       TriggerType.AutoPass)
             SetProgResult(apComplete, retProgResult)
         Else
-            SetProgStatus(ProgAction.Abort, TriggerType.AutoPass)
+            osFuncLib_Progress.SetProgStatus(ProgAction.Abort, TriggerType.AutoPass)
             SetProgResult(apComplete, retProgResult)
         End If
 
-        ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.MaxFill)
+        CoreDataLib.ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.MaxFill)
 
         Return retProgResult
 
     End Function
 
     Public Sub BeginPrep() Handles Me.Loaded
-        With FetchProgSizeReport(TriggerType.AutoPass)
+        With CoreDataLib.FetchProgSizeReport(TriggerType.AutoPass)
             pHeight = .Item("pH")
             pWidth = .Item("pW")
         End With

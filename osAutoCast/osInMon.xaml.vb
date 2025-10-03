@@ -13,55 +13,55 @@ Public Class osInMon
 
     Private Sub osInitialize()
         PrepPrefs()
-        PreloadForms(Me)
+
+        Dim a As New osi
+
+        osHandler_GUI.PreloadForms(a, Me)
 
         osMenu_Init(Me)
 
-        osGui_InputMonitor = Me
+        ' osHandler_GUI.osGui_InputMonitor2 = Me
         InputMonitor_Launch()
     End Sub
 
     Private Async Sub InputMonitor_Init(Optional isRestart As Boolean = False)
-
-        ' If isRestart Then InputMonitor_Prep()
+        If isRestart Then
+            Me.InputMonitor_Prep()
+        End If
         Await Task.Delay(10)
-
-        'If osFuncLib_InputScan.isMonitorActive() Then Return
-
-        'If osFuncLib_InputScan.isMonitorInStartup() Then osFuncLib_InputScan.ActivateMonitor()
-
-        InputMonitor_Start()
+        If osFuncLib_InputScan.isMonitorActive() Then Return
+        If osFuncLib_InputScan.isMonitorInStartup() Then
+            osFuncLib_InputScan.ActivateMonitor()
+        End If
+        Me.InputMonitor_Start()
     End Sub
 
     Private Sub InitTriggerMonitor()
-        If InputMonSvc IsNot Nothing Then
-            InputMonSvc = Nothing
+        If CoreDataLib.InputMonSvc IsNot Nothing Then
+            CoreDataLib.InputMonSvc = Nothing
         End If
-
-        InputMonSvc = New InputMonitorService
+        CoreDataLib.InputMonSvc = New InputMonitorService()
     End Sub
 
     Public Sub InputMonitor_Start()
-        InitTriggerMonitor()
-        InputMonSvc.LaunchTriggerMonitor()
+        Me.InitTriggerMonitor()
+        CoreDataLib.InputMonSvc.LaunchTriggerMonitor()
     End Sub
 
     Public Shared Sub StopMonitoring()
-        If InputMon_Support IsNot Nothing Then
-            InputMon_Support.Dispose()
-            InputMon_Support = Nothing
-        End If
+        If InputMon_Support Is Nothing Then Return
+        InputMon_Support.Dispose()
+        InputMon_Support = Nothing
     End Sub
 
     Private Sub InputMonitor_Prep()
-        '  osFuncLib_InputScan.SetMonitorState(MonitorStatus.Starting)
-
-        InputMonitorAbortSrc = New CancellationTokenSource()
+        osFuncLib_InputScan.SetMonitorState(DataTypeLib.MonitorStatus.Starting)
+        Me.InputMonitorAbortSrc = New CancellationTokenSource()
     End Sub
 
     Private Sub InputMonitor_Launch(Optional isRestart As Boolean = False)
-        InputMonitor_Prep()
-        InputMonitor_Init()
+        Me.InputMonitor_Prep()
+        Me.InputMonitor_Init()
     End Sub
 
     Public Sub RestartMonitor()
@@ -71,12 +71,10 @@ Public Class osInMon
     Private Sub PrepPrefs()
         Me.Visibility = Visibility.Hidden
         Me.Hide()
-
-        Using osPrefManager As New osPrefLoader(osPrefIndex)
-            osPrefManager.ProcessPrefIndex(osPrefIndex)
+        Using loader As New osPrefLoader(CoreDataLib.osPrefIndex)
+            loader.ProcessPrefIndex(CoreDataLib.osPrefIndex)
         End Using
-
-        InitProgColors()
+        osFuncLib_Progress.InitProgColors()
     End Sub
 
 End Class

@@ -15,12 +15,12 @@ Public Class progGui_AutoCast
     ' Private invFuse As Double = 1.0 / valFuse
 
     Private Async Function AutoCast_Prep() As Task
-        ProcessProgressEvent(ProgMode.AutoCast, ProgEvent.Reset)
-        ProcessProgressEvent(ProgMode.AutoCast, ProgEvent.DispMsg, "Release Shift")
+        CoreDataLib.ProcessProgressEvent(ProgMode.AutoCast, ProgEvent.Reset)
+        CoreDataLib.ProcessProgressEvent(ProgMode.AutoCast, ProgEvent.DispMsg, "Release Shift")
 
-        Await InputMonSvc.AnticipateInput(InputAction.AC_Start)
+        Await CoreDataLib.InputMonSvc.AnticipateInput(InputAction.AC_Start)
 
-        ProcessProgressEvent(ProgMode.AutoCast, ProgEvent.Reset)
+        CoreDataLib.ProcessProgressEvent(ProgMode.AutoCast, ProgEvent.Reset)
 
         Await Task.Delay(500)
 
@@ -42,14 +42,14 @@ Public Class progGui_AutoCast
 
         acProgressHandler = Sub(sender As Object, e As EventArgs)
                                 Try
-                                    objCancelState.ThrowIfCancellationRequested()
+                                    CoreDataLib.objCancelState.ThrowIfCancellationRequested()
 
                                     ' Dim progRatio As Double = CalcProgress(acTimer.ElapsedMilliseconds, invFuse)
 
                                     'OddProgBar1.ProgressFraction = CalcProgress(acTimer.ElapsedMilliseconds, invFuse)
                                     Me.OddProgBar1.UpdateProgress(acTimer.ElapsedMilliseconds)
 
-                                    If acTimer.ElapsedMilliseconds >= ProgDuration Then
+                                    If acTimer.ElapsedMilliseconds >= osFuncLib_Progress.ProgDuration Then
                                         TerminateAutoCast(True)
                                     End If
 
@@ -84,15 +84,15 @@ Public Class progGui_AutoCast
         Dim retProgResult As ProgResult = Nothing
 
         If acComplete Then
-            If GetProgState() = ProgStatus.Running Then SetProgStatus(ProgAction.Complete,
+            If osFuncLib_Progress.GetProgState() = ProgStatus.Running Then osFuncLib_Progress.SetProgStatus(ProgAction.Complete,
                                                                       TriggerType.AutoCast)
             SetProgResult(acComplete, retProgResult)
         Else
-            SetProgStatus(ProgAction.Abort, TriggerType.AutoCast)
+            osFuncLib_Progress.SetProgStatus(ProgAction.Abort, TriggerType.AutoCast)
             SetProgResult(acComplete, retProgResult)
         End If
 
-        ProcessProgressEvent(ProgMode.AutoCast, ProgEvent.MaxFill)
+        CoreDataLib.ProcessProgressEvent(ProgMode.AutoCast, ProgEvent.MaxFill)
 
         Return retProgResult
 

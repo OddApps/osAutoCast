@@ -85,53 +85,50 @@ Public NotInheritable Class osFuncLib_InputScan
 
 End Class
 
-Module osFuncLib_Progress
-    <Runtime.CompilerServices.Extension()>
-    Public Function FirstOrDefault(Of TSource)(source As IEnumerable(Of TSource), predicate As Func(Of TSource, Boolean), defaultValue As TSource) As TSource
+Public NotInheritable Class osFuncLib_Progress
 
-    End Function
 
-    Public progValue As Double = 0.0F
+    Public Shared progValue As Double = 0.0F
 
-    Public progDispMsg As String = "noStatus"
-    Public progShowMsg As Boolean = False
+    Public Shared progDispMsg As String = "noStatus"
+    Public Shared progShowMsg As Boolean = False
 
-    Public progContObj As Control
+    Public Shared progContObj As Control
 
-    Public progSteps As Integer = 200
+    Public Shared progSteps As Integer = 200
 
-    Public ProgDuration As Integer
-    Public ProgInv As Double
+    Public Shared ProgDuration As Integer
+    Public Shared ProgInv As Double
 
-    Public progBlock_W As Single
-    Public progBlock_H As Integer = 25
+    Public Shared progBlock_W As Single
+    Public Shared progBlock_H As Integer = 25
 
-    Public progCurStatus As ProgStatus
+    Public Shared progCurStatus As ProgStatus
 
-    Public progColor As Color
-    Public progColor_AutoCast As System.Windows.Media.Color
+    Public Shared progColor As Color
+    Public Shared progColor_AutoCast As System.Windows.Media.Color
 
-    Public progColorData As System.Windows.Media.Color
+    Public Shared progColorData As System.Windows.Media.Color
 
-    Public ProgBrush_BG As SolidBrush
-    Public ProgBrush_Active As SolidBrush
-    Public ProgBrush_Border As Pen
+    Public Shared ProgBrush_BG As SolidBrush
+    Public Shared ProgBrush_Active As SolidBrush
+    Public Shared ProgBrush_Border As Pen
 
-    Public pBrush_BG As New System.Windows.Media.
+    Public Shared pBrush_BG As New System.Windows.Media.
         SolidColorBrush(System.Windows.Media.Color.FromRgb(57, 57, 57))
 
-    Public pBrush_Active As System.Windows.Media.SolidColorBrush
-    Public pBrush_Border As System.Windows.Media.Pen = New System.Windows.Media.Pen(System.Windows.Media.Brushes.Black, 2)
+    Public Shared pBrush_Active As System.Windows.Media.SolidColorBrush
+    Public Shared pBrush_Border As System.Windows.Media.Pen = New System.Windows.Media.Pen(System.Windows.Media.Brushes.Black, 2)
 
-    Public ProgContainer As Rectangle
-    Public ProgContainerBorder As Rectangle
+    Public Shared ProgContainer As Rectangle
+    Public Shared ProgContainerBorder As Rectangle
 
-    Public progFont_AC As New Font("Segoe UI", 9, FontStyle.Bold)
-    Public progFont_AP As New Font("Segoe UI", 10, FontStyle.Bold)
+    Public Shared progFont_AC As New Font("Segoe UI", 9, FontStyle.Bold)
+    Public Shared progFont_AP As New Font("Segoe UI", 10, FontStyle.Bold)
 
-    Public objAutoPassProg As SmoothProgressBarr = Nothing
+    Public Shared objAutoPassProg As SmoothProgressBarr = Nothing
 
-    Private ProgStatusColors As New Dictionary(Of ProgStatus, Color) From {
+    Private Shared ProgStatusColors As New Dictionary(Of ProgStatus, Color) From {
         {ProgStatus.Idle, Color.White},
         {ProgStatus.Running, Color.FromArgb(82, 96, 117)},
         {ProgStatus.Success, Color.ForestGreen},
@@ -139,7 +136,7 @@ Module osFuncLib_Progress
         {ProgStatus.StartAP, Color.Maroon}
     }
 
-    Private ReadOnly ProgStatusColors_AutoCast As New Dictionary(Of ProgStatus, System.Windows.Media.Color) From {
+    Private Shared ReadOnly ProgStatusColors_AutoCast As New Dictionary(Of ProgStatus, System.Windows.Media.Color) From {
         {ProgStatus.Idle, System.Windows.Media.Color.FromRgb(57, 57, 57)},
         {ProgStatus.Running, System.Windows.Media.Color.FromRgb(82, 96, 117)},
         {ProgStatus.Success, System.Windows.Media.Color.FromRgb(34, 139, 34)},
@@ -147,7 +144,7 @@ Module osFuncLib_Progress
         {ProgStatus.StartAP, System.Windows.Media.Color.FromRgb(97, 20, 20)}
     }
 
-    Private ReadOnly ProgStatusColorsIndex As New Dictionary(Of ProgStatus, System.Windows.Media.Color) From {
+    Private Shared ReadOnly ProgStatusColorsIndex As New Dictionary(Of ProgStatus, System.Windows.Media.Color) From {
         {ProgStatus.Idle, System.Windows.Media.Color.FromRgb(57, 57, 57)},
         {ProgStatus.Running, System.Windows.Media.Color.FromRgb(82, 96, 117)},
         {ProgStatus.Success, System.Windows.Media.Color.FromRgb(34, 139, 34)},
@@ -155,562 +152,990 @@ Module osFuncLib_Progress
         {ProgStatus.StartAP, System.Windows.Media.Color.FromRgb(97, 20, 20)}
     }
 
-    Public Sub SetProgContainer(pType As TriggerType)
-        ProgContainer = New Rectangle(0, 0, GetProgSize(pType), GetProgSize(pType, True))
-        ProgContainerBorder = New Rectangle(0, 0, GetProgSize(pType) - 1, GetProgSize(pType, True) - 1)
+    Public Shared Sub SetProgContainer(pType As DataTypeLib.TriggerType)
+        ProgContainer = New Rectangle(0, 0, CoreDataLib.GetProgSize(pType), CoreDataLib.GetProgSize(pType, True))
+        ProgContainerBorder = New Rectangle(0, 0, CoreDataLib.GetProgSize(pType) - 1, CoreDataLib.GetProgSize(pType, True) - 1)
     End Sub
 
-    Public Sub SetProgState(newStatus As ProgStatus)
+    Public Shared Sub SetProgState(newStatus As DataTypeLib.ProgStatus)
         progCurStatus = newStatus
-        pBrush_BG = New System.Windows.Media.SolidColorBrush()
+        pBrush_BG = New SolidColorBrush()
     End Sub
 
-    Public Sub SetProgState(optStatus As String)
+    Public Shared Sub SetProgState(optStatus As String)
         Select Case optStatus.ToLower()
             Case "i"
-                progCurStatus = ProgStatus.Idle
+                progCurStatus = DataTypeLib.ProgStatus.Idle
             Case "r"
-                progCurStatus = ProgStatus.Running
+                progCurStatus = DataTypeLib.ProgStatus.Running
             Case "s"
-                progCurStatus = ProgStatus.Success
+                progCurStatus = DataTypeLib.ProgStatus.Success
             Case "f"
-                progCurStatus = ProgStatus.Fail
+                progCurStatus = DataTypeLib.ProgStatus.Fail
             Case "sap"
-                progCurStatus = ProgStatus.StartAP
+                progCurStatus = DataTypeLib.ProgStatus.StartAP
         End Select
     End Sub
 
-    Public Function GetProgState() As ProgStatus
+    Public Shared Function GetProgState() As DataTypeLib.ProgStatus
         Return progCurStatus
     End Function
 
-    Public Function ShowProgFull() As Boolean
-        Return progCurStatus = ProgStatus.Success OrElse progCurStatus = ProgStatus.Fail
+    Public Shared Function ShowProgFull() As Boolean
+        Return progCurStatus = DataTypeLib.ProgStatus.Success OrElse progCurStatus = DataTypeLib.ProgStatus.Fail
     End Function
 
-    Public Function IsProgSuccess() As ProgStatus
-        Return progCurStatus = ProgStatus.Success
+    Public Shared Function IsProgSuccess() As DataTypeLib.ProgStatus
+        Return If(progCurStatus = DataTypeLib.ProgStatus.Success, CType(-1, DataTypeLib.ProgStatus), CType(0, DataTypeLib.ProgStatus))
     End Function
 
-    Public Sub SetProgStatus(setAction As ProgAction, pType As TriggerType, Optional progGUI As Form = Nothing)
-        If pType = TriggerType.AutoCast Then
+    Public Shared Sub SetProgStatus(setAction As DataTypeLib.ProgAction, pType As DataTypeLib.TriggerType, Optional progGUI As Form = Nothing)
+        If pType = DataTypeLib.TriggerType.AutoCast Then
             Select Case setAction
-                Case ProgAction.Abort
+                Case DataTypeLib.ProgAction.Abort
                     SetProgState("f")
-
-                    progValue = 1.0F
-                 '   DisplayProgText("Cancelled")
-                Case ProgAction.Activate
-                    progValue = 0.0F
+                    progValue = 1.0
+                Case DataTypeLib.ProgAction.Activate
+                    progValue = 0.0
                     SetProgState("r")
-                Case ProgAction.Complete
+                Case DataTypeLib.ProgAction.Complete
                     SetProgState("s")
-
-                    progValue = 1.0F
-                   ' DisplayProgText(If(isRTC(), "Release To Cast", "Casting"), True)
-                Case ProgAction.Reset
+                    progValue = 1.0
+                Case DataTypeLib.ProgAction.Reset
                     SetProgState("i")
-
-                    progValue = 0.0F
-                    '   DisplayProgText("")
-
+                    progValue = 0.0
             End Select
-
             SetProgColor(pType)
         Else
             Select Case setAction
-                Case ProgAction.Abort
+                Case DataTypeLib.ProgAction.Abort
                     SetProgState("f")
-
-                    progValue = 1.0F
-                  '  DisplayProgText("AutoPass Cancelled")
-                Case ProgAction.Activate
+                    progValue = 1.0
+                Case DataTypeLib.ProgAction.Activate
                     SetProgState("sap")
-
-                    progValue = 1.0F
-                Case ProgAction.Complete
+                    progValue = 1.0
+                Case DataTypeLib.ProgAction.Complete
                     SetProgState("s")
-
-                    progValue = 1.0F
-                  '  DisplayProgText("Release Shift To AutoPass | Press C To Cancel")
-                Case ProgAction.Reset
+                    progValue = 1.0
+                Case DataTypeLib.ProgAction.Reset
                     SetProgState("i")
-
-                    progValue = 0.0F
-                    ' DisplayProgText("")
+                    progValue = 0.0
             End Select
-
             SetProgColor(pType)
         End If
-
     End Sub
 
-    Public Sub DisplayProgText(progTxt As String, Optional guiUpdate As Boolean = False,
-                               Optional guiForm As Form = Nothing, Optional guiProg As Control = Nothing)
-
+    Public Shared Sub DisplayProgText(progTxt As String, Optional guiUpdate As Boolean = False, Optional guiForm As Form = Nothing, Optional guiProg As Control = Nothing)
         If progTxt = "" Then
             progShowMsg = False
             progDispMsg = ""
-
-            Exit Sub
+        Else
+            progShowMsg = True
+            progDispMsg = progTxt
+            If guiUpdate Then
+                guiForm?.Invalidate()
+                guiProg?.Invalidate()
+            End If
         End If
-
-        progShowMsg = True
-        progDispMsg = progTxt
-
-        If guiUpdate Then
-            If guiForm IsNot Nothing Then guiForm.Invalidate()
-            If guiProg IsNot Nothing Then guiProg.Invalidate()
-        End If
-
     End Sub
 
-    Public Sub DisplayProgText(progTxt As String, showProgMsg As Boolean)
+    Public Shared Sub DisplayProgText(progTxt As String, showProgMsg As Boolean)
         If progTxt = "" Then
             progShowMsg = False
             progDispMsg = ""
-
-            Exit Sub
+        Else
+            progShowMsg = True
+            progDispMsg = progTxt
         End If
-
-        progShowMsg = True
-        progDispMsg = progTxt
     End Sub
 
-    Public Function CalcTargetTime(sTime As Long, valDuration As Integer, repCnt As Integer, repRate As Double) As Long
-        Return sTime + CLng(valDuration * (repCnt * repRate))
+    Public Shared Function CalcTargetTime(sTime As Long, valDuration As Integer, repCnt As Integer, repRate As Double) As Long
+        Return sTime + CLng(Math.Round(valDuration * repCnt * repRate))
     End Function
 
-    Public Sub ApplyActiveColor(optColor As System.Windows.Media.Color)
-        pBrush_Active = New System.Windows.Media.SolidColorBrush(optColor)
+    Public Shared Sub ApplyActiveColor(optColor As System.Windows.Media.Color)
+        pBrush_Active = New SolidColorBrush(optColor)
     End Sub
 
-    Private Sub SetProgColor(pType As TriggerType)
+    Private Shared Sub SetProgColor(pType As DataTypeLib.TriggerType)
         Select Case pType
-            Case TriggerType.AutoCast
-                osGui_AutoCast.Dispatcher.Invoke(Sub()
-                                                     progColorData = FetchProgColor(GetProgState(), True)
-                                                     ApplyActiveColor(progColorData)
-
-                                                     osGui_AutoCast.OddProgBar1.SetProgColor(progColorData)
-                                                 End Sub)
-            Case TriggerType.AutoPass
-                osGui_AutoPass.Dispatcher.Invoke(Sub()
-                                                     progColorData = FetchProgColor(GetProgState(), True)
-                                                     ApplyActiveColor(progColorData)
-
-                                                     osGui_AutoPass.OddProgBar_AP.SetProgColor(progColorData)
-                                                 End Sub)
+            Case DataTypeLib.TriggerType.AutoCast
+                osHandler_GUI.osGui_AutoCast.Dispatcher.Invoke(Sub()
+                                                                   progColorData = FetchProgColor(GetProgState(), True)
+                                                                   ApplyActiveColor(progColorData)
+                                                                   osHandler_GUI.osGui_AutoCast.OddProgBar1.SetProgColor(progColorData)
+                                                               End Sub)
+            Case DataTypeLib.TriggerType.AutoPass
+                osHandler_GUI.osGui_AutoPass.Dispatcher.Invoke(Sub()
+                                                                   progColorData = FetchProgColor(GetProgState(), True)
+                                                                   ApplyActiveColor(progColorData)
+                                                                   osHandler_GUI.osGui_AutoPass.OddProgBar_AP.SetProgColor(progColorData)
+                                                               End Sub)
         End Select
-
     End Sub
 
-    Public Sub ConstructProgContainer(progG As Graphics)
-        progG.SmoothingMode = Drawing2D.SmoothingMode.AntiAlias
-
+    Public Shared Sub ConstructProgContainer(progG As Graphics)
+        progG.SmoothingMode = SmoothingMode.AntiAlias
         progG.Clear(Color.FromArgb(22, 22, 22))
         progG.FillRectangle(ProgBrush_BG, ProgContainer)
     End Sub
 
-    Public Sub ConstructProgBorder(progG As Graphics, Optional noFill As Boolean = False)
-        progG.SmoothingMode = Drawing2D.SmoothingMode.AntiAlias
-
+    Public Shared Sub ConstructProgBorder(progG As Graphics, Optional noFill As Boolean = False)
+        progG.SmoothingMode = SmoothingMode.AntiAlias
         If Not noFill Then progG.Clear(Color.FromArgb(22, 22, 22))
         progG.DrawRectangle(ProgBrush_Border, ProgContainerBorder)
     End Sub
 
-    Public Sub ConstructProgFull(progG As Graphics, Optional noFill As Boolean = False)
-        progG.SmoothingMode = Drawing2D.SmoothingMode.AntiAlias
-
+    Public Shared Sub ConstructProgFull(progG As Graphics, Optional noFill As Boolean = False)
+        progG.SmoothingMode = SmoothingMode.AntiAlias
         If Not noFill Then progG.Clear(Color.FromArgb(22, 22, 22))
         progG.DrawRectangle(ProgBrush_Border, ProgContainerBorder)
     End Sub
 
-    Public Sub InitProgColors()
+    Public Shared Sub InitProgColors()
         ProgBrush_BG = New SolidBrush(Color.FromArgb(40, 40, 40))
         ProgBrush_Active = New SolidBrush(Color.DeepSkyBlue)
-
-        ProgBrush_Border = New Pen(Color.Black, 2)
+        ProgBrush_Border = New Pen(Color.Black, 2.0F)
     End Sub
 
-    Public Function FetchProgColor(pStatus As ProgStatus) As Color
+    Public Shared Function FetchProgColor(pStatus As DataTypeLib.ProgStatus) As Color
         Return ProgStatusColors(pStatus)
     End Function
 
-    Public Function FetchProgColor(pStatus As ProgStatus, idxColors As Boolean) As System.Windows.Media.Color
+    Public Shared Function FetchProgColor(pStatus As DataTypeLib.ProgStatus, idxColors As Boolean) As System.Windows.Media.Color
         Return ProgStatusColorsIndex(pStatus)
     End Function
 
-    Public Function CalcPosData(ptPos As Point) As Point
-        Return New Point(ptPos.X - CInt(GetProgSize(TriggerType.AutoCast) / 2),
-                         ptPos.Y - CInt(GetProgSize(TriggerType.AutoCast, True)) - 22)
+    Public Shared Function CalcPosData(ptPos As Point) As Point
+        Return New Point(ptPos.X - CInt(Math.Round(CoreDataLib.GetProgSize(DataTypeLib.TriggerType.AutoCast) / 2.0)),
+                         ptPos.Y - CoreDataLib.GetProgSize(DataTypeLib.TriggerType.AutoCast, True) - 22)
     End Function
 
-    Private Function CalcProgSize() As System.Drawing.Size
-        Return New System.Drawing.Size(GetProgSize(TriggerType.AutoCast),
-                                GetProgSize(TriggerType.AutoCast, True))
+    Public Shared Function CalcProgSize() As System.Drawing.Size
+        Return New System.Drawing.Size(CoreDataLib.GetProgSize(DataTypeLib.TriggerType.AutoCast), CoreDataLib.GetProgSize(DataTypeLib.TriggerType.AutoCast, True))
     End Function
 
-    Public Function CalcProgSize(pType As TriggerType) As System.Drawing.Size
-        Return New System.Drawing.Size(GetProgSize(pType),
-                                GetProgSize(pType, True))
+    Public Shared Function CalcProgSize(pType As DataTypeLib.TriggerType) As System.Drawing.Size
+        Return New System.Drawing.Size(CoreDataLib.GetProgSize(pType), CoreDataLib.GetProgSize(pType, True))
     End Function
 
-    Public Sub SetProgBlockData(trigType As TriggerType)
-        ProgDuration = If(trigType = TriggerType.AutoCast,
-            GetFuse(), GetSafetyTimer())
+    Public Shared Sub SetProgBlockData(trigType As DataTypeLib.TriggerType)
+        ProgDuration = If(trigType = DataTypeLib.TriggerType.AutoCast, CoreDataLib.GetFuse(), CoreDataLib.GetSafetyTimer())
         ProgInv = 1.0 / ProgDuration
     End Sub
 
-    Public Sub DisplayProgress(guiAutoCast As Form, ptPos As Point)
-        With guiAutoCast
-            .Location = CalcPosData(ptPos)
-            .Show()
-
-            .Size = CalcProgSize()
-        End With
+    Public Shared Sub DisplayProgress(guiAutoCast As Form, ptPos As Point)
+        guiAutoCast.Location = CalcPosData(ptPos)
+        guiAutoCast.Show()
+        guiAutoCast.Size = CalcProgSize()
     End Sub
 
-    Public Sub DisplayProgress(guiAutoPass As Form, isAutoPass As Boolean)
-        ' GenAutoPassProg()
-
-        With guiAutoPass
-            .Show()
-            '  .Controls.Add(objAutoPassProg)
-        End With
-
+    Public Shared Sub DisplayProgress(guiAutoPass As Form, isAutoPass As Boolean)
+        guiAutoPass.Show()
         guiAutoPass.Invalidate()
     End Sub
 
-    Private Sub GenAutoPassProg()
-        objAutoPassProg = Nothing
 
-        objAutoPassProg = New SmoothProgressBarr(GetSafetyTimer()) With {
-            .Size = CalcProgSize(TriggerType.AutoPass),
-            .BackColor = Color.FromArgb(22, 22, 22),
-            .Dock = DockStyle.Bottom
-        }
 
-        progContObj = objAutoPassProg
-    End Sub
+    ' -- Easing functions --
 
-    Public Function EaseInOutExpo(x As Double) As Double
-        If x = 0 Then Return 0
-        If x = 1 Then Return 1
-
-        If x < 0.5 Then
-            Return Math.Pow(2, 20 * x - 10) / 2
-        Else
-            Return (2 - Math.Pow(2, -20 * x + 10)) / 2
-        End If
+    Public Shared Function EaseInOutExpo(x As Double) As Double
+        If x = 0.0 Then Return 0.0
+        If x = 1.0 Then Return 1.0
+        Return If(x < 0.5, Math.Pow(2, 20 * x - 10) / 2, (2 - Math.Pow(2, -20 * x + 10)) / 2)
     End Function
 
-    Public Function EaseInOutCustom(x As Double) As Double
+    Public Shared Function EaseInOutCustom(x As Double) As Double
+        Dim num As Double
         If x < 0.4 Then
-            Dim ezScale As Double = x / 0.4
-            Return 0.32 * ezScale * ezScale
-        ElseIf x < 0.8 Then
-            Dim ezScale As Double = (x - 0.4) / 0.4
-            Return 0.32 + ezScale * 0.56
+            Dim t = x / 0.4
+            num = 0.32 * t * t
+        ElseIf x >= 0.8 Then
+            num = 0.88 + (1.0 - Math.Pow(1.0 - (x - 0.8) / 0.2, 2.0)) * 0.12
         Else
-            Dim ezScale As Double = (x - 0.8) / 0.2
-            Return 0.88 + (1 - Math.Pow(1 - ezScale, 2)) * 0.12
+            num = 0.32 + (x - 0.4) / 0.4 * 0.56
         End If
+        Return num
     End Function
 
-    Public Function EaseInOutSine(x As Double) As Double
-        Return -(Math.Cos(Math.PI * x) - 1) / 2
+    Public Shared Function EaseInOutSine(x As Double) As Double
+        Return -(Math.Cos(Math.PI * x) - 1.0) / 2.0
     End Function
 
-    Public Function EaseInOutCube(x As Double) As Double
-        If x < 0.5 Then
-            Return 4 * x * x * x
-        Else
-            Return 1 - Math.Pow(-2 * x + 2, 3) / 2
-        End If
+    Public Shared Function EaseInOutCube(x As Double) As Double
+        Return If(x >= 0.5, 1.0 - Math.Pow(-2 * x + 2, 3) / 2.0, 4 * x * x * x)
     End Function
 
-    Public Function EaseOutCubic(t As Double) As Double
-        Return 1 - Math.Pow(1 - t, 3)
+    Public Shared Function EaseOutCubic(t As Double) As Double
+        Return 1.0 - Math.Pow(1.0 - t, 3)
     End Function
 
-End Module
+    'Public Sub SetProgContainer(pType As TriggerType)
+    '    ProgContainer = New Rectangle(0, 0, CoreDataLib.CoreDataLib.GetProgSize(pType), CoreDataLib.CoreDataLib.GetProgSize(pType, True))
+    '    ProgContainerBorder = New Rectangle(0, 0, CoreDataLib.CoreDataLib.GetProgSize(pType) - 1, CoreDataLib.CoreDataLib.GetProgSize(pType, True) - 1)
+    'End Sub
 
-Module osFuncLib_AutoCast
+    'Public Sub SetProgState(newStatus As ProgStatus)
+    '    progCurStatus = newStatus
+    '    pBrush_BG = New System.Windows.Media.SolidColorBrush()
+    'End Sub
 
-    <DllImport("user32.dll", SetLastError:=True, EntryPoint:="mouse_event")>
-    Private Sub InvokeMouse(dwFlags As UInteger, dx As UInteger, dy As UInteger,
-                                   cButtons As UInteger, dwExtraInfo As IntPtr)
+    'Public Sub SetProgState(optStatus As String)
+    '    Select Case optStatus.ToLower()
+    '        Case "i"
+    '            progCurStatus = ProgStatus.Idle
+    '        Case "r"
+    '            progCurStatus = ProgStatus.Running
+    '        Case "s"
+    '            progCurStatus = ProgStatus.Success
+    '        Case "f"
+    '            progCurStatus = ProgStatus.Fail
+    '        Case "sap"
+    '            progCurStatus = ProgStatus.StartAP
+    '    End Select
+    'End Sub
+
+    'Public Function GetProgState() As ProgStatus
+    '    Return progCurStatus
+    'End Function
+
+    'Public Function ShowProgFull() As Boolean
+    '    Return progCurStatus = ProgStatus.Success OrElse progCurStatus = ProgStatus.Fail
+    'End Function
+
+    'Public Function IsProgSuccess() As ProgStatus
+    '    Return progCurStatus = ProgStatus.Success
+    'End Function
+
+    'Public Sub SetProgStatus(setAction As ProgAction, pType As TriggerType, Optional progGUI As Form = Nothing)
+    '    If pType = TriggerType.AutoCast Then
+    '        Select Case setAction
+    '            Case ProgAction.Abort
+    '                SetProgState("f")
+
+    '                progValue = 1.0F
+    '             '   DisplayProgText("Cancelled")
+    '            Case ProgAction.Activate
+    '                progValue = 0.0F
+    '                SetProgState("r")
+    '            Case ProgAction.Complete
+    '                SetProgState("s")
+
+    '                progValue = 1.0F
+    '               ' DisplayProgText(If(isRTC(), "Release To Cast", "Casting"), True)
+    '            Case ProgAction.Reset
+    '                SetProgState("i")
+
+    '                progValue = 0.0F
+    '                '   DisplayProgText("")
+
+    '        End Select
+
+    '        SetProgColor(pType)
+    '    Else
+    '        Select Case setAction
+    '            Case ProgAction.Abort
+    '                SetProgState("f")
+
+    '                progValue = 1.0F
+    '              '  DisplayProgText("AutoPass Cancelled")
+    '            Case ProgAction.Activate
+    '                SetProgState("sap")
+
+    '                progValue = 1.0F
+    '            Case ProgAction.Complete
+    '                SetProgState("s")
+
+    '                progValue = 1.0F
+    '              '  DisplayProgText("Release Shift To AutoPass | Press C To Cancel")
+    '            Case ProgAction.Reset
+    '                SetProgState("i")
+
+    '                progValue = 0.0F
+    '                ' DisplayProgText("")
+    '        End Select
+
+    '        SetProgColor(pType)
+    '    End If
+
+    'End Sub
+
+    'Public Sub DisplayProgText(progTxt As String, Optional guiUpdate As Boolean = False,
+    '                           Optional guiForm As Form = Nothing, Optional guiProg As Control = Nothing)
+
+    '    If progTxt = "" Then
+    '        progShowMsg = False
+    '        progDispMsg = ""
+
+    '        Exit Sub
+    '    End If
+
+    '    progShowMsg = True
+    '    progDispMsg = progTxt
+
+    '    If guiUpdate Then
+    '        If guiForm IsNot Nothing Then guiForm.Invalidate()
+    '        If guiProg IsNot Nothing Then guiProg.Invalidate()
+    '    End If
+
+    'End Sub
+
+    'Public Sub DisplayProgText(progTxt As String, showProgMsg As Boolean)
+    '    If progTxt = "" Then
+    '        progShowMsg = False
+    '        progDispMsg = ""
+
+    '        Exit Sub
+    '    End If
+
+    '    progShowMsg = True
+    '    progDispMsg = progTxt
+    'End Sub
+
+    'Public Function CalcTargetTime(sTime As Long, valDuration As Integer, repCnt As Integer, repRate As Double) As Long
+    '    Return sTime + CLng(valDuration * (repCnt * repRate))
+    'End Function
+
+    'Public Sub ApplyActiveColor(optColor As System.Windows.Media.Color)
+    '    pBrush_Active = New System.Windows.Media.SolidColorBrush(optColor)
+    'End Sub
+
+    'Private Sub SetProgColor(pType As TriggerType)
+    '    Select Case pType
+    '        Case TriggerType.AutoCast
+    '            osGui_AutoCast.Dispatcher.Invoke(Sub()
+    '                                                 progColorData = FetchProgColor(GetProgState(), True)
+    '                                                 ApplyActiveColor(progColorData)
+
+    '                                                 osGui_AutoCast.OddProgBar1.SetProgColor(progColorData)
+    '                                             End Sub)
+    '        Case TriggerType.AutoPass
+    '            osGui_AutoPass.Dispatcher.Invoke(Sub()
+    '                                                 progColorData = FetchProgColor(GetProgState(), True)
+    '                                                 ApplyActiveColor(progColorData)
+
+    '                                                 osGui_AutoPass.OddProgBar_AP.SetProgColor(progColorData)
+    '                                             End Sub)
+    '    End Select
+
+    'End Sub
+
+    'Public Sub ConstructProgContainer(progG As Graphics)
+    '    progG.SmoothingMode = Drawing2D.SmoothingMode.AntiAlias
+
+    '    progG.Clear(Color.FromArgb(22, 22, 22))
+    '    progG.FillRectangle(ProgBrush_BG, ProgContainer)
+    'End Sub
+
+    'Public Sub ConstructProgBorder(progG As Graphics, Optional noFill As Boolean = False)
+    '    progG.SmoothingMode = Drawing2D.SmoothingMode.AntiAlias
+
+    '    If Not noFill Then progG.Clear(Color.FromArgb(22, 22, 22))
+    '    progG.DrawRectangle(ProgBrush_Border, ProgContainerBorder)
+    'End Sub
+
+    'Public Sub ConstructProgFull(progG As Graphics, Optional noFill As Boolean = False)
+    '    progG.SmoothingMode = Drawing2D.SmoothingMode.AntiAlias
+
+    '    If Not noFill Then progG.Clear(Color.FromArgb(22, 22, 22))
+    '    progG.DrawRectangle(ProgBrush_Border, ProgContainerBorder)
+    'End Sub
+
+    'Public Sub InitProgColors()
+    '    ProgBrush_BG = New SolidBrush(Color.FromArgb(40, 40, 40))
+    '    ProgBrush_Active = New SolidBrush(Color.DeepSkyBlue)
+
+    '    ProgBrush_Border = New Pen(Color.Black, 2)
+    'End Sub
+
+    'Public Function FetchProgColor(pStatus As ProgStatus) As Color
+    '    Return ProgStatusColors(pStatus)
+    'End Function
+
+    'Public Function FetchProgColor(pStatus As ProgStatus, idxColors As Boolean) As System.Windows.Media.Color
+    '    Return ProgStatusColorsIndex(pStatus)
+    'End Function
+
+    'Public Function CalcPosData(ptPos As Point) As Point
+    '    Return New Point(ptPos.X - CInt(CoreDataLib.GetProgSize(TriggerType.AutoCast) / 2),
+    '                     ptPos.Y - CInt(CoreDataLib.GetProgSize(TriggerType.AutoCast, True)) - 22)
+    'End Function
+
+    'Private Function CalcProgSize() As System.Drawing.Size
+    '    Return New System.Drawing.Size(CoreDataLib.GetProgSize(TriggerType.AutoCast),
+    '                            CoreDataLib.GetProgSize(TriggerType.AutoCast, True))
+    'End Function
+
+    'Public Function CalcProgSize(pType As TriggerType) As System.Drawing.Size
+    '    Return New System.Drawing.Size(CoreDataLib.GetProgSize(pType),
+    '                            CoreDataLib.GetProgSize(pType, True))
+    'End Function
+
+    'Public Sub SetProgBlockData(trigType As TriggerType)
+    '    ProgDuration = If(trigType = TriggerType.AutoCast,
+    '        GetFuse(), GetSafetyTimer())
+    '    ProgInv = 1.0 / ProgDuration
+    'End Sub
+
+    'Public Sub DisplayProgress(guiAutoCast As Form, ptPos As Point)
+    '    With guiAutoCast
+    '        .Location = CalcPosData(ptPos)
+    '        .Show()
+
+    '        .Size = CalcProgSize()
+    '    End With
+    'End Sub
+
+    'Public Sub DisplayProgress(guiAutoPass As Form, isAutoPass As Boolean)
+    '    ' GenAutoPassProg()
+
+    '    With guiAutoPass
+    '        .Show()
+    '        '  .Controls.Add(objAutoPassProg)
+    '    End With
+
+    '    guiAutoPass.Invalidate()
+    'End Sub
+
+    'Private Sub GenAutoPassProg()
+    '    objAutoPassProg = Nothing
+
+    '    objAutoPassProg = New SmoothProgressBarr(GetSafetyTimer()) With {
+    '        .Size = CalcProgSize(TriggerType.AutoPass),
+    '        .BackColor = Color.FromArgb(22, 22, 22),
+    '        .Dock = DockStyle.Bottom
+    '    }
+
+    '    progContObj = objAutoPassProg
+    'End Sub
+
+    'Public Function EaseInOutExpo(x As Double) As Double
+    '    If x = 0 Then Return 0
+    '    If x = 1 Then Return 1
+
+    '    If x < 0.5 Then
+    '        Return Math.Pow(2, 20 * x - 10) / 2
+    '    Else
+    '        Return (2 - Math.Pow(2, -20 * x + 10)) / 2
+    '    End If
+    'End Function
+
+    'Public Function EaseInOutCustom(x As Double) As Double
+    '    If x < 0.4 Then
+    '        Dim ezScale As Double = x / 0.4
+    '        Return 0.32 * ezScale * ezScale
+    '    ElseIf x < 0.8 Then
+    '        Dim ezScale As Double = (x - 0.4) / 0.4
+    '        Return 0.32 + ezScale * 0.56
+    '    Else
+    '        Dim ezScale As Double = (x - 0.8) / 0.2
+    '        Return 0.88 + (1 - Math.Pow(1 - ezScale, 2)) * 0.12
+    '    End If
+    'End Function
+
+    'Public Function EaseInOutSine(x As Double) As Double
+    '    Return -(Math.Cos(Math.PI * x) - 1) / 2
+    'End Function
+
+    'Public Function EaseInOutCube(x As Double) As Double
+    '    If x < 0.5 Then
+    '        Return 4 * x * x * x
+    '    Else
+    '        Return 1 - Math.Pow(-2 * x + 2, 3) / 2
+    '    End If
+    'End Function
+
+    'Public Function EaseOutCubic(t As Double) As Double
+    '    Return 1 - Math.Pow(1 - t, 3)
+    'End Function
+
+End Class
+
+Public NotInheritable Class osFuncLib_AutoCast
+
+    Private Shared ptPos As Point
+    Private Shared objFuncLib_InputScan As New osFuncLib_InputScan()
+
+    <DllImport("user32.dll", EntryPoint:="mouse_event", SetLastError:=True)>
+    Private Shared Sub InvokeMouse(dwFlags As UInteger, dx As UInteger, dy As UInteger, cButtons As UInteger, dwExtraInfo As IntPtr)
     End Sub
 
     <DllImport("user32.dll", SetLastError:=True)>
-    Private Function EnableWindow(hWnd As IntPtr, bEnable As Boolean) As Boolean
+    Private Shared Function EnableWindow(hWnd As IntPtr, bEnable As Boolean) As Boolean
     End Function
 
     <DllImport("kernel32.dll", SetLastError:=True)>
-    Private Function GetModuleHandle(lpModuleName As String) As IntPtr
+    Private Shared Function GetModuleHandle(lpModuleName As String) As IntPtr
     End Function
 
-    Public Sub ToggleInputBlock(doBlock As Boolean)
-        EnableWindow(DetectGameUI.FetchHwndMTGA(),
-                     Not doBlock)
+    Public Shared Sub ToggleInputBlock(doBlock As Boolean)
+        EnableWindow(DetectGameUI.FetchHwndMTGA(), Not doBlock)
     End Sub
 
-    Private ptPos As Point
-
-    Private objFuncLib_InputScan As New osFuncLib_InputScan
-
-    Public Async Sub InvokeAutoCast()
-
-        If isRTC() Then
+    Public Shared Async Sub InvokeAutoCast()
+        If CoreDataLib.isRTC() Then
             Await Task.Delay(75)
-
             Await osHandler_Input.SuppressInput()
-
-            ExecClicker(True)
-
-            HoldInputs(True)
-        Else
-            LiberateLeftClick()
-
-            Await osHandler_Input.SuppressInput()
-            ExecClicker(True)
-
-            HoldInputs(True)
-        End If
-
-    End Sub
-
-    Public Async Sub EngageAutoCast()
-
-        If isRTC() Then
-            Await Task.Delay(75)
-
             ExecClicker(True)
             HoldInputs(True)
         Else
             LiberateLeftClick()
-
-            Await Task.Delay(75)
-
+            Await osHandler_Input.SuppressInput()
             ExecClicker(True)
             HoldInputs(True)
         End If
-
     End Sub
 
-    Public Async Function ExecuteAutoCast() As Task
+    Public Shared Async Sub EngageAutoCast()
+        If CoreDataLib.isRTC() Then
+            Await Task.Delay(75)
+            ExecClicker(True)
+            HoldInputs(True)
+        Else
+            LiberateLeftClick()
+            Await Task.Delay(75)
+            ExecClicker(True)
+            HoldInputs(True)
+        End If
+    End Sub
 
-        Dim retProgResult As ProgResult = Nothing
+    Public Shared Async Function ExecuteAutoCast() As Task
+        Dim acResult As DataTypeLib.ProgResult = DataTypeLib.ProgResult.Completed
 
-        Dim isTask_AutoCast = osGui_AutoCast.
-            Dispatcher.InvokeAsync(Async Function()
-                                       If osFuncLib_InputScan.FindProgPosition(ptPos) Then
-                                           SetProgContainer(TriggerType.AutoCast)
+        Await TaskExtensions.Unwrap(osHandler_GUI.osGui_AutoCast.Dispatcher.InvokeAsync(Of Task)(Async Function()
+                                                                                                     If Not osFuncLib_InputScan.FindProgPosition(ptPos) Then
+                                                                                                         Return
+                                                                                                     End If
+                                                                                                     osFuncLib_Progress.SetProgContainer(DataTypeLib.TriggerType.AutoCast)
+                                                                                                     osHandler_GUI.DisplayGUI(DataTypeLib.TriggerType.AutoCast, ptPos)
+                                                                                                     osFuncLib_Progress.SetProgBlockData(DataTypeLib.TriggerType.AutoCast)
 
-                                           DisplayGUI(TriggerType.AutoCast, ptPos)
-                                           SetProgBlockData(TriggerType.AutoCast)
+                                                                                                     ' Closure variable (compiler-generated in C#)
+                                                                                                     Dim closure90 As Object = Nothing
+                                                                                                     closure90 = Await osHandler_GUI.osGui_AutoCast.LaunchAutoCast()
+                                                                                                 End Function).Task)
 
-                                           retProgResult = Await osGui_AutoCast.LaunchAutoCast()
-                                       End If
-                                   End Function)
-
-        Await isTask_AutoCast.Task.Unwrap()
-
-        Await ProcessResult(retProgResult)
+        Await ProcessResult(acResult)
         osFuncLib_InputScan.isActionComplete = True
     End Function
 
-    Private Async Function ProcessResult(acResult As ProgResult) As Task
+    Private Shared Async Function ProcessResult(acResult As DataTypeLib.ProgResult) As Task
         Try
             Select Case acResult
-                Case ProgResult.Completed
-
-                    If isRTC() Then
-                        ProcessProgressEvent(ProgMode.AutoCast, ProgEvent.DispMsg, "Release To Cast")
-
-                        Await InputMonSvc.AnticipateInput(InputAction.AC_RTC)
+                Case DataTypeLib.ProgResult.Completed
+                    If CoreDataLib.isRTC() Then
+                        CoreDataLib.ProcessProgressEvent(DataTypeLib.ProgMode.AutoCast, DataTypeLib.ProgEvent.DispMsg, "Release To Cast")
+                        Dim num As Integer = If(Await CoreDataLib.InputMonSvc.AnticipateInput(DataTypeLib.InputAction.AC_RTC), 1, 0)
                         Await Task.Delay(10)
-
                     End If
 
-                    Await osGui_AutoCast.Dispatcher.InvokeAsync(
-                        Async Function()
-                            Await Task.Delay(150)
-
-                            ProcessProgressEvent(ProgMode.AutoCast, ProgEvent.DispMsg, "Casting")
-                        End Function, DispatcherPriority.ApplicationIdle)
+                    Dim dispatcher1 As Dispatcher = osHandler_GUI.osGui_AutoCast.Dispatcher
+                    Dim callback1 As Func(Of Task) = Async Function()
+                                                         Await Task.Delay(150)
+                                                         CoreDataLib.ProcessProgressEvent(DataTypeLib.ProgMode.AutoCast, DataTypeLib.ProgEvent.DispMsg, "Casting")
+                                                     End Function
+                    Await dispatcher1.InvokeAsync(callback1, DispatcherPriority.ApplicationIdle)
                     EngageAutoCast()
 
-                Case ProgResult.Cancelled
-                    Await osGui_AutoCast.Dispatcher.InvokeAsync(
-                        Async Function()
-                            Await Task.Delay(150)
-                            ProcessProgressEvent(ProgMode.AutoCast, ProgEvent.DispMsg, "Cancelled")
-                        End Function, DispatcherPriority.ApplicationIdle)
+                Case DataTypeLib.ProgResult.Cancelled
+                    Dim dispatcher2 As Dispatcher = osHandler_GUI.osGui_AutoCast.Dispatcher
+                    Dim callback2 As Func(Of Task) = Async Function()
+                                                         Await Task.Delay(150)
+                                                         CoreDataLib.ProcessProgressEvent(DataTypeLib.ProgMode.AutoCast, DataTypeLib.ProgEvent.DispMsg, "Cancelled")
+                                                     End Function
+                    Await dispatcher2.InvokeAsync(callback2, DispatcherPriority.ApplicationIdle)
             End Select
 
             Await FinalizeAutoCast()
         Catch ex As Exception
-            Debug.WriteLine($"ProcessResult error: {ex}")
+
         End Try
     End Function
 
-    Private Async Function FinalizeAutoCast() As Task
+    Private Shared Async Function FinalizeAutoCast() As Task
         Await Task.Delay(750)
-        osGui_AutoCast.Dispatcher.Invoke(Sub()
-                                             osGui_AutoCast.Close()
-                                         End Sub)
+        Dim dispatcher As Dispatcher = osHandler_GUI.osGui_AutoCast.Dispatcher
+        Dim callback As Action = Sub() osHandler_GUI.osGui_AutoCast.Close()
+        dispatcher.Invoke(callback)
     End Function
 
-    Private Async Sub HoldInputs(doAsync As Boolean)
+    Private Shared Async Sub HoldInputs(doAsync As Boolean)
         Await Task.Delay(1250)
         Await osHandler_Input.RestoreInput()
     End Sub
 
-    Private Async Sub ExecClicker(Optional doDbl As Boolean = False)
-
+    Private Shared Async Sub ExecClicker(Optional doDbl As Boolean = False)
         PerformLeftClk()
-
         If doDbl Then
             Await Task.Delay(105)
             PerformLeftClk()
         End If
-
     End Sub
 
-    Private Sub PerformLeftClk()
-        InvokeMouse(mEvent_Down, 0, 0, 0, IntPtr.Zero)
-        InvokeMouse(mEvent_Up, 0, 0, 0, IntPtr.Zero)
+    Private Shared Sub PerformLeftClk()
+        InvokeMouse(2UI, 0UI, 0UI, 0UI, IntPtr.Zero)
+        InvokeMouse(4UI, 0UI, 0UI, 0UI, IntPtr.Zero)
     End Sub
 
-    Private Sub LiberateLeftClick()
-        InvokeMouse(mEvent_Up, 0, 0, 0, IntPtr.Zero)
+    Private Shared Sub LiberateLeftClick()
+        InvokeMouse(4UI, 0UI, 0UI, 0UI, IntPtr.Zero)
     End Sub
 
-End Module
+End Class
 
-Module osFuncLib_ShowOpts
+'Module osFuncLib_AutoCast
 
-    Private chkCloseSettings As TaskCompletionSource(Of Boolean)
+'    <Runtime.CompilerServices.Extension()>
+'    Public Function FirstOrDefault(Of TSource)(source As IEnumerable(Of TSource), predicate As Func(Of TSource, Boolean), defaultValue As TSource) As TSource
 
-    Public Async Function ExecuteDispOpts() As Task
-        PrepTrigger(TriggerType.ShowPrefs)
+'    End Function
 
-        osGui_InputMonitor.Dispatcher.Invoke(Sub()
-                                                 With osGui_Prefs
-                                                     .Show()
-                                                     .Focus()
-                                                     osPrefs_PrepHandlers()
-                                                 End With
-                                             End Sub)
+'    Private ptPos As Point
+'    Private objFuncLib_InputScan As New osFuncLib_InputScan()
+
+'    ' -- P/Invoke declarations --
+'    <DllImport("user32.dll", EntryPoint:="mouse_event", SetLastError:=True)>
+'    Private Sub InvokeMouse(dwFlags As UInteger, dx As UInteger, dy As UInteger, cButtons As UInteger, dwExtraInfo As IntPtr)
+'    End Sub
+
+'    <DllImport("user32.dll", SetLastError:=True)>
+'    Private Function EnableWindow(hWnd As IntPtr, bEnable As Boolean) As Boolean
+'    End Function
+
+'    <DllImport("kernel32.dll", SetLastError:=True)>
+'    Private Function GetModuleHandle(lpModuleName As String) As IntPtr
+'    End Function
+
+'    ' -- Methods --
+
+'    Public Sub ToggleInputBlock(doBlock As Boolean)
+'        EnableWindow(DetectGameUI.FetchHwndMTGA(), Not doBlock)
+'    End Sub
+
+'    Public Async Sub InvokeAutoCast()
+'        If CoreDataLib.isRTC() Then
+'            Await Task.Delay(75)
+'            Await osHandler_Input.SuppressInput()
+'            ExecClicker(True)
+'            HoldInputs(True)
+'        Else
+'            LiberateLeftClick()
+'            Await osHandler_Input.SuppressInput()
+'            ExecClicker(True)
+'            HoldInputs(True)
+'        End If
+'    End Sub
+
+'    Public Async Sub EngageAutoCast()
+'        If CoreDataLib.isRTC() Then
+'            Await Task.Delay(75)
+'            ExecClicker(True)
+'            HoldInputs(True)
+'        Else
+'            LiberateLeftClick()
+'            Await Task.Delay(75)
+'            ExecClicker(True)
+'            HoldInputs(True)
+'        End If
+'    End Sub
+
+'    Public Async Function ExecuteAutoCast() As Task
+'        Dim acResult As DataTypeLib.ProgResult = DataTypeLib.ProgResult.Completed
+'        Await osHandler_GUI.osGui_AutoCast.Dispatcher.InvokeAsync(Function()
+'                                                                      If Not objFuncLib_InputScan.FindProgPosition(ptPos) Then
+'                                                                          Return Task.CompletedTask
+'                                                                      End If
+'                                                                      osFuncLib_Progress.SetProgContainer(DataTypeLib.TriggerType.AutoCast)
+'                                                                      osHandler_GUI.DisplayGUI(DataTypeLib.TriggerType.AutoCast, ptPos)
+'                                                                      osFuncLib_Progress.SetProgBlockData(DataTypeLib.TriggerType.AutoCast)
+'                                                                      ' Launch AutoCast GUI asynchronously
+'                                                                      Return osHandler_GUI.osGui_AutoCast.LaunchAutoCast()
+'                                                                  End Function).Task
+'        Await ProcessResult(acResult)
+'        osFuncLib_InputScan.isActionComplete = True
+'    End Function
+
+'    Private Async Function ProcessResult(acResult As DataTypeLib.ProgResult) As Task
+'        Try
+'            Select Case acResult
+'                Case DataTypeLib.ProgResult.Completed
+'                    If CoreDataLib.isRTC() Then
+'                        CoreDataLib.ProcessProgressEvent(DataTypeLib.ProgMode.AutoCast, DataTypeLib.ProgEvent.DispMsg, "Release To Cast")
+'                        Await CoreDataLib.InputMonSvc.AnticipateInput(DataTypeLib.InputAction.AC_RTC)
+'                        Await Task.Delay(10)
+'                    End If
+'                    Await osHandler_GUI.osGui_AutoCast.Dispatcher.InvokeAsync(Async Function()
+'                                                                                  Await Task.Delay(150)
+'                                                                                  CoreDataLib.ProcessProgressEvent(DataTypeLib.ProgMode.AutoCast, DataTypeLib.ProgEvent.DispMsg, "Casting")
+'                                                                              End Function, DispatcherPriority.ApplicationIdle)
+'                    EngageAutoCast()
+'                Case DataTypeLib.ProgResult.Cancelled
+'                    Await osHandler_GUI.osGui_AutoCast.Dispatcher.InvokeAsync(Async Function()
+'                                                                                  Await Task.Delay(150)
+'                                                                                  CoreDataLib.ProcessProgressEvent(DataTypeLib.ProgMode.AutoCast, DataTypeLib.ProgEvent.DispMsg, "Cancelled")
+'                                                                              End Function, DispatcherPriority.ApplicationIdle)
+'            End Select
+
+'            Await FinalizeAutoCast()
+'        Catch ex As Exception
+'            Debug.WriteLine($"ProcessResult error: {ex}")
+'        End Try
+'    End Function
+
+'    Private Async Function FinalizeAutoCast() As Task
+'        Await Task.Delay(750)
+'        osHandler_GUI.osGui_AutoCast.Dispatcher.Invoke(Sub() osHandler_GUI.osGui_AutoCast.Close())
+'    End Function
+
+'    Private Async Sub HoldInputs(doAsync As Boolean)
+'        Await Task.Delay(1250)
+'        Await osHandler_Input.RestoreInput()
+'    End Sub
+
+'    Private Async Sub ExecClicker(Optional doDbl As Boolean = False)
+'        PerformLeftClk()
+'        If doDbl Then
+'            Await Task.Delay(105)
+'            PerformLeftClk()
+'        End If
+'    End Sub
+
+'    Private Sub PerformLeftClk()
+'        InvokeMouse(&H2UI, 0UI, 0UI, 0UI, IntPtr.Zero)
+'        InvokeMouse(&H4UI, 0UI, 0UI, 0UI, IntPtr.Zero)
+'    End Sub
+
+'    Private Sub LiberateLeftClick()
+'        InvokeMouse(&H4UI, 0UI, 0UI, 0UI, IntPtr.Zero)
+'    End Sub
+
+'End Module
+Public NotInheritable Class osFuncLib_ShowOpts
+
+    Private Shared chkCloseSettings As TaskCompletionSource(Of Boolean)
+
+    Public Shared Async Function ExecuteDispOpts() As Task
+        CoreDataLib.PrepTrigger(TriggerType.ShowPrefs)
+
+        osHandler_GUI.osGui_InputMonitor2.Dispatcher.Invoke(Sub()
+                                                                With osHandler_GUI.osGui_Prefs
+                                                                    .Show()
+                                                                    .Focus()
+                                                                    osPrefs_PrepHandlers()
+                                                                End With
+                                                            End Sub)
 
         Await chkCloseSettings.Task
 
         osFuncLib_InputScan.isActionComplete = True
     End Function
 
-    Private Sub osPrefs_PrepHandlers()
-        chkCloseSettings = New TaskCompletionSource(Of Boolean)
+    Private Shared Sub osPrefs_PrepHandlers()
+        chkCloseSettings = New TaskCompletionSource(Of Boolean)()
+        Dim osGuiPrefs As osPrefs = osHandler_GUI.osGui_Prefs
 
-        With osGui_Prefs
-            RemoveHandler .VisibleChanged, Nothing
-            AddHandler .VisibleChanged, Sub(sender, e)
-                                            If Not .Visible Then
-                                                chkCloseSettings.TrySetResult(True)
-                                            End If
-                                        End Sub
-        End With
+        RemoveHandler osGuiPrefs.VisibleChanged, Nothing
+        AddHandler osGuiPrefs.VisibleChanged, Sub(sender As Object, e As EventArgs)
+                                                  If osGuiPrefs.Visible Then
+                                                      Return
+                                                  End If
+                                                  chkCloseSettings.TrySetResult(True)
+                                              End Sub
     End Sub
 
-    Private Sub ResetStatus()
-        If osFuncLib_InputScan.isActionComplete Then osFuncLib_InputScan.isActionComplete = False
-        osFuncLib_InputScan.SetMonitorState(MonitorStatus.Watching)
-        '  osInputMonitor.InputMonitor_Start()
+    Private Shared Sub ResetStatus()
+        If osFuncLib_InputScan.isActionComplete Then
+            osFuncLib_InputScan.isActionComplete = False
+        End If
+        osFuncLib_InputScan.SetMonitorState(DataTypeLib.MonitorStatus.Watching)
     End Sub
 
-End Module
+End Class
+'Module osFuncLib_ShowOpts
 
-Module osFuncLib_AutoPass
+'    Private chkCloseSettings As TaskCompletionSource(Of Boolean)
 
-    Public Async Sub InvokeAutoPass()
-        SetGameFocus()
+'    Public Async Function ExecuteDispOpts() As Task
+'        PrepTrigger(TriggerType.ShowPrefs)
+
+'        osGui_InputMonitor.Dispatcher.Invoke(Sub()
+'                                                 With osGui_Prefs
+'                                                     .Show()
+'                                                     .Focus()
+'                                                     osPrefs_PrepHandlers()
+'                                                 End With
+'                                             End Sub)
+
+'        Await chkCloseSettings.Task
+
+'        osFuncLib_InputScan.isActionComplete = True
+'    End Function
+
+'    Private Sub osPrefs_PrepHandlers()
+'        chkCloseSettings = New TaskCompletionSource(Of Boolean)
+
+'        With osGui_Prefs
+'            RemoveHandler .VisibleChanged, Nothing
+'            AddHandler .VisibleChanged, Sub(sender, e)
+'                                            If Not .Visible Then
+'                                                chkCloseSettings.TrySetResult(True)
+'                                            End If
+'                                        End Sub
+'        End With
+'    End Sub
+
+'    Private Sub ResetStatus()
+'        If osFuncLib_InputScan.isActionComplete Then osFuncLib_InputScan.isActionComplete = False
+'        osFuncLib_InputScan.SetMonitorState(MonitorStatus.Watching)
+'        '  osInputMonitor.InputMonitor_Start()
+'    End Sub
+
+'End Module
+Public NotInheritable Class osFuncLib_AutoPass
+
+    Public Shared Async Sub InvokeAutoPass()
+        CoreDataLib.SetGameFocus()
         Await Task.Delay(100)
-
         osHandler_Input.InjectAutoPassInputs()
     End Sub
 
-    Public Async Function ExecuteAutoPass() As Task
+    Public Shared Async Function ExecuteAutoPass() As Task
+        Dim acResult As DataTypeLib.ProgResult = DataTypeLib.ProgResult.Completed
 
-        Dim retProgResult As ProgResult = Nothing
+        ' Display GUI and set progress
+        Await osHandler_GUI.osGui_AutoPass.Dispatcher.InvokeAsync(Async Function()
+                                                                      osHandler_GUI.DisplayGUI(DataTypeLib.TriggerType.AutoPass)
+                                                                      osFuncLib_Progress.SetProgBlockData(DataTypeLib.TriggerType.AutoPass)
+                                                                      Await Task.Delay(50)
+                                                                      Await osHandler_GUI.osGui_AutoPass.LaunchAutoPass()
+                                                                  End Function)
 
-        Dim isTask_AutoPass = osGui_AutoPass.
-            Dispatcher.InvokeAsync(Async Function()
-                                       DisplayGUI(TriggerType.AutoPass)
-                                       SetProgBlockData(TriggerType.AutoPass)
-
-                                       Await Task.Delay(50)
-
-                                       retProgResult = Await osGui_AutoPass.LaunchAutoPass()
-                                   End Function)
-
-        Await isTask_AutoPass.Task.Unwrap()
-
-        Await ProcessResult(retProgResult)
+        Await ProcessResult(acResult)
         osFuncLib_InputScan.isActionComplete = True
-
     End Function
 
-    Private Async Function AnticipateLaunchAP() As Task(Of Boolean)
-        Dim chkInput As Boolean = Await InputMonSvc.AnticipateInput(InputAction.AP_Exec)
-
-        If Not chkInput Then
-            SetProgStatus(ProgAction.Abort, TriggerType.AutoPass)
-            ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.DispMsg, "AutoPass Cancelled")
+    Private Shared Async Function AnticipateLaunchAP() As Task(Of Boolean)
+        Dim flag As Boolean = Await CoreDataLib.InputMonSvc.AnticipateInput(DataTypeLib.InputAction.AP_Exec)
+        If Not flag Then
+            osFuncLib_Progress.SetProgStatus(DataTypeLib.ProgAction.Abort, DataTypeLib.TriggerType.AutoPass)
+            CoreDataLib.ProcessProgressEvent(DataTypeLib.ProgMode.AutoPass, DataTypeLib.ProgEvent.DispMsg, "AutoPass Cancelled")
         End If
-
-        Return chkInput
+        Return flag
     End Function
 
-    Private Async Function ProcessResult(acResult As ProgResult) As Task
-
+    Private Shared Async Function ProcessResult(acResult As DataTypeLib.ProgResult) As Task
         Try
             Select Case acResult
-                Case ProgResult.Completed
-                    ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.DispMsg, "Release Shift To AutoPass | Press C To Cancel")
-
-                    Dim apProceed = Await AnticipateLaunchAP()
-
-                    If apProceed Then
-                        ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.DispMsg, "AutoPassing")
+                Case DataTypeLib.ProgResult.Completed
+                    CoreDataLib.ProcessProgressEvent(DataTypeLib.ProgMode.AutoPass, DataTypeLib.ProgEvent.DispMsg, "Release Shift To AutoPass | Press C To Cancel")
+                    If Await AnticipateLaunchAP() Then
+                        CoreDataLib.ProcessProgressEvent(DataTypeLib.ProgMode.AutoPass, DataTypeLib.ProgEvent.DispMsg, "AutoPassing")
                         InvokeAutoPass()
                     Else
-                        SetProgStatus(ProgAction.Abort, TriggerType.AutoPass)
-                        ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.DispMsg, "AutoPass Cancelled")
+                        osFuncLib_Progress.SetProgStatus(DataTypeLib.ProgAction.Abort, DataTypeLib.TriggerType.AutoPass)
+                        CoreDataLib.ProcessProgressEvent(DataTypeLib.ProgMode.AutoPass, DataTypeLib.ProgEvent.DispMsg, "AutoPass Cancelled")
                     End If
-                Case ProgResult.Cancelled
-                    SetProgStatus(ProgAction.Abort, TriggerType.AutoPass)
-                    ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.DispMsg, "AutoPass Cancelled")
+
+                Case DataTypeLib.ProgResult.Cancelled
+                    osFuncLib_Progress.SetProgStatus(DataTypeLib.ProgAction.Abort, DataTypeLib.TriggerType.AutoPass)
+                    CoreDataLib.ProcessProgressEvent(DataTypeLib.ProgMode.AutoPass, DataTypeLib.ProgEvent.DispMsg, "AutoPass Cancelled")
             End Select
 
             Await FinalizeAutoPass()
         Catch ex As Exception
-
         End Try
-
     End Function
 
-    Private Async Function FinalizeAutoPass() As Task
+    Private Shared Async Function FinalizeAutoPass() As Task
         Await Task.Delay(750)
-
-        Await osGui_AutoPass.Dispatcher.InvokeAsync(Async Function()
-                                                        ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.Reset)
-                                                        Await Task.Delay(100)
-                                                        osGui_AutoPass.Close()
-                                                    End Function)
+        Await osHandler_GUI.osGui_AutoPass.Dispatcher.InvokeAsync(Async Function()
+                                                                      CoreDataLib.ProcessProgressEvent(DataTypeLib.ProgMode.AutoPass, DataTypeLib.ProgEvent.Reset)
+                                                                      Await Task.Delay(100)
+                                                                      osHandler_GUI.osGui_AutoPass.Close()
+                                                                  End Function)
     End Function
 
-End Module
+End Class
+'Module osFuncLib_AutoPass
+
+'    Public Async Sub InvokeAutoPass()
+'        SetGameFocus()
+'        Await Task.Delay(100)
+
+'        osHandler_Input.InjectAutoPassInputs()
+'    End Sub
+
+'    Public Async Function ExecuteAutoPass() As Task
+
+'        Dim retProgResult As ProgResult = Nothing
+
+'        Dim isTask_AutoPass = osGui_AutoPass.
+'            Dispatcher.InvokeAsync(Async Function()
+'                                       DisplayGUI(TriggerType.AutoPass)
+'                                       SetProgBlockData(TriggerType.AutoPass)
+
+'                                       Await Task.Delay(50)
+
+'                                       retProgResult = Await osGui_AutoPass.LaunchAutoPass()
+'                                   End Function)
+
+'        Await isTask_AutoPass.Task.Unwrap()
+
+'        Await ProcessResult(retProgResult)
+'        osFuncLib_InputScan.isActionComplete = True
+
+'    End Function
+
+'    Private Async Function AnticipateLaunchAP() As Task(Of Boolean)
+'        Dim chkInput As Boolean = Await InputMonSvc.AnticipateInput(InputAction.AP_Exec)
+
+'        If Not chkInput Then
+'            SetProgStatus(ProgAction.Abort, TriggerType.AutoPass)
+'            ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.DispMsg, "AutoPass Cancelled")
+'        End If
+
+'        Return chkInput
+'    End Function
+
+'    Private Async Function ProcessResult(acResult As ProgResult) As Task
+
+'        Try
+'            Select Case acResult
+'                Case ProgResult.Completed
+'                    ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.DispMsg, "Release Shift To AutoPass | Press C To Cancel")
+
+'                    Dim apProceed = Await AnticipateLaunchAP()
+
+'                    If apProceed Then
+'                        ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.DispMsg, "AutoPassing")
+'                        InvokeAutoPass()
+'                    Else
+'                        SetProgStatus(ProgAction.Abort, TriggerType.AutoPass)
+'                        ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.DispMsg, "AutoPass Cancelled")
+'                    End If
+'                Case ProgResult.Cancelled
+'                    SetProgStatus(ProgAction.Abort, TriggerType.AutoPass)
+'                    ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.DispMsg, "AutoPass Cancelled")
+'            End Select
+
+'            Await FinalizeAutoPass()
+'        Catch ex As Exception
+
+'        End Try
+
+'    End Function
+
+'    Private Async Function FinalizeAutoPass() As Task
+'        Await Task.Delay(750)
+
+'        Await osGui_AutoPass.Dispatcher.InvokeAsync(Async Function()
+'                                                        ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.Reset)
+'                                                        Await Task.Delay(100)
+'                                                        osGui_AutoPass.Close()
+'                                                    End Function)
+'    End Function
+
+'End Module
 
 Module osFuncLib_TrayMenu
 
@@ -792,7 +1217,7 @@ Module osFuncLib_TrayMenu
 
         AddHandler osMenu_Opts.Click, Async Sub()
                                           osFuncLib_InputScan.SetMonitorState(MonitorStatus.InCmd)
-                                          Await ExecuteDispOpts()
+                                          Await osFuncLib_ShowOpts.ExecuteDispOpts()
                                       End Sub
 
         AddHandler osMenuExit.Click, Sub()
@@ -807,10 +1232,11 @@ Module osFuncLib_TrayMenu
         Return osMenuObj
     End Function
 
+
     Public Sub osMenu_Init(objInMon As osInMon)
 
-        osTrayMenu = CreateTrayMenu()
-        PrepTrayMenu(osTrayMenu)
+        CoreDataLib.osTrayMenu = CreateTrayMenu()
+        PrepTrayMenu(CoreDataLib.osTrayMenu)
 
         osIsEnabled = True
 
@@ -819,7 +1245,7 @@ Module osFuncLib_TrayMenu
         With New osFuncData(AddressOf GetEnabledStatus, AddressOf ConfirmStatusChange,
                             AddressOf SetNewStatus, AddressOf UpdateTrayIcon)
 
-            osMenuFuncBinder.BindChecked(osTrayMenu.Items.Item("osMenuEnDis"),
+            osMenuFuncBinder.BindChecked(CoreDataLib.osTrayMenu.Items.Item("osMenuEnDis"),
                                          .osFunc_GetStatus, .osFunc_ApplyStatus,
                                          .osFunc_ConfirmStatus, .osFunc_UpdateIcon)
         End With

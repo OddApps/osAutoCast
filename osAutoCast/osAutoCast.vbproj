@@ -113,6 +113,12 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="osi.Designer.vb">
+      <DependentUpon>osi.vb</DependentUpon>
+    </Compile>
+    <Compile Include="osi.vb">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="osInMon.xaml.vb">
       <DependentUpon>osInMon.xaml</DependentUpon>
     </Compile>
