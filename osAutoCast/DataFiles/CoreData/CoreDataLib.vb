@@ -13,10 +13,12 @@ Public NotInheritable Class CoreDataLib
     Public Shared osTrayIcon As Forms.NotifyIcon
     Public Shared osTrayMenu As Forms.ContextMenuStrip
 
-    Public Shared osAppDataDir As String = Environment.GetFolderPath(CType(26, Environment.SpecialFolder))
+    Public Shared osAppDataDir As String = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData)
+
     Public Shared osRootDir As String = AppDomain.CurrentDomain.BaseDirectory
     Public Shared osPrefDir As String = Path.Combine(osAppDataDir, "osData", "Data")
     Public Shared osPrefFile As String = Path.Combine(osPrefDir, "prefSettings.osps")
+
     Public Shared osPrefIndex As PrefRecordIndex
     Public Shared osPrefStoreData As osPrefStore
     Public Shared isDispPref As Boolean = False
@@ -93,19 +95,25 @@ Public NotInheritable Class CoreDataLib
     End Function
 
     Public Shared Function IsDebugBuild() As Boolean
-        Return True
-        'Dim customAttribute As DebuggableAttribute =
-        '        CType(Attribute.GetCustomAttribute(Assembly.GetExecutingAssembly(), GetType(DebuggableAttribute)), DebuggableAttribute)
-        'Return customAttribute IsNot Nothing AndAlso customAttribute.IsJITTrackingEnabled
+        Dim customAttribute As DebuggableAttribute =
+                CType(Attribute.GetCustomAttribute(Assembly.GetExecutingAssembly(), GetType(DebuggableAttribute)), DebuggableAttribute)
+        Return customAttribute IsNot Nothing AndAlso customAttribute.IsJITTrackingEnabled
     End Function
 
-    Public Shared Function IsDebugBuild(isOld As Boolean) As Boolean
-        Dim attr = CType(Attribute.GetCustomAttribute(
-        Assembly.GetExecutingAssembly(),
-        GetType(DebuggableAttribute)), DebuggableAttribute)
+    'Public Shared Function IsDebugBuild() As Boolean
+    '    Return True
+    '    'Dim customAttribute As DebuggableAttribute =
+    '    '        CType(Attribute.GetCustomAttribute(Assembly.GetExecutingAssembly(), GetType(DebuggableAttribute)), DebuggableAttribute)
+    '    'Return customAttribute IsNot Nothing AndAlso customAttribute.IsJITTrackingEnabled
+    'End Function
 
-        Return attr IsNot Nothing AndAlso attr.IsJITTrackingEnabled
-    End Function
+    'Public Shared Function IsDebugBuild(isOld As Boolean) As Boolean
+    '    Dim attr = CType(Attribute.GetCustomAttribute(
+    '    Assembly.GetExecutingAssembly(),
+    '    GetType(DebuggableAttribute)), DebuggableAttribute)
+
+    '    Return attr IsNot Nothing AndAlso attr.IsJITTrackingEnabled
+    'End Function
 
     Public Shared Function SetGameFocus() As Boolean
         Return DetectGameUI.FocusMTGA(True)
@@ -156,13 +164,9 @@ Public NotInheritable Class CoreDataLib
         If ValidateTrigger(tType) Then
             InputMonSvc.SelectState(MonitorStatus.InCmd)
 
-            ' Dim objTrigger = GetTriggerHandler(tType)
-
-            'Dim objHandlerEvent As Func(Of Task) = If(objTrigger.HandleEvent, Nothing)
-
-            Dim objHandlerEvent = TriggerHandlers.
-                 FirstOrDefault(Function(TriggerHandle) TriggerHandle.HandleAction = tType,
-                                (TriggerAction.None, CType(Nothing, Func(Of Task)))).HandleEvent
+            Dim objHandlerEvent = TriggerHandlers.FirstOrDefault(
+                Function(TriggerHandle) TriggerHandle.HandleAction = tType,
+                    (TriggerAction.None, CType(Nothing, Func(Of Task)))).HandleEvent
 
             If objHandlerEvent IsNot Nothing Then
                 Await objHandlerEvent()
@@ -263,10 +267,11 @@ Public NotInheritable Class CoreDataLib
         End Try
 
         With PrepareProgEvent(osProgElement)
-            .evDispatch.Invoke(Sub()
-                                   .evAction(GenerateProgEventData(pEvent, objProgEventType,
-                                                                   strEventData))
-                               End Sub)
+            .evDispatch.Invoke(
+                Sub()
+                    .evAction(GenerateProgEventData(pEvent, objProgEventType,
+                                                    strEventData))
+                End Sub)
         End With
     End Sub
 

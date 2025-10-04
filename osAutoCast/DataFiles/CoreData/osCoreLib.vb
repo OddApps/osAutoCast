@@ -1309,24 +1309,30 @@ Module osFuncLib_UI
     Public Sub SetRoundedCorners(panel As Panel, radius As Integer)
         Dim path As New GraphicsPath()
 
-        path.StartFigure()
-        path.AddArc(New Rectangle(0, 0, radius, radius), 180, 90)
-        path.AddArc(New Rectangle(panel.Width - radius, 0, radius, radius), 270, 90)
-        path.AddArc(New Rectangle(panel.Width - radius, panel.Height - radius, radius, radius), 0, 90)
-        path.AddArc(New Rectangle(0, panel.Height - radius, radius, radius), 90, 90)
-        path.CloseFigure()
+        With path
+            .StartFigure()
+            .AddArc(New Rectangle(0, 0, radius, radius), 180, 90)
+            .AddArc(New Rectangle(panel.Width - radius, 0, radius, radius), 270, 90)
+            .AddArc(New Rectangle(panel.Width - radius, panel.Height - radius, radius, radius), 0, 90)
+            .AddArc(New Rectangle(0, panel.Height - radius, radius, radius), 90, 90)
+            .CloseFigure()
+        End With
 
         panel.Region = New Region(path)
     End Sub
 
     Private Function GetRoundedRectangle(rect As Rectangle, radius As Integer) As GraphicsPath
         Dim path As New GraphicsPath()
-        path.StartFigure()
-        path.AddArc(rect.X, rect.Y, radius, radius, 180, 90)
-        path.AddArc(rect.Right - radius, rect.Y, radius, radius, 270, 90)
-        path.AddArc(rect.Right - radius, rect.Bottom - radius, radius, radius, 0, 90)
-        path.AddArc(rect.X, rect.Bottom - radius, radius, radius, 90, 90)
-        path.CloseFigure()
+
+        With path
+            .StartFigure()
+            .AddArc(rect.X, rect.Y, radius, radius, 180, 90)
+            .AddArc(rect.Right - radius, rect.Y, radius, radius, 270, 90)
+            .AddArc(rect.Right - radius, rect.Bottom - radius, radius, radius, 0, 90)
+            .AddArc(rect.X, rect.Bottom - radius, radius, radius, 90, 90)
+            .CloseFigure()
+        End With
+
         Return path
     End Function
 
@@ -1379,21 +1385,22 @@ Public Class osMenuFuncBinder
 End Class
 
 Module ControlExtensions
+
     <Extension()>
     Public Function InvokeAsync(ctrl As Control, action As Action) As Task
         Dim tcs As New TaskCompletionSource(Of Object)()
 
         If ctrl.InvokeRequired Then
-            ctrl.BeginInvoke(Sub()
-                                 Try
-                                     action()
-                                     tcs.SetResult(Nothing)
-                                 Catch ex As Exception
-                                     tcs.SetException(ex)
-                                 End Try
-                             End Sub)
+            ctrl.BeginInvoke(
+                Sub()
+                    Try
+                        action()
+                        tcs.SetResult(Nothing)
+                    Catch ex As Exception
+                        tcs.SetException(ex)
+                    End Try
+                End Sub)
         Else
-            ' Already on UI thread
             Try
                 action()
                 tcs.SetResult(Nothing)
@@ -1404,4 +1411,15 @@ Module ControlExtensions
 
         Return tcs.Task
     End Function
+
+    <Extension()>
+    Public Function FirstOrDefault(Of TSource)(source As IEnumerable(Of TSource), predicate As Func(Of TSource, Boolean),
+                                               defaultValue As TSource) As TSource
+        For Each item In source
+            If predicate(item) Then Return item
+        Next
+
+        Return defaultValue
+    End Function
+
 End Module

@@ -32,8 +32,9 @@ Public NotInheritable Class osHandler_GUI
 
     Public Shared Sub PreloadForms(osGuiInputMon As Form, guiInputMon As Window)
         Dim handle As IntPtr = osGui_Prefs.Handle
+
         osGui_AutoPass.BeginPrep()
-        osGui_AutoPass.ApplyTemplate()
+
         osGui_InputMonitor = osGuiInputMon
         osGui_InputMonitor2 = guiInputMon
         osGui_AutoCast.BeginPrep()

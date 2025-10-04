@@ -8,10 +8,6 @@ Imports System.Windows.Threading
 
 Public Module DataTypeLib
 
-    <Runtime.CompilerServices.Extension()>
-    Public Function FirstOrDefault(Of TSource)(source As IEnumerable(Of TSource), predicate As Func(Of TSource, Boolean), defaultValue As TSource) As TSource
-
-    End Function
     Public Enum DetectOpts
         MonitorMouse
         MonitorMouseR
@@ -107,7 +103,6 @@ End Module
 
 Public Class InjectInputData
     Implements IDisposable
-
 
     Private disposedValue As Boolean
 
@@ -332,6 +327,7 @@ Public Class PrefRecordIndex
             pWriter.WriteLine("_PrefCatalog")
         End Using
     End Sub
+
 
     Private Sub SavePrefsToFile()
         Using pWriter As New IO.StreamWriter(CoreDataLib.osPrefFile, False)

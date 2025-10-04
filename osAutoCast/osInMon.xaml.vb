@@ -8,16 +8,15 @@ Public Class osInMon
     Private Async Sub MainWindow_Loaded(sender As Object, e As EventArgs) Handles Me.Loaded
         Await Task.Delay(5)
         osInitialize()
-
     End Sub
 
     Private Sub osInitialize()
         PrepPrefs()
 
-        Dim a As New osInputMonitor
-        Dim b = a.Handle
+        Dim objOsInputMon As New osInputMonitor
+        Dim tmpHandle = objOsInputMon.Handle
 
-        osHandler_GUI.PreloadForms(a, Me)
+        osHandler_GUI.PreloadForms(objOsInputMon, Me)
 
         osMenu_Init(Me)
 
@@ -27,14 +26,11 @@ Public Class osInMon
 
     Private Async Sub InputMonitor_Init(Optional isRestart As Boolean = False)
         If isRestart Then
-            Me.InputMonitor_Prep()
+            InputMonitor_Prep()
         End If
         Await Task.Delay(10)
-        'If osFuncLib_InputScan.isMonitorActive() Then Return
-        'If osFuncLib_InputScan.isMonitorInStartup() Then
-        '    osFuncLib_InputScan.ActivateMonitor()
-        'End If
-        Me.InputMonitor_Start()
+
+        InputMonitor_Start()
     End Sub
 
     Private Sub InitTriggerMonitor()
@@ -45,11 +41,12 @@ Public Class osInMon
         If CoreDataLib.InputMonSvc IsNot Nothing Then
             CoreDataLib.InputMonSvc = Nothing
         End If
+
         CoreDataLib.InputMonSvc = New InputMonitorService()
     End Sub
 
     Public Sub InputMonitor_Start()
-        Me.InitTriggerMonitor()
+        InitTriggerMonitor()
         CoreDataLib.InputMonSvc.LaunchTriggerMonitor()
     End Sub
 
@@ -60,13 +57,12 @@ Public Class osInMon
     End Sub
 
     Private Sub InputMonitor_Prep()
-        ' osFuncLib_InputScan.SetMonitorState(DataTypeLib.MonitorStatus.Starting)
-        Me.InputMonitorAbortSrc = New CancellationTokenSource()
+        InputMonitorAbortSrc = New CancellationTokenSource()
     End Sub
 
     Private Sub InputMonitor_Launch(Optional isRestart As Boolean = False)
-        Me.InputMonitor_Prep()
-        Me.InputMonitor_Init()
+        InputMonitor_Prep()
+        InputMonitor_Init()
     End Sub
 
     Public Sub RestartMonitor()
@@ -74,11 +70,13 @@ Public Class osInMon
     End Sub
 
     Private Sub PrepPrefs()
-        Me.Visibility = Visibility.Hidden
+        Visibility = Visibility.Hidden
         Me.Hide()
-        Using loader As New osPrefLoader(CoreDataLib.osPrefIndex)
-            loader.ProcessPrefIndex(CoreDataLib.osPrefIndex)
+
+        Using osPrefManager As New osPrefLoader(CoreDataLib.osPrefIndex)
+            osPrefManager.ProcessPrefIndex(CoreDataLib.osPrefIndex)
         End Using
+
         osFuncLib_Progress.InitProgColors()
     End Sub
 

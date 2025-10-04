@@ -28,33 +28,26 @@ Public Class InputMonitorService
     }
 
     Private InputMonitorAbortSrc As CancellationTokenSource
+
     Private Shared InputMon_Support As IDisposable
     Private Shared InputMon_Observer As IDisposable
 
-    'Private Shared TriggerCmd As New Subject(Of TriggerAction)
+    Private Shared TriggerCmd As New Subject(Of TriggerAction)()
     Private Shared _MonitorState As DataTypeLib.MonitorStatus
 
     Private Shared ReadOnly TriggerBindings As (TriggerCondition As Func(Of Boolean), TriggerHandler As TriggerAction)() = {
             (Function() CmdBind_AutoCast(), TriggerAction.AutoCast),
             (Function() CmdBind_ShowOpts(), TriggerAction.ShowOpts),
-            (Function() CmdBind_AutoPass(), TriggerAction.AutoPass),
-            (Function() CmdBind_Nothing(), TriggerAction.None)
+            (Function() CmdBind_AutoPass(), TriggerAction.AutoPass)
         }
 
-    'Public Shared Property InputTriggerActions As IObservable(Of TriggerAction)
-    '    Get
-    '        Return TriggerCmd
-    '    End Get
-    '    Set(value As IObservable(Of TriggerAction))
-    '        TriggerCmd = DirectCast(value, Subject(Of TriggerAction))
-    '    End Set
-    'End Property
-
-    Private Shared TriggerCmd As New Subject(Of TriggerAction)()
-    Public Shared ReadOnly Property InputTriggerActions As IObservable(Of TriggerAction)
+    Public Shared Property InputTriggerActions As IObservable(Of TriggerAction)
         Get
             Return TriggerCmd
         End Get
+        Set(value As IObservable(Of TriggerAction))
+            TriggerCmd = value
+        End Set
     End Property
 
     Public Shared Property MonitorState As DataTypeLib.MonitorStatus
@@ -100,10 +93,6 @@ Public Class InputMonitorService
 
     Private Shared Function CmdBind_AutoPass() As Boolean
         Return InputMon_ShiftDown() AndAlso InputMon_MouseDown(True)
-    End Function
-
-    Private Shared Function CmdBind_Nothing() As Boolean
-        Return Not (InputMon_ShiftDown() AndAlso InputMon_MouseDown(True))
     End Function
 
     Private Shared Function CmdBind_ShowOpts() As Boolean
@@ -193,7 +182,7 @@ Public Class InputMonitorService
     End Function
 
     Private Shared Sub ActivateTriggerMonitor()
-        InputMon_Support = Observable.Interval(TimeSpan.FromMilliseconds(100)).
+        InputMon_Observer = Observable.Interval(TimeSpan.FromMilliseconds(100)).
             Select(Function(chkDuration) EvalInputActionInternal()).
             Where(Function(getTrigger) getTrigger <> TriggerAction.None).
             Subscribe(Sub(taskTrigger) TriggerCmd.OnNext(taskTrigger))
@@ -217,6 +206,7 @@ Public Class InputMonitorService
                 Async Sub(objInputAction)
                     If objInputAction <> TriggerAction.None Then
                         SuspendMonitoring()
+
                         Try
                             Await CoreDataLib.ExecuteTrigger(objInputAction)
                         Finally
@@ -230,7 +220,7 @@ Public Class InputMonitorService
         ActivateTriggerMonitor()
 
         SetMonitorState(MonitorStatus.Watching)
-        EstablishTriggerMonitor(InputMon_Observer)
+        EstablishTriggerMonitor(InputMon_Support)
     End Sub
 
     Public Function DetectTrigger(Optional DetectMode As DetectOpts = DetectOpts.MonitorAll) As Boolean

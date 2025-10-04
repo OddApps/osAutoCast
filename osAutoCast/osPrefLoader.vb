@@ -524,6 +524,37 @@ Class osPrefLoader
         Return prefLines.ToList()
     End Function
 
+    Private Function PopulatePrefData2() As PrefRecordIndex
+        Dim prefRecordIndex As New PrefRecordIndex()
+        Dim inCatalog As Boolean = False
+        Dim prefRecordDataList As New List(Of PrefRecordData)()
+        Dim currentType As String = Nothing
+
+        Dim lines As List(Of String) = File.ReadAllLines(CoreDataLib.osPrefFile).ToList()
+
+        For Each line As String In lines.Select(Function(l) l.Trim())
+            If Me.isPrefHeader(line) Then
+                inCatalog = True
+            ElseIf String.Compare(line, "_PrefCatalog", StringComparison.OrdinalIgnoreCase) = 0 Then
+                inCatalog = False
+            ElseIf inCatalog Then
+                If Me.isPrefType(line) Then
+                    currentType = Me.FormatPrefType(line)
+                    prefRecordDataList = New List(Of PrefRecordData)()
+                ElseIf Me.isPrefType(line, True) Then
+                    If Me.VerifyRecordType(currentType, line) Then
+                        prefRecordIndex.CreateRecord(currentType, prefRecordDataList.ToArray())
+                        currentType = Nothing
+                    End If
+                ElseIf Me.isPrefData(currentType, line) Then
+                    prefRecordDataList.Add(New PrefRecordData(line))
+                End If
+            End If
+        Next
+
+        Return prefRecordIndex
+    End Function
+
     Private Function PopulatePrefData() As PrefRecordIndex
 
         Dim pRecIdxObj As New PrefRecordIndex
@@ -560,6 +591,15 @@ Class osPrefLoader
     End Function
 
     Public Sub ProcessPrefIndex(prefRecIdx As PrefRecordIndex)
+
+        For Each pRec As PrefRecord In prefRecIdx.RecIdx
+            For Each pRecData As PrefRecordData In pRec.PrefRecord
+                Dim pi As PropertyInfo = Me.PrefStoreProp(pRec, pRecData)
+                pi.SetValue(CoreDataLib.osPrefStoreData, Me.PrepPref(pRecData, pi.PropertyType), Nothing)
+            Next
+        Next
+        CoreDataLib.osPrefStoreData.GenPrefBinds()
+
         prefRecIdx.RecIdx.
             ForEach(Sub(pRec)
                         For Each pRecData In pRec.PrefRecord
