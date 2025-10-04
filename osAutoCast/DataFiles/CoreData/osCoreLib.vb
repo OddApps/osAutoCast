@@ -5,9 +5,7 @@ Imports System.Reactive.Subjects
 Imports System.Runtime.CompilerServices
 Imports System.Runtime.InteropServices
 Imports System.Windows.Forms
-Imports System.Windows.Forms.Design.AxImporter
 Imports System.Windows.Threading
-Imports OddScripTxX.osMenuFuncBinder
 
 Public NotInheritable Class osFuncLib_InputScan
 

@@ -1,5 +1,5 @@
 ﻿<Global.Microsoft.VisualBasic.CompilerServices.DesignerGenerated()>
-Partial Class osInputMonitor
+Partial Class osInputMonitor2
     Inherits System.Windows.Forms.Form
 
     'Form overrides dispose to clean up the component list.

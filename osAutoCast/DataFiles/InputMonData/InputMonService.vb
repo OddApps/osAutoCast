@@ -30,22 +30,31 @@ Public Class InputMonitorService
     Private InputMonitorAbortSrc As CancellationTokenSource
     Private Shared InputMon_Support As IDisposable
     Private Shared InputMon_Observer As IDisposable
-    Private Shared TriggerCmd As New Subject(Of DataTypeLib.TriggerAction)
+
+    'Private Shared TriggerCmd As New Subject(Of TriggerAction)
     Private Shared _MonitorState As DataTypeLib.MonitorStatus
 
-    Private Shared ReadOnly TriggerBindings As (TriggerCondition As Func(Of Boolean), TriggerHandler As DataTypeLib.TriggerAction)() = {
-            (Function() CmdBind_AutoCast(), DataTypeLib.TriggerAction.AutoCast),
-            (Function() CmdBind_ShowOpts(), DataTypeLib.TriggerAction.ShowOpts),
-            (Function() CmdBind_AutoPass(), DataTypeLib.TriggerAction.AutoPass)
+    Private Shared ReadOnly TriggerBindings As (TriggerCondition As Func(Of Boolean), TriggerHandler As TriggerAction)() = {
+            (Function() CmdBind_AutoCast(), TriggerAction.AutoCast),
+            (Function() CmdBind_ShowOpts(), TriggerAction.ShowOpts),
+            (Function() CmdBind_AutoPass(), TriggerAction.AutoPass),
+            (Function() CmdBind_Nothing(), TriggerAction.None)
         }
 
-    Public Shared Property InputTriggerActions As IObservable(Of DataTypeLib.TriggerAction)
+    'Public Shared Property InputTriggerActions As IObservable(Of TriggerAction)
+    '    Get
+    '        Return TriggerCmd
+    '    End Get
+    '    Set(value As IObservable(Of TriggerAction))
+    '        TriggerCmd = DirectCast(value, Subject(Of TriggerAction))
+    '    End Set
+    'End Property
+
+    Private Shared TriggerCmd As New Subject(Of TriggerAction)()
+    Public Shared ReadOnly Property InputTriggerActions As IObservable(Of TriggerAction)
         Get
             Return TriggerCmd
         End Get
-        Set(value As IObservable(Of DataTypeLib.TriggerAction))
-            TriggerCmd = DirectCast(value, Subject(Of DataTypeLib.TriggerAction))
-        End Set
     End Property
 
     Public Shared Property MonitorState As DataTypeLib.MonitorStatus
@@ -85,13 +94,16 @@ Public Class InputMonitorService
         End If
     End Sub
 
-
     Private Shared Function CmdBind_AutoCast() As Boolean
         Return InputMon_ShiftDown() AndAlso InputMon_MouseDown()
     End Function
 
     Private Shared Function CmdBind_AutoPass() As Boolean
         Return InputMon_ShiftDown() AndAlso InputMon_MouseDown(True)
+    End Function
+
+    Private Shared Function CmdBind_Nothing() As Boolean
+        Return Not (InputMon_ShiftDown() AndAlso InputMon_MouseDown(True))
     End Function
 
     Private Shared Function CmdBind_ShowOpts() As Boolean
@@ -153,42 +165,9 @@ Public Class InputMonitorService
         Return True
     End Function
 
-    Private Shared Async Function InputDetection(inAction As InputAction) As Task(Of Boolean)
-        'Dim chkInput As Boolean
-
-        'Await HoldForAction(inAction)
-
-        'Select Case inputType
-        '    Case TriggerType.AutoCast
-
-        '        While InputMonSvc.DetectTrigger(SelAction(initAction))
-        '            Await Task.Delay(10)
-        '        End While
-        '    Case TriggerType.AutoPass
-        '        If initAction Then
-        '            While InputMonSvc.DetectTrigger(DetectOpts.MonitorMouseR)
-        '                Await Task.Delay(10)
-        '            End While
-
-        '            chkInput = True
-        '        Else
-
-        '            While InputMonSvc.DetectTrigger(DetectOpts.MonitorShift)
-        '                If isAutoPassCancelled() Then
-        '                    chkInput = False
-        '                End If
-        '                Await Task.Delay(10)
-        '            End While
-
-        '            chkInput = True
-        '        End If
-        'End Select
-
-        'Return chkInput
-    End Function
-
     Private Shared Async Function InputDetection(inputType As DataTypeLib.TriggerType, Optional initAction As Boolean = False) As Task(Of Boolean)
         Dim chkInput As Boolean
+
         Select Case inputType
             Case DataTypeLib.TriggerType.AutoCast
                 While CoreDataLib.InputMonSvc.DetectTrigger(SelAction(initAction))
@@ -209,11 +188,12 @@ Public Class InputMonitorService
                     chkInput = True
                 End If
         End Select
+
         Return chkInput
     End Function
 
     Private Shared Sub ActivateTriggerMonitor()
-        InputMon_Observer = Observable.Interval(TimeSpan.FromMilliseconds(100)).
+        InputMon_Support = Observable.Interval(TimeSpan.FromMilliseconds(100)).
             Select(Function(chkDuration) EvalInputActionInternal()).
             Where(Function(getTrigger) getTrigger <> TriggerAction.None).
             Subscribe(Sub(taskTrigger) TriggerCmd.OnNext(taskTrigger))
@@ -233,9 +213,9 @@ Public Class InputMonitorService
     End Sub
 
     Private Shared Sub EstablishTriggerMonitor(ByRef objMonitor As IDisposable)
-        Dim disposable = InputTriggerActions.Subscribe(
+        objMonitor = InputTriggerActions.Subscribe(
                 Async Sub(objInputAction)
-                    If objInputAction <> DataTypeLib.TriggerAction.None Then
+                    If objInputAction <> TriggerAction.None Then
                         SuspendMonitoring()
                         Try
                             Await CoreDataLib.ExecuteTrigger(objInputAction)
@@ -244,14 +224,13 @@ Public Class InputMonitorService
                         End Try
                     End If
                 End Sub)
-        objMonitor = disposable
     End Sub
 
     Private Shared Sub StartTriggerMonitor()
         ActivateTriggerMonitor()
 
         SetMonitorState(MonitorStatus.Watching)
-        EstablishTriggerMonitor(InputMon_Support)
+        EstablishTriggerMonitor(InputMon_Observer)
     End Sub
 
     Public Function DetectTrigger(Optional DetectMode As DetectOpts = DetectOpts.MonitorAll) As Boolean

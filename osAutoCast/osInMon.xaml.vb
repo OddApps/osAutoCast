@@ -14,7 +14,8 @@ Public Class osInMon
     Private Sub osInitialize()
         PrepPrefs()
 
-        Dim a As New osi
+        Dim a As New osInputMonitor
+        Dim b = a.Handle
 
         osHandler_GUI.PreloadForms(a, Me)
 
@@ -29,14 +30,18 @@ Public Class osInMon
             Me.InputMonitor_Prep()
         End If
         Await Task.Delay(10)
-        If osFuncLib_InputScan.isMonitorActive() Then Return
-        If osFuncLib_InputScan.isMonitorInStartup() Then
-            osFuncLib_InputScan.ActivateMonitor()
-        End If
+        'If osFuncLib_InputScan.isMonitorActive() Then Return
+        'If osFuncLib_InputScan.isMonitorInStartup() Then
+        '    osFuncLib_InputScan.ActivateMonitor()
+        'End If
         Me.InputMonitor_Start()
     End Sub
 
     Private Sub InitTriggerMonitor()
+        DoInitTriggerMonitor()
+    End Sub
+
+    Private Shared Sub DoInitTriggerMonitor()
         If CoreDataLib.InputMonSvc IsNot Nothing Then
             CoreDataLib.InputMonSvc = Nothing
         End If
@@ -55,7 +60,7 @@ Public Class osInMon
     End Sub
 
     Private Sub InputMonitor_Prep()
-        osFuncLib_InputScan.SetMonitorState(DataTypeLib.MonitorStatus.Starting)
+        ' osFuncLib_InputScan.SetMonitorState(DataTypeLib.MonitorStatus.Starting)
         Me.InputMonitorAbortSrc = New CancellationTokenSource()
     End Sub
 

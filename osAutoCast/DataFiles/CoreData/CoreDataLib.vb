@@ -28,11 +28,11 @@ Public NotInheritable Class CoreDataLib
     Public Shared objCancelState As CancellationToken
     Public Shared InputMonSvc As InputMonitorService = Nothing
 
-    Public Shared TriggerHandlers As (DataTypeLib.TriggerAction, Func(Of Task))() = {
-            (DataTypeLib.TriggerAction.AutoCast, Function() osFuncLib_AutoCast.ExecuteAutoCast()),
-            (DataTypeLib.TriggerAction.AutoPass, Function() osFuncLib_AutoPass.ExecuteAutoPass()),
-            (DataTypeLib.TriggerAction.ShowOpts, Function() osFuncLib_ShowOpts.ExecuteDispOpts())
-        }
+    Private Shared ReadOnly TriggerHandlers As (HandleAction As TriggerAction, HandleEvent As Func(Of Task))() = {
+        (TriggerAction.AutoCast, Function() osFuncLib_AutoCast.ExecuteAutoCast()),
+        (TriggerAction.AutoPass, Function() osFuncLib_AutoPass.ExecuteAutoPass()),
+        (TriggerAction.ShowOpts, Function() osFuncLib_ShowOpts.ExecuteDispOpts())
+    }
 
     Private Shared ib As Integer = 0
 
@@ -149,6 +149,26 @@ Public NotInheritable Class CoreDataLib
                 Await func()
             End If
         End If
+        ResolveAction()
+    End Function
+
+    Public Async Function ExecuteTrigger2(tType As TriggerAction) As Task
+        If ValidateTrigger(tType) Then
+            InputMonSvc.SelectState(MonitorStatus.InCmd)
+
+            ' Dim objTrigger = GetTriggerHandler(tType)
+
+            'Dim objHandlerEvent As Func(Of Task) = If(objTrigger.HandleEvent, Nothing)
+
+            Dim objHandlerEvent = TriggerHandlers.
+                 FirstOrDefault(Function(TriggerHandle) TriggerHandle.HandleAction = tType,
+                                (TriggerAction.None, CType(Nothing, Func(Of Task)))).HandleEvent
+
+            If objHandlerEvent IsNot Nothing Then
+                Await objHandlerEvent()
+            End If
+        End If
+
         ResolveAction()
     End Function
 
