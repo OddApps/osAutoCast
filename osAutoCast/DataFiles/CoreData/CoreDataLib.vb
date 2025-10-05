@@ -150,13 +150,18 @@ Public NotInheritable Class CoreDataLib
     End Sub
 
     Public Shared Async Function ExecuteTrigger(tType As DataTypeLib.TriggerAction) As Task
-        If ValidateTrigger(CType(tType, DataTypeLib.TriggerType)) Then
-            InputMonSvc.SelectState(DataTypeLib.MonitorStatus.InCmd)
-            Dim func = TriggerHandlers.FirstOrDefault(Function(th) th.Item1 = tType).Item2
-            If func IsNot Nothing Then
-                Await func()
+        If ValidateTrigger(tType) Then
+            InputMonSvc.SelectState(MonitorStatus.InCmd)
+
+            Dim objHandlerEvent = TriggerHandlers.
+                 FirstOrDefault(Function(TriggerHandle) TriggerHandle.HandleAction = tType,
+                                (TriggerAction.None, CType(Nothing, Func(Of Task)))).HandleEvent
+
+            If objHandlerEvent IsNot Nothing Then
+                Await objHandlerEvent()
             End If
         End If
+
         ResolveAction()
     End Function
 
@@ -177,11 +182,12 @@ Public NotInheritable Class CoreDataLib
     End Function
 
     Public Shared Function ValidateTrigger(pType As DataTypeLib.TriggerType) As Boolean
-        If pType = DataTypeLib.TriggerType.ShowPrefs Then
-            Return True
-        ElseIf ChkExecPermission() Then
-            osFuncLib_Progress.SetProgStatus(DataTypeLib.ProgAction.Activate, pType)
+        If pType = TriggerType.ShowPrefs Then Return True
+
+        If ChkExecPermission() Then
+            osFuncLib_Progress.SetProgStatus(ProgAction.Activate, pType)
             StartCancelWatcher(pType)
+
             Return True
         Else
             Return False

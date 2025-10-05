@@ -2,12 +2,13 @@
 Imports System.IO
 Imports System.Reflection
 Imports System.Runtime.InteropServices.ComTypes
+Imports System.Windows.Forms
 
 Public Class osPrefStore
 
     Implements INotifyPropertyChanged
 
-    Public osPrefStoreBindings As Dictionary(Of String, System.Windows.Forms.Binding)
+    Public osPrefStoreBindings As Dictionary(Of String, Binding)
     Private _AutoPass_SafetyTimer As Integer
     Private _AutoCast_Fuse As Integer
     Private _AutoCast_RTC As Boolean
@@ -34,16 +35,16 @@ Public Class osPrefStore
     End Function
 
     Public Sub GenPrefBinds()
-        osPrefStoreBindings = New Dictionary(Of String, System.Windows.Forms.Binding) From {
-            {"acFuse", New System.Windows.Forms.Binding("Text", CoreDataLib.osPrefStoreData, "AutoCast_Fuse", False, Forms.DataSourceUpdateMode.OnPropertyChanged)},
-            {"apSafetyTimer", New System.Windows.Forms.Binding("Text", CoreDataLib.osPrefStoreData, "AutoPass_SafetyTimer", False, Forms.DataSourceUpdateMode.OnPropertyChanged)},
-            {"acRTC", New System.Windows.Forms.Binding("Checked", CoreDataLib.osPrefStoreData, "AutoCast_RTC", False, Forms.DataSourceUpdateMode.OnPropertyChanged)}
+        osPrefStoreBindings = New Dictionary(Of String, Binding) From {
+            {"acFuse", New Binding("Text", CoreDataLib.osPrefStoreData, "AutoCast_Fuse", False, DataSourceUpdateMode.OnPropertyChanged)},
+            {"apSafetyTimer", New Binding("Text", CoreDataLib.osPrefStoreData, "AutoPass_SafetyTimer", False, DataSourceUpdateMode.OnPropertyChanged)},
+            {"acRTC", New Binding("Checked", CoreDataLib.osPrefStoreData, "AutoCast_RTC", False, DataSourceUpdateMode.OnPropertyChanged)}
         }
     End Sub
 
     Public Sub UpdatePrefStore()
         Try
-            For Each pBind As System.Windows.Forms.Binding In osPrefStoreBindings.Values
+            For Each pBind As Binding In osPrefStoreBindings.Values
                 Dim prefStoreData As PrefStoreData = GenPrefObj(pBind)
                 CoreDataLib.osPrefIndex.SavePref(prefStoreData.pType, prefStoreData.pName, Convert.ToString(prefStoreData.pVal))
             Next
@@ -52,13 +53,15 @@ Public Class osPrefStore
         End Try
     End Sub
 
-    Public Function GetBindingValue(pBind As System.Windows.Forms.Binding) As Object
-        Dim propertyInfo As PropertyInfo = pBind.DataSource.GetType().GetProperty(pBind.BindingMemberInfo.BindingField)
+    Public Function GetBindingValue(pBind As Binding) As Object
+        Dim propertyInfo As PropertyInfo = pBind.DataSource.
+            GetType().GetProperty(pBind.BindingMemberInfo.BindingField)
+
         If propertyInfo Is Nothing Then Return Nothing
         Return propertyInfo.GetValue(pBind.DataSource)
     End Function
 
-    Public Function GenPrefObj(pBind As System.Windows.Forms.Binding) As PrefStoreData
+    Public Function GenPrefObj(pBind As Binding) As PrefStoreData
         Dim strArray As String() = pBind.BindingMemberInfo.BindingField.Split("_"c)
         Return New PrefStoreData(strArray(0), strArray(1), GetBindingValue(pBind))
     End Function
@@ -174,10 +177,10 @@ Public Class osPrefStore
         End Set
     End Property
 
-    Public Shared Function GetPrefBinds() As Dictionary(Of String, System.Windows.Forms.Binding)
-        Return New Dictionary(Of String, System.Windows.Forms.Binding) From {
-            {"acFuse", New System.Windows.Forms.Binding("Value", CoreDataLib.osPrefStoreData, "AutoCast_Fuse", False, Forms.DataSourceUpdateMode.OnPropertyChanged)},
-            {"acRTC", New System.Windows.Forms.Binding("Checked", CoreDataLib.osPrefStoreData, "AutoCast_RTC", False, Forms.DataSourceUpdateMode.OnPropertyChanged)}
+    Public Shared Function GetPrefBinds() As Dictionary(Of String, Binding)
+        Return New Dictionary(Of String, Binding) From {
+            {"acFuse", New Binding("Value", CoreDataLib.osPrefStoreData, "AutoCast_Fuse", False, DataSourceUpdateMode.OnPropertyChanged)},
+            {"acRTC", New Binding("Checked", CoreDataLib.osPrefStoreData, "AutoCast_RTC", False, DataSourceUpdateMode.OnPropertyChanged)}
         }
     End Function
 
@@ -225,7 +228,7 @@ End Class
 '        RaiseEvent PropertyChanged(Me, New PropertyChangedEventArgs(propertyName))
 '    End Sub
 
-'    Public osPrefStoreBindings As Dictionary(Of String, System.Windows.Forms.Binding)
+'    Public osPrefStoreBindings As Dictionary(Of String, Binding)
 
 '    'Public Sub GenPrefBinds()
 '    '    osPrefStoreBindings = New Dictionary(Of String, Binding) From {
@@ -247,10 +250,10 @@ End Class
 '    }
 '    End Function
 '    Public Sub GenPrefBinds()
-'        osPrefStoreBindings = New Dictionary(Of String, System.Windows.Forms.Binding) From {
-'        {"acFuse", New System.Windows.Forms.Binding("Text", osPrefStoreData, NameOf(AutoCast_Fuse), False, Forms.DataSourceUpdateMode.OnPropertyChanged)},
-'        {"apSafetyTimer", New System.Windows.Forms.Binding("Text", osPrefStoreData, NameOf(AutoPass_SafetyTimer), False, Forms.DataSourceUpdateMode.OnPropertyChanged)},
-'        {"acRTC", New System.Windows.Forms.Binding("Checked", osPrefStoreData, NameOf(AutoCast_RTC), False, Forms.DataSourceUpdateMode.OnPropertyChanged)}
+'        osPrefStoreBindings = New Dictionary(Of String, Binding) From {
+'        {"acFuse", New Binding("Text", osPrefStoreData, NameOf(AutoCast_Fuse), False, DataSourceUpdateMode.OnPropertyChanged)},
+'        {"apSafetyTimer", New Binding("Text", osPrefStoreData, NameOf(AutoPass_SafetyTimer), False, DataSourceUpdateMode.OnPropertyChanged)},
+'        {"acRTC", New Binding("Checked", osPrefStoreData, NameOf(AutoCast_RTC), False, DataSourceUpdateMode.OnPropertyChanged)}
 '    }
 '    End Sub
 
@@ -262,7 +265,7 @@ End Class
 '        Next
 '    End Sub
 
-'    Public Function GetBindingValue(pBind As System.Windows.Forms.Binding) As Object
+'    Public Function GetBindingValue(pBind As Binding) As Object
 '        Dim prop = pBind.DataSource.GetType().GetProperty(pBind.BindingMemberInfo.BindingField)
 '        If prop IsNot Nothing Then
 '            Return prop.GetValue(pBind.DataSource)
@@ -270,7 +273,7 @@ End Class
 '        Return Nothing
 '    End Function
 
-'    Public Function GenPrefObj(pBind As System.Windows.Forms.Binding) As PrefStoreData
+'    Public Function GenPrefObj(pBind As Binding) As PrefStoreData
 '        Dim pStoreObj = pBind.BindingMemberInfo.BindingField.Split("_")
 
 '        Return New PrefStoreData(pStoreObj(0), pStoreObj(1), GetBindingValue(pBind))
@@ -407,10 +410,10 @@ End Class
 '        End Set
 '    End Property
 
-'    Public Shared Function GetPrefBinds() As Dictionary(Of String, System.Windows.Forms.Binding)
-'        Return New Dictionary(Of String, System.Windows.Forms.Binding) From {
-'            {"acFuse", New System.Windows.Forms.Binding("Value", osPrefStoreData, NameOf(AutoCast_Fuse), False, Forms.DataSourceUpdateMode.OnPropertyChanged)},
-'            {"acRTC", New System.Windows.Forms.Binding("Checked", osPrefStoreData, NameOf(AutoCast_RTC), False, Forms.DataSourceUpdateMode.OnPropertyChanged)}
+'    Public Shared Function GetPrefBinds() As Dictionary(Of String, Binding)
+'        Return New Dictionary(Of String, Binding) From {
+'            {"acFuse", New Binding("Value", osPrefStoreData, NameOf(AutoCast_Fuse), False, DataSourceUpdateMode.OnPropertyChanged)},
+'            {"acRTC", New Binding("Checked", osPrefStoreData, NameOf(AutoCast_RTC), False, DataSourceUpdateMode.OnPropertyChanged)}
 '        }
 '    End Function
 

@@ -184,7 +184,7 @@ Public NotInheritable Class osFuncLib_Progress
     End Function
 
     Public Shared Function IsProgSuccess() As DataTypeLib.ProgStatus
-        Return If(progCurStatus = DataTypeLib.ProgStatus.Success, CType(-1, DataTypeLib.ProgStatus), CType(0, DataTypeLib.ProgStatus))
+        Return progCurStatus = DataTypeLib.ProgStatus.Success
     End Function
 
     Public Shared Sub SetProgStatus(setAction As DataTypeLib.ProgAction, pType As DataTypeLib.TriggerType, Optional progGUI As Form = Nothing)
@@ -258,17 +258,21 @@ Public NotInheritable Class osFuncLib_Progress
     Private Shared Sub SetProgColor(pType As DataTypeLib.TriggerType)
         Select Case pType
             Case DataTypeLib.TriggerType.AutoCast
-                osHandler_GUI.osGui_AutoCast.Dispatcher.Invoke(Sub()
-                                                                   progColorData = FetchProgColor(GetProgState(), True)
-                                                                   ApplyActiveColor(progColorData)
-                                                                   osHandler_GUI.osGui_AutoCast.OddProgBar1.SetProgColor(progColorData)
-                                                               End Sub)
+                osHandler_GUI.osGui_AutoCast.
+                    Dispatcher.Invoke(
+                    Sub()
+                        progColorData = FetchProgColor(GetProgState(), True)
+                        ApplyActiveColor(progColorData)
+                        osHandler_GUI.osGui_AutoCast.OddProgBar1.SetProgColor(progColorData)
+                    End Sub)
             Case DataTypeLib.TriggerType.AutoPass
-                osHandler_GUI.osGui_AutoPass.Dispatcher.Invoke(Sub()
-                                                                   progColorData = FetchProgColor(GetProgState(), True)
-                                                                   ApplyActiveColor(progColorData)
-                                                                   osHandler_GUI.osGui_AutoPass.OddProgBar_AP.SetProgColor(progColorData)
-                                                               End Sub)
+                osHandler_GUI.osGui_AutoPass.
+                    Dispatcher.Invoke(
+                    Sub()
+                        progColorData = FetchProgColor(GetProgState(), True)
+                        ApplyActiveColor(progColorData)
+                        osHandler_GUI.osGui_AutoPass.OddProgBar_AP.SetProgColor(progColorData)
+                    End Sub)
         End Select
     End Sub
 
@@ -697,24 +701,66 @@ Public NotInheritable Class osFuncLib_AutoCast
         End If
     End Sub
 
+    'Public Shared Async Function ExecuteAutoCast() As Task
+    '    Dim acResult As DataTypeLib.ProgResult = DataTypeLib.ProgResult.Completed
+
+    '    Await TaskExtensions.Unwrap(osHandler_GUI.osGui_AutoCast.Dispatcher.InvokeAsync(Of Task)(Async Function()
+    '                                                                                                 If Not osFuncLib_InputScan.FindProgPosition(ptPos) Then
+    '                                                                                                     Return
+    '                                                                                                 End If
+    '                                                                                                 osFuncLib_Progress.SetProgContainer(DataTypeLib.TriggerType.AutoCast)
+    '                                                                                                 osHandler_GUI.DisplayGUI(DataTypeLib.TriggerType.AutoCast, ptPos)
+    '                                                                                                 osFuncLib_Progress.SetProgBlockData(DataTypeLib.TriggerType.AutoCast)
+
+    '                                                                                                 ' Closure variable (compiler-generated in C#)
+    '                                                                                                 Dim closure90 As Object = Nothing
+    '                                                                                                 closure90 = Await osHandler_GUI.osGui_AutoCast.LaunchAutoCast()
+    '                                                                                             End Function).Task)
+
+    '    Await ProcessResult(acResult)
+    '    osFuncLib_InputScan.isActionComplete = True
+    'End Function
+
     Public Shared Async Function ExecuteAutoCast() As Task
         Dim acResult As DataTypeLib.ProgResult = DataTypeLib.ProgResult.Completed
 
-        Await TaskExtensions.Unwrap(osHandler_GUI.osGui_AutoCast.Dispatcher.InvokeAsync(Of Task)(Async Function()
-                                                                                                     If Not osFuncLib_InputScan.FindProgPosition(ptPos) Then
-                                                                                                         Return
-                                                                                                     End If
-                                                                                                     osFuncLib_Progress.SetProgContainer(DataTypeLib.TriggerType.AutoCast)
-                                                                                                     osHandler_GUI.DisplayGUI(DataTypeLib.TriggerType.AutoCast, ptPos)
-                                                                                                     osFuncLib_Progress.SetProgBlockData(DataTypeLib.TriggerType.AutoCast)
+        Dim retProgResult As ProgResult = Nothing
 
-                                                                                                     ' Closure variable (compiler-generated in C#)
-                                                                                                     Dim closure90 As Object = Nothing
-                                                                                                     closure90 = Await osHandler_GUI.osGui_AutoCast.LaunchAutoCast()
-                                                                                                 End Function).Task)
+        Dim isTask_AutoCast = osHandler_GUI.osGui_AutoCast.
+            Dispatcher.InvokeAsync(Async Function()
+                                       If osFuncLib_InputScan.FindProgPosition(ptPos) Then
+                                           osFuncLib_Progress.SetProgContainer(TriggerType.AutoCast)
 
-        Await ProcessResult(acResult)
+                                           osHandler_GUI.DisplayGUI(TriggerType.AutoCast, ptPos)
+                                           osFuncLib_Progress.SetProgBlockData(TriggerType.AutoCast)
+
+                                           retProgResult = Await osHandler_GUI.osGui_AutoCast.LaunchAutoCast(True)
+                                       End If
+                                   End Function)
+
+        Await isTask_AutoCast.Task.Unwrap()
+
+        Await ProcessResult(retProgResult)
+
+        'Await osHandler_GUI.osGui_AutoCast.Dispatcher.InvokeAsync(Of Task)(Async Function()
+        '                                                                       If Not FindProgPos(ptPos) Then
+        '                                                                           Return Task.CompletedTask
+        '                                                                       End If
+        '                                                                       osFuncLib_Progress.SetProgContainer(DataTypeLib.TriggerType.AutoCast)
+        '                                                                       osHandler_GUI.DisplayGUI(DataTypeLib.TriggerType.AutoCast, ptPos)
+        '                                                                       osFuncLib_Progress.SetProgBlockData(DataTypeLib.TriggerType.AutoCast)
+        '                                                                       ' Launch AutoCast GUI asynchronously
+        '                                                                       Return Await osHandler_GUI.osGui_AutoCast.LaunchAutoCast(True)
+        '                                                                   End Function).Task
+        'Await ProcessResult(acResult)
         osFuncLib_InputScan.isActionComplete = True
+    End Function
+
+    <DllImport("user32.dll")>
+    Private Shared Function GetCursorPos(ByRef lpPoint As Point) As Boolean
+    End Function
+    Private Shared Function FindProgPos(ByRef pt As Point) As Boolean
+        Return GetCursorPos(pt)
     End Function
 
     Private Shared Async Function ProcessResult(acResult As DataTypeLib.ProgResult) As Task

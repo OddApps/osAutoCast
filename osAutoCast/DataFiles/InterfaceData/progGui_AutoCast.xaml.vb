@@ -1,5 +1,6 @@
 ﻿Imports System.ComponentModel
 Imports System.Windows.Media
+Imports System.Threading
 
 Public Class progGui_AutoCast
 
@@ -7,6 +8,8 @@ Public Class progGui_AutoCast
     Private pWidth As Integer
 
     Private chkAutoCastResult As TaskCompletionSource(Of Boolean)
+    Private chkAutoCastComplete As Boolean
+
     Private acProgressHandler As EventHandler = Nothing
 
     Private acTimer As Stopwatch
@@ -33,8 +36,99 @@ Public Class progGui_AutoCast
 
         objChkResult = New TaskCompletionSource(Of Boolean)(TaskCreationOptions.
                                                     RunContinuationsAsynchronously)
-        acTimer = Stopwatch.StartNew
+        ' acTimer = Stopwatch.StartNew
     End Sub
+    ' Class-level field so we can remove the handler reliably
+    ' Private acProgressHandler As EventHandler
+
+    'Public Async Function LaunchAutoCast(isNew As Boolean) As Task(Of ProgResult)
+
+    '    Await AutoCast_Prep()
+
+    '    Dim tcs As New TaskCompletionSource(Of Boolean)(TaskCreationOptions.RunContinuationsAsynchronously)
+    '    Dim durationMs As Double = osFuncLib_Progress.ProgDuration
+    '    Dim started As Boolean = False
+    '    Dim startTime As TimeSpan = TimeSpan.Zero
+    '    Dim lastEdge As Integer = -1
+
+    '    ' 1) Subscribe once; compute progress from the rendering clock
+    '    acProgressHandler = Sub(sender As Object, e As EventArgs)
+    '                            Dim re = TryCast(e, System.Windows.Media.RenderingEventArgs)
+    '                            If re Is Nothing Then Exit Sub
+
+    '                            If Not started Then
+    '                                startTime = re.RenderingTime
+    '                                started = True
+    '                            End If
+
+    '                            Dim elapsedMs As Double = (re.RenderingTime - startTime).TotalMilliseconds
+    '                            If elapsedMs < 0 Then elapsedMs = 0
+
+    '                            Dim f As Double = Math.Min(1.0, elapsedMs / durationMs)
+
+    '                            ' Throttle: only update if the filled pixel width changes
+    '                            Dim edge As Integer = CInt(Math.Round(Me.OddProgBar1.ActualWidth * f))
+    '                            If edge <> lastEdge Then
+    '                                lastEdge = edge
+    '                                ' Directly set ProgressFraction; your control will ease & clamp
+    '                                Me.OddProgBar1.ProgressFraction = f
+    '                            End If
+
+    '                            If f >= 1.0 Then
+    '                                RemoveHandler CompositionTarget.Rendering, acProgressHandler
+    '                                tcs.TrySetResult(True) ' completed successfully
+    '                            End If
+    '                        End Sub
+
+    '    AddHandler CompositionTarget.Rendering, acProgressHandler
+
+    '    ' 2) Register cancellation ONCE; no per-frame exceptions
+    '    Using ctr = CoreDataLib.objCancelState.Register(
+    '    Sub()
+    '        RemoveHandler CompositionTarget.Rendering, acProgressHandler
+    '        tcs.TrySetResult(False) ' canceled
+    '    End Sub)
+
+    '        ' 3) Await finish/cancel, then finalize
+    '        Dim ok As Boolean = Await tcs.Task
+    '        TerminateAutoCast(ok)
+
+    '        Dim acResult = Await chkAutoCastResult.Task
+    '        Return AutoCast_HandleResult(acResult)
+    '    End Using
+    'End Function
+
+    Public Async Function LaunchAutoCast(isNew As Boolean) As Task(Of ProgResult)
+
+        Await AutoCast_Prep()
+
+        Dim osProcessProg As New System.Windows.Media.Animation.DoubleAnimation() With {
+            .From = 0.0, .To = 1.0,
+            .Duration = TimeSpan.FromMilliseconds(osFuncLib_Progress.ProgDuration),
+            .FillBehavior = Animation.FillBehavior.Stop
+        }
+
+        AddHandler osProcessProg.Completed, Sub()
+                                                TerminateAutoCast(True)
+                                            End Sub
+
+        ' Start animation (linear). Your ProgressFraction setter applies EaseInOutExpo.
+        Me.OddProgBar1.BeginAnimation(OddLib_ProgressBar.ProgressValueProperty, osProcessProg)
+
+        Using reg As CancellationTokenRegistration = CoreDataLib.
+            objCancelState.Register(
+                Sub()
+                    ' Stop animation and finish as canceled
+                    Me.OddProgBar1.BeginAnimation(OddLib_ProgressBar.ProgressValueProperty, Nothing)
+                    TerminateAutoCast(False)
+                End Sub)
+
+            Dim acResult = Await chkAutoCastResult.Task
+            Return AutoCast_HandleResult(acResult)
+        End Using
+
+    End Function
+
 
     Public Async Function LaunchAutoCast() As Task(Of ProgResult)
 
@@ -65,9 +159,10 @@ Public Class progGui_AutoCast
     End Function
 
     Private Sub TerminateAutoCast(acComplete As Boolean)
-        RemoveHandler CompositionTarget.Rendering, acProgressHandler
+        '  RemoveHandler CompositionTarget.Rendering, acProgressHandler
 
-        acTimer.Stop()
+        ' acTimer.Stop()
+        chkAutoCastComplete = acComplete
         chkAutoCastResult.TrySetResult(acComplete)
     End Sub
 
@@ -101,8 +196,8 @@ Public Class progGui_AutoCast
     Public Sub BeginPrep() Handles Me.Loaded
         Me.OddProgBar1.Background = New SolidColorBrush(System.Windows.Media.Color.FromRgb(57, 57, 57))
 
-        Me.OddProgBar1.BorderThickness = 2
-        Me.OddProgBar1.BorderBrush = New SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 0, 0))
+        ' Me.OddProgBar1.BorderThickness = 2
+        ' Me.OddProgBar1.BorderBrush = New SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 0, 0))
     End Sub
 
     Private Sub SetProgResult(pResult As Boolean, ByRef setProgResult As ProgResult)
