@@ -10,14 +10,16 @@ Public Class osInMon
         osInitialize()
     End Sub
 
+    Private Sub DoAppPrep()
+        PrepPrefs()
+        osHandler_GUI.PreloadForms(Me)
+        osMenu_Init(Me)
+    End Sub
+
     Private Async Sub osInitialize()
         SetLoadText(LoadTextContent.isInit)
 
-        PrepPrefs()
-
-        osHandler_GUI.PreloadForms(Me)
-
-        osMenu_Init(Me)
+        DoAppPrep()
 
         Await Task.Delay(1000)
 
@@ -44,7 +46,7 @@ Public Class osInMon
         Await Task.Delay(500)
 
         Visibility = Visibility.Hidden
-        Me.Hide()
+        Hide()
     End Sub
 
     Private Sub InitTriggerMonitor()

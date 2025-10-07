@@ -19,6 +19,7 @@ Public Class InputMonitorService
     Private Const VK_ALT As Integer = &H12
     Private Const VK_O As Integer = Keys.O
     Private Const VK_C As Integer = Keys.C
+    Private Const VK_M As Integer = Keys.M
 
     Private Shared ReadOnly InputActionIdx As New Dictionary(Of InputAction, DetectOpts) From {
         {InputAction.AC_Start, DetectOpts.MonitorShift},
@@ -37,8 +38,9 @@ Public Class InputMonitorService
 
     Private Shared ReadOnly TriggerBindings As (TriggerCondition As Func(Of Boolean), TriggerHandler As TriggerAction)() = {
             (Function() CmdBind_AutoCast(), TriggerAction.AutoCast),
+            (Function() CmdBind_AutoPass(), TriggerAction.AutoPass),
             (Function() CmdBind_ShowOpts(), TriggerAction.ShowOpts),
-            (Function() CmdBind_AutoPass(), TriggerAction.AutoPass)
+            (Function() CmdBind_ShowMenu(), TriggerAction.ShowMenu)
         }
 
     Public Shared Property InputTriggerActions As IObservable(Of TriggerAction)
@@ -99,6 +101,10 @@ Public Class InputMonitorService
         Return InputMon_ShiftDown() AndAlso InputMon_AltDown() AndAlso InputMon_ODown()
     End Function
 
+    Private Shared Function CmdBind_ShowMenu() As Boolean
+        Return InputMon_ShiftDown() AndAlso InputMon_AltDown() AndAlso InputMon_MDown()
+    End Function
+
     Private Shared Function InputMon_ShiftDown() As Boolean
         Return (GetAsyncKeyState(VK_SHIFT) And &H8000) <> 0
     End Function
@@ -121,6 +127,10 @@ Public Class InputMonitorService
 
     Private Shared Function InputMon_CDown() As Boolean
         Return (GetAsyncKeyState(VK_C) And &H8000) <> 0
+    End Function
+
+    Private Shared Function InputMon_MDown() As Boolean
+        Return (GetAsyncKeyState(VK_M) And &H8000) <> 0
     End Function
 
     Public Shared Function isAutoPassCancelled() As Boolean
@@ -187,8 +197,6 @@ Public Class InputMonitorService
             Where(Function(getTrigger) getTrigger <> TriggerAction.None).
             Subscribe(Sub(taskTrigger) TriggerCmd.OnNext(taskTrigger))
     End Sub
-
-
 
     Private Shared Function EvalInputActionInternal() As TriggerAction
         Return TriggerBindings.

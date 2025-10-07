@@ -128,7 +128,9 @@ Public Class osHandler_Input
     Private Const KEYEVENTF_SCANCODE As UInteger = &H8
 
     Private Shared hookHandle As IntPtr = IntPtr.Zero
-    Private Shared hookProcDelegate As LowLevelMouseProc = AddressOf InvokeInputHook
+
+    Private Shared hookProc_PreventClick As LowLevelMouseProc = AddressOf InvokeInputHook
+    Private Shared hookProc_CloseMenu As LowLevelMouseProc = AddressOf InvokeInputHook
 
     Private Shared messagePumpTask As Task
     Private Shared cancelSource As CancellationTokenSource
@@ -138,7 +140,7 @@ Public Class osHandler_Input
 
         cancelSource = New CancellationTokenSource()
 
-        hookHandle = SetWindowsHookEx(WH_MOUSE_LL, hookProcDelegate, GetModuleHandle(Nothing), 0)
+        hookHandle = SetWindowsHookEx(WH_MOUSE_LL, hookProc_PreventClick, GetModuleHandle(Nothing), 0)
 
         messagePumpTask = Task.Run(Sub() MessagePump(cancelSource.Token))
         Await Task.CompletedTask
@@ -245,4 +247,43 @@ Public Class osHandler_Input
         Await Task.Delay(50)
     End Function
 
+End Class
+
+Public Class ObserveMenuCloseClick
+    Implements Forms.IMessageFilter
+
+    Private ReadOnly _menu As Forms.ContextMenuStrip
+
+    ' Mouse down + non-client mouse down messages
+    Private Const WM_LBUTTONDOWN As Integer = &H201
+    Private Const WM_RBUTTONDOWN As Integer = &H204
+    Private Const WM_MBUTTONDOWN As Integer = &H207
+    Private Const WM_NCLBUTTONDOWN As Integer = &HA1
+    Private Const WM_NCRBUTTONDOWN As Integer = &HA4
+    Private Const WM_NCMBUTTONDOWN As Integer = &HA7
+
+    Public Sub New(menu As Forms.ContextMenuStrip)
+        _menu = menu
+    End Sub
+
+    Public Function PreFilterMessage(ByRef m As Forms.Message) As Boolean Implements Forms.IMessageFilter.PreFilterMessage
+        If _menu Is Nothing OrElse Not _menu.Visible Then
+            Return False
+        End If
+
+        Select Case m.Msg
+            Case WM_LBUTTONDOWN, WM_RBUTTONDOWN, WM_MBUTTONDOWN,
+                 WM_NCLBUTTONDOWN, WM_NCRBUTTONDOWN, WM_NCMBUTTONDOWN
+
+                Dim pos As System.Drawing.Point = Forms.Control.MousePosition ' screen coords
+                ' If click is outside the menu bounds, close it
+                If Not _menu.Bounds.Contains(pos) Then
+                    _menu.Close(Forms.ToolStripDropDownCloseReason.AppClicked)
+                    ' Return False so the click continues to its target
+                    Return False
+                End If
+        End Select
+
+        Return False
+    End Function
 End Class

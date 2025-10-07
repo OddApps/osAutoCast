@@ -70,6 +70,7 @@ Public Module DataTypeLib
         AutoCast
         AutoPass
         ShowOpts
+        ShowMenu
         InputShift
         InputClick
         None
@@ -83,6 +84,7 @@ Public Module DataTypeLib
         AutoCast
         AutoPass
         ShowPrefs
+        ShowMenu
     End Enum
 
     Public Enum InjectType

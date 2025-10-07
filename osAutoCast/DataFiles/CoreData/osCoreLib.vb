@@ -564,6 +564,30 @@ Public NotInheritable Class osFuncLib_ShowOpts
 
 End Class
 
+Public NotInheritable Class osFuncLib_ShowMenu
+
+    Private Shared chkMenuOpen As TaskCompletionSource(Of Boolean)
+
+    Public Shared Async Function DisplayMenuPopup() As Task
+        CoreDataLib.PrepTrigger(TriggerType.ShowMenu)
+
+        chkMenuOpen = New TaskCompletionSource(Of Boolean)()
+
+        osHandler_GUI.osGui_InputMonitor2.Dispatcher.
+            Invoke(Sub()
+                       CoreDataLib.osTrayMenu.AutoClose = True
+                       CoreDataLib.osTrayMenu.Show(Cursor.Position)
+                       osFuncLib_TrayMenu.AttachClkMon()
+                       chkMenuOpen.TrySetResult(True)
+                   End Sub)
+
+        Await chkMenuOpen.Task
+
+        osFuncLib_InputScan.isActionComplete = True
+    End Function
+
+End Class
+
 Public NotInheritable Class osFuncLib_AutoPass
 
     Public Shared Async Sub InvokeAutoPass()
@@ -637,6 +661,26 @@ Module osFuncLib_TrayMenu
     Private osTrayIcon As New NotifyIcon
 
     Private objInputMon As osInMon
+
+    Private chkMenuOpen As TaskCompletionSource(Of Boolean)
+
+    Private MenuCloseClkMon As ObserveMenuCloseClick
+
+    Public Async Function DisplayMenuPopup() As Task
+        CoreDataLib.PrepTrigger(TriggerType.ShowMenu)
+
+        chkMenuOpen = New TaskCompletionSource(Of Boolean)()
+
+        osHandler_GUI.osGui_InputMonitor2.Dispatcher.
+            Invoke(Sub()
+                       CoreDataLib.osTrayMenu.Show(Cursor.Position)
+                       chkMenuOpen.TrySetResult(True)
+                   End Sub)
+
+        Await chkMenuOpen.Task
+
+        osFuncLib_InputScan.isActionComplete = True
+    End Function
 
     Public Function GetEnabledStatus() As Boolean
         Return osIsEnabled
@@ -723,6 +767,8 @@ Module osFuncLib_TrayMenu
                                          osStopApp()
                                      End Sub
 
+        AddHandler osMenuObj.Closed, Sub(sender, e) DetachClkMon()
+
         Return osMenuObj
     End Function
 
@@ -748,6 +794,20 @@ Module osFuncLib_TrayMenu
                                          .osFunc_ConfirmStatus, .osFunc_UpdateIcon)
         End With
 
+    End Sub
+
+    Public Sub AttachClkMon()
+        If MenuCloseClkMon Is Nothing Then
+            MenuCloseClkMon = New ObserveMenuCloseClick(CoreDataLib.osTrayMenu)
+        End If
+
+        Forms.Application.AddMessageFilter(MenuCloseClkMon)
+    End Sub
+
+    Private Sub DetachClkMon()
+        If MenuCloseClkMon IsNot Nothing Then
+            Forms.Application.RemoveMessageFilter(MenuCloseClkMon)
+        End If
     End Sub
 
 End Module
