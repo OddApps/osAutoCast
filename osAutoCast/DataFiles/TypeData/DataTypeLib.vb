@@ -99,6 +99,14 @@ Public Module DataTypeLib
         AP_Exec
     End Enum
 
+    Public Enum LoadTextContent
+        isLoading
+        isInit
+        isStartingSvc
+        isStarting
+        isApplyConfig
+    End Enum
+
 End Module
 
 Public Class InjectInputData

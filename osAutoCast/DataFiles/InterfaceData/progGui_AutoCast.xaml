@@ -6,6 +6,6 @@
         xmlns:local="clr-namespace:osAutoCast"
         mc:Ignorable="d" Height="25" Width="110" ResizeMode="NoResize" WindowStyle="None" ShowInTaskbar="False" Topmost="True">
     <!--<Canvas x:Name="progCanvas" Background="#FF222222" Width="105" Height="22"/>-->
-    <local:OddLib_ProgressBar x:Name="OddProgBar1" Width="110" Height="25" Background="#FF39393B" BorderThickness="2"/>
+    <local:OddLib_ProgressBar x:Name="OddProgBar1" Width="110" Height="25" Background="#FF39393B" BorderThickness="0"/>
 </Window>
 

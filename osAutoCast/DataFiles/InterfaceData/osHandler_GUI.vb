@@ -30,14 +30,17 @@ Public NotInheritable Class osHandler_GUI
         osGui_AutoCast.BeginPrep()
     End Sub
 
-    Public Shared Sub PreloadForms(osGuiInputMon As Form, guiInputMon As Window)
+    Public Shared Sub PreloadForms(guiInputMon As Window)
         Dim handle As IntPtr = osGui_Prefs.Handle
 
-        osGui_AutoPass.BeginPrep()
+        Dim objOsInputMon As New osInputMonitor
+        Dim tmpHandle = objOsInputMon.Handle
 
-        osGui_InputMonitor = osGuiInputMon
+        osGui_InputMonitor = objOsInputMon
         osGui_InputMonitor2 = guiInputMon
+
         osGui_AutoCast.BeginPrep()
+        osGui_AutoPass.BeginPrep()
     End Sub
 
     Public Shared Sub DisplayGUI(guiType As DataTypeLib.TriggerType, Optional ptPosData As System.Drawing.Point = Nothing)
