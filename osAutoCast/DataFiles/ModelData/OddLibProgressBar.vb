@@ -14,27 +14,25 @@ Public Class OddLib_ProgressBar
     Private _pixelWidth As Integer
     Private _pixelHeight As Integer
 
-    Private _progressFraction As Double ' 0..1 (already inverted when Descending)
-    Private _prevEdge As Integer        ' previous fill width in DIPs (rounded to pixel)
-    Private _pendingDraw As Boolean     ' coalesce BeginInvoke calls
+    Private _progChunk As Double
+    Private objEdge_Prev As Integer
+    Private isPendingDraw As Boolean
 
     Private isMsgDisplayed As Boolean = False
 
-    ' NOTE: With delta rendering we don't need these big full-scene drawings anymore.
-    ' Keeping the fields for compatibility, but they are unused now.
     Private ProgGraphic_Full As Drawing = Nothing
     Private _backgroundDrawing As Drawing = Nothing
 
     Private Shared ReadOnly DefaultBg As SolidColorBrush = New SolidColorBrush(Color.FromRgb(57, 57, 57))
 
     Shared Sub New()
-        ' Freeze defaults to avoid per-frame brush realization
         DefaultBg.Freeze()
     End Sub
 
     Public Sub New()
         SnapsToDevicePixels = True
         UseLayoutRounding = True
+
         RenderOptions.SetBitmapScalingMode(Me, BitmapScalingMode.LowQuality)
     End Sub
 
@@ -42,13 +40,9 @@ Public Class OddLib_ProgressBar
 
 #Region "Dependency Properties"
 
-    ' Exposed only for animation; forwards to ProgressFraction
     Public Shared ReadOnly ProgressValueProperty As DependencyProperty =
-    DependencyProperty.Register(
-        "ProgressValue",
-        GetType(Double),
-        GetType(OddLib_ProgressBar),
-        New PropertyMetadata(0.0, AddressOf OnProgressValueChanged))
+        DependencyProperty.Register("ProgressValue", GetType(Double), GetType(OddLib_ProgressBar),
+                                    New PropertyMetadata(0.0, AddressOf OnProgressValueChanged))
 
     Public Property ProgressValue As Double
         Get
@@ -59,10 +53,10 @@ Public Class OddLib_ProgressBar
         End Set
     End Property
 
-    Private Shared Sub OnProgressValueChanged(d As DependencyObject, e As DependencyPropertyChangedEventArgs)
-        Dim pb = DirectCast(d, OddLib_ProgressBar)
-        ' Drive your existing setter (which already eases/clamps/draws)
-        pb.ProgressFraction = CDbl(e.NewValue)
+    Private Shared Sub OnProgressValueChanged(objDependency As DependencyObject, e As DependencyPropertyChangedEventArgs)
+        Dim objOsProgBar = DirectCast(objDependency, OddLib_ProgressBar)
+
+        objOsProgBar.ProgressChunk = CDbl(e.NewValue)
     End Sub
 
 
@@ -79,16 +73,18 @@ Public Class OddLib_ProgressBar
         End Set
     End Property
 
-    Private Shared Sub OnBackgroundChanged(d As DependencyObject, e As DependencyPropertyChangedEventArgs)
-        Dim objOsProg = SetOsProgObj(d)
+    Private Shared Sub OnBackgroundChanged(objDependency As DependencyObject, e As DependencyPropertyChangedEventArgs)
+        Dim objOsProg = SetOsProgObj(objDependency)
         Dim objOsProgFreeze = TryCast(e.NewValue, Freezable)
 
         If ValidateProgFreeze(objOsProgFreeze) Then objOsProgFreeze.Freeze()
-        objOsProg.RebuildBackingBitmap(includeProgress:=True) ' repaint BG + current progress into RTB
+
+        objOsProg.RebuildBackingBitmap(includeProgress:=True)
     End Sub
 
-    Public Shared ReadOnly BorderBrushProperty As DependencyProperty = DependencyProperty.
-        Register("BorderBrush", GetType(Brush), GetType(OddLib_ProgressBar), New FrameworkPropertyMetadata(Brushes.Black))
+    Public Shared ReadOnly BorderBrushProperty As DependencyProperty =
+        DependencyProperty.Register("BorderBrush", GetType(Brush), GetType(OddLib_ProgressBar),
+                                    New FrameworkPropertyMetadata(Brushes.Black))
 
     Public Property BorderBrush As Brush
         Get
@@ -99,8 +95,9 @@ Public Class OddLib_ProgressBar
         End Set
     End Property
 
-    Public Shared ReadOnly BorderThicknessProperty As DependencyProperty = DependencyProperty.
-        Register("BorderThickness", GetType(Double), GetType(OddLib_ProgressBar), New FrameworkPropertyMetadata(0.0))
+    Public Shared ReadOnly BorderThicknessProperty As DependencyProperty =
+        DependencyProperty.Register("BorderThickness", GetType(Double), GetType(OddLib_ProgressBar),
+                                    New FrameworkPropertyMetadata(0.0))
 
     Public Property BorderThickness As Double
         Get
@@ -111,8 +108,9 @@ Public Class OddLib_ProgressBar
         End Set
     End Property
 
-    Public Shared ReadOnly ProgressFlowProperty As DependencyProperty = DependencyProperty.
-        Register(NameOf(ProgressFlow), GetType(ProgFlow), GetType(OddLib_ProgressBar), New PropertyMetadata(ProgFlow.Ascending))
+    Public Shared ReadOnly ProgressFlowProperty As DependencyProperty =
+        DependencyProperty.Register(NameOf(ProgressFlow), GetType(ProgFlow), GetType(OddLib_ProgressBar),
+                                    New PropertyMetadata(ProgFlow.Ascending))
 
     Public Property ProgressFlow As ProgFlow
         Get
@@ -123,8 +121,9 @@ Public Class OddLib_ProgressBar
         End Set
     End Property
 
-    Public Shared ReadOnly IsAutoPassProperty As DependencyProperty = DependencyProperty.
-        Register(NameOf(IsAutoPass), GetType(Boolean), GetType(OddLib_ProgressBar), New PropertyMetadata(False, AddressOf OnIsAutoPassChanged))
+    Public Shared ReadOnly IsAutoPassProperty As DependencyProperty =
+        DependencyProperty.Register(NameOf(IsAutoPass), GetType(Boolean), GetType(OddLib_ProgressBar),
+                                    New PropertyMetadata(False, AddressOf OnIsAutoPassChanged))
 
     Public Property IsAutoPass As Boolean
         Get
@@ -135,14 +134,15 @@ Public Class OddLib_ProgressBar
         End Set
     End Property
 
-    Private Shared Sub OnIsAutoPassChanged(d As DependencyObject, e As DependencyPropertyChangedEventArgs)
-        Dim objOsProg = SetOsProgObj(d)
+    Private Shared Sub OnIsAutoPassChanged(objDependency As DependencyObject, e As DependencyPropertyChangedEventArgs)
+        Dim objOsProg = SetOsProgObj(objDependency)
         objOsProg.ApplyOptionalClip()
     End Sub
 
-    ' Skip tiny redraws that have no visible effect but cost CPU/GPU
-    Public Shared ReadOnly MinDeltaProperty As DependencyProperty = DependencyProperty.
-        Register(NameOf(MinDelta), GetType(Double), GetType(OddLib_ProgressBar), New PropertyMetadata(0.002)) ' ~0.2% of width
+
+    Public Shared ReadOnly MinDeltaProperty As DependencyProperty =
+        DependencyProperty.Register(NameOf(MinDelta), GetType(Double), GetType(OddLib_ProgressBar),
+                                    New PropertyMetadata(0.002))
 
     Public Property MinDelta As Double
         Get
@@ -164,39 +164,33 @@ Public Class OddLib_ProgressBar
         End Get
         Set(value As Brush)
             If value IsNot Nothing Then
-                Dim fr = TryCast(value, Freezable)
-                EstablishProgFreeze(fr)
+                Dim objFreezable = TryCast(value, Freezable)
+                EstablishProgFreeze(objFreezable)
             End If
+
             _activeBrush = value
 
             RebuildBackingBitmap(includeProgress:=True)
         End Set
     End Property
 
-    Private Function BgBrushOrDefault() As Brush
-        Return If(Background, DirectCast(DefaultBg, Brush))
-    End Function
-
 #End Region
 
 #Region "Progress API"
 
-    Public Property ProgressFraction As Double
+    Public Property ProgressChunk As Double
         Get
-            Return _progressFraction
+            Return _progChunk
         End Get
         Set(value As Double)
-            ' Ease + clamp
             Dim pVal = osFuncLib_Progress.EaseInOutExpo(value)
             Dim pClamped = Math.Max(0.0, Math.Min(1.0, pVal))
 
-            ' invert when descending so that "filled width" = ActualWidth * _progressFraction
             If ProgressFlow = ProgFlow.Descending Then
                 pClamped = 1.0 - pClamped
             End If
 
-            ' Skip imperceptible changes
-            If Math.Abs(pClamped - _progressFraction) < Me.MinDelta Then Return
+            If Math.Abs(pClamped - _progChunk) < Me.MinDelta Then Return
 
             With CalcProgEdge(pClamped)
                 If ProgRenderBitmap Is Nothing OrElse _activeBrush Is Nothing Then
@@ -209,70 +203,38 @@ Public Class OddLib_ProgressBar
         End Set
     End Property
 
-    Private Function CalcProgEdge(valClamped As Double) As (valEdge_Old As Integer, valEdge_New As Integer)
-        Dim oldEdge = EdgeFromFraction(_progressFraction)
-        _progressFraction = valClamped
-        Dim newEdge = EdgeFromFraction(_progressFraction)
-
-        Return (valEdge_Old:=oldEdge, valEdge_New:=newEdge)
-    End Function
-
-    Public Sub UpdateProgress(msDuration As Long)
-        Me.ProgressFraction = CalcProgress(msDuration)
-    End Sub
-
-    Private Function CalcProgress(msDuration As Long) As Double
-        Return CDbl(Math.Min(1.0, msDuration * osFuncLib_Progress.ProgInv))
-    End Function
 
 #End Region
 
 #Region "Delta Rendering"
 
-    Private Function EdgeFromFraction(fr As Double) As Integer
-        If ActualWidth <= 0 Then Return 0
-        Return CInt(Math.Round(ActualWidth * fr))
-    End Function
-
     Private Sub RequestDeltaDraw(oldEdge As Integer, newEdge As Integer)
         If oldEdge = newEdge Then Return
 
-        Dim x As Integer, w As Integer
-        Dim paint As Brush
+        Dim objEdgeData As New ProgEdgeData(oldEdge, newEdge,
+                                            _activeBrush, BgBrushOrDefault())
 
-        If newEdge > oldEdge Then
-            ' Growing: paint the new right-side strip with ActiveBrush
-            x = oldEdge
-            w = newEdge - oldEdge
-            paint = _activeBrush
-        Else
-            ' Shrinking: "erase" the right-most strip with background brush
-            x = newEdge
-            w = oldEdge - newEdge
-            paint = BgBrushOrDefault()
-        End If
+        Dim objRect = GenProgRect(objEdgeData.EdgeX, 0, objEdgeData.EdgeW, _pixelHeight)
 
-        Dim rect As New Rect(x, 0, w, _pixelHeight)
-
-        ' Coalesce multiple rapid updates to a single render tick
-        If _pendingDraw Then
-            _prevEdge = newEdge
+        If isPendingDraw Then
+            objEdge_Prev = newEdge
             Return
         End If
-        _pendingDraw = True
-        _prevEdge = newEdge
+
+        isPendingDraw = True
+        objEdge_Prev = newEdge
 
         AllocDispatcher().BeginInvoke(DispatcherPriority.Render,
             New Action(Sub()
                            Try
                                ValidateProgDV()
 
-                               Using dc = ProgRenderSurface.RenderOpen()
-                                   dc.DrawRectangle(paint, Nothing, rect)
+                               Using ProgRenderTarget = ProgRenderSurface.RenderOpen()
+                                   ProgRenderTarget.DrawRectangle(objEdgeData.EdgeBrush, Nothing, objRect)
 
                                    If IsAutoPass Then
                                        With New ProgMsg("Release Shift or Press C To Cancel", TriggerType.AutoPass, Me.IsAutoPass)
-                                           dc.DrawText(.txtComposed, .txtLocation)
+                                           ProgRenderTarget.DrawText(.txtComposed, .txtLocation)
                                        End With
                                    End If
                                End Using
@@ -281,7 +243,7 @@ Public Class OddLib_ProgressBar
 
                                InvalidateVisual()
                            Finally
-                               _pendingDraw = False
+                               isPendingDraw = False
                            End Try
                        End Sub))
     End Sub
@@ -310,12 +272,11 @@ Public Class OddLib_ProgressBar
     Private Sub ResetProgress(Optional apReset As TriggerType = False)
         Dim chkApReset As Boolean = apReset = TriggerType.AutoPass
 
-        _progressFraction = If(chkApReset, 1.0, 0.0)
-        _prevEdge = EdgeFromFraction(_progressFraction)
+        _progChunk = If(chkApReset, 1.0, 0.0)
+        objEdge_Prev = EdgeFromChunk(_progChunk)
         _backgroundDrawing = Nothing
         ProgGraphic_Full = Nothing
 
-        ' Repaint background and current progress into the RTB in one go
         RebuildBackingBitmap(includeProgress:=True)
     End Sub
 
@@ -325,12 +286,12 @@ Public Class OddLib_ProgressBar
         AllocDispatcher().BeginInvoke(DispatcherPriority.Render,
             New Action(Sub()
                            ValidateProgDV()
-                           Using dc = ProgRenderSurface.RenderOpen()
-                               dc.DrawRectangle(_activeBrush, Nothing, New Rect(0, 0, _pixelWidth, _pixelHeight))
+                           Using ProgRenderTarget = ProgRenderSurface.RenderOpen()
+                               ProgRenderTarget.DrawRectangle(_activeBrush, Nothing, New Rect(0, 0, _pixelWidth, _pixelHeight))
                            End Using
                            ProgRenderBitmap.Render(ProgRenderSurface)
-                           _prevEdge = _pixelWidth
-                           _progressFraction = 1.0
+                           objEdge_Prev = _pixelWidth
+                           _progChunk = 1.0
                            InvalidateVisual()
                        End Sub))
     End Sub
@@ -343,13 +304,13 @@ Public Class OddLib_ProgressBar
                            ValidateProgDV()
 
                            Try
-                               Using dc = ProgRenderSurface.RenderOpen()
+                               Using ProgRenderTarget = ProgRenderSurface.RenderOpen()
                                    If isMsgDisplayed Then
-                                       RenderMsgContainer(dc)
+                                       RenderMsgContainer(ProgRenderTarget)
                                    End If
 
                                    With New ProgMsg(txtMsg, pType, Me.IsAutoPass)
-                                       dc.DrawText(.txtComposed, .txtLocation)
+                                       ProgRenderTarget.DrawText(.txtComposed, .txtLocation)
                                    End With
 
                                    isMsgDisplayed = True
@@ -370,13 +331,13 @@ Public Class OddLib_ProgressBar
         AllocDispatcher().BeginInvoke(DispatcherPriority.Render,
             New Action(Sub()
                            ValidateProgDV()
-                           Using dc = ProgRenderSurface.RenderOpen()
-                               ' redraw background (clears any previous text)
-                               dc.DrawRectangle(BgBrushOrDefault(), Nothing, New Rect(0, 0, _pixelWidth, _pixelHeight))
-                               ' also restore the current progress fill on top
-                               Dim curEdge = EdgeFromFraction(_progressFraction)
+                           Using ProgRenderTarget = ProgRenderSurface.RenderOpen()
+
+                               ProgRenderTarget.DrawRectangle(BgBrushOrDefault(), Nothing, New Rect(0, 0, _pixelWidth, _pixelHeight))
+
+                               Dim curEdge = EdgeFromChunk(_progChunk)
                                If curEdge > 0 AndAlso _activeBrush IsNot Nothing Then
-                                   dc.DrawRectangle(_activeBrush, Nothing, New Rect(0, 0, curEdge, _pixelHeight))
+                                   ProgRenderTarget.DrawRectangle(_activeBrush, Nothing, New Rect(0, 0, curEdge, _pixelHeight))
                                End If
                                isMsgDisplayed = False
                            End Using
@@ -395,9 +356,6 @@ Public Class OddLib_ProgressBar
 
 #Region "Rendering Surface / Layout"
 
-    Private Sub ValidateProgDV()
-        If ProgRenderSurface Is Nothing Then ProgRenderSurface = New DrawingVisual()
-    End Sub
 
     Private Sub RebuildBackingBitmap(Optional includeProgress As Boolean = False)
         If _pixelWidth <= 0 OrElse _pixelHeight <= 0 Then
@@ -406,49 +364,48 @@ Public Class OddLib_ProgressBar
         End If
 
         If ProgRenderBitmap Is Nothing OrElse
-           ProgRenderBitmap.PixelWidth <> _pixelWidth OrElse
-           ProgRenderBitmap.PixelHeight <> _pixelHeight Then
+            ProgRenderBitmap.PixelWidth <> _pixelWidth OrElse
+            ProgRenderBitmap.PixelHeight <> _pixelHeight Then
 
             ProgRenderBitmap = New RenderTargetBitmap(_pixelWidth, _pixelHeight, 96, 96, PixelFormats.Pbgra32)
         End If
 
-        Dim curEdge = EdgeFromFraction(_progressFraction)
+        Dim curEdge = EdgeFromChunk(_progChunk)
 
         AllocDispatcher().BeginInvoke(DispatcherPriority.Render,
             New Action(Sub()
                            ValidateProgDV()
-                           Using dc = ProgRenderSurface.RenderOpen()
-                               ' Paint background once
-                               dc.DrawRectangle(BgBrushOrDefault(), Nothing, New Rect(0, 0, _pixelWidth, _pixelHeight))
-                               ' Optionally paint current progress
+                           Using ProgRenderTarget = ProgRenderSurface.RenderOpen()
+
+                               ProgRenderTarget.DrawRectangle(BgBrushOrDefault(), Nothing, New Rect(0, 0, _pixelWidth, _pixelHeight))
+
                                If includeProgress AndAlso _activeBrush IsNot Nothing AndAlso curEdge > 0 Then
-                                   dc.DrawRectangle(_activeBrush, Nothing, New Rect(0, 0, curEdge, _pixelHeight))
+                                   ProgRenderTarget.DrawRectangle(_activeBrush, Nothing, New Rect(0, 0, curEdge, _pixelHeight))
                                End If
                            End Using
                            ProgRenderBitmap.Render(ProgRenderSurface)
-                           _prevEdge = curEdge
+                           objEdge_Prev = curEdge
                            InvalidateVisual()
                        End Sub))
     End Sub
 
-    Protected Overrides Sub OnRender(dc As DrawingContext)
-        MyBase.OnRender(dc)
+    Protected Overrides Sub OnRender(progDC As DrawingContext)
+        MyBase.OnRender(progDC)
 
-        ' NOTE: We do NOT draw the Background here every frame; it's already in the RTB.
-        ' This keeps the per-frame work to a single DrawImage call.
         If ProgRenderBitmap IsNot Nothing Then
-            dc.DrawImage(ProgRenderBitmap, New Rect(0, 0, ActualWidth, ActualHeight))
+            progDC.DrawImage(ProgRenderBitmap, New Rect(0, 0, ActualWidth, ActualHeight))
         Else
-            ' First-time fallback: show a solid background so it doesn't flash transparent
-            dc.DrawRectangle(BgBrushOrDefault(), Nothing, New Rect(0, 0, ActualWidth, ActualHeight))
+
+            progDC.DrawRectangle(BgBrushOrDefault(), Nothing, New Rect(0, 0, ActualWidth, ActualHeight))
         End If
 
-        ' Optional border (cheap if thickness == 0)
         If BorderThickness > 0 AndAlso BorderBrush IsNot Nothing Then
-            Dim p As New Pen(BorderBrush, BorderThickness)
-            Dim fr = TryCast(p, Freezable)
-            If fr IsNot Nothing AndAlso fr.CanFreeze AndAlso Not fr.IsFrozen Then fr.Freeze()
-            dc.DrawRectangle(Nothing, p, New Rect(0.5, 0.5, Math.Max(0, ActualWidth - 1), Math.Max(0, ActualHeight - 1)))
+            Dim objPen = ApplyPen(BorderBrush, BorderThickness)
+            Dim objFreeze = TryCast(objPen, Freezable)
+
+            EstablishProgFreeze(objFreeze)
+
+            progDC.DrawRectangle(Nothing, objPen, New Rect(0.5, 0.5, Math.Max(0, ActualWidth - 1), Math.Max(0, ActualHeight - 1)))
         End If
     End Sub
 
@@ -458,19 +415,10 @@ Public Class OddLib_ProgressBar
         If ActualWidth > 0 AndAlso ActualHeight > 0 Then
             _pixelWidth = Math.Max(1, CInt(Math.Round(ActualWidth)))
             _pixelHeight = Math.Max(1, CInt(Math.Round(ActualHeight)))
+
             ApplyOptionalClip()
 
-            ' Build the backing RTB with current background + progress
             RebuildBackingBitmap(includeProgress:=True)
-        End If
-    End Sub
-
-    Private Sub ApplyOptionalClip()
-        If Me.IsAutoPass Then
-            ' Same rounded container you had before (20px radius)
-            Me.Clip = ApplyProgContainer(Math.Max(0, ActualWidth), Math.Max(0, ActualHeight), 20)
-        Else
-            Me.Clip = Nothing
         End If
     End Sub
 
@@ -479,17 +427,30 @@ Public Class OddLib_ProgressBar
 #Region "Helpers you already had (kept, trimmed to match new pipeline)"
 
     Private Function ApplyProgContainer(width As Double, height As Double, radius As Double) As Geometry
-        Dim figure As New PathFigure With {
+        Dim objPathFigure As New PathFigure With {
             .StartPoint = New Point(0, 0),
             .Segments = GenerateProgContainer(width, height, radius),
             .IsClosed = True
         }
-        Dim geometry As New PathGeometry()
-        geometry.Figures.Add(figure)
-        Return geometry
+
+        Dim objPathGeometry As New PathGeometry()
+        objPathGeometry.Figures.Add(objPathFigure)
+
+        Return objPathGeometry
     End Function
 
     Private Function GenerateProgContainer(width As Double, height As Double, radius As Double) As PathSegmentCollection
+        Return New PathSegmentCollection(
+            {
+                GenSegLine(width, 0),
+                GenSegLine(width, height - radius),
+                GenSegArc(width - radius, height),
+                GenSegLine(radius, height),
+                GenSegArc(0, height - radius)
+            })
+    End Function
+
+    Private Function GenerateProgContainer2(width As Double, height As Double, radius As Double) As PathSegmentCollection
         Return New PathSegmentCollection({
             New LineSegment(New Point(width, 0), True),
             New LineSegment(New Point(width, height - radius), True),
@@ -501,13 +462,76 @@ Public Class OddLib_ProgressBar
         })
     End Function
 
+    Private Function GenSegLine(segW As Double, segH As Double) As LineSegment
+        Return New LineSegment(GenSegPoint(segW, segH), True)
+    End Function
+
+    Private Function GenSegArc(segW As Double, segH As Double, Optional pR As Double = 0) As ArcSegment
+        Return New ArcSegment(GenSegPoint(segW, segH),
+                            GenSegSize(pR), 0, False,
+                            SweepDirection.Clockwise, True)
+    End Function
+
+    Private Function GenSegPoint(pX As Double, pY As Double) As Point
+        Return New Point(pX, pY)
+    End Function
+
+    Private Function GenSegSize(sR As Double) As Size
+        Return New Size(sR, sR)
+    End Function
+
     Public Sub SetProgColor(pColor As Color)
         ActiveBrush = New SolidColorBrush(pColor)
     End Sub
 
     Private Function AllocDispatcher() As Dispatcher
-        ' Keep your existing routing
-        Return If(Not IsAutoPass, osHandler_GUI.osGui_AutoCast.Dispatcher, osHandler_GUI.osGui_AutoPass.Dispatcher)
+        Return If(Not IsAutoPass, osHandler_GUI.osGui_AutoCast.Dispatcher,
+            osHandler_GUI.osGui_AutoPass.Dispatcher)
+    End Function
+
+    Private Sub ApplyOptionalClip()
+        If Me.IsAutoPass Then
+            Me.Clip = ApplyProgContainer(Math.Max(0, ActualWidth), Math.Max(0, ActualHeight), 20)
+        Else
+            Me.Clip = Nothing
+        End If
+    End Sub
+
+    Private Sub ValidateProgDV()
+        If ProgRenderSurface Is Nothing Then ProgRenderSurface = New DrawingVisual()
+    End Sub
+
+    Private Function ApplyPen(brdrBrush As Brush, brdrThick As Double) As Pen
+        Return New Pen(brdrBrush, brdrThick)
+    End Function
+
+    Private Function CalcProgEdge(valClamped As Double) As (valEdge_Old As Integer, valEdge_New As Integer)
+        Dim oldEdge = EdgeFromChunk(_progChunk)
+        _progChunk = valClamped
+        Dim newEdge = EdgeFromChunk(_progChunk)
+
+        Return (valEdge_Old:=oldEdge, valEdge_New:=newEdge)
+    End Function
+
+    Public Sub UpdateProgress(msDuration As Long)
+        Me.ProgressChunk = CalcProgress(msDuration)
+    End Sub
+
+    Private Function CalcProgress(msDuration As Long) As Double
+        Return CDbl(Math.Min(1.0, msDuration * osFuncLib_Progress.ProgInv))
+    End Function
+
+    Private Function EdgeFromChunk(objChunk As Double) As Integer
+        If ActualWidth <= 0 Then Return 0
+        Return CInt(Math.Round(ActualWidth * objChunk))
+    End Function
+
+    Private Function GenProgRect(rX As Double, rY As Double, rW As Double, rH As Double) As Rect
+        Return New Rect(rX, rY, rW, rH)
+    End Function
+
+    Private Function BgBrushOrDefault() As Brush
+        Return If(Background, DirectCast(DefaultBg, Brush))
     End Function
 
     Private Shared Function ValidateProgFreeze(objPF As Freezable) As Boolean

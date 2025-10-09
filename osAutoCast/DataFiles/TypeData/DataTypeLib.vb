@@ -222,25 +222,55 @@ Public Class ProgMsg
 
     Private Function DetermineFontSize(txtMsg As String, isAP As Boolean) As Double
         If isAP Then
-            Select Case txtMsg.Length
-                Case < 30
-                    Return 15
-                Case 34
-                    Return 13.5
-                Case > 40
-                    Return 12
-                Case Else
-                    Return 12
-            End Select
+            Return CalculateFontSize(txtMsg.Length)
         Else
             Return 14
         End If
+    End Function
+
+    Private Function CalculateFontSize(txtLength As Integer) As Double
+        Select Case txtLength
+            Case < 30
+                Return 15
+            Case > 40
+                Return 12
+            Case Else
+                Return 13.5
+        End Select
     End Function
 
     Private Function ComposeTypeFace() As Typeface
         Return New Typeface(New FontFamily("Segoe UI"), FontStyles.Normal,
                             FontWeights.Bold, FontStretches.Normal)
     End Function
+
+End Class
+
+Public Class ProgEdgeData
+
+    Public Property EdgeX As Integer
+    Public Property EdgeW As Integer
+    Public Property EdgeBrush As System.Windows.Media.Brush
+
+    Public Sub New()
+
+    End Sub
+
+    Public Sub New(edgeOld As Integer, edgeNew As Integer, activeBrush As System.Windows.Media.Brush, GetBrush As System.Windows.Media.Brush)
+        If edgeNew > edgeOld Then
+            EdgeX = edgeOld
+            EdgeW = edgeNew - edgeOld
+            EdgeBrush = activeBrush
+        Else
+            EdgeX = edgeNew
+            EdgeW = edgeOld - edgeNew
+            EdgeBrush = GetBrush
+        End If
+    End Sub
+
+    Public Sub New(eX As Integer, eW As Integer, eB As System.Windows.Media.Brush)
+
+    End Sub
 
 End Class
 
