@@ -222,7 +222,16 @@ Public Class ProgMsg
 
     Private Function DetermineFontSize(txtMsg As String, isAP As Boolean) As Double
         If isAP Then
-            Return If(txtMsg.Length > 25, 12, 15)
+            Select Case txtMsg.Length
+                Case < 30
+                    Return 15
+                Case 34
+                    Return 13.5
+                Case > 40
+                    Return 12
+                Case Else
+                    Return 12
+            End Select
         Else
             Return 14
         End If
@@ -441,6 +450,21 @@ Public Class osFuncData
         Me.osFunc_ConfirmStatus = objFunc_ConfirmStatus
         Me.osFunc_ApplyStatus = objFunc_ApplyStatus
         Me.osFunc_UpdateIcon = objFunc_UpdateIcon
+
+    End Sub
+
+End Class
+
+Public Class osMenuFuncData
+
+    Public Property osMenuFunc_GetStatus As Func(Of Boolean)
+    Public Property osMenuFunc_ApplyStatus As Action(Of Boolean)
+
+    Public Sub New(objFunc_GetStatus As Func(Of Boolean),
+                   objFunc_ApplyStatus As Action(Of Boolean))
+
+        Me.osMenuFunc_GetStatus = objFunc_GetStatus
+        Me.osMenuFunc_ApplyStatus = objFunc_ApplyStatus
 
     End Sub
 

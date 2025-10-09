@@ -1,12 +1,11 @@
 ﻿Imports System.ComponentModel
 Imports System.Windows.Media
+Imports System.Threading
 
 Public Class progGui_AutoPass
 
     Private chkAutoPassResult As TaskCompletionSource(Of Boolean)
     Private apProgressHandler As EventHandler = Nothing
-
-    Private apTimer As Stopwatch
 
     ' Private valSafetyTimer As Integer ' = GetSafetyTimer()
     ' Private invST As Double '= 1.0 / valSafetyTimer
@@ -15,55 +14,50 @@ Public Class progGui_AutoPass
     Private pWidth As Integer
 
     Private Async Function AutoPass_Prep() As Task
-        CoreDataLib.ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.Reset)
+        ' CoreDataLib.ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.Reset)
         CoreDataLib.ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.DispMsg, "Release Mouse To Begin")
 
         Await CoreDataLib.InputMonSvc.AnticipateInput(InputAction.AP_Start)
-
-        ' CoreDataLib.ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.Reset)
-
-        '  valSafetyTimer = GetSafetyTimer()
-        '  invST = 1.0 / valSafetyTimer
-
         Await Task.Delay(100)
+
+        CoreDataLib.ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.ClrMsg)
 
         InitiateAutoPass(chkAutoPassResult)
     End Function
 
     Private Sub InitiateAutoPass(ByRef objChkResult As TaskCompletionSource(Of Boolean))
         If objChkResult IsNot Nothing Then objChkResult = Nothing
-        If apTimer IsNot Nothing Then apTimer = Nothing
 
         objChkResult = New TaskCompletionSource(Of Boolean)(TaskCreationOptions.
                                                     RunContinuationsAsynchronously)
-        apTimer = Stopwatch.StartNew
     End Sub
 
     Public Async Function LaunchAutoPass() As Task(Of ProgResult)
 
         Await AutoPass_Prep()
 
-        apProgressHandler = Sub(sender As Object, e As EventArgs)
-                                Try
-                                    CoreDataLib.objCancelState.ThrowIfCancellationRequested()
+        Dim apProgRender As New Animation.DoubleAnimation() With {
+            .From = 0.0, .To = 1.0,
+            .Duration = TimeSpan.FromMilliseconds(osFuncLib_Progress.ProgDuration),
+            .FillBehavior = Animation.FillBehavior.Stop
+        }
 
-                                    Me.OddProgBar_AP.ProgressFraction = CalcProgress(apTimer.ElapsedMilliseconds, osFuncLib_Progress.ProgInv)
-                                    ' Me.OddProgBar_AP.UpdateProgress(apTimer.ElapsedMilliseconds)
+        AddHandler apProgRender.Completed, Sub() TerminateAutoPass(True)
 
-                                    If apTimer.ElapsedMilliseconds >= osFuncLib_Progress.ProgDuration Then
-                                        TerminateAutoPass(True)
-                                    End If
+        Me.OddProgBar_AP.BeginAnimation(OddLib_ProgressBar.ProgressValueProperty, apProgRender)
 
-                                Catch ex As OperationCanceledException
-                                    TerminateAutoPass(False)
-                                End Try
-                            End Sub
+        Using CancelStateReg As CancellationTokenRegistration = CoreDataLib.
+            objCancelState.Register(
+                Sub()
+                    Me.OddProgBar_AP.BeginAnimation(OddLib_ProgressBar.ProgressValueProperty, Nothing)
+                    TerminateAutoPass(False)
+                End Sub)
 
-        AddHandler CompositionTarget.Rendering, apProgressHandler
-
-        Dim acResult = Await chkAutoPassResult.Task
-        Return AutoPass_HandleResult(acResult)
+            Dim apResult = Await chkAutoPassResult.Task
+            Return AutoPass_HandleResult(apResult)
+        End Using
     End Function
+
 
     Private Function AutoPass_HandleResult(apComplete As Boolean) As ProgResult
 
@@ -79,6 +73,7 @@ Public Class progGui_AutoPass
         End If
 
         CoreDataLib.ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.MaxFill)
+        CoreDataLib.ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.DispMsg, "Release Shift To AutoPass | Press C To Cancel")
 
         Return retProgResult
 
@@ -103,9 +98,6 @@ Public Class progGui_AutoPass
     End Function
 
     Private Sub TerminateAutoPass(apComplete As Boolean)
-        RemoveHandler CompositionTarget.Rendering, apProgressHandler
-
-        apTimer.Stop()
         chkAutoPassResult.TrySetResult(apComplete)
     End Sub
 

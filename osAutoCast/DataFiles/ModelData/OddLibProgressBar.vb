@@ -269,9 +269,16 @@ Public Class OddLib_ProgressBar
 
                                Using dc = ProgRenderSurface.RenderOpen()
                                    dc.DrawRectangle(paint, Nothing, rect)
+
+                                   If IsAutoPass Then
+                                       With New ProgMsg("Release Shift or Press C To Cancel", TriggerType.AutoPass, Me.IsAutoPass)
+                                           dc.DrawText(.txtComposed, .txtLocation)
+                                       End With
+                                   End If
                                End Using
 
                                ProgRenderBitmap.Render(ProgRenderSurface)
+
                                InvalidateVisual()
                            Finally
                                _pendingDraw = False
@@ -334,24 +341,25 @@ Public Class OddLib_ProgressBar
         AllocDispatcher().BeginInvoke(DispatcherPriority.Render,
             New Action(Sub()
                            ValidateProgDV()
+
                            Try
                                Using dc = ProgRenderSurface.RenderOpen()
                                    If isMsgDisplayed Then
-                                       ' draw container (overwrite previous text area)
                                        RenderMsgContainer(dc)
                                    End If
 
                                    With New ProgMsg(txtMsg, pType, Me.IsAutoPass)
                                        dc.DrawText(.txtComposed, .txtLocation)
                                    End With
+
                                    isMsgDisplayed = True
                                End Using
+
                                ProgRenderBitmap.Render(ProgRenderSurface)
                                InvalidateVisual()
                            Catch ex As Exception
 
                            End Try
-
                        End Sub))
 
         osFuncLib_Progress.progShowMsg = False

@@ -30,19 +30,19 @@ Public Class progGui_AutoCast
                                                     RunContinuationsAsynchronously)
     End Sub
 
-    Public Async Function LaunchAutoCast(isNew As Boolean) As Task(Of ProgResult)
+    Public Async Function LaunchAutoCast() As Task(Of ProgResult)
 
         Await AutoCast_Prep()
 
-        Dim osProcessProg As New Animation.DoubleAnimation() With {
+        Dim acProgRender As New Animation.DoubleAnimation() With {
             .From = 0.0, .To = 1.0,
             .Duration = TimeSpan.FromMilliseconds(osFuncLib_Progress.ProgDuration),
             .FillBehavior = Animation.FillBehavior.Stop
         }
 
-        AddHandler osProcessProg.Completed, Sub() TerminateAutoCast(True)
+        AddHandler acProgRender.Completed, Sub() TerminateAutoCast(True)
 
-        Me.OddProgBar1.BeginAnimation(OddLib_ProgressBar.ProgressValueProperty, osProcessProg)
+        Me.OddProgBar1.BeginAnimation(OddLib_ProgressBar.ProgressValueProperty, acProgRender)
 
         Using CancelStateReg As CancellationTokenRegistration = CoreDataLib.
             objCancelState.Register(
@@ -78,9 +78,6 @@ Public Class progGui_AutoCast
 
     Public Sub BeginPrep() Handles Me.Loaded
         Me.OddProgBar1.Background = New SolidColorBrush(System.Windows.Media.Color.FromRgb(57, 57, 57))
-
-        ' Me.OddProgBar1.BorderThickness = 2
-        ' Me.OddProgBar1.BorderBrush = New SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 0, 0))
     End Sub
 
     Private Sub SetProgResult(pResult As Boolean, ByRef setProgResult As ProgResult)

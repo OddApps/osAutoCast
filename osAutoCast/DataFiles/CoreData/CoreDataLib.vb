@@ -13,6 +13,13 @@ Public NotInheritable Class CoreDataLib
     Public Shared osTrayIcon As Forms.NotifyIcon
     Public Shared osTrayMenu As Forms.ContextMenuStrip
 
+    Public Shared osPopupMenu As System.Windows.Controls.ContextMenu
+
+    Public Shared dirProgFiles As String = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles)
+    Public Shared dirMtga As String = Path.Combine(dirProgFiles, "Wizards of the Coast", "MTGA",
+                                                   "MTGALauncher")
+    Public Shared dirMtgaExe As String = Path.Combine(dirMtga, "MTGALauncher.exe")
+
     Public Shared osAppDataDir As String = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData)
 
     Public Shared osRootDir As String = AppDomain.CurrentDomain.BaseDirectory
@@ -34,7 +41,7 @@ Public NotInheritable Class CoreDataLib
         (TriggerAction.AutoCast, Function() osFuncLib_AutoCast.ExecuteAutoCast()),
         (TriggerAction.AutoPass, Function() osFuncLib_AutoPass.ExecuteAutoPass()),
         (TriggerAction.ShowOpts, Function() osFuncLib_ShowOpts.ExecuteDispOpts()),
-        (TriggerAction.ShowMenu, Function() osFuncLib_ShowMenu.DisplayMenuPopup())
+        (TriggerAction.ShowMenu, Function() osFuncLib_TrayMenu.DisplayMenuPopup())
     }
 
     Private Shared ib As Integer = 0
@@ -174,12 +181,16 @@ Public NotInheritable Class CoreDataLib
         While Not cts.Token.IsCancellationRequested
             If pType = TriggerType.AutoCast Then
                 If Not InputMonSvc.DetectTrigger(DetectOpts.MonitorMouse) Then
-                    cts.Cancel()
+                    Await osHandler_GUI.osGui_AutoCast.Dispatcher.InvokeAsync(Sub()
+                                                                                  cts.Cancel()
+                                                                              End Sub)
                     Exit While
                 End If
             ElseIf pType = TriggerType.AutoPass AndAlso
                        Not InputMonSvc.DetectTrigger(DetectOpts.MonitorShift) Then
-                cts.Cancel()
+                Await osHandler_GUI.osGui_AutoPass.Dispatcher.InvokeAsync(Sub()
+                                                                              cts.Cancel()
+                                                                          End Sub)
                 Exit While
             End If
             Await Task.Delay(5)

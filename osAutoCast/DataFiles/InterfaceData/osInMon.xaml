@@ -26,10 +26,8 @@
                            FontSize="24"
                            FontWeight="Bold"
                            TextAlignment="Center"
-                           HorizontalAlignment="Center"
                            Margin="0,0,0,2" Padding="0,2,0,4"
-                           local:TextBlockExtensions.CharacterSpacing="2" Height="34" ScrollViewer.VerticalScrollBarVisibility="Disabled" Width="{Binding ActualWidth, ElementName=LoadContentContainer, Mode=OneWay}" UseLayoutRounding="True">
-                </TextBlock>
+                           Height="34" ScrollViewer.VerticalScrollBarVisibility="Disabled" UseLayoutRounding="True"/>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0" Height="26">
                     <TextBlock x:Name="Dot1" FontSize="32" FontWeight="Bold" Opacity="0.25" Margin="1,0" Padding="1,2,1,0" VerticalAlignment="Bottom" Height="44">
                         <Run BaselineAlignment="Center" FontSize="32">•</Run>

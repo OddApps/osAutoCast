@@ -6,7 +6,11 @@ Imports System.Runtime.CompilerServices
 Imports System.Runtime.InteropServices
 Imports System.Windows.Forms
 Imports System.Windows.Threading
-
+Imports System.Diagnostics
+Imports System.Text
+Imports System.Globalization
+Imports osBinder = System.Windows.Data
+Imports osControls = System.Windows.Controls
 
 Public NotInheritable Class osFuncLib_InputScan
 
@@ -409,26 +413,6 @@ Public NotInheritable Class osFuncLib_AutoCast
         End If
     End Sub
 
-    'Public Shared Async Function ExecuteAutoCast() As Task
-    '    Dim acResult As ProgResult = ProgResult.Completed
-
-    '    Await TaskExtensions.Unwrap(osHandler_GUI.osGui_AutoCast.Dispatcher.InvokeAsync(Of Task)(Async Function()
-    '                                                                                                 If Not osFuncLib_InputScan.FindProgPosition(ptPos) Then
-    '                                                                                                     Return
-    '                                                                                                 End If
-    '                                                                                                 osFuncLib_Progress.SetProgContainer(TriggerType.AutoCast)
-    '                                                                                                 osHandler_GUI.DisplayGUI(TriggerType.AutoCast, ptPos)
-    '                                                                                                 osFuncLib_Progress.SetProgBlockData(TriggerType.AutoCast)
-
-    '                                                                                                 ' Closure variable (compiler-generated in C#)
-    '                                                                                                 Dim closure90 As Object = Nothing
-    '                                                                                                 closure90 = Await osHandler_GUI.osGui_AutoCast.LaunchAutoCast()
-    '                                                                                             End Function).Task)
-
-    '    Await ProcessResult(acResult)
-    '    osFuncLib_InputScan.isActionComplete = True
-    'End Function
-
     Public Shared Async Function ExecuteAutoCast() As Task
         Dim acResult As ProgResult = ProgResult.Completed
 
@@ -442,7 +426,7 @@ Public NotInheritable Class osFuncLib_AutoCast
                                            osHandler_GUI.DisplayGUI(TriggerType.AutoCast, ptPos)
                                            osFuncLib_Progress.SetProgBlockData(TriggerType.AutoCast)
 
-                                           retProgResult = Await osHandler_GUI.osGui_AutoCast.LaunchAutoCast(True)
+                                           retProgResult = Await osHandler_GUI.osGui_AutoCast.LaunchAutoCast()
                                        End If
                                    End Function)
 
@@ -450,13 +434,6 @@ Public NotInheritable Class osFuncLib_AutoCast
 
         Await ProcessResult(retProgResult)
         osFuncLib_InputScan.isActionComplete = True
-    End Function
-
-    <DllImport("user32.dll")>
-    Private Shared Function GetCursorPos(ByRef lpPoint As Point) As Boolean
-    End Function
-    Private Shared Function FindProgPos(ByRef pt As Point) As Boolean
-        Return GetCursorPos(pt)
     End Function
 
     Private Shared Async Function ProcessResult(acResult As ProgResult) As Task
@@ -564,30 +541,6 @@ Public NotInheritable Class osFuncLib_ShowOpts
 
 End Class
 
-Public NotInheritable Class osFuncLib_ShowMenu
-
-    Private Shared chkMenuOpen As TaskCompletionSource(Of Boolean)
-
-    Public Shared Async Function DisplayMenuPopup() As Task
-        CoreDataLib.PrepTrigger(TriggerType.ShowMenu)
-
-        chkMenuOpen = New TaskCompletionSource(Of Boolean)()
-
-        osHandler_GUI.osGui_InputMonitor2.Dispatcher.
-            Invoke(Sub()
-                       CoreDataLib.osTrayMenu.AutoClose = True
-                       CoreDataLib.osTrayMenu.Show(Cursor.Position)
-                       osFuncLib_TrayMenu.AttachClkMon()
-                       chkMenuOpen.TrySetResult(True)
-                   End Sub)
-
-        Await chkMenuOpen.Task
-
-        osFuncLib_InputScan.isActionComplete = True
-    End Function
-
-End Class
-
 Public NotInheritable Class osFuncLib_AutoPass
 
     Public Shared Async Sub InvokeAutoPass()
@@ -597,17 +550,22 @@ Public NotInheritable Class osFuncLib_AutoPass
     End Sub
 
     Public Shared Async Function ExecuteAutoPass() As Task
-        Dim acResult As ProgResult = ProgResult.Completed
+        Dim apResult As ProgResult = ProgResult.Completed
 
-        ' Display GUI and set progress
-        Await osHandler_GUI.osGui_AutoPass.Dispatcher.InvokeAsync(Async Function()
-                                                                      osHandler_GUI.DisplayGUI(TriggerType.AutoPass)
-                                                                      osFuncLib_Progress.SetProgBlockData(TriggerType.AutoPass)
-                                                                      Await Task.Delay(50)
-                                                                      Await osHandler_GUI.osGui_AutoPass.LaunchAutoPass()
-                                                                  End Function)
+        Dim retProgResult As ProgResult = Nothing
 
-        Await ProcessResult(acResult)
+        Dim isTask_AutoPass = osHandler_GUI.osGui_AutoPass.
+            Dispatcher.InvokeAsync(Async Function()
+                                       osHandler_GUI.DisplayGUI(TriggerType.AutoPass)
+                                       osFuncLib_Progress.SetProgBlockData(TriggerType.AutoPass)
+                                       Await Task.Delay(50)
+
+                                       retProgResult = Await osHandler_GUI.osGui_AutoPass.LaunchAutoPass()
+                                   End Function)
+
+        Await isTask_AutoPass.Task.Unwrap()
+
+        Await ProcessResult(retProgResult)
         osFuncLib_InputScan.isActionComplete = True
     End Function
 
@@ -648,17 +606,32 @@ Public NotInheritable Class osFuncLib_AutoPass
         Await osHandler_GUI.osGui_AutoPass.Dispatcher.InvokeAsync(Async Function()
                                                                       CoreDataLib.ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.Reset)
                                                                       Await Task.Delay(100)
+                                                                      CoreDataLib.ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.Reset)
                                                                       osHandler_GUI.osGui_AutoPass.Close()
                                                                   End Function)
     End Function
 
 End Class
 
+Public Class MenuHostWindow
+    Inherits Window
+    Public Sub New()
+        WindowStyle = WindowStyle.None
+        AllowsTransparency = True
+        ShowInTaskbar = False
+        Opacity = 0.0
+        Width = 1
+        Height = 1
+        Topmost = True
+    End Sub
+End Class
+
 Module osFuncLib_TrayMenu
 
     Private Property osIsEnabled As Boolean
 
-    Private osTrayIcon As New NotifyIcon
+    'Private osTrayIcon As New NotifyIcon
+    'Private osTrayMenu As ContextMenuStrip
 
     Private objInputMon As osInMon
 
@@ -666,21 +639,48 @@ Module osFuncLib_TrayMenu
 
     Private MenuCloseClkMon As ObserveMenuCloseClick
 
+    Private objMenuHost As MenuHostWindow
+
     Public Async Function DisplayMenuPopup() As Task
         CoreDataLib.PrepTrigger(TriggerType.ShowMenu)
 
-        chkMenuOpen = New TaskCompletionSource(Of Boolean)()
+        Dim objPopupMenu = CoreDataLib.osPopupMenu
 
-        osHandler_GUI.osGui_InputMonitor2.Dispatcher.
-            Invoke(Sub()
-                       CoreDataLib.osTrayMenu.Show(Cursor.Position)
-                       chkMenuOpen.TrySetResult(True)
-                   End Sub)
+        Await Application.Current.
+            Dispatcher.InvokeAsync(
+            Sub()
+                GenMenuHost()
 
-        Await chkMenuOpen.Task
+                objPopupMenu.PlacementTarget = objMenuHost
+                objPopupMenu.Placement = Primitives.PlacementMode.MousePoint
+
+                objPopupMenu.IsOpen = True
+            End Sub)
 
         osFuncLib_InputScan.isActionComplete = True
     End Function
+
+    Private Sub CloseMenuHost()
+        objMenuHost.Close()
+        objMenuHost = Nothing
+    End Sub
+
+    Private Sub GenMenuHost()
+        If objMenuHost IsNot Nothing Then
+            objMenuHost = Nothing
+        End If
+
+        objMenuHost = New MenuHostWindow()
+
+        With objMenuHost
+            Dim p = Control.MousePosition
+            .Left = p.X
+            .Top = p.Y
+
+            .Show()
+            .Activate()
+        End With
+    End Sub
 
     Public Function GetEnabledStatus() As Boolean
         Return osIsEnabled
@@ -709,17 +709,35 @@ Module osFuncLib_TrayMenu
         End If
     End Function
 
+    Public Sub VerifyStatusChange(setStatus As Boolean)
+        Dim result = ConfirmStatusChange(setStatus)
+        If result = UpdateStatus.CancelUpdate Then Return
+
+        SetNewStatus(setStatus)
+    End Sub
+
     Private Sub SetNewStatus(setStatus As Boolean)
         osIsEnabled = setStatus
     End Sub
 
     Private Sub UpdateTrayIcon(chkStatus As Boolean)
-        osTrayIcon.Icon = If(chkStatus, My.Resources.osIcon,
+        CoreDataLib.osTrayIcon.Icon = If(chkStatus, My.Resources.osIcon,
             My.Resources.osIcon_Disabled)
     End Sub
 
+    Private Sub UpdateTrayText(isEnabled As Boolean)
+        CoreDataLib.osTrayIcon.Text = If(isEnabled, "OddMTGA | Enabled", "OddMTGA | Disabled")
+    End Sub
+
+    Public Sub UpdateTray(isEnabled As Boolean)
+        UpdateTrayIcon(isEnabled)
+        UpdateTrayText(isEnabled)
+
+
+    End Sub
+
     Private Sub PrepTrayMenu(objOsMenu As ContextMenuStrip)
-        With osTrayIcon
+        With CoreDataLib.osTrayIcon
             .Icon = My.Resources.osIcon
             .Text = "OddMTGA | Enabled"
             .Visible = True
@@ -728,70 +746,182 @@ Module osFuncLib_TrayMenu
         End With
     End Sub
 
+    Private Sub PrepTrayMenu(objOsMenu As osControls.ContextMenu)
+        CoreDataLib.osTrayIcon = New Forms.NotifyIcon With {
+            .Icon = My.Resources.osIcon,
+            .Text = "OddMTGA | Enabled",
+            .Visible = True
+        }
+
+        AddHandler CoreDataLib.osTrayIcon.MouseUp,
+            Sub(sender As Object, e As System.Windows.Forms.MouseEventArgs)
+                If e.Button = System.Windows.Forms.MouseButtons.Right Then
+                    GenMenuHost()
+
+                    objOsMenu.PlacementTarget = objMenuHost
+                    objOsMenu.Placement = Primitives.PlacementMode.MousePoint
+
+                    objOsMenu.IsOpen = True
+                End If
+            End Sub
+
+    End Sub
+
     Private Function GenMenuItem(txtMenu As String) As ToolStripMenuItem
         Return New ToolStripMenuItem(txtMenu)
     End Function
 
-    Public Function CreateTrayMenu() As ContextMenuStrip
+    Private Function GenMenuItem2(header As String) As osControls.MenuItem
+        Return New osControls.MenuItem With {.Header = header}
+    End Function
+
+    Private Function PopulateMenu_Popup() As osControls.ContextMenu
+        Dim osMenuObj As New osControls.ContextMenu With {
+            .FontFamily = New Media.FontFamily("Trebuchet MS"),
+            .FontSize = 14
+        }
+
+        Dim osMenu_EnDis As New osControls.MenuItem With {
+            .Header = "Enabled",
+            .IsCheckable = True,
+            .IsChecked = True,
+            .Name = "osMenuEnDis"
+        }
+
+        Dim osMenu_GameOpts = GenMenuItem2("MTG Menu")
+        Dim osGameMenu_Play = GenMenuItem2("Play Game")
+        Dim osGameMenu_Leave = GenMenuItem2("Leave Game")
+
+        osMenu_GameOpts.Items.Add(osGameMenu_Play)
+        osMenu_GameOpts.Items.Add(osGameMenu_Leave)
+
+        Dim osMenu_Opts = GenMenuItem2("Preferences")
+        Dim osMenuExit = GenMenuItem2("Exit")
+
+        With osMenuObj
+            .Items.Add(osMenu_EnDis)
+            .Items.Add(New Separator())
+            .Items.Add(osMenu_GameOpts)
+            .Items.Add(New Separator())
+            .Items.Add(osMenu_Opts)
+            .Items.Add(osMenuExit)
+        End With
+
+        ' Handlers (async where you had it)
+        AddHandler osMenu_Opts.Click,
+            Async Sub()
+                osFuncLib_InputScan.SetMonitorState(MonitorStatus.InCmd)
+                Await osFuncLib_ShowOpts.ExecuteDispOpts()
+
+                CloseMenuHost()
+            End Sub
+
+        AddHandler osMenuExit.Click,
+            Sub()
+                Dim chkConfirmExit = MsgBox("Are you sure you want to exit OddScript?",
+                                            vbYesNo + vbQuestion, "Confirm Close")
+
+                If chkConfirmExit = vbNo Then Exit Sub
+
+                CloseMenuHost()
+                osStopApp()
+            End Sub
+
+        ' Optional: sample handlers for MTG submenu
+        AddHandler osGameMenu_Play.Click,
+            Sub()
+                Dim procStart_MTGA As New ProcessStartInfo With {
+                    .FileName = CoreDataLib.dirMtgaExe,
+                    .WorkingDirectory = CoreDataLib.dirMtga,
+                    .WindowStyle = ProcessWindowStyle.Maximized
+                }
+
+                Process.Start(procStart_MTGA)
+                CloseMenuHost()
+            End Sub
+
+        AddHandler osGameMenu_Leave.Click,
+            Sub()
+                Dim chkConfirmCloseGame = MsgBox("Are you sure you want to close MTG Arena?",
+                                                 vbYesNo + vbQuestion, "Confirm Close")
+                If chkConfirmCloseGame = vbYes Then
+                    Dim cmdCloseMTGA = CmdRunner.RunCmd("taskkill", "/f /im MTGA.exe")
+                End If
+
+                CloseMenuHost()
+            End Sub
+
+        Return osMenuObj
+    End Function
+
+    Public Function PopulateMenu_Tray() As ContextMenuStrip
         Dim osMenuComponents As New System.ComponentModel.Container()
 
         Dim osMenuObj As New ContextMenuStrip(osMenuComponents)
 
-        Dim osMenu_EnDis As New ToolStripMenuItem("Enabled") With {.Checked = True, .CheckState = CheckState.Checked, .Name = "osMenuEnDis"}
-        Dim ToolStripSeparator2 As New ToolStripSeparator()
+        Dim osMenu_EnDis As New ToolStripMenuItem("Enabled") With {
+            .Checked = True,
+            .CheckState = CheckState.Checked,
+            .Name = "osMenuEnDis"
+        }
+
         Dim osMenu_GameOpts = GenMenuItem("MTG Menu")
         Dim osGameMenu_Play = GenMenuItem("Play Game")
         Dim osGameMenu_Leave = GenMenuItem("Leave Game")
-        Dim ToolStripSeparator1 As New ToolStripSeparator()
         Dim osMenu_Opts = GenMenuItem("Preferences")
         Dim osMenuExit = GenMenuItem("Exit")
 
         osMenu_GameOpts.DropDownItems.AddRange(New ToolStripItem() {osGameMenu_Play, osGameMenu_Leave})
-        osMenuObj.Items.AddRange(New ToolStripItem() {osMenu_EnDis, ToolStripSeparator2, osMenu_GameOpts, ToolStripSeparator1, osMenu_Opts, osMenuExit})
+        osMenuObj.Items.AddRange(New ToolStripItem() {osMenu_EnDis, New ToolStripSeparator(), osMenu_GameOpts, New ToolStripSeparator(), osMenu_Opts, osMenuExit})
 
         osMenuObj.Font = New Font("Trebuchet MS", 11.25F, FontStyle.Regular)
         osMenuObj.RenderMode = ToolStripRenderMode.Professional
         osMenuObj.ShowCheckMargin = True
 
-        AddHandler osMenu_Opts.Click, Async Sub()
-                                          osFuncLib_InputScan.SetMonitorState(MonitorStatus.InCmd)
-                                          Await osFuncLib_ShowOpts.ExecuteDispOpts()
-                                      End Sub
+        AddHandler osMenu_Opts.Click,
+            Async Sub()
+                osFuncLib_InputScan.SetMonitorState(MonitorStatus.InCmd)
+                Await osFuncLib_ShowOpts.ExecuteDispOpts()
+            End Sub
 
-        AddHandler osMenuExit.Click, Sub()
-                                         Dim chkConfirmExit = MsgBox("Are you sure you want to exit OddScript?",
-                                                                     vbYesNo + vbQuestion, "Confirm Close")
+        AddHandler osMenuExit.Click,
+            Sub()
+                Dim chkConfirmExit = MsgBox("Are you sure you want to exit OddScript?",
+                                            vbYesNo + vbQuestion, "Confirm Close")
 
-                                         If chkConfirmExit = vbNo Then Exit Sub
-
-                                         osStopApp()
-                                     End Sub
-
-        AddHandler osMenuObj.Closed, Sub(sender, e) DetachClkMon()
+                If chkConfirmExit = vbNo Then Exit Sub
+                osStopApp()
+            End Sub
 
         Return osMenuObj
     End Function
 
     Private Sub osStopApp()
-        osTrayIcon.Visible = False
+        CoreDataLib.osTrayIcon.Visible = False
         End
     End Sub
 
     Public Sub osMenu_Init(objInMon As osInMon)
 
-        CoreDataLib.osTrayMenu = CreateTrayMenu()
-        PrepTrayMenu(CoreDataLib.osTrayMenu)
+        CoreDataLib.osTrayMenu = PopulateMenu_Tray()
+        CoreDataLib.osPopupMenu = PopulateMenu_Popup()
+
+        PrepTrayMenu(CoreDataLib.osPopupMenu)
 
         osIsEnabled = True
-
         objInputMon = objInMon
 
         With New osFuncData(AddressOf GetEnabledStatus, AddressOf ConfirmStatusChange,
                             AddressOf SetNewStatus, AddressOf UpdateTrayIcon)
 
             osMenuFuncBinder.BindChecked(CoreDataLib.osTrayMenu.Items.Item("osMenuEnDis"),
-                                         .osFunc_GetStatus, .osFunc_ApplyStatus,
-                                         .osFunc_ConfirmStatus, .osFunc_UpdateIcon)
+                             .osFunc_GetStatus, .osFunc_ApplyStatus,
+                             .osFunc_ConfirmStatus, .osFunc_UpdateIcon)
+        End With
+
+        With New osMenuFuncData(AddressOf GetEnabledStatus, AddressOf VerifyStatusChange)
+            osMenuFuncBinder.BindChecked_Popup(CoreDataLib.osPopupMenu.Items.Item(0),
+                                         .osMenuFunc_GetStatus, .osMenuFunc_ApplyStatus)
         End With
 
     End Sub
@@ -912,12 +1042,108 @@ Module osFuncLib_UI
 
 End Module
 
+'Public Class BoolToEnabledTextConverter
+'    Implements IValueConverter
+
+'    Public Function Convert(value As Object, targetType As Type, parameter As Object, culture As CultureInfo) As Object _
+'        Implements IValueConverter.Convert
+'        Dim b = False
+'        If value IsNot Nothing Then b = System.Convert.ToBoolean(value)
+'        Return If(b, "Enabled", "Disabled")
+'    End Function
+
+'    Public Function ConvertBack(value As Object, targetType As Type, parameter As Object, culture As CultureInfo) As Object _
+'        Implements IValueConverter.ConvertBack
+'        ' Not used
+'        Throw New NotSupportedException()
+'    End Function
+'End Class
+
+Public Class isEnabledConverter
+    Implements IValueConverter
+
+    Public Function Convert(value As Object, targetType As Type, parameter As Object,
+                            culture As CultureInfo) As Object Implements IValueConverter.Convert
+        Return If(System.Convert.ToBoolean(value), "Enabled", "Disabled")
+    End Function
+    Public Function ConvertBack(value As Object, targetType As Type, parameter As Object, culture As CultureInfo) As Object _
+        Implements IValueConverter.ConvertBack
+        Throw New NotSupportedException()
+    End Function
+End Class
+
+Public Class MenuFuncAdapter
+    Implements System.ComponentModel.INotifyPropertyChanged
+
+    Private ReadOnly _get As Func(Of Boolean)
+    Private ReadOnly _set As Action(Of Boolean)
+
+    Public Sub New(getter As Func(Of Boolean), setter As Action(Of Boolean))
+        _get = getter
+        _set = setter
+    End Sub
+
+    Public Property Value As Boolean
+        Get
+            Return _get()
+        End Get
+        Set(v As Boolean)
+            _set?.Invoke(v)
+            RaiseEvent PropertyChanged(Me, New System.ComponentModel.PropertyChangedEventArgs(NameOf(Value)))
+        End Set
+    End Property
+
+    ' Call this if the underlying state changes elsewhere and you want the UI to refresh
+    Public Sub Refresh()
+        RaiseEvent PropertyChanged(Me, New System.ComponentModel.PropertyChangedEventArgs(NameOf(Value)))
+    End Sub
+
+    Public Event PropertyChanged As System.ComponentModel.PropertyChangedEventHandler _
+        Implements System.ComponentModel.INotifyPropertyChanged.PropertyChanged
+End Class
+
+Public Class TrayIconBridge
+    Inherits DependencyObject
+
+    Public Property NotifyIcon As NotifyIcon
+
+    Public Shared ReadOnly IsEnabledProperty As DependencyProperty =
+        DependencyProperty.Register(
+            NameOf(IsEnabled),
+            GetType(Boolean),
+            GetType(TrayIconBridge),
+            New PropertyMetadata(True, AddressOf OnIsEnabledChanged))
+
+    Public Property IsEnabled As Boolean
+        Get
+            Return CBool(GetValue(IsEnabledProperty))
+        End Get
+        Set(value As Boolean)
+            SetValue(IsEnabledProperty, value)
+        End Set
+    End Property
+
+    Private Shared Sub OnIsEnabledChanged(d As DependencyObject, e As DependencyPropertyChangedEventArgs)
+        Dim br = DirectCast(d, TrayIconBridge)
+        If br.NotifyIcon Is Nothing Then Exit Sub
+        Dim onOff = CBool(e.NewValue)
+        br.NotifyIcon.Icon = If(onOff, My.Resources.osIcon, My.Resources.osIcon_Disabled)
+        br.NotifyIcon.Text = If(onOff, "osAutoCast (Enabled)", "osAutoCast (Disabled)")
+        br.NotifyIcon.Visible = True
+    End Sub
+End Class
+
 Public Class osMenuFuncBinder
 
     Public Enum UpdateStatus
         ToEnabled
         ToDisabled
         CancelUpdate
+    End Enum
+
+    Private Enum MenuBinderType
+        isChk
+        isMenu
     End Enum
 
     Public Shared Sub BindChecked(objMenuItem As ToolStripMenuItem,
@@ -940,6 +1166,75 @@ Public Class osMenuFuncBinder
                                    DoFunc_ApplyStatus(chkNewStatus)
                                End Sub
         End With
+    End Sub
+
+    Private Shared Sub ApplyMenuBinding(MenuItemObj As DependencyObject, MenuItemBinder As osBinder.Binding, BinderType As MenuBinderType)
+        Select Case BinderType
+            Case MenuBinderType.isChk
+                BindingOperations.SetBinding(MenuItemObj, osControls.MenuItem.IsCheckedProperty, MenuItemBinder)
+            Case MenuBinderType.isMenu
+                BindingOperations.SetBinding(MenuItemObj, HeaderedItemsControl.HeaderProperty, MenuItemBinder)
+        End Select
+    End Sub
+
+    Private Shared Function GenMenuBinding(MenuBindSrc As Object, BinderType As MenuBinderType) As osBinder.Binding
+        Select Case BinderType
+            Case MenuBinderType.isChk
+                Return New osBinder.Binding("Value") With {
+                    .Mode = BindingMode.TwoWay,
+                    .UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged,
+                    .Source = MenuBindSrc
+                }
+            Case MenuBinderType.isMenu
+                Dim osConvEnabled = New isEnabledConverter()
+
+                Return New osBinder.Binding("Value") With {
+                    .Mode = BindingMode.OneWay,
+                    .Source = MenuBindSrc,
+                    .Converter = osConvEnabled
+                }
+            Case Else
+                Return Nothing
+        End Select
+    End Function
+
+    Private Shared Function GenTrayBinding(TrayBindSrc As Object) As osBinder.Binding
+        Return New osBinder.Binding("Value") With {
+            .Mode = BindingMode.OneWay,
+            .Source = TrayBindSrc
+        }
+    End Function
+
+    Private Shared Sub ApplyTrayBinding(TrayMenuObj As DependencyObject, TrayMenuBinder As osBinder.Binding)
+
+        BindingOperations.SetBinding(TrayMenuObj, TrayIconBridge.IsEnabledProperty, TrayMenuBinder)
+
+    End Sub
+
+    Public Shared Sub BindTrayIcon(objMenuAdapt As MenuFuncAdapter)
+
+    End Sub
+
+    Public Shared Sub BindChecked_Popup(objMenuItem As osControls.MenuItem,
+                                        DoFunc_FetchStatus As Func(Of Boolean),
+                                        DoFunc_ConfirmStatus As Action(Of Boolean))
+
+        Dim osMenuAdapter = New MenuFuncAdapter(DoFunc_FetchStatus, DoFunc_ConfirmStatus)
+
+        Dim osBinder_ChkEnabled = GenMenuBinding(osMenuAdapter, MenuBinderType.isChk)
+        ApplyMenuBinding(objMenuItem, osBinder_ChkEnabled, MenuBinderType.isChk)
+
+        Dim osBinder_MenuText = GenMenuBinding(osMenuAdapter, MenuBinderType.isMenu)
+        ApplyMenuBinding(objMenuItem, osBinder_MenuText, MenuBinderType.isMenu)
+
+        AddHandler osMenuAdapter.PropertyChanged, Sub(sender, e)
+                                                      If e.PropertyName = NameOf(osMenuAdapter.Value) Then
+                                                          Dim isEnabled As Boolean = osMenuAdapter.Value
+                                                          UpdateTray(isEnabled)
+                                                      End If
+                                                  End Sub
+
+
     End Sub
 
 End Class
@@ -1102,3 +1397,66 @@ Public NotInheritable Class TextBlockExtensions
         tb.TextEffects = effects
     End Sub
 End Class
+
+Public Module CmdRunner
+
+    Public Function RunCmd(cmd As String,
+                           Optional arguments As String = "",
+                           Optional timeoutMs As Integer = 30000,
+                           Optional workingDir As String = Nothing,
+                           Optional forceUtf8 As Boolean = True) _
+                           As (ExitCode As Integer, StdOut As String, StdErr As String)
+
+        Dim outSb As New StringBuilder()
+        Dim errSb As New StringBuilder()
+
+        ' Build the full command line that cmd.exe will execute
+        ' Example final: /c chcp 65001 & ipconfig /all
+        Dim inner As New StringBuilder()
+        inner.Append("/c ")
+        If forceUtf8 Then inner.Append("chcp 65001 >nul & ") ' make stdout UTF-8 to avoid mojibake
+        inner.Append(cmd)
+        If Not String.IsNullOrWhiteSpace(arguments) Then
+            inner.Append(" "c).Append(arguments)
+        End If
+
+        Dim psi As New ProcessStartInfo() With {
+            .FileName = "cmd.exe",
+            .Arguments = inner.ToString(),
+            .UseShellExecute = False,            ' must be False to redirect
+            .RedirectStandardOutput = True,
+            .RedirectStandardError = True,
+            .CreateNoWindow = True,
+            .StandardOutputEncoding = Encoding.UTF8,
+            .StandardErrorEncoding = Encoding.UTF8
+        }
+        If Not String.IsNullOrWhiteSpace(workingDir) Then psi.WorkingDirectory = workingDir
+
+        Dim p As New Process()
+        p.StartInfo = psi
+
+        ' Async read to avoid deadlocks
+        AddHandler p.OutputDataReceived, Sub(sender, e)
+                                             If e.Data IsNot Nothing Then outSb.AppendLine(e.Data)
+                                         End Sub
+        AddHandler p.ErrorDataReceived, Sub(sender, e)
+                                            If e.Data IsNot Nothing Then errSb.AppendLine(e.Data)
+                                        End Sub
+
+        p.Start()
+        p.BeginOutputReadLine()
+        p.BeginErrorReadLine()
+
+        Dim exited As Boolean = p.WaitForExit(timeoutMs)
+        If Not exited Then
+            Try : p.Kill() : Catch : End Try
+            errSb.AppendLine($"Timed out after {timeoutMs} ms")
+        Else
+            ' Ensure async handlers flush
+            p.WaitForExit()
+        End If
+
+        Dim code As Integer = If(exited, p.ExitCode, -1)
+        Return (code, outSb.ToString().TrimEnd(), errSb.ToString().TrimEnd())
+    End Function
+End Module
