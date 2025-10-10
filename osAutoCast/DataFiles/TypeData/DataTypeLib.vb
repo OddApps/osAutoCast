@@ -30,6 +30,14 @@ Public Module DataTypeLib
         StartAP
     End Enum
 
+    Public Enum ActionState
+        inIdle
+        inInit
+        inProgress
+        inComplete
+        inFailed
+    End Enum
+
     Public Enum ProgAction
         Abort
         Activate
@@ -42,6 +50,7 @@ Public Module DataTypeLib
         MaxFill
         DispMsg
         ClrMsg
+        Starter
     End Enum
 
     Public Enum ProgResult

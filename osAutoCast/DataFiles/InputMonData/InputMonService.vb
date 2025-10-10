@@ -164,23 +164,23 @@ Public Class InputMonitorService
         Return True
     End Function
 
-    Private Shared Async Function InputDetection(inputType As DataTypeLib.TriggerType, Optional initAction As Boolean = False) As Task(Of Boolean)
+    Private Shared Async Function InputDetection(inputType As TriggerType, Optional initAction As Boolean = False) As Task(Of Boolean)
         Dim chkInput As Boolean
 
         Select Case inputType
-            Case DataTypeLib.TriggerType.AutoCast
+            Case TriggerType.AutoCast
                 While CoreDataLib.InputMonSvc.DetectTrigger(SelAction(initAction))
                     Await Task.Delay(10)
                 End While
                 chkInput = True
-            Case DataTypeLib.TriggerType.AutoPass
+            Case TriggerType.AutoPass
                 If initAction Then
-                    While CoreDataLib.InputMonSvc.DetectTrigger(DataTypeLib.DetectOpts.MonitorMouseR)
+                    While CoreDataLib.InputMonSvc.DetectTrigger(DetectOpts.MonitorMouseR)
                         Await Task.Delay(10)
                     End While
                     chkInput = True
                 Else
-                    While CoreDataLib.InputMonSvc.DetectTrigger(DataTypeLib.DetectOpts.MonitorShift)
+                    While CoreDataLib.InputMonSvc.DetectTrigger(DetectOpts.MonitorShift)
                         If isAutoPassCancelled() Then chkInput = False
                         Await Task.Delay(10)
                     End While
@@ -192,17 +192,17 @@ Public Class InputMonitorService
     End Function
 
     Private Shared Sub ActivateTriggerMonitor()
-        InputMon_Observer = Observable.Interval(TimeSpan.FromMilliseconds(100)).
+        InputMon_Observer = Observable.Interval(TimeSpan.FromMilliseconds(200)).
             Select(Function(chkDuration) EvalInputActionInternal()).
             Where(Function(getTrigger) getTrigger <> TriggerAction.None).
             Subscribe(Sub(taskTrigger) TriggerCmd.OnNext(taskTrigger))
     End Sub
 
     Private Shared Function EvalInputActionInternal() As TriggerAction
-        Return TriggerBindings.
-            FirstOrDefault(Function(evalTrigger)
-                               Return evalTrigger.TriggerCondition()
-                           End Function, (Nothing, TriggerAction.None)).TriggerHandler
+        Return TriggerBindings.FirstOrDefault(
+            Function(evalTrigger)
+                Return evalTrigger.TriggerCondition()
+            End Function, (Nothing, TriggerAction.None)).TriggerHandler
     End Function
 
     Public Sub LaunchTriggerMonitor()
@@ -211,17 +211,17 @@ Public Class InputMonitorService
 
     Private Shared Sub EstablishTriggerMonitor(ByRef objMonitor As IDisposable)
         objMonitor = InputTriggerActions.Subscribe(
-                Async Sub(objInputAction)
-                    If objInputAction <> TriggerAction.None Then
-                        SuspendMonitoring()
+            Async Sub(objInputAction)
+                If objInputAction <> TriggerAction.None Then
+                    SuspendMonitoring()
 
-                        Try
-                            Await CoreDataLib.ExecuteTrigger(objInputAction)
-                        Finally
-                            StartTriggerMonitor()
-                        End Try
-                    End If
-                End Sub)
+                    Try
+                        Await CoreDataLib.ExecuteTrigger(objInputAction)
+                    Finally
+                        StartTriggerMonitor()
+                    End Try
+                End If
+            End Sub)
     End Sub
 
     Private Shared Sub StartTriggerMonitor()
@@ -235,15 +235,15 @@ Public Class InputMonitorService
         Return InputTriggerDetected(DetectMode)
     End Function
 
-    Public Shared Function InputTriggerDetected(Optional DetectMode As DataTypeLib.DetectOpts = DataTypeLib.DetectOpts.MonitorAll) As Boolean
+    Public Shared Function InputTriggerDetected(Optional DetectMode As DataTypeLib.DetectOpts = DetectOpts.MonitorAll) As Boolean
         Select Case DetectMode
-            Case DataTypeLib.DetectOpts.MonitorMouse
+            Case DetectOpts.MonitorMouse
                 Return InputMon_MouseDown()
-            Case DataTypeLib.DetectOpts.MonitorMouseR
+            Case DetectOpts.MonitorMouseR
                 Return InputMon_MouseDown(True)
-            Case DataTypeLib.DetectOpts.MonitorShift
+            Case DetectOpts.MonitorShift
                 Return InputMon_ShiftDown()
-            Case DataTypeLib.DetectOpts.MonitorAll
+            Case DetectOpts.MonitorAll
                 Return CmdBind_AutoCast()
             Case Else
                 Return InputMon_ShiftDown()

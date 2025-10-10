@@ -43,6 +43,7 @@ Public NotInheritable Class osHandler_GUI
         osGui_AutoPass.BeginPrep()
     End Sub
 
+
     Public Shared Sub DisplayGUI(guiType As DataTypeLib.TriggerType, Optional ptPosData As System.Drawing.Point = Nothing)
         If guiType = DataTypeLib.TriggerType.AutoCast Then
             osGui_AutoCast.Dispatcher.Invoke(Sub()
@@ -57,6 +58,10 @@ Public NotInheritable Class osHandler_GUI
                                              End Sub)
         ElseIf guiType = DataTypeLib.TriggerType.AutoPass Then
             osGui_AutoPass.Dispatcher.Invoke(Sub()
+                                                 osFuncLib_Progress.UpdateProgStatus(TriggerAction.AutoPass, ProgAction.Activate)
+                                                 CoreDataLib.ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.Reset)
+                                                 '  osGui_AutoPass.OddProgBar_AP.SetProgColor(osFuncLib_Progress.progColorData)
+                                                 osGui_AutoPass.OddProgBar_AP.ProgressChunk = 1
                                                  osGui_AutoPass.Show()
                                              End Sub)
         End If

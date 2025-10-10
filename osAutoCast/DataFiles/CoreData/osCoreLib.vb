@@ -11,6 +11,7 @@ Imports System.Text
 Imports System.Globalization
 Imports osBinder = System.Windows.Data
 Imports osControls = System.Windows.Controls
+Imports osColors = System.Windows.Media
 
 Public NotInheritable Class osFuncLib_InputScan
 
@@ -92,18 +93,18 @@ Public NotInheritable Class osFuncLib_Progress
     Public Shared progCurStatus As ProgStatus
 
     Public Shared progColor As Color
-    Public Shared progColor_AutoCast As Windows.Media.Color
+    Public Shared progColor_AutoCast As osColors.Color
 
-    Public Shared progColorData As Windows.Media.Color
+    Public Shared progColorData As osColors.Color
 
     Public Shared ProgBrush_BG As SolidBrush
     Public Shared ProgBrush_Active As SolidBrush
     Public Shared ProgBrush_Border As Pen
 
-    Public Shared pBrush_BG As New SolidColorBrush(Media.Color.FromRgb(57, 57, 57))
+    Public Shared pBrush_BG As New SolidColorBrush(osColors.Color.FromRgb(57, 57, 57))
 
     Public Shared pBrush_Active As SolidColorBrush
-    Public Shared pBrush_Border As New Media.Pen(Media.Brushes.Black, 2)
+    Public Shared pBrush_Border As New osColors.Pen(osColors.Brushes.Black, 2)
 
     Public Shared ProgContainer As Rectangle
     Public Shared ProgContainerBorder As Rectangle
@@ -121,20 +122,28 @@ Public NotInheritable Class osFuncLib_Progress
         {ProgStatus.StartAP, Color.Maroon}
     }
 
-    Private Shared ReadOnly ProgStatusColors_AutoCast As New Dictionary(Of ProgStatus, System.Windows.Media.Color) From {
-        {ProgStatus.Idle, System.Windows.Media.Color.FromRgb(57, 57, 57)},
-        {ProgStatus.Running, System.Windows.Media.Color.FromRgb(82, 96, 117)},
-        {ProgStatus.Success, System.Windows.Media.Color.FromRgb(34, 139, 34)},
-        {ProgStatus.Fail, System.Windows.Media.Color.FromRgb(97, 20, 20)},
-        {ProgStatus.StartAP, System.Windows.Media.Color.FromRgb(97, 20, 20)}
+    Private Shared ReadOnly ProgColorIdx_AutoCast As New Dictionary(Of ProgStatus, osColors.Color) From {
+        {ProgStatus.Idle, osColors.Color.FromRgb(57, 57, 57)},
+        {ProgStatus.Running, osColors.Color.FromRgb(82, 96, 117)},
+        {ProgStatus.Success, osColors.Color.FromRgb(34, 139, 34)},
+        {ProgStatus.Fail, osColors.Color.FromRgb(97, 20, 20)},
+        {ProgStatus.StartAP, osColors.Color.FromRgb(97, 20, 20)}
     }
 
-    Private Shared ReadOnly ProgStatusColorsIndex As New Dictionary(Of ProgStatus, System.Windows.Media.Color) From {
-        {ProgStatus.Idle, System.Windows.Media.Color.FromRgb(57, 57, 57)},
-        {ProgStatus.Running, System.Windows.Media.Color.FromRgb(82, 96, 117)},
-        {ProgStatus.Success, System.Windows.Media.Color.FromRgb(34, 139, 34)},
-        {ProgStatus.Fail, System.Windows.Media.Color.FromRgb(97, 20, 20)},
-        {ProgStatus.StartAP, System.Windows.Media.Color.FromRgb(97, 20, 20)}
+    Private Shared ReadOnly ProgColorIdx_AutoPass As New Dictionary(Of ProgStatus, osColors.Color) From {
+        {ProgStatus.Idle, osColors.Color.FromRgb(57, 57, 57)},
+        {ProgStatus.Running, osColors.Color.FromRgb(82, 96, 117)},
+        {ProgStatus.Success, osColors.Color.FromRgb(34, 139, 34)},
+        {ProgStatus.Fail, osColors.Color.FromRgb(97, 20, 20)},
+        {ProgStatus.StartAP, osColors.Color.FromRgb(82, 96, 117)}
+    }
+
+    Private Shared ReadOnly ProgStatusColorsIndex As New Dictionary(Of ProgStatus, osColors.Color) From {
+        {ProgStatus.Idle, osColors.Color.FromRgb(57, 57, 57)},
+        {ProgStatus.Running, osColors.Color.FromRgb(82, 96, 117)},
+        {ProgStatus.Success, osColors.Color.FromRgb(34, 139, 34)},
+        {ProgStatus.Fail, osColors.Color.FromRgb(97, 20, 20)},
+        {ProgStatus.StartAP, osColors.Color.FromRgb(97, 20, 20)}
     }
 
     Public Shared Sub SetProgContainer(pType As TriggerType)
@@ -162,6 +171,22 @@ Public NotInheritable Class osFuncLib_Progress
         End Select
     End Sub
 
+    Public Shared Function ApplyProgState(setAction As ProgAction, Optional isAutoPass As Boolean = False) As ProgStatus
+        Select Case setAction
+            Case ProgAction.Reset
+                progCurStatus = ProgStatus.Idle
+            Case ProgAction.Activate
+                progCurStatus = If(isAutoPass, ProgStatus.StartAP,
+                    ProgStatus.Running)
+            Case ProgAction.Complete
+                progCurStatus = ProgStatus.Success
+            Case ProgAction.Abort
+                progCurStatus = ProgStatus.Fail
+        End Select
+
+        Return progCurStatus
+    End Function
+
     Public Shared Function GetProgState() As ProgStatus
         Return progCurStatus
     End Function
@@ -180,6 +205,67 @@ Public NotInheritable Class osFuncLib_Progress
 
     Public Shared Sub SetProgStatus(setAction As ProgAction, pType As TriggerType, Optional progGUI As Form = Nothing)
         If pType = TriggerType.AutoCast Then
+            Select Case setAction
+                Case ProgAction.Abort
+                    SetProgState("f")
+                    progValue = 1.0
+                Case ProgAction.Activate
+                    progValue = 0.0
+                    SetProgState("r")
+                Case ProgAction.Complete
+                    SetProgState("s")
+                    progValue = 1.0
+                Case ProgAction.Reset
+                    SetProgState("i")
+                    progValue = 0.0
+            End Select
+            SetProgColor(pType)
+        Else
+            Select Case setAction
+                Case ProgAction.Abort
+                    SetProgState("f")
+                    progValue = 1.0
+                Case ProgAction.Activate
+                    SetProgState("sap")
+                    progValue = 1.0
+                Case ProgAction.Complete
+                    SetProgState("s")
+                    progValue = 1.0
+                Case ProgAction.Reset
+                    SetProgState("i")
+                    progValue = 0.0
+            End Select
+            SetProgColor(pType)
+        End If
+    End Sub
+
+    Public Shared Sub UpdateProgStatus(pType As TriggerAction, pAction As ProgAction)
+        Dim isValAP = If(pType = TriggerAction.AutoPass, True, False)
+        Dim getProgStatus = ApplyProgState(pAction, isValAP)
+        ApplyProgColor(pType, getProgStatus)
+    End Sub
+
+    Private Shared Sub ApplyProgColor(pType As TriggerType, pStatus As ProgStatus)
+        Select Case pType
+            Case TriggerType.AutoCast
+                osHandler_GUI.osGui_AutoCast.
+                    Dispatcher.Invoke(
+                    Sub()
+                        progColorData = FetchProgColor(pStatus, pType)
+                        osHandler_GUI.osGui_AutoCast.OddProgBar1.SetProgColor(progColorData)
+                    End Sub)
+            Case TriggerType.AutoPass
+                osHandler_GUI.osGui_AutoPass.
+                    Dispatcher.Invoke(
+                    Sub()
+                        progColorData = FetchProgColor(pStatus, pType)
+                        osHandler_GUI.osGui_AutoPass.OddProgBar_AP.SetProgColor(progColorData)
+                    End Sub)
+        End Select
+    End Sub
+
+    Public Shared Sub SetProgStatus(setAction As ProgAction, pType As TriggerAction)
+        If pType = TriggerAction.AutoCast Then
             Select Case setAction
                 Case ProgAction.Abort
                     SetProgState("f")
@@ -242,7 +328,7 @@ Public NotInheritable Class osFuncLib_Progress
         Return sTime + CLng(Math.Round(valDuration * repCnt * repRate))
     End Function
 
-    Public Shared Sub ApplyActiveColor(optColor As System.Windows.Media.Color)
+    Public Shared Sub ApplyActiveColor(optColor As osColors.Color)
         pBrush_Active = New SolidColorBrush(optColor)
     End Sub
 
@@ -252,16 +338,14 @@ Public NotInheritable Class osFuncLib_Progress
                 osHandler_GUI.osGui_AutoCast.
                     Dispatcher.Invoke(
                     Sub()
-                        progColorData = FetchProgColor(GetProgState(), True)
-                        ApplyActiveColor(progColorData)
+                        progColorData = FetchProgColor(GetProgState(), pType)
                         osHandler_GUI.osGui_AutoCast.OddProgBar1.SetProgColor(progColorData)
                     End Sub)
             Case TriggerType.AutoPass
                 osHandler_GUI.osGui_AutoPass.
                     Dispatcher.Invoke(
                     Sub()
-                        progColorData = FetchProgColor(GetProgState(), True)
-                        ApplyActiveColor(progColorData)
+                        progColorData = FetchProgColor(GetProgState(), pType)
                         osHandler_GUI.osGui_AutoPass.OddProgBar_AP.SetProgColor(progColorData)
                     End Sub)
         End Select
@@ -295,8 +379,12 @@ Public NotInheritable Class osFuncLib_Progress
         Return ProgStatusColors(pStatus)
     End Function
 
-    Public Shared Function FetchProgColor(pStatus As ProgStatus, idxColors As Boolean) As System.Windows.Media.Color
+    Public Shared Function FetchProgColor(pStatus As ProgStatus, idxColors As Boolean) As osColors.Color
         Return ProgStatusColorsIndex(pStatus)
+    End Function
+
+    Public Shared Function FetchProgColor(pStatus As ProgStatus, pType As TriggerType) As osColors.Color
+        Return If(pType = TriggerType.AutoCast, ProgColorIdx_AutoCast(pStatus), ProgColorIdx_AutoPass(pStatus))
     End Function
 
     Public Shared Function CalcPosData(ptPos As Point) As Point
@@ -327,10 +415,6 @@ Public NotInheritable Class osFuncLib_Progress
         guiAutoPass.Show()
         guiAutoPass.Invalidate()
     End Sub
-
-
-
-    ' -- Easing functions --
 
     Public Shared Function EaseInOutExpo(x As Double) As Double
         If x = 0.0 Then Return 0.0
@@ -504,7 +588,7 @@ Public NotInheritable Class osFuncLib_ShowOpts
     Private Shared chkCloseSettings As TaskCompletionSource(Of Boolean)
 
     Public Shared Async Function ExecuteDispOpts() As Task
-        CoreDataLib.PrepTrigger(TriggerType.ShowPrefs)
+        CoreDataLib.PrepUtilityTrigger(TriggerType.ShowPrefs)
 
         osHandler_GUI.osGui_InputMonitor2.Dispatcher.Invoke(Sub()
                                                                 With osHandler_GUI.osGui_Prefs
@@ -572,7 +656,7 @@ Public NotInheritable Class osFuncLib_AutoPass
     Private Shared Async Function AnticipateLaunchAP() As Task(Of Boolean)
         Dim flag As Boolean = Await CoreDataLib.InputMonSvc.AnticipateInput(InputAction.AP_Exec)
         If Not flag Then
-            osFuncLib_Progress.SetProgStatus(ProgAction.Abort, TriggerType.AutoPass)
+            osFuncLib_Progress.UpdateProgStatus(TriggerAction.AutoPass, ProgAction.Abort)
             CoreDataLib.ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.DispMsg, "AutoPass Cancelled")
         End If
         Return flag
@@ -587,12 +671,14 @@ Public NotInheritable Class osFuncLib_AutoPass
                         CoreDataLib.ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.DispMsg, "AutoPassing")
                         InvokeAutoPass()
                     Else
-                        osFuncLib_Progress.SetProgStatus(ProgAction.Abort, TriggerType.AutoPass)
+                        osFuncLib_Progress.UpdateProgStatus(TriggerAction.AutoPass, ProgAction.Abort)
+                        CoreDataLib.ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.MaxFill)
                         CoreDataLib.ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.DispMsg, "AutoPass Cancelled")
                     End If
 
                 Case ProgResult.Cancelled
-                    osFuncLib_Progress.SetProgStatus(ProgAction.Abort, TriggerType.AutoPass)
+                    osFuncLib_Progress.UpdateProgStatus(TriggerAction.AutoPass, ProgAction.Abort)
+                    CoreDataLib.ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.MaxFill)
                     CoreDataLib.ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.DispMsg, "AutoPass Cancelled")
             End Select
 
@@ -601,12 +687,16 @@ Public NotInheritable Class osFuncLib_AutoPass
         End Try
     End Function
 
+
     Private Shared Async Function FinalizeAutoPass() As Task
-        Await Task.Delay(750)
+        Await Task.Delay(650)
         Await osHandler_GUI.osGui_AutoPass.Dispatcher.InvokeAsync(Async Function()
+                                                                      ' CoreDataLib.ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.Reset)
                                                                       CoreDataLib.ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.Reset)
                                                                       Await Task.Delay(100)
-                                                                      CoreDataLib.ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.Reset)
+                                                                      osFuncLib_Progress.UpdateProgStatus(TriggerAction.AutoPass, ProgAction.Activate)
+                                                                      'Await Task.Delay(5)
+                                                                      ' Await Task.Delay(10)
                                                                       osHandler_GUI.osGui_AutoPass.Close()
                                                                   End Function)
     End Function
@@ -721,8 +811,13 @@ Module osFuncLib_TrayMenu
     End Sub
 
     Private Sub UpdateTrayIcon(chkStatus As Boolean)
-        CoreDataLib.osTrayIcon.Icon = If(chkStatus, My.Resources.osIcon,
-            My.Resources.osIcon_Disabled)
+        If chkStatus Then
+            CoreDataLib.osTrayIcon.Icon = My.Resources.osIcon
+            CoreDataLib.osTrayIcon.Text = "OddScriptxX | Enabled"
+        Else
+            CoreDataLib.osTrayIcon.Icon = My.Resources.osIcon_Disabled
+            CoreDataLib.osTrayIcon.Text = "OddScriptxX | Disabled"
+        End If
     End Sub
 
     Private Sub UpdateTrayText(isEnabled As Boolean)
@@ -732,18 +827,6 @@ Module osFuncLib_TrayMenu
     Public Sub UpdateTray(isEnabled As Boolean)
         UpdateTrayIcon(isEnabled)
         UpdateTrayText(isEnabled)
-
-
-    End Sub
-
-    Private Sub PrepTrayMenu(objOsMenu As ContextMenuStrip)
-        With CoreDataLib.osTrayIcon
-            .Icon = My.Resources.osIcon
-            .Text = "OddMTGA | Enabled"
-            .Visible = True
-
-            .ContextMenuStrip = objOsMenu
-        End With
     End Sub
 
     Private Sub PrepTrayMenu(objOsMenu As osControls.ContextMenu)
@@ -777,7 +860,7 @@ Module osFuncLib_TrayMenu
 
     Private Function PopulateMenu_Popup() As osControls.ContextMenu
         Dim osMenuObj As New osControls.ContextMenu With {
-            .FontFamily = New Media.FontFamily("Trebuchet MS"),
+            .FontFamily = New osColors.FontFamily("Trebuchet MS"),
             .FontSize = 14
         }
 
@@ -827,7 +910,6 @@ Module osFuncLib_TrayMenu
                 osStopApp()
             End Sub
 
-        ' Optional: sample handlers for MTG submenu
         AddHandler osGameMenu_Play.Click,
             Sub()
                 Dim procStart_MTGA As New ProcessStartInfo With {

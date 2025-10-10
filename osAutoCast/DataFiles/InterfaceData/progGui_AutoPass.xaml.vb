@@ -20,8 +20,8 @@ Public Class progGui_AutoPass
         Await CoreDataLib.InputMonSvc.AnticipateInput(InputAction.AP_Start)
         Await Task.Delay(100)
 
-        CoreDataLib.ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.ClrMsg)
-
+        'CoreDataLib.ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.ClrMsg)
+        CoreDataLib.ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.DispMsg, "Release Shift or Press C To Cancel")
         InitiateAutoPass(chkAutoPassResult)
     End Function
 

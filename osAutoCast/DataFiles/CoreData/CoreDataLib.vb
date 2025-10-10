@@ -94,6 +94,14 @@ Public NotInheritable Class CoreDataLib
         End If
     End Function
 
+    Public Shared Function VerifyRunStatus() As Boolean
+        If IsDisabled() Then
+            Return False
+        Else
+            Return ChkExecPermission()
+        End If
+    End Function
+
     Public Shared Function ChkExecPermission(tType As TriggerAction) As Boolean
         If Not IsDebugBuild() Then
             Return DetectGameUI.FocusMTGA()
@@ -133,8 +141,13 @@ Public NotInheritable Class CoreDataLib
         StartCancelWatcher(pType)
     End Sub
 
-    Private Shared Function isUtilityTrigger(pType As TriggerType) As Boolean
-        Return pType = TriggerType.ShowMenu OrElse pType = TriggerType.ShowPrefs
+    Public Shared Sub PrepUtilityTrigger(pType As TriggerType)
+        osFuncLib_InputScan.SetMonitorState(MonitorStatus.InCmd)
+        If isUtilityTrigger(pType) Then Return
+    End Sub
+
+    Private Shared Function isUtilityTrigger(pType As TriggerAction) As Boolean
+        Return pType = TriggerAction.ShowMenu OrElse pType = TriggerAction.ShowOpts
     End Function
 
     Public Shared Async Function ExecuteTrigger(tType As TriggerAction) As Task
@@ -153,11 +166,12 @@ Public NotInheritable Class CoreDataLib
         ResolveAction()
     End Function
 
-    Public Shared Function ValidateTrigger(pType As TriggerType) As Boolean
+    Public Shared Function ValidateTrigger(pType As TriggerAction) As Boolean
         If isUtilityTrigger(pType) Then Return True
 
-        If ChkExecPermission() Then
-            osFuncLib_Progress.SetProgStatus(ProgAction.Activate, pType)
+        If VerifyRunStatus() Then
+            'osFuncLib_Progress.SetProgStatus(ProgAction.Activate, pType)
+            osFuncLib_Progress.UpdateProgStatus(pType, ProgAction.Activate)
             StartCancelWatcher(pType)
 
             Return True
