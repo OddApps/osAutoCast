@@ -143,7 +143,7 @@ Public NotInheritable Class osFuncLib_Progress
         {ProgStatus.Running, osColors.Color.FromRgb(82, 96, 117)},
         {ProgStatus.Success, osColors.Color.FromRgb(34, 139, 34)},
         {ProgStatus.Fail, osColors.Color.FromRgb(97, 20, 20)},
-        {ProgStatus.StartAP, osColors.Color.FromRgb(97, 20, 20)}
+        {ProgStatus.StartAP, osColors.Color.FromRgb(82, 96, 117)}
     }
 
     Public Shared Sub SetProgContainer(pType As TriggerType)
@@ -154,21 +154,6 @@ Public NotInheritable Class osFuncLib_Progress
     Public Shared Sub SetProgState(newStatus As ProgStatus)
         progCurStatus = newStatus
         pBrush_BG = New SolidColorBrush()
-    End Sub
-
-    Public Shared Sub SetProgState(optStatus As String)
-        Select Case optStatus.ToLower()
-            Case "i"
-                progCurStatus = ProgStatus.Idle
-            Case "r"
-                progCurStatus = ProgStatus.Running
-            Case "s"
-                progCurStatus = ProgStatus.Success
-            Case "f"
-                progCurStatus = ProgStatus.Fail
-            Case "sap"
-                progCurStatus = ProgStatus.StartAP
-        End Select
     End Sub
 
     Public Shared Function ApplyProgState(setAction As ProgAction, Optional isAutoPass As Boolean = False) As ProgStatus
@@ -203,153 +188,37 @@ Public NotInheritable Class osFuncLib_Progress
         Return progCurStatus = ProgStatus.Success
     End Function
 
-    Public Shared Sub SetProgStatus(setAction As ProgAction, pType As TriggerType, Optional progGUI As Form = Nothing)
-        If pType = TriggerType.AutoCast Then
-            Select Case setAction
-                Case ProgAction.Abort
-                    SetProgState("f")
-                    progValue = 1.0
-                Case ProgAction.Activate
-                    progValue = 0.0
-                    SetProgState("r")
-                Case ProgAction.Complete
-                    SetProgState("s")
-                    progValue = 1.0
-                Case ProgAction.Reset
-                    SetProgState("i")
-                    progValue = 0.0
-            End Select
-            SetProgColor(pType)
-        Else
-            Select Case setAction
-                Case ProgAction.Abort
-                    SetProgState("f")
-                    progValue = 1.0
-                Case ProgAction.Activate
-                    SetProgState("sap")
-                    progValue = 1.0
-                Case ProgAction.Complete
-                    SetProgState("s")
-                    progValue = 1.0
-                Case ProgAction.Reset
-                    SetProgState("i")
-                    progValue = 0.0
-            End Select
-            SetProgColor(pType)
-        End If
-    End Sub
-
     Public Shared Sub UpdateProgStatus(pType As TriggerAction, pAction As ProgAction)
         Dim isValAP = If(pType = TriggerAction.AutoPass, True, False)
         Dim getProgStatus = ApplyProgState(pAction, isValAP)
+
         ApplyProgColor(pType, getProgStatus)
     End Sub
 
     Private Shared Sub ApplyProgColor(pType As TriggerType, pStatus As ProgStatus)
+        progColorData = FetchProgColor(pStatus, pType)
+
         Select Case pType
             Case TriggerType.AutoCast
-                osHandler_GUI.osGui_AutoCast.
-                    Dispatcher.Invoke(
-                    Sub()
-                        progColorData = FetchProgColor(pStatus, pType)
-                        osHandler_GUI.osGui_AutoCast.OddProgBar1.SetProgColor(progColorData)
-                    End Sub)
+                osHandler_GUI.osGui_AutoCast.Dispatcher.
+                    Invoke(Sub()
+                               osHandler_GUI.osGui_AutoCast.OddProgBar1.SetProgColor(progColorData)
+                           End Sub)
             Case TriggerType.AutoPass
-                osHandler_GUI.osGui_AutoPass.
-                    Dispatcher.Invoke(
-                    Sub()
-                        progColorData = FetchProgColor(pStatus, pType)
-                        osHandler_GUI.osGui_AutoPass.OddProgBar_AP.SetProgColor(progColorData)
-                    End Sub)
+                osHandler_GUI.osGui_AutoPass.Dispatcher.
+                    Invoke(Sub()
+                               If pStatus = ProgStatus.StartAP Then
+                                   osHandler_GUI.osGui_AutoPass.OddProgBar_AP.SetProgress(1)
+                               End If
+
+                               osHandler_GUI.osGui_AutoPass.OddProgBar_AP.SetProgColor(progColorData)
+                           End Sub)
         End Select
-    End Sub
-
-    Public Shared Sub SetProgStatus(setAction As ProgAction, pType As TriggerAction)
-        If pType = TriggerAction.AutoCast Then
-            Select Case setAction
-                Case ProgAction.Abort
-                    SetProgState("f")
-                    progValue = 1.0
-                Case ProgAction.Activate
-                    progValue = 0.0
-                    SetProgState("r")
-                Case ProgAction.Complete
-                    SetProgState("s")
-                    progValue = 1.0
-                Case ProgAction.Reset
-                    SetProgState("i")
-                    progValue = 0.0
-            End Select
-            SetProgColor(pType)
-        Else
-            Select Case setAction
-                Case ProgAction.Abort
-                    SetProgState("f")
-                    progValue = 1.0
-                Case ProgAction.Activate
-                    SetProgState("sap")
-                    progValue = 1.0
-                Case ProgAction.Complete
-                    SetProgState("s")
-                    progValue = 1.0
-                Case ProgAction.Reset
-                    SetProgState("i")
-                    progValue = 0.0
-            End Select
-            SetProgColor(pType)
-        End If
-    End Sub
-
-    Public Shared Sub DisplayProgText(progTxt As String, Optional guiUpdate As Boolean = False, Optional guiForm As Form = Nothing, Optional guiProg As Control = Nothing)
-        If progTxt = "" Then
-            progShowMsg = False
-            progDispMsg = ""
-        Else
-            progShowMsg = True
-            progDispMsg = progTxt
-            If guiUpdate Then
-                guiForm?.Invalidate()
-                guiProg?.Invalidate()
-            End If
-        End If
-    End Sub
-
-    Public Shared Sub DisplayProgText(progTxt As String, showProgMsg As Boolean)
-        If progTxt = "" Then
-            progShowMsg = False
-            progDispMsg = ""
-        Else
-            progShowMsg = True
-            progDispMsg = progTxt
-        End If
     End Sub
 
     Public Shared Function CalcTargetTime(sTime As Long, valDuration As Integer, repCnt As Integer, repRate As Double) As Long
         Return sTime + CLng(Math.Round(valDuration * repCnt * repRate))
     End Function
-
-    Public Shared Sub ApplyActiveColor(optColor As osColors.Color)
-        pBrush_Active = New SolidColorBrush(optColor)
-    End Sub
-
-    Private Shared Sub SetProgColor(pType As TriggerType)
-        Select Case pType
-            Case TriggerType.AutoCast
-                osHandler_GUI.osGui_AutoCast.
-                    Dispatcher.Invoke(
-                    Sub()
-                        progColorData = FetchProgColor(GetProgState(), pType)
-                        osHandler_GUI.osGui_AutoCast.OddProgBar1.SetProgColor(progColorData)
-                    End Sub)
-            Case TriggerType.AutoPass
-                osHandler_GUI.osGui_AutoPass.
-                    Dispatcher.Invoke(
-                    Sub()
-                        progColorData = FetchProgColor(GetProgState(), pType)
-                        osHandler_GUI.osGui_AutoPass.OddProgBar_AP.SetProgColor(progColorData)
-                    End Sub)
-        End Select
-    End Sub
 
     Public Shared Sub ConstructProgContainer(progG As Graphics)
         progG.SmoothingMode = SmoothingMode.AntiAlias
@@ -498,7 +367,7 @@ Public NotInheritable Class osFuncLib_AutoCast
     End Sub
 
     Public Shared Async Function ExecuteAutoCast() As Task
-        Dim acResult As ProgResult = ProgResult.Completed
+        'Dim acResult As ProgResult = ProgResult.Completed
 
         Dim retProgResult As ProgResult = Nothing
 
@@ -522,6 +391,8 @@ Public NotInheritable Class osFuncLib_AutoCast
 
     Private Shared Async Function ProcessResult(acResult As ProgResult) As Task
         Try
+            CoreDataLib.ProcessProgressEvent(ProgMode.AutoCast, ProgEvent.MaxFill)
+
             Select Case acResult
                 Case ProgResult.Completed
                     If CoreDataLib.isRTC() Then
@@ -531,19 +402,19 @@ Public NotInheritable Class osFuncLib_AutoCast
 
                     Await osHandler_GUI.osGui_AutoCast.Dispatcher.InvokeAsync(
                         Async Function()
-                            Await Task.Delay(150)
+                            Await Task.Delay(100)
 
                             CoreDataLib.ProcessProgressEvent(ProgMode.AutoCast, ProgEvent.DispMsg, "Casting")
-                        End Function, DispatcherPriority.ApplicationIdle)
+                        End Function)
                     EngageAutoCast()
 
                 Case ProgResult.Cancelled
                     Await osHandler_GUI.osGui_AutoCast.Dispatcher.InvokeAsync(
                         Async Function()
-                            Await Task.Delay(150)
+                            Await Task.Delay(50)
                             CoreDataLib.ProcessProgressEvent(ProgMode.AutoCast,
                                                              ProgEvent.DispMsg, "Cancelled")
-                        End Function, DispatcherPriority.ApplicationIdle)
+                        End Function)
             End Select
 
             Await FinalizeAutoCast()
@@ -554,9 +425,10 @@ Public NotInheritable Class osFuncLib_AutoCast
 
     Private Shared Async Function FinalizeAutoCast() As Task
         Await Task.Delay(750)
-        Dim dispatcher As Dispatcher = osHandler_GUI.osGui_AutoCast.Dispatcher
-        Dim callback As Action = Sub() osHandler_GUI.osGui_AutoCast.Close()
-        dispatcher.Invoke(callback)
+
+        osHandler_GUI.osGui_AutoCast.Dispatcher.Invoke(Sub()
+                                                           osHandler_GUI.osGui_AutoCast.Close()
+                                                       End Sub)
     End Function
 
     Private Shared Async Sub HoldInputs(doAsync As Boolean)
@@ -634,8 +506,6 @@ Public NotInheritable Class osFuncLib_AutoPass
     End Sub
 
     Public Shared Async Function ExecuteAutoPass() As Task
-        Dim apResult As ProgResult = ProgResult.Completed
-
         Dim retProgResult As ProgResult = Nothing
 
         Dim isTask_AutoPass = osHandler_GUI.osGui_AutoPass.
@@ -662,12 +532,17 @@ Public NotInheritable Class osFuncLib_AutoPass
         Return flag
     End Function
 
+
     Private Shared Async Function ProcessResult(acResult As ProgResult) As Task
         Try
             Select Case acResult
                 Case ProgResult.Completed
                     CoreDataLib.ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.DispMsg, "Release Shift To AutoPass | Press C To Cancel")
-                    If Await AnticipateLaunchAP() Then
+                    CoreDataLib.ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.MaxFill)
+
+                    Dim chkLaunchAP = Await AnticipateLaunchAP()
+
+                    If chkLaunchAP Then
                         CoreDataLib.ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.DispMsg, "AutoPassing")
                         InvokeAutoPass()
                     Else
@@ -687,21 +562,18 @@ Public NotInheritable Class osFuncLib_AutoPass
         End Try
     End Function
 
-
     Private Shared Async Function FinalizeAutoPass() As Task
-        Await Task.Delay(650)
-        Await osHandler_GUI.osGui_AutoPass.Dispatcher.InvokeAsync(Async Function()
-                                                                      ' CoreDataLib.ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.Reset)
-                                                                      CoreDataLib.ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.Reset)
-                                                                      Await Task.Delay(100)
-                                                                      osFuncLib_Progress.UpdateProgStatus(TriggerAction.AutoPass, ProgAction.Activate)
-                                                                      'Await Task.Delay(5)
-                                                                      ' Await Task.Delay(10)
-                                                                      osHandler_GUI.osGui_AutoPass.Close()
-                                                                  End Function)
+        Await Task.Delay(750)
+        osHandler_GUI.osGui_AutoPass.Dispatcher.Invoke(Sub()
+                                                           ' osFuncLib_Progress.UpdateProgStatus(TriggerAction.AutoPass, ProgAction.Reset)
+                                                           osHandler_GUI.ResetUI(TriggerAction.AutoPass, True)
+                                                       End Sub)
     End Function
 
 End Class
+
+
+
 
 Public Class MenuHostWindow
     Inherits Window
@@ -732,7 +604,7 @@ Module osFuncLib_TrayMenu
     Private objMenuHost As MenuHostWindow
 
     Public Async Function DisplayMenuPopup() As Task
-        CoreDataLib.PrepTrigger(TriggerType.ShowMenu)
+        CoreDataLib.PrepUtilityTrigger(TriggerType.ShowMenu)
 
         Dim objPopupMenu = CoreDataLib.osPopupMenu
 

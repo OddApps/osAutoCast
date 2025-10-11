@@ -11,6 +11,9 @@ Public Class progGui_AutoCast
     Private retProgResult As ProgResult = Nothing
 
     Private Async Function AutoCast_Prep() As Task
+
+        Me.OddProgBar1.LockProgress = False
+
         CoreDataLib.ProcessProgressEvent(ProgMode.AutoCast, ProgEvent.Reset)
         CoreDataLib.ProcessProgressEvent(ProgMode.AutoCast, ProgEvent.DispMsg, "Release Shift")
 
@@ -30,6 +33,8 @@ Public Class progGui_AutoCast
                                                     RunContinuationsAsynchronously)
     End Sub
 
+
+
     Public Async Function LaunchAutoCast() As Task(Of ProgResult)
 
         Await AutoCast_Prep()
@@ -37,10 +42,13 @@ Public Class progGui_AutoCast
         Dim acProgRender As New Animation.DoubleAnimation() With {
             .From = 0.0, .To = 1.0,
             .Duration = TimeSpan.FromMilliseconds(osFuncLib_Progress.ProgDuration),
-            .FillBehavior = Animation.FillBehavior.Stop
+            .FillBehavior = Animation.FillBehavior.Stop,
+            .EasingFunction = New EaseInOutExpoEase
         }
 
-        AddHandler acProgRender.Completed, Sub() TerminateAutoCast(True)
+        AddHandler acProgRender.Completed, Sub()
+                                               TerminateAutoCast(True)
+                                           End Sub
 
         Me.OddProgBar1.BeginAnimation(OddLib_ProgressBar.ProgressValueProperty, acProgRender)
 
@@ -63,21 +71,26 @@ Public Class progGui_AutoCast
 
     Private Function AutoCast_HandleResult(acComplete As Boolean) As ProgResult
         If acComplete Then
-            If osFuncLib_Progress.IsProgRunning() Then osFuncLib_Progress.SetProgStatus(ProgAction.Complete,
-                                                                                        TriggerType.AutoCast)
+            If osFuncLib_Progress.IsProgRunning() Then
+                Me.OddProgBar1.LockProgress = True
+                osFuncLib_Progress.UpdateProgStatus(TriggerAction.AutoCast,
+                                                    ProgAction.Complete)
+            End If
+
             SetProgResult(acComplete, retProgResult)
         Else
-            osFuncLib_Progress.SetProgStatus(ProgAction.Abort, TriggerType.AutoCast)
+            osFuncLib_Progress.UpdateProgStatus(TriggerAction.AutoCast, ProgAction.Abort)
             SetProgResult(acComplete, retProgResult)
         End If
 
-        CoreDataLib.ProcessProgressEvent(ProgMode.AutoCast, ProgEvent.MaxFill)
+        'CoreDataLib.ProcessProgressEvent(ProgMode.AutoCast, ProgEvent.MaxFill)
 
         Return retProgResult
     End Function
 
-    Public Sub BeginPrep() Handles Me.Loaded
+    Public Sub BeginPrep()
         Me.OddProgBar1.Background = New SolidColorBrush(System.Windows.Media.Color.FromRgb(57, 57, 57))
+        Me.OddProgBar1.IsAutoPass = False
     End Sub
 
     Private Sub SetProgResult(pResult As Boolean, ByRef setProgResult As ProgResult)

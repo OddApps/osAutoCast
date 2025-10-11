@@ -32,66 +32,108 @@ Public Class OddLib_ProgressBar
         DefaultBg.Freeze()
     End Sub
 
+    Private _pendingPrime As Boolean
+
     Public Sub New()
         SnapsToDevicePixels = True
         UseLayoutRounding = True
 
+        LockProgress = False
+
         RenderOptions.SetBitmapScalingMode(Me, BitmapScalingMode.LowQuality)
 
         AddHandler Me.Loaded, Sub()
-                                  ' Cache pixel size
-                                  _pixelWidth = Math.Max(1, CInt(Math.Round(ActualWidth)))
-                                  _pixelHeight = Math.Max(1, CInt(Math.Round(ActualHeight)))
+                                  SetSizeData()
 
                                   ApplyOptionalClip()
                                   ValidateProgDV()
                                   ValidateMsgDV()
                                   EnsureBitmapsSized()
 
-                                  ' Draw the very first frame synchronously so it's ready
-                                  Using dc = ProgRenderSurface.RenderOpen()
-                                      dc.DrawRectangle(BgBrushOrDefault(), Nothing, New Rect(0, 0, _pixelWidth, _pixelHeight))
-                                      Dim curEdge = EdgeFromChunk(_progChunk) ' uses ActualWidth (now valid)
-                                      If _activeBrush IsNot Nothing AndAlso curEdge > 0 Then
-                                          dc.DrawRectangle(_activeBrush, Nothing, New Rect(0, 0, curEdge, _pixelHeight))
+                                  Using ProgRenderTarget = ProgRenderSurface.RenderOpen()
+                                      ProgRenderTarget.DrawRectangle(BgBrushOrDefault(), Nothing,
+                                                                     New Rect(0, 0, _pixelWidth, _pixelHeight))
+
+                                      Dim curEdge = EdgeFromChunk(_progChunk)
+
+                                      If ValidateBrush(curEdge) Then
+                                          ProgRenderTarget.DrawRectangle(_activeBrush, Nothing, New Rect(0, 0, curEdge, _pixelHeight))
                                       End If
                                   End Using
+
                                   ProgRenderBitmap.Render(ProgRenderSurface)
                                   objEdge_Prev = EdgeFromChunk(_progChunk)
+
                                   InvalidateVisual()
                               End Sub
+        AddHandler Me.Loaded,
+            Sub()
+                If _pendingPrime Then
+                    _pendingPrime = False
+                    PrimeFirstFrame()
+                End If
+            End Sub
+
+        AddHandler Me.SizeChanged,
+            Sub()
+                If _pendingPrime AndAlso _pixelWidth > 0 AndAlso _pixelHeight > 0 Then
+                    _pendingPrime = False
+                    PrimeFirstFrame()
+                End If
+            End Sub
     End Sub
 
     Public Sub PrimeFirstFrame(Optional chunk As Double? = Nothing)
 
-        'If chunk.HasValue Then
-        '    _progChunk = Math.Max(0.0, Math.Min(1.0, chunk.Value))
-        '    If ProgressFlow = ProgFlow.Descending Then _progChunk = 1.0 - _progChunk
-        'End If
+        If chunk.HasValue Then
+            _progChunk = Math.Max(0.0, Math.Min(1.0, chunk.Value))
+        End If
 
-        _progChunk = 1
-
-        If _pixelWidth <= 0 OrElse _pixelHeight <= 0 Then Return
+        If ValidateSize() Then Return
 
         ValidateProgDV()
         ValidateMsgDV()
+
         EnsureBitmapsSized()
 
         Dim curEdge = EdgeFromChunk(_progChunk)
 
-        Using dc = ProgRenderSurface.RenderOpen()
-            dc.DrawRectangle(BgBrushOrDefault(), Nothing, New Rect(0, 0, _pixelWidth, _pixelHeight))
-
-            If _activeBrush IsNot Nothing AndAlso curEdge > 0 Then
-                dc.DrawRectangle(_activeBrush, Nothing, New Rect(0, 0, curEdge, _pixelHeight))
+        Using ProgRenderTarget = ProgRenderSurface.RenderOpen()
+            If Not LockProgress Then
+                ProgRenderTarget.DrawRectangle(BgBrushOrDefault(), Nothing,
+                                           New Rect(0, 0, _pixelWidth, _pixelHeight))
             End If
 
+            If ValidateBrush(curEdge) Then
+                ProgRenderTarget.DrawRectangle(_activeBrush, Nothing,
+                                               New Rect(0, 0, curEdge, _pixelHeight))
+            End If
         End Using
 
         ProgRenderBitmap.Render(ProgRenderSurface)
         objEdge_Prev = curEdge
+
         InvalidateVisual()
     End Sub
+
+    Private Sub PrimeIfReady()
+        If VerifyFramePrime() Then Return
+
+        If IsAutoPass Then
+            PrimeFirstFrame(1)
+        Else
+            PrimeFirstFrame()
+        End If
+    End Sub
+
+    Private Function VerifyFramePrime() As Boolean
+        Dim chkPrime As Boolean = False
+
+        If Not IsLoaded Then chkPrime = True
+        If _pixelWidth <= 0 OrElse _pixelHeight <= 0 Then chkPrime = True
+
+        Return chkPrime
+    End Function
 
 #End Region
 
@@ -212,7 +254,7 @@ Public Class OddLib_ProgressBar
 
 #End Region
 
-#Region "Brushes"
+#Region "Object Properties"
 
     Private _activeBrush As Brush
     Public Property ActiveBrush As Brush
@@ -220,14 +262,28 @@ Public Class OddLib_ProgressBar
             Return _activeBrush
         End Get
         Set(value As Brush)
-            If value IsNot Nothing Then
-                Dim objFreezable = TryCast(value, Freezable)
-                EstablishProgFreeze(objFreezable)
+            Dim newBrush As Brush = If(value, Brushes.Transparent)
+
+            Dim objFreezable = TryCast(newBrush, Freezable)
+            EstablishProgFreeze(objFreezable)
+
+            _activeBrush = newBrush
+
+            If ValidateSize(True) Then
+                PrimeFirstFrame()
+            Else
+                _pendingPrime = True
             End If
+        End Set
+    End Property
 
-            _activeBrush = value
-
-            RebuildBackingBitmap(includeProgress:=True)
+    Private _LockProgress As Boolean
+    Public Property LockProgress As Boolean
+        Get
+            Return _LockProgress
+        End Get
+        Set(value As Boolean)
+            _LockProgress = value
         End Set
     End Property
 
@@ -241,26 +297,22 @@ Public Class OddLib_ProgressBar
             Return _progChunk
         End Get
         Set(value As Double)
-            Dim pVal = osFuncLib_Progress.EaseInOutExpo(value)
-            Dim pClamped = Math.Max(0.0, Math.Min(1.0, pVal))
+            Dim valProgress = ProcessProgress(value)
 
-            If ProgressFlow = ProgFlow.Descending Then
-                pClamped = 1.0 - pClamped
-            End If
+            PrimeIfReady()
 
-            If Math.Abs(pClamped - _progChunk) < Me.MinDelta Then Return
+            If ValidateProgress(valProgress) Then Return
 
-            With CalcProgEdge(pClamped)
-                If ProgRenderBitmap Is Nothing OrElse _activeBrush Is Nothing Then
+            With CalcProgEdge(valProgress, True)
+                If ValidateProgBitmap() Then
                     InvalidateVisual()
                     Return
                 End If
 
-                RequestDeltaDraw(.valEdge_Old, .valEdge_New)
+                RequestDeltaDraw(.EdgeOld, .EdgeNew)
             End With
         End Set
     End Property
-
 
 #End Region
 
@@ -269,7 +321,7 @@ Public Class OddLib_ProgressBar
     Private Sub RequestDeltaDraw(oldEdge As Integer, newEdge As Integer)
         If oldEdge = newEdge Then Return
 
-        Dim objEdgeData As New ProgEdgeData(oldEdge, newEdge,
+        Dim objEdgeData As New ProgEdgeObj(oldEdge, newEdge,
                                             _activeBrush, BgBrushOrDefault())
 
         Dim objRect = GenProgRect(objEdgeData.EdgeX, 0, objEdgeData.EdgeW, _pixelHeight)
@@ -282,30 +334,22 @@ Public Class OddLib_ProgressBar
         isPendingDraw = True
         objEdge_Prev = newEdge
 
-        AllocDispatcher().BeginInvoke(DispatcherPriority.Render,
-            New Action(Sub()
-                           Try
-                               ValidateProgDV()
-                               ValidateMsgDV()
-                               EnsureBitmapsSized()
+        RunOnUI(Sub()
+                    Try
+                        ValidateProgDV()
+                        ValidateMsgDV()
+                        EnsureBitmapsSized()
 
-                               Using ProgRenderTarget = ProgRenderSurface.RenderOpen()
-                                   ProgRenderTarget.DrawRectangle(objEdgeData.EdgeBrush, Nothing, objRect)
+                        Using ProgRenderTarget = ProgRenderSurface.RenderOpen()
+                            ProgRenderTarget.DrawRectangle(objEdgeData.EdgeBrush, Nothing, objRect)
+                        End Using
 
-                                   'If IsAutoPass Then
-                                   '    With New ProgMsg("Release Shift or Press C To Cancel", TriggerType.AutoPass, Me.IsAutoPass)
-                                   '        ProgRenderTarget.DrawText(.txtComposed, .txtLocation)
-                                   '    End With
-                                   'End If
-                               End Using
-
-                               ProgRenderBitmap.Render(ProgRenderSurface)
-
-                               InvalidateVisual()
-                           Finally
-                               isPendingDraw = False
-                           End Try
-                       End Sub))
+                        ProgRenderBitmap.Render(ProgRenderSurface)
+                        InvalidateVisual()
+                    Finally
+                        isPendingDraw = False
+                    End Try
+                End Sub)
     End Sub
 
 #End Region
@@ -316,19 +360,15 @@ Public Class OddLib_ProgressBar
         Select Case doEvent.evType
             Case ProgEvent.Reset
                 ResetProgress(doEvent.evTrigger)
-
             Case ProgEvent.MaxFill
                 ResetProgress()
                 DisplayMaxVal()
-
             Case ProgEvent.DispMsg
                 DisplayMsg(doEvent.evDispMsg, doEvent.evTrigger)
-
             Case ProgEvent.ClrMsg
                 ClearMsg(doEvent.evTrigger)
         End Select
     End Sub
-
 
     Private Sub ResetProgress(Optional apReset As TriggerType = False)
         Dim chkApReset As Boolean = apReset = TriggerType.AutoPass
@@ -339,9 +379,10 @@ Public Class OddLib_ProgressBar
             _progChunk = 0.0
         End If
 
-        ClearMsg(TriggerType.AutoCast)
+        ClearMsg()
 
         objEdge_Prev = EdgeFromChunk(_progChunk)
+
         _backgroundDrawing = Nothing
         ProgGraphic_Full = Nothing
 
@@ -349,7 +390,7 @@ Public Class OddLib_ProgressBar
     End Sub
 
     Private Sub DisplayMaxVal()
-        If ProgRenderBitmap Is Nothing OrElse _activeBrush Is Nothing Then Return
+        If ValidateProgBitmap() Then Return
 
         AllocDispatcher().BeginInvoke(DispatcherPriority.Render,
             New Action(Sub()
@@ -373,9 +414,9 @@ Public Class OddLib_ProgressBar
                            EnsureBitmapsSized()
                            ResetMsgBitmap()
 
-                           Using dc = MsgOverlaySurface.RenderOpen()
+                           Using MsgRenderTarget = MsgOverlaySurface.RenderOpen()
                                With New ProgMsg(txtMsg, pType, Me.IsAutoPass)
-                                   dc.DrawText(.txtComposed, .txtLocation)
+                                   MsgRenderTarget.DrawText(.txtComposed, .txtLocation)
                                End With
                            End Using
 
@@ -387,7 +428,7 @@ Public Class OddLib_ProgressBar
         osFuncLib_Progress.progShowMsg = False
     End Sub
 
-    Private Sub ClearMsg(pType As TriggerType)
+    Private Sub ClearMsg(Optional pType As TriggerType = Nothing)
         osFuncLib_Progress.progShowMsg = True
 
         AllocDispatcher().BeginInvoke(DispatcherPriority.Render,
@@ -396,7 +437,7 @@ Public Class OddLib_ProgressBar
                            EnsureBitmapsSized()
                            ResetMsgBitmap()
 
-                           Using dc = MsgOverlaySurface.RenderOpen()
+                           Using MsgRenderTarget = MsgOverlaySurface.RenderOpen()
                            End Using
 
                            isMsgDisplayed = False
@@ -406,110 +447,9 @@ Public Class OddLib_ProgressBar
         osFuncLib_Progress.progShowMsg = False
     End Sub
 
-
-    'Private Sub DisplayMsg(txtMsg As String, pType As TriggerType)
-    '    osFuncLib_Progress.progShowMsg = True
-
-    '    AllocDispatcher().BeginInvoke(DispatcherPriority.Render,
-    '    New Action(Sub()
-    '                   ValidateMsgDV()
-    '                   EnsureBitmapsSized()
-
-    '                   Using dc = MsgOverlaySurface.RenderOpen()
-    '                       ' Optional: a semi-transparent plate; omit to draw just text
-    '                       ' dc.DrawRectangle(New SolidColorBrush(Color.FromArgb(96, 0, 0, 0)), Nothing,
-    '                       '                  New Rect(0, 0, _pixelWidth, _pixelHeight))
-
-    '                       With New ProgMsg(txtMsg, pType, Me.IsAutoPass)
-    '                           dc.DrawText(.txtComposed, .txtLocation)
-    '                       End With
-    '                   End Using
-
-    '                   MsgRenderBitmap.Render(MsgOverlaySurface)
-    '                   isMsgDisplayed = True
-    '                   InvalidateVisual()
-    '               End Sub))
-
-    '    osFuncLib_Progress.progShowMsg = False
-    'End Sub
-
-    'Private Sub ClearMsg(pType As TriggerType)
-    '    osFuncLib_Progress.progShowMsg = True
-
-    '    AllocDispatcher().BeginInvoke(DispatcherPriority.Render,
-    '    New Action(Sub()
-    '                   ValidateMsgDV()
-    '                   EnsureBitmapsSized()
-
-    '                   Using dc = MsgOverlaySurface.RenderOpen()
-    '                       ' Clear overlay by drawing nothing (opening replaces content)
-    '                       ' Optionally draw transparent rectangle if you prefer explicit clear
-    '                       dc.DrawRectangle(Brushes.Transparent, Nothing, New Rect(0, 0, _pixelWidth, _pixelHeight))
-    '                   End Using
-
-    '                   MsgRenderBitmap.Render(MsgOverlaySurface)
-    '                   isMsgDisplayed = False
-    '                   InvalidateVisual()
-    '               End Sub))
-
-    '    osFuncLib_Progress.progShowMsg = False
-    'End Sub
-
-    'Private Sub DisplayMsg(txtMsg As String, pType As TriggerType)
-    '    osFuncLib_Progress.progShowMsg = True
-
-    '    AllocDispatcher().BeginInvoke(DispatcherPriority.Render,
-    '        New Action(Sub()
-    '                       ValidateProgDV()
-
-    '                       Try
-    '                           Using ProgRenderTarget = ProgRenderSurface.RenderOpen()
-    '                               If isMsgDisplayed Then
-    '                                   RenderMsgContainer(ProgRenderTarget)
-    '                               End If
-
-    '                               With New ProgMsg(txtMsg, pType, Me.IsAutoPass)
-    '                                   ProgRenderTarget.DrawText(.txtComposed, .txtLocation)
-    '                               End With
-
-    '                               isMsgDisplayed = True
-    '                           End Using
-
-    '                           ProgRenderBitmap.Render(ProgRenderSurface)
-    '                           InvalidateVisual()
-    '                       Catch ex As Exception
-
-    '                       End Try
-    '                   End Sub))
-
-    '    osFuncLib_Progress.progShowMsg = False
-    'End Sub
-
-
-
-    'Private Sub ClearMsg(pType As TriggerType)
-    '    osFuncLib_Progress.progShowMsg = True
-    '    AllocDispatcher().BeginInvoke(DispatcherPriority.Render,
-    '        New Action(Sub()
-    '                       ValidateProgDV()
-    '                       Using ProgRenderTarget = ProgRenderSurface.RenderOpen()
-
-    '                           ProgRenderTarget.DrawRectangle(BgBrushOrDefault(), Nothing, New Rect(0, 0, _pixelWidth, _pixelHeight))
-
-    '                           Dim curEdge = EdgeFromChunk(_progChunk)
-    '                           If curEdge > 0 AndAlso _activeBrush IsNot Nothing Then
-    '                               ProgRenderTarget.DrawRectangle(_activeBrush, Nothing, New Rect(0, 0, curEdge, _pixelHeight))
-    '                           End If
-    '                           isMsgDisplayed = False
-    '                       End Using
-    '                       ProgRenderBitmap.Render(ProgRenderSurface)
-    '                       InvalidateVisual()
-    '                   End Sub))
-    '    osFuncLib_Progress.progShowMsg = False
-    'End Sub
-
     Private Sub RenderMsgContainer(pDC As DrawingContext)
-        pDC.DrawRectangle(_activeBrush, Nothing, New Rect(0, 0, _pixelWidth, _pixelHeight))
+        pDC.DrawRectangle(_activeBrush, Nothing,
+                          New Rect(0, 0, _pixelWidth, _pixelHeight))
         isMsgDisplayed = False
     End Sub
 
@@ -517,46 +457,42 @@ Public Class OddLib_ProgressBar
 
 #Region "Rendering Surface / Layout"
 
-
     Private Sub RebuildBackingBitmap(Optional includeProgress As Boolean = False)
-        If _pixelWidth <= 0 OrElse _pixelHeight <= 0 Then
+        If ValidateSize() Then
             InvalidateVisual()
             Return
         End If
 
-        If ProgRenderBitmap Is Nothing OrElse
-            ProgRenderBitmap.PixelWidth <> _pixelWidth OrElse
-            ProgRenderBitmap.PixelHeight <> _pixelHeight Then
-
-            ProgRenderBitmap = New RenderTargetBitmap(_pixelWidth, _pixelHeight, 96, 96, PixelFormats.Pbgra32)
-        End If
+        VerifyBitmapSize(RenderBitmapObj.Progress)
 
         Dim curEdge = EdgeFromChunk(_progChunk)
 
-        AllocDispatcher().BeginInvoke(DispatcherPriority.Render,
-            New Action(Sub()
-                           ValidateProgDV()
-                           Using ProgRenderTarget = ProgRenderSurface.RenderOpen()
+        RunOnUI(Sub()
+                    ValidateProgDV()
+                    ValidateMsgDV()
 
-                               ProgRenderTarget.DrawRectangle(BgBrushOrDefault(), Nothing, New Rect(0, 0, _pixelWidth, _pixelHeight))
+                    EnsureBitmapsSized()
 
-                               If includeProgress AndAlso _activeBrush IsNot Nothing AndAlso curEdge > 0 Then
-                                   ProgRenderTarget.DrawRectangle(_activeBrush, Nothing, New Rect(0, 0, curEdge, _pixelHeight))
-                               End If
-                           End Using
-                           ProgRenderBitmap.Render(ProgRenderSurface)
-                           objEdge_Prev = curEdge
-                           InvalidateVisual()
-                       End Sub))
+                    Using ProgRenderTarget = ProgRenderSurface.RenderOpen()
+                        ProgRenderTarget.DrawRectangle(BgBrushOrDefault(), Nothing,
+                                                       New Rect(0, 0, _pixelWidth, _pixelHeight))
+
+                        If ValidateProgEdge(includeProgress, curEdge) Then
+                            ProgRenderTarget.DrawRectangle(_activeBrush, Nothing,
+                                                           New Rect(0, 0, curEdge, _pixelHeight))
+                        End If
+                    End Using
+
+                    ProgRenderBitmap.Render(ProgRenderSurface)
+                    objEdge_Prev = curEdge
+                    InvalidateVisual()
+                End Sub)
     End Sub
 
-    ' Helper
     Private Sub ResetMsgBitmap()
-        If _pixelWidth <= 0 OrElse _pixelHeight <= 0 Then Return
+        If ValidateSize() Then Return
         MsgRenderBitmap = New RenderTargetBitmap(_pixelWidth, _pixelHeight, 96, 96, PixelFormats.Pbgra32)
     End Sub
-
-
 
     Protected Overrides Sub OnRender(progDC As DrawingContext)
         MyBase.OnRender(progDC)
@@ -581,13 +517,12 @@ Public Class OddLib_ProgressBar
         End If
     End Sub
 
+
     Protected Overrides Sub OnRenderSizeChanged(sizeInfo As SizeChangedInfo)
         MyBase.OnRenderSizeChanged(sizeInfo)
 
         If ActualWidth > 0 AndAlso ActualHeight > 0 Then
-            _pixelWidth = Math.Max(1, CInt(Math.Round(ActualWidth)))
-            _pixelHeight = Math.Max(1, CInt(Math.Round(ActualHeight)))
-
+            SetSizeData()
             ApplyOptionalClip()
 
             ValidateProgDV()
@@ -597,8 +532,7 @@ Public Class OddLib_ProgressBar
             RebuildBackingBitmap(includeProgress:=True)
 
             If isMsgDisplayed Then
-                ' Repaint current message if you cache it, otherwise just clear overlay
-                ClearMsg(TriggerType.AutoCast)
+                ClearMsg()
             End If
         End If
     End Sub
@@ -670,6 +604,15 @@ Public Class OddLib_ProgressBar
             osHandler_GUI.osGui_AutoPass.Dispatcher)
     End Function
 
+    Private Function ValidateProgress(pVal As Double) As Boolean
+        Return Math.Abs(pVal - _progChunk) < Me.MinDelta
+    End Function
+
+    Private Function ProcessProgress(pVal As Double) As Double
+        ' Dim chkVal As Double = If(IsAutoPass, osFuncLib_Progress.EaseInOutExpo(pVal), pVal)
+        Return Math.Max(0.00, Math.Min(1.0, pVal))
+    End Function
+
     Private Sub ApplyOptionalClip()
         If Me.IsAutoPass Then
             Me.Clip = ApplyProgContainer(Math.Max(0, ActualWidth), Math.Max(0, ActualHeight), 20)
@@ -677,6 +620,27 @@ Public Class OddLib_ProgressBar
             Me.Clip = Nothing
         End If
     End Sub
+
+    Private Sub SetSizeData()
+        _pixelWidth = Math.Max(1, CInt(Math.Round(ActualWidth)))
+        _pixelHeight = Math.Max(1, CInt(Math.Round(ActualHeight)))
+    End Sub
+
+    Private Function ValidateSize() As Boolean
+        Return _pixelWidth <= 0 OrElse _pixelHeight <= 0
+    End Function
+
+    Private Function ValidateSize(chkLoad As Boolean) As Boolean
+        Return IsLoaded AndAlso _pixelWidth > 0 AndAlso _pixelHeight > 0
+    End Function
+
+    Private Function ValidateBrush(curEdge As Double) As Boolean
+        Return _activeBrush IsNot Nothing AndAlso curEdge > 0
+    End Function
+
+    Private Function ValidateProgBitmap() As Boolean
+        Return ProgRenderBitmap Is Nothing OrElse _activeBrush Is Nothing
+    End Function
 
     Private Sub ValidateProgDV()
         If ProgRenderSurface Is Nothing Then ProgRenderSurface = New DrawingVisual()
@@ -694,8 +658,14 @@ Public Class OddLib_ProgressBar
         Return (valEdge_Old:=oldEdge, valEdge_New:=newEdge)
     End Function
 
-    Public Sub UpdateProgress(msDuration As Long)
-        Me.ProgressChunk = CalcProgress(msDuration)
+    Private Function CalcProgEdge(valClamped As Double, isEdgeObj As Boolean) As ProgEdgeData
+        Dim objEdgeData As New ProgEdgeData(valClamped, ActualWidth, _progChunk)
+
+        Return objEdgeData
+    End Function
+
+    Public Sub SetProgress(setProgVal As Double)
+        _progChunk = setProgVal
     End Sub
 
     Private Function CalcProgress(msDuration As Long) As Double
@@ -719,20 +689,63 @@ Public Class OddLib_ProgressBar
         If MsgOverlaySurface Is Nothing Then MsgOverlaySurface = New DrawingVisual()
     End Sub
 
+    Private Function ValidateProgEdge(chkProg As Boolean, chkEdge As Double) As Boolean
+        Return chkProg AndAlso _activeBrush IsNot Nothing AndAlso chkEdge > 0
+    End Function
+
+    Private Function ValidateProgRender() As Boolean
+        Return ProgRenderBitmap Is Nothing OrElse
+            ProgRenderBitmap.PixelWidth <> _pixelWidth OrElse
+            ProgRenderBitmap.PixelHeight <> _pixelHeight
+    End Function
+
+    Private Function ValidateMsgRender() As Boolean
+        Return MsgRenderBitmap Is Nothing OrElse
+            MsgRenderBitmap.PixelWidth <> _pixelWidth OrElse
+            MsgRenderBitmap.PixelHeight <> _pixelHeight
+    End Function
+
     Private Sub EnsureBitmapsSized()
-        ' Progress RTB
-        If ProgRenderBitmap Is Nothing OrElse
-       ProgRenderBitmap.PixelWidth <> _pixelWidth OrElse
-       ProgRenderBitmap.PixelHeight <> _pixelHeight Then
+        If ValidateProgRender() Then
             ProgRenderBitmap = New RenderTargetBitmap(_pixelWidth, _pixelHeight, 96, 96, PixelFormats.Pbgra32)
         End If
-        ' Message/overlay RTB
-        If MsgRenderBitmap Is Nothing OrElse
-       MsgRenderBitmap.PixelWidth <> _pixelWidth OrElse
-       MsgRenderBitmap.PixelHeight <> _pixelHeight Then
+
+        If ValidateMsgRender() Then
             MsgRenderBitmap = New RenderTargetBitmap(_pixelWidth, _pixelHeight, 96, 96, PixelFormats.Pbgra32)
         End If
     End Sub
+
+    Private Sub VerifyBitmapSize(chkRender As RenderBitmapObj)
+        Select Case chkRender
+            Case RenderBitmapObj.Progress
+                If ValidateProgRender() Then
+                    ProgRenderBitmap = New RenderTargetBitmap(_pixelWidth, _pixelHeight, 96, 96, PixelFormats.Pbgra32)
+                End If
+            Case RenderBitmapObj.Message
+                If ValidateMsgRender() Then
+                    MsgRenderBitmap = New RenderTargetBitmap(_pixelWidth, _pixelHeight, 96, 96, PixelFormats.Pbgra32)
+                End If
+        End Select
+    End Sub
+
+    Private Sub RunRender(action As Action)
+        If Me.Dispatcher.CheckAccess() Then
+            action()
+        Else
+            AllocDispatcher().Invoke(DispatcherPriority.Render, action)
+        End If
+    End Sub
+
+    ' Runs the action *now* when already on the UI thread; otherwise marshals to it.
+    Private Sub RunOnUI(action As Action, Optional prio As DispatcherPriority = DispatcherPriority.Normal)
+        Dim d = AllocDispatcher()
+        If d.CheckAccess() Then
+            action()
+        Else
+            d.Invoke(prio, action)
+        End If
+    End Sub
+
 
     Private Shared Function ValidateProgFreeze(objPF As Freezable) As Boolean
         If objPF IsNot Nothing AndAlso objPF.CanFreeze AndAlso Not objPF.IsFrozen Then

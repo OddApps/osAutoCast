@@ -118,6 +118,11 @@ Public Module DataTypeLib
         isApplyConfig
     End Enum
 
+    Public Enum RenderBitmapObj
+        Progress
+        Message
+    End Enum
+
 End Module
 
 Public Class InjectInputData
@@ -255,7 +260,7 @@ Public Class ProgMsg
 
 End Class
 
-Public Class ProgEdgeData
+Public Class ProgEdgeObj
 
     Public Property EdgeX As Integer
     Public Property EdgeW As Integer
@@ -281,6 +286,83 @@ Public Class ProgEdgeData
 
     End Sub
 
+End Class
+
+Public Class ProgEdgeData
+
+    Public Property EdgeOld As Integer
+    Public Property EdgeNew As Integer
+
+    Public Sub New()
+
+    End Sub
+
+    Public Sub New(progVal As Double, progWidth As Double, ByRef objChunk As Double)
+        EdgeOld = EdgeFromChunk(objChunk, progWidth)
+        objChunk = progVal
+        EdgeNew = EdgeFromChunk(objChunk, progWidth)
+    End Sub
+
+    Private Function EdgeFromChunk(chunkVal As Double, progW As Double) As Integer
+        If progW <= 0 Then Return 0
+        Return CInt(Math.Round(progW * chunkVal))
+    End Function
+
+End Class
+
+Public Class GUI_PrepData
+    Implements IDisposable
+
+    Private disposedValue As Boolean
+
+    Public Property guiAction As Action
+    Public Property guiDispatch As Dispatcher
+    Public Property guiIsLoaded As Boolean
+
+    Public Sub New()
+
+    End Sub
+
+    Public Sub New(objGUI As progGui_AutoPass)
+        guiAction = Sub()
+                        Try
+                            If objGUI.IsLoaded Then
+                                objGUI.IsHitTestVisible = False
+                                objGUI.Opacity = 0
+                                objGUI.Close()
+                            End If
+                        Catch
+
+                        End Try
+                    End Sub
+
+        guiDispatch = objGUI.Dispatcher
+        guiIsLoaded = guiDispatch IsNot Nothing AndAlso Not guiDispatch.HasShutdownStarted
+    End Sub
+
+    Protected Overridable Sub Dispose(disposing As Boolean)
+        If Not disposedValue Then
+            If disposing Then
+                If guiAction IsNot Nothing Then
+                    guiAction = Nothing
+                End If
+
+                If guiDispatch IsNot Nothing Then
+                    guiDispatch = Nothing
+                End If
+            End If
+
+            ' TODO: free unmanaged resources (unmanaged objects) and override finalizer
+            ' TODO: set large fields to null
+            disposedValue = True
+        End If
+    End Sub
+
+    Public Sub Dispose() Implements IDisposable.Dispose
+        ' Do not change this code. Put cleanup code in 'Dispose(disposing As Boolean)' method
+        Dispose(disposing:=True)
+        GC.SuppressFinalize(Me)
+    End Sub
 End Class
 
 Public Class ProgTimeData

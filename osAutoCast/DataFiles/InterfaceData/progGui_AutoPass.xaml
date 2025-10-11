@@ -20,18 +20,17 @@
             </Grid.ColumnDefinitions>
             <Canvas x:Name="lblContainer" Margin="6,2,6,2" Grid.Row="0" Grid.ColumnSpan="2" >
                 <Label Content="AutoPass" Width="{Binding ActualWidth, ElementName=lblContainer}"
-Height="{Binding ActualHeight, ElementName=lblContainer}" FontFamily="Trebuchet MS" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" Padding="5,0,5,0"/>
-                <!--<Label Content="Label" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" Width="{Binding ActualWidth, ElementName=lblContainer}"
-       Height="{Binding ActualHeight, ElementName=lblContainer}" VerticalAlignment="Center" HorizontalAlignment="Center" FontFamily="Trebuchet MS" FontSize="22" FontWeight="Bold"/>-->
-               
-
+                       Height="{Binding ActualHeight, ElementName=lblContainer}" FontFamily="Trebuchet MS"
+                       FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"
+                       VerticalContentAlignment="Center" HorizontalContentAlignment="Center" Padding="5,0,5,0"/>
             </Canvas>
             <Border x:Name="apBorder" Grid.Row="1"
-        CornerRadius="0,0,20,20"
-        Background="#FF393939"
-        ClipToBounds="True" Height="28" VerticalAlignment="Bottom">
-                <local:OddLib_ProgressBar x:Name="OddProgBar_AP"
-                              HorizontalAlignment="Stretch" Height="28" IsAutoPass="True" Background="#FF393939" VerticalAlignment="Bottom" />
+                    CornerRadius="0,0,20,20"
+                    Background="#FF393939"
+                    ClipToBounds="True" Height="28" VerticalAlignment="Bottom">
+                <local:OddLib_ProgressBar x:Name="OddProgBar_AP" HorizontalAlignment="Stretch" 
+                                          Height="28" IsAutoPass="True" 
+                                          Background="#FF393939" VerticalAlignment="Bottom" />
             </Border>
 
             <!--<Border CornerRadius="0,0,20,20"

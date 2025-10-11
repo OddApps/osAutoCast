@@ -15,7 +15,7 @@ Public Class progGui_AutoPass
 
     Private Async Function AutoPass_Prep() As Task
         ' CoreDataLib.ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.Reset)
-        CoreDataLib.ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.DispMsg, "Release Mouse To Begin")
+        'CoreDataLib.ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.DispMsg, "Release Mouse To Begin")
 
         Await CoreDataLib.InputMonSvc.AnticipateInput(InputAction.AP_Start)
         Await Task.Delay(100)
@@ -37,12 +37,15 @@ Public Class progGui_AutoPass
         Await AutoPass_Prep()
 
         Dim apProgRender As New Animation.DoubleAnimation() With {
-            .From = 0.0, .To = 1.0,
+            .From = 1.0, .To = 0.0,
             .Duration = TimeSpan.FromMilliseconds(osFuncLib_Progress.ProgDuration),
-            .FillBehavior = Animation.FillBehavior.Stop
+            .FillBehavior = Animation.FillBehavior.Stop,
+            .EasingFunction = New EaseInOutExpoEase
         }
 
-        AddHandler apProgRender.Completed, Sub() TerminateAutoPass(True)
+        AddHandler apProgRender.Completed, Sub()
+                                               TerminateAutoPass(True)
+                                           End Sub
 
         Me.OddProgBar_AP.BeginAnimation(OddLib_ProgressBar.ProgressValueProperty, apProgRender)
 
@@ -64,28 +67,30 @@ Public Class progGui_AutoPass
         Dim retProgResult As ProgResult = Nothing
 
         If apComplete Then
-            If osFuncLib_Progress.GetProgState() = ProgStatus.StartAP Then osFuncLib_Progress.SetProgStatus(ProgAction.Complete,
-                                                                      TriggerType.AutoPass)
+            osFuncLib_Progress.UpdateProgStatus(TriggerAction.AutoPass,
+                                                ProgAction.Complete)
+
             SetProgResult(apComplete, retProgResult)
         Else
-            osFuncLib_Progress.SetProgStatus(ProgAction.Abort, TriggerType.AutoPass)
+            osFuncLib_Progress.UpdateProgStatus(TriggerAction.AutoPass, ProgAction.Abort)
             SetProgResult(apComplete, retProgResult)
         End If
 
-        CoreDataLib.ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.MaxFill)
-        CoreDataLib.ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.DispMsg, "Release Shift To AutoPass | Press C To Cancel")
+        ' CoreDataLib.ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.MaxFill)
+        ' CoreDataLib.ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.DispMsg, "Release Shift To AutoPass | Press C To Cancel")
 
         Return retProgResult
 
     End Function
 
-    Public Sub BeginPrep() Handles Me.Loaded
+    Public Sub BeginPrep()
         With CoreDataLib.FetchProgSizeReport(TriggerType.AutoPass)
             pHeight = .Item("pH")
             pWidth = .Item("pW")
         End With
 
         Me.OddProgBar_AP.ProgressFlow = ProgFlow.Descending
+        Me.OddProgBar_AP.IsAutoPass = True
     End Sub
 
     Private Sub SetProgResult(pResult As Boolean, ByRef setProgResult As ProgResult)
@@ -102,8 +107,8 @@ Public Class progGui_AutoPass
     End Sub
 
     Private Sub progGui_AutoPass_Closing(sender As Object, e As CancelEventArgs) Handles Me.Closing
-        e.Cancel = True
-        Me.Hide()
+        'e.Cancel = True
+        'Me.Hide()
     End Sub
 
 End Class

@@ -133,14 +133,6 @@ Public NotInheritable Class CoreDataLib
         InputMonSvc.SelectState(MonitorStatus.Watching)
     End Sub
 
-    Public Shared Sub PrepTrigger(pType As TriggerType)
-        osFuncLib_InputScan.SetMonitorState(MonitorStatus.InCmd)
-        If isUtilityTrigger(pType) Then Return
-
-        osFuncLib_Progress.SetProgStatus(ProgAction.Activate, pType)
-        StartCancelWatcher(pType)
-    End Sub
-
     Public Shared Sub PrepUtilityTrigger(pType As TriggerType)
         osFuncLib_InputScan.SetMonitorState(MonitorStatus.InCmd)
         If isUtilityTrigger(pType) Then Return
