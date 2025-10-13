@@ -123,6 +123,11 @@ Public Module DataTypeLib
         Message
     End Enum
 
+    Public Enum MsgRenderType
+        msgClear
+        msgDisplay
+    End Enum
+
 End Module
 
 Public Class InjectInputData

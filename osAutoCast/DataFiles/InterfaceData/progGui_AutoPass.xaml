@@ -3,10 +3,11 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:osAutoCast"
-        mc:Ignorable="d" Height="65" Width="280" ResizeMode="NoResize" WindowStyle="None" AllowsTransparency="True"
-        ShowInTaskbar="False" Topmost="True" Background="Transparent" WindowStartupLocation="CenterScreen" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
-
+        xmlns:local="clr-namespace:osAutoCast" mc:Ignorable="d" 
+        Height="65" Width="280" ResizeMode="NoResize" WindowStyle="None"
+        AllowsTransparency="True" ShowInTaskbar="False" Topmost="True"
+        Background="Transparent" WindowStartupLocation="CenterScreen" 
+        HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
     <Border BorderBrush="Black" BorderThickness="2,3,2,3" CornerRadius="0,0,20,20" Background="#FF9E9E9E"
             SnapsToDevicePixels="True">
         <Grid Width="276" Height="60" SnapsToDevicePixels="False">
@@ -29,8 +30,9 @@
                     Background="#FF393939"
                     ClipToBounds="True" Height="28" VerticalAlignment="Bottom">
                 <local:OddLib_ProgressBar x:Name="OddProgBar_AP" HorizontalAlignment="Stretch" 
-                                          Height="28" IsAutoPass="True" 
-                                          Background="#FF393939" VerticalAlignment="Bottom" />
+                                          Height="28" IsAutoPass="True" Background="#FF393939" 
+                                          VerticalAlignment="Bottom" SnapsToDevicePixels="True" 
+                                          UseLayoutRounding="True" RenderOptions.BitmapScalingMode="LowQuality"/>
             </Border>
 
             <!--<Border CornerRadius="0,0,20,20"

@@ -61,6 +61,10 @@ Public NotInheritable Class osHandler_GUI
                     Dim size As System.Drawing.Size = osFuncLib_Progress.CalcProgSize(guiType)
                     osGuiAutoCast.Left = point.X
                     osGuiAutoCast.Top = point.Y
+
+                    CoreDataLib.ProcessProgressEvent(ProgMode.AutoCast, ProgEvent.Reset)
+                    CoreDataLib.ProcessProgressEvent(ProgMode.AutoCast, ProgEvent.DispMsg, "Release Shift")
+
                     osGuiAutoCast.Show()
                     osGuiAutoCast.Width = size.Width
                     osGuiAutoCast.Height = size.Height

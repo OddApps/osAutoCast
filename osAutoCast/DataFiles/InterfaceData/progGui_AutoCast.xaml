@@ -4,8 +4,10 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:osAutoCast"
-        mc:Ignorable="d" Height="25" Width="110" ResizeMode="NoResize" WindowStyle="None" ShowInTaskbar="False" Topmost="True">
-    <!--<Canvas x:Name="progCanvas" Background="#FF222222" Width="105" Height="22"/>-->
-    <local:OddLib_ProgressBar x:Name="OddProgBar1" Width="110" Height="25" Background="#FF39393B" BorderThickness="0"/>
+        mc:Ignorable="d" Height="25" Width="110" ResizeMode="NoResize"
+        WindowStyle="None" AllowsTransparency="False" ShowInTaskbar="False" 
+        Topmost="True" Focusable="False" ShowActivated="False">
+    <local:OddLib_ProgressBar x:Name="OddProgBar1" Width="110" Height="25" IsAutoPass="False" 
+                          Background="#FF393939" BorderThickness="0" SnapsToDevicePixels="True" 
+                          UseLayoutRounding="True" RenderOptions.BitmapScalingMode="LowQuality" />
 </Window>
-

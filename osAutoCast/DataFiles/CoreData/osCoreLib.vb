@@ -126,8 +126,7 @@ Public NotInheritable Class osFuncLib_Progress
         {ProgStatus.Idle, osColors.Color.FromRgb(57, 57, 57)},
         {ProgStatus.Running, osColors.Color.FromRgb(82, 96, 117)},
         {ProgStatus.Success, osColors.Color.FromRgb(34, 139, 34)},
-        {ProgStatus.Fail, osColors.Color.FromRgb(97, 20, 20)},
-        {ProgStatus.StartAP, osColors.Color.FromRgb(97, 20, 20)}
+        {ProgStatus.Fail, osColors.Color.FromRgb(97, 20, 20)}
     }
 
     Private Shared ReadOnly ProgColorIdx_AutoPass As New Dictionary(Of ProgStatus, osColors.Color) From {
@@ -367,23 +366,20 @@ Public NotInheritable Class osFuncLib_AutoCast
     End Sub
 
     Public Shared Async Function ExecuteAutoCast() As Task
-        'Dim acResult As ProgResult = ProgResult.Completed
-
-        Dim retProgResult As ProgResult = Nothing
+        ' Dim retProgResult As ProgResult = Nothing
 
         Dim isTask_AutoCast = osHandler_GUI.osGui_AutoCast.
             Dispatcher.InvokeAsync(Async Function()
-                                       If osFuncLib_InputScan.FindProgPosition(ptPos) Then
-                                           osFuncLib_Progress.SetProgContainer(TriggerType.AutoCast)
+                                       Dim chkPos = osFuncLib_InputScan.FindProgPosition(ptPos)
 
-                                           osHandler_GUI.DisplayGUI(TriggerType.AutoCast, ptPos)
-                                           osFuncLib_Progress.SetProgBlockData(TriggerType.AutoCast)
+                                       osHandler_GUI.DisplayGUI(TriggerType.AutoCast, ptPos)
+                                       osFuncLib_Progress.SetProgBlockData(TriggerType.AutoCast)
 
-                                           retProgResult = Await osHandler_GUI.osGui_AutoCast.LaunchAutoCast()
-                                       End If
+                                       Dim retAC = Await osHandler_GUI.osGui_AutoCast.LaunchAutoCast()
+                                       Return retAC
                                    End Function)
 
-        Await isTask_AutoCast.Task.Unwrap()
+        Dim retProgResult = Await isTask_AutoCast.Task.Unwrap()
 
         Await ProcessResult(retProgResult)
         osFuncLib_InputScan.isActionComplete = True
@@ -391,8 +387,6 @@ Public NotInheritable Class osFuncLib_AutoCast
 
     Private Shared Async Function ProcessResult(acResult As ProgResult) As Task
         Try
-            CoreDataLib.ProcessProgressEvent(ProgMode.AutoCast, ProgEvent.MaxFill)
-
             Select Case acResult
                 Case ProgResult.Completed
                     If CoreDataLib.isRTC() Then
@@ -400,21 +394,25 @@ Public NotInheritable Class osFuncLib_AutoCast
                         Await CoreDataLib.InputMonSvc.AnticipateInput(InputAction.AC_RTC)
                     End If
 
-                    Await osHandler_GUI.osGui_AutoCast.Dispatcher.InvokeAsync(
+                    Dim procComplete = PrepDispatcher().InvokeAsync(
                         Async Function()
                             Await Task.Delay(100)
-
                             CoreDataLib.ProcessProgressEvent(ProgMode.AutoCast, ProgEvent.DispMsg, "Casting")
                         End Function)
-                    EngageAutoCast()
+                    Await procComplete.Task.Unwrap()
 
+                    EngageAutoCast()
                 Case ProgResult.Cancelled
-                    Await osHandler_GUI.osGui_AutoCast.Dispatcher.InvokeAsync(
+                    Dim procFail = PrepDispatcher().InvokeAsync(
                         Async Function()
-                            Await Task.Delay(50)
+                            CoreDataLib.ProcessProgressEvent(ProgMode.AutoCast, ProgEvent.MaxFill)
+                            Await Task.Delay(24)
+
                             CoreDataLib.ProcessProgressEvent(ProgMode.AutoCast,
                                                              ProgEvent.DispMsg, "Cancelled")
                         End Function)
+
+                    Await procFail.Task.Unwrap()
             End Select
 
             Await FinalizeAutoCast()
@@ -425,7 +423,6 @@ Public NotInheritable Class osFuncLib_AutoCast
 
     Private Shared Async Function FinalizeAutoCast() As Task
         Await Task.Delay(750)
-
         osHandler_GUI.osGui_AutoCast.Dispatcher.Invoke(Sub()
                                                            osHandler_GUI.osGui_AutoCast.Close()
                                                        End Sub)
@@ -506,32 +503,26 @@ Public NotInheritable Class osFuncLib_AutoPass
     End Sub
 
     Public Shared Async Function ExecuteAutoPass() As Task
-        Dim retProgResult As ProgResult = Nothing
-
         Dim isTask_AutoPass = osHandler_GUI.osGui_AutoPass.
             Dispatcher.InvokeAsync(Async Function()
                                        osHandler_GUI.DisplayGUI(TriggerType.AutoPass)
                                        osFuncLib_Progress.SetProgBlockData(TriggerType.AutoPass)
                                        Await Task.Delay(50)
 
-                                       retProgResult = Await osHandler_GUI.osGui_AutoPass.LaunchAutoPass()
+                                       Dim retAP = Await osHandler_GUI.osGui_AutoPass.LaunchAutoPass()
+                                       Return retAP
                                    End Function)
 
-        Await isTask_AutoPass.Task.Unwrap()
+        Dim retProgResult = Await isTask_AutoPass.Task.Unwrap()
 
         Await ProcessResult(retProgResult)
         osFuncLib_InputScan.isActionComplete = True
     End Function
 
     Private Shared Async Function AnticipateLaunchAP() As Task(Of Boolean)
-        Dim flag As Boolean = Await CoreDataLib.InputMonSvc.AnticipateInput(InputAction.AP_Exec)
-        If Not flag Then
-            osFuncLib_Progress.UpdateProgStatus(TriggerAction.AutoPass, ProgAction.Abort)
-            CoreDataLib.ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.DispMsg, "AutoPass Cancelled")
-        End If
-        Return flag
+        Dim chkExecAP = Await CoreDataLib.InputMonSvc.AnticipateInput(InputAction.AP_Exec)
+        Return chkExecAP
     End Function
-
 
     Private Shared Async Function ProcessResult(acResult As ProgResult) As Task
         Try
@@ -547,12 +538,14 @@ Public NotInheritable Class osFuncLib_AutoPass
                         InvokeAutoPass()
                     Else
                         osFuncLib_Progress.UpdateProgStatus(TriggerAction.AutoPass, ProgAction.Abort)
+
                         CoreDataLib.ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.MaxFill)
                         CoreDataLib.ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.DispMsg, "AutoPass Cancelled")
                     End If
 
                 Case ProgResult.Cancelled
                     osFuncLib_Progress.UpdateProgStatus(TriggerAction.AutoPass, ProgAction.Abort)
+
                     CoreDataLib.ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.MaxFill)
                     CoreDataLib.ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.DispMsg, "AutoPass Cancelled")
             End Select
@@ -565,7 +558,6 @@ Public NotInheritable Class osFuncLib_AutoPass
     Private Shared Async Function FinalizeAutoPass() As Task
         Await Task.Delay(750)
         osHandler_GUI.osGui_AutoPass.Dispatcher.Invoke(Sub()
-                                                           ' osFuncLib_Progress.UpdateProgStatus(TriggerAction.AutoPass, ProgAction.Reset)
                                                            osHandler_GUI.ResetUI(TriggerAction.AutoPass, True)
                                                        End Sub)
     End Function
@@ -949,6 +941,11 @@ Module osFuncLib_Timer
 End Module
 
 Module osFuncLib_UI
+
+    Public Function PrepDispatcher(Optional IsAutoPass As Boolean = False) As Dispatcher
+        Return If(IsAutoPass, osHandler_GUI.osGui_AutoPass.Dispatcher,
+            osHandler_GUI.osGui_AutoCast.Dispatcher)
+    End Function
 
     Public Sub SetRoundedCorners(panel As Panel, radius As Integer)
         Dim path As New GraphicsPath()

@@ -38,8 +38,6 @@ Public Class OddLib_ProgressBar
         SnapsToDevicePixels = True
         UseLayoutRounding = True
 
-        LockProgress = False
-
         RenderOptions.SetBitmapScalingMode(Me, BitmapScalingMode.LowQuality)
 
         AddHandler Me.Loaded, Sub()
@@ -66,6 +64,7 @@ Public Class OddLib_ProgressBar
 
                                   InvalidateVisual()
                               End Sub
+
         AddHandler Me.Loaded,
             Sub()
                 If _pendingPrime Then
@@ -74,9 +73,16 @@ Public Class OddLib_ProgressBar
                 End If
             End Sub
 
+        AddHandler Me.Loaded,
+            Sub()
+                If _pixelWidth > 0 Then
+                    CalcMinDelta(IsGpuOptimized())
+                End If
+            End Sub
+
         AddHandler Me.SizeChanged,
             Sub()
-                If _pendingPrime AndAlso _pixelWidth > 0 AndAlso _pixelHeight > 0 Then
+                If ValidatePendingPrime() Then
                     _pendingPrime = False
                     PrimeFirstFrame()
                 End If
@@ -84,6 +90,7 @@ Public Class OddLib_ProgressBar
     End Sub
 
     Public Sub PrimeFirstFrame(Optional chunk As Double? = Nothing)
+        If IsPrimingSuspended Then Exit Sub
 
         If chunk.HasValue Then
             _progChunk = Math.Max(0.0, Math.Min(1.0, chunk.Value))
@@ -99,10 +106,8 @@ Public Class OddLib_ProgressBar
         Dim curEdge = EdgeFromChunk(_progChunk)
 
         Using ProgRenderTarget = ProgRenderSurface.RenderOpen()
-            If Not LockProgress Then
-                ProgRenderTarget.DrawRectangle(BgBrushOrDefault(), Nothing,
-                                           New Rect(0, 0, _pixelWidth, _pixelHeight))
-            End If
+            ProgRenderTarget.DrawRectangle(BgBrushOrDefault(), Nothing,
+                                       New Rect(0, 0, _pixelWidth, _pixelHeight))
 
             If ValidateBrush(curEdge) Then
                 ProgRenderTarget.DrawRectangle(_activeBrush, Nothing,
@@ -115,25 +120,6 @@ Public Class OddLib_ProgressBar
 
         InvalidateVisual()
     End Sub
-
-    Private Sub PrimeIfReady()
-        If VerifyFramePrime() Then Return
-
-        If IsAutoPass Then
-            PrimeFirstFrame(1)
-        Else
-            PrimeFirstFrame()
-        End If
-    End Sub
-
-    Private Function VerifyFramePrime() As Boolean
-        Dim chkPrime As Boolean = False
-
-        If Not IsLoaded Then chkPrime = True
-        If _pixelWidth <= 0 OrElse _pixelHeight <= 0 Then chkPrime = True
-
-        Return chkPrime
-    End Function
 
 #End Region
 
@@ -277,16 +263,6 @@ Public Class OddLib_ProgressBar
         End Set
     End Property
 
-    Private _LockProgress As Boolean
-    Public Property LockProgress As Boolean
-        Get
-            Return _LockProgress
-        End Get
-        Set(value As Boolean)
-            _LockProgress = value
-        End Set
-    End Property
-
 #End Region
 
 
@@ -355,13 +331,27 @@ Public Class OddLib_ProgressBar
 #End Region
 
 #Region "Reset / Events / Messages"
+    Private _suspendPrimeDepth As Integer = 0
+
+    Private Sub SuspendPriming()
+        _suspendPrimeDepth += 1
+    End Sub
+
+    Private Sub ResumePriming()
+        If _suspendPrimeDepth > 0 Then _suspendPrimeDepth -= 1
+    End Sub
+
+    Private ReadOnly Property IsPrimingSuspended As Boolean
+        Get
+            Return _suspendPrimeDepth > 0
+        End Get
+    End Property
 
     Public Sub PerformProgressEvent(doEvent As ProgressEventData)
         Select Case doEvent.evType
             Case ProgEvent.Reset
                 ResetProgress(doEvent.evTrigger)
             Case ProgEvent.MaxFill
-                ResetProgress()
                 DisplayMaxVal()
             Case ProgEvent.DispMsg
                 DisplayMsg(doEvent.evDispMsg, doEvent.evTrigger)
@@ -390,61 +380,43 @@ Public Class OddLib_ProgressBar
     End Sub
 
     Private Sub DisplayMaxVal()
+        PrimeIfReady()
+
         If ValidateProgBitmap() Then Return
 
-        AllocDispatcher().BeginInvoke(DispatcherPriority.Render,
-            New Action(Sub()
-                           ValidateProgDV()
-                           Using ProgRenderTarget = ProgRenderSurface.RenderOpen()
-                               ProgRenderTarget.DrawRectangle(_activeBrush, Nothing, New Rect(0, 0, _pixelWidth, _pixelHeight))
-                           End Using
-                           ProgRenderBitmap.Render(ProgRenderSurface)
-                           objEdge_Prev = _pixelWidth
-                           _progChunk = 1.0
-                           InvalidateVisual()
-                       End Sub))
+        Dim oldEdge As Integer = objEdge_Prev
+        Dim newEdge As Integer = _pixelWidth
+
+        If newEdge > oldEdge Then
+            RequestDeltaDraw(oldEdge, newEdge)
+        End If
+
+        _progChunk = 1.0
+        objEdge_Prev = newEdge
     End Sub
 
     Private Sub DisplayMsg(txtMsg As String, pType As TriggerType)
-        osFuncLib_Progress.progShowMsg = True
+        SuspendPriming()
 
-        AllocDispatcher().BeginInvoke(DispatcherPriority.Render,
-            New Action(Sub()
-                           ValidateMsgDV()
-                           EnsureBitmapsSized()
-                           ResetMsgBitmap()
-
-                           Using MsgRenderTarget = MsgOverlaySurface.RenderOpen()
-                               With New ProgMsg(txtMsg, pType, Me.IsAutoPass)
-                                   MsgRenderTarget.DrawText(.txtComposed, .txtLocation)
-                               End With
-                           End Using
-
-                           MsgRenderBitmap.Render(MsgOverlaySurface)
-                           isMsgDisplayed = True
-                           InvalidateVisual()
-                       End Sub))
-
-        osFuncLib_Progress.progShowMsg = False
+        Try
+            AllocDispatcher().
+                BeginInvoke(DispatcherPriority.Render,
+                            ComposeMsgRender(MsgRenderType.msgDisplay, txtMsg, pType))
+        Finally
+            ResumePriming()
+        End Try
     End Sub
 
     Private Sub ClearMsg(Optional pType As TriggerType = Nothing)
-        osFuncLib_Progress.progShowMsg = True
+        SuspendPriming()
 
-        AllocDispatcher().BeginInvoke(DispatcherPriority.Render,
-            New Action(Sub()
-                           ValidateMsgDV()
-                           EnsureBitmapsSized()
-                           ResetMsgBitmap()
-
-                           Using MsgRenderTarget = MsgOverlaySurface.RenderOpen()
-                           End Using
-
-                           isMsgDisplayed = False
-                           InvalidateVisual()
-                       End Sub))
-
-        osFuncLib_Progress.progShowMsg = False
+        Try
+            AllocDispatcher().
+                BeginInvoke(DispatcherPriority.Render,
+                            ComposeMsgRender(MsgRenderType.msgClear))
+        Finally
+            ResumePriming()
+        End Try
     End Sub
 
     Private Sub RenderMsgContainer(pDC As DrawingContext)
@@ -458,6 +430,9 @@ Public Class OddLib_ProgressBar
 #Region "Rendering Surface / Layout"
 
     Private Sub RebuildBackingBitmap(Optional includeProgress As Boolean = False)
+
+        If IsPrimingSuspended Then Exit Sub
+
         If ValidateSize() Then
             InvalidateVisual()
             Return
@@ -517,12 +492,14 @@ Public Class OddLib_ProgressBar
         End If
     End Sub
 
-
     Protected Overrides Sub OnRenderSizeChanged(sizeInfo As SizeChangedInfo)
         MyBase.OnRenderSizeChanged(sizeInfo)
 
         If ActualWidth > 0 AndAlso ActualHeight > 0 Then
             SetSizeData()
+
+            Me.MinDelta = 1.0 / _pixelWidth
+
             ApplyOptionalClip()
 
             ValidateProgDV()
@@ -609,8 +586,33 @@ Public Class OddLib_ProgressBar
     End Function
 
     Private Function ProcessProgress(pVal As Double) As Double
-        ' Dim chkVal As Double = If(IsAutoPass, osFuncLib_Progress.EaseInOutExpo(pVal), pVal)
-        Return Math.Max(0.00, Math.Min(1.0, pVal))
+        Dim valClamped As Double = Math.Max(0.0, Math.Min(1.0, pVal))
+
+        If _pixelWidth > 0 Then
+            Dim progStep As Double = 1.0 / _pixelWidth   ' 1 pixel in normalized units
+            valClamped = Math.Round(valClamped / progStep, 1) * progStep
+        End If
+
+        Return valClamped
+    End Function
+
+    Private Sub PrimeIfReady()
+        If VerifyFramePrime() Then Return
+
+        If IsAutoPass Then
+            PrimeFirstFrame(1)
+        Else
+            PrimeFirstFrame()
+        End If
+    End Sub
+
+    Private Function VerifyFramePrime() As Boolean
+        Dim chkPrime As Boolean = False
+
+        If Not IsLoaded Then chkPrime = True
+        If _pixelWidth <= 0 OrElse _pixelHeight <= 0 Then chkPrime = True
+
+        Return chkPrime
     End Function
 
     Private Sub ApplyOptionalClip()
@@ -625,6 +627,10 @@ Public Class OddLib_ProgressBar
         _pixelWidth = Math.Max(1, CInt(Math.Round(ActualWidth)))
         _pixelHeight = Math.Max(1, CInt(Math.Round(ActualHeight)))
     End Sub
+
+    Private Function ValidatePendingPrime() As Boolean
+        Return _pendingPrime AndAlso _pixelWidth > 0 AndAlso _pixelHeight > 0
+    End Function
 
     Private Function ValidateSize() As Boolean
         Return _pixelWidth <= 0 OrElse _pixelHeight <= 0
@@ -715,6 +721,19 @@ Public Class OddLib_ProgressBar
         End If
     End Sub
 
+    Private Function IsGpuOptimized() As Boolean
+        Dim chkGpuOpt = (RenderCapability.Tier >> 16)
+        Return chkGpuOpt >= 2
+    End Function
+
+    Private Sub CalcMinDelta(isGpuOpt As Boolean)
+        If isGpuOpt Then
+            Me.MinDelta = 1.0 / _pixelWidth
+        Else
+            Me.MinDelta = 2.0 / _pixelWidth
+        End If
+    End Sub
+
     Private Sub VerifyBitmapSize(chkRender As RenderBitmapObj)
         Select Case chkRender
             Case RenderBitmapObj.Progress
@@ -728,15 +747,39 @@ Public Class OddLib_ProgressBar
         End Select
     End Sub
 
-    Private Sub RunRender(action As Action)
-        If Me.Dispatcher.CheckAccess() Then
-            action()
-        Else
-            AllocDispatcher().Invoke(DispatcherPriority.Render, action)
-        End If
-    End Sub
+    Private Function ComposeMsgRender(renType As MsgRenderType, Optional txtMsg As String = Nothing, Optional pType As TriggerType = Nothing) As Action
+        Select Case renType
+            Case MsgRenderType.msgClear
+                Return New Action(
+                    Sub()
+                        ResetMsgBitmap()
+                        isMsgDisplayed = False
+                        InvalidateVisual()
+                    End Sub)
+            Case MsgRenderType.msgDisplay
+                Return New Action(
+                    Sub()
+                        ValidateMsgDV()
+                        EnsureBitmapsSized()
 
-    ' Runs the action *now* when already on the UI thread; otherwise marshals to it.
+                        ResetMsgBitmap()
+
+                        Using MsgRenderTarget = MsgOverlaySurface.RenderOpen()
+                            With New ProgMsg(txtMsg, pType, Me.IsAutoPass)
+                                MsgRenderTarget.DrawText(.txtComposed, .txtLocation)
+                            End With
+                        End Using
+
+                        MsgRenderBitmap.Render(MsgOverlaySurface)
+
+                        isMsgDisplayed = True
+                        InvalidateVisual()
+                    End Sub)
+            Case Else
+                Return Nothing
+        End Select
+    End Function
+
     Private Sub RunOnUI(action As Action, Optional prio As DispatcherPriority = DispatcherPriority.Normal)
         Dim d = AllocDispatcher()
         If d.CheckAccess() Then

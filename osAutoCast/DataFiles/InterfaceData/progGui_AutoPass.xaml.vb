@@ -14,13 +14,10 @@ Public Class progGui_AutoPass
     Private pWidth As Integer
 
     Private Async Function AutoPass_Prep() As Task
-        ' CoreDataLib.ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.Reset)
-        'CoreDataLib.ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.DispMsg, "Release Mouse To Begin")
 
         Await CoreDataLib.InputMonSvc.AnticipateInput(InputAction.AP_Start)
         Await Task.Delay(100)
 
-        'CoreDataLib.ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.ClrMsg)
         CoreDataLib.ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.DispMsg, "Release Shift or Press C To Cancel")
         InitiateAutoPass(chkAutoPassResult)
     End Function
@@ -40,8 +37,12 @@ Public Class progGui_AutoPass
             .From = 1.0, .To = 0.0,
             .Duration = TimeSpan.FromMilliseconds(osFuncLib_Progress.ProgDuration),
             .FillBehavior = Animation.FillBehavior.Stop,
-            .EasingFunction = New EaseInOutExpoEase
+            .EasingFunction = New Animation.CubicEase With {
+                .EasingMode = Animation.EasingMode.EaseInOut
+            }
         }
+
+        Animation.Timeline.SetDesiredFrameRate(apProgRender, 50)
 
         AddHandler apProgRender.Completed, Sub()
                                                TerminateAutoPass(True)

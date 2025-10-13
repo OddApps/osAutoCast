@@ -12,16 +12,20 @@ Public Class progGui_AutoCast
 
     Private Async Function AutoCast_Prep() As Task
 
-        Me.OddProgBar1.LockProgress = False
-
-        CoreDataLib.ProcessProgressEvent(ProgMode.AutoCast, ProgEvent.Reset)
-        CoreDataLib.ProcessProgressEvent(ProgMode.AutoCast, ProgEvent.DispMsg, "Release Shift")
-
         Await CoreDataLib.InputMonSvc.AnticipateInput(InputAction.AC_Start)
 
-        CoreDataLib.ProcessProgressEvent(ProgMode.AutoCast, ProgEvent.Reset)
+        CoreDataLib.ProcessProgressEvent(ProgMode.AutoCast, ProgEvent.ClrMsg)
+        osFuncLib_Progress.UpdateProgStatus(TriggerAction.AutoCast, ProgAction.Activate)
 
-        Await Task.Delay(500)
+        'Dim tier As Integer = (RenderCapability.Tier >> 16)
+        'If tier < 2 Then
+        '    ' Tier 0/1: be conservative
+        '    minDt = TimeSpan.FromMilliseconds(33)  ' 30 FPS
+        '    OddProgBar1.MinDelta = 0.005           ' ~0.5% pixel threshold
+        'End If
+
+
+        Await Task.Delay(375)
 
         InitiateAutoCast(chkAutoCastResult)
     End Function
@@ -33,8 +37,6 @@ Public Class progGui_AutoCast
                                                     RunContinuationsAsynchronously)
     End Sub
 
-
-
     Public Async Function LaunchAutoCast() As Task(Of ProgResult)
 
         Await AutoCast_Prep()
@@ -42,20 +44,25 @@ Public Class progGui_AutoCast
         Dim acProgRender As New Animation.DoubleAnimation() With {
             .From = 0.0, .To = 1.0,
             .Duration = TimeSpan.FromMilliseconds(osFuncLib_Progress.ProgDuration),
-            .FillBehavior = Animation.FillBehavior.Stop,
-            .EasingFunction = New EaseInOutExpoEase
+            .FillBehavior = Animation.FillBehavior.HoldEnd,
+            .EasingFunction = New Animation.ExponentialEase() With {
+                .Exponent = 4,
+                .EasingMode = Animation.EasingMode.EaseInOut
+            }
         }
+
+        Animation.Timeline.SetDesiredFrameRate(acProgRender, 40)
 
         AddHandler acProgRender.Completed, Sub()
                                                TerminateAutoCast(True)
                                            End Sub
 
-        Me.OddProgBar1.BeginAnimation(OddLib_ProgressBar.ProgressValueProperty, acProgRender)
+        OddProgBar1.BeginAnimation(OddLib_ProgressBar.ProgressValueProperty, acProgRender)
 
         Using CancelStateReg As CancellationTokenRegistration = CoreDataLib.
             objCancelState.Register(
                 Sub()
-                    Me.OddProgBar1.BeginAnimation(OddLib_ProgressBar.ProgressValueProperty, Nothing)
+                    OddProgBar1.BeginAnimation(OddLib_ProgressBar.ProgressValueProperty, Nothing)
                     TerminateAutoCast(False)
                 End Sub)
 
@@ -71,26 +78,20 @@ Public Class progGui_AutoCast
 
     Private Function AutoCast_HandleResult(acComplete As Boolean) As ProgResult
         If acComplete Then
-            If osFuncLib_Progress.IsProgRunning() Then
-                Me.OddProgBar1.LockProgress = True
-                osFuncLib_Progress.UpdateProgStatus(TriggerAction.AutoCast,
+            osFuncLib_Progress.UpdateProgStatus(TriggerAction.AutoCast,
                                                     ProgAction.Complete)
-            End If
-
             SetProgResult(acComplete, retProgResult)
         Else
             osFuncLib_Progress.UpdateProgStatus(TriggerAction.AutoCast, ProgAction.Abort)
             SetProgResult(acComplete, retProgResult)
         End If
 
-        'CoreDataLib.ProcessProgressEvent(ProgMode.AutoCast, ProgEvent.MaxFill)
-
         Return retProgResult
     End Function
 
     Public Sub BeginPrep()
-        Me.OddProgBar1.Background = New SolidColorBrush(System.Windows.Media.Color.FromRgb(57, 57, 57))
-        Me.OddProgBar1.IsAutoPass = False
+        ' OddProgBar1.Background = New SolidColorBrush(System.Windows.Media.Color.FromRgb(57, 57, 57))
+        OddProgBar1.IsAutoPass = False
     End Sub
 
     Private Sub SetProgResult(pResult As Boolean, ByRef setProgResult As ProgResult)
@@ -100,7 +101,7 @@ Public Class progGui_AutoCast
 
     Private Sub progGui_AutoCast_Closing(sender As Object, e As CancelEventArgs) Handles Me.Closing
         e.Cancel = True
-        Me.Hide()
+        Hide()
     End Sub
 
 End Class
