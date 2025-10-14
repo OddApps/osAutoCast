@@ -5,6 +5,9 @@ Imports System.Reflection
 Imports System.Windows
 Imports System.Windows.Media
 Imports System.Windows.Threading
+Imports osForms = System.Windows.Forms
+Imports osDraw = System.Drawing
+Imports osIcons = System.Drawing.SystemIcons
 
 Public Module DataTypeLib
 
@@ -68,6 +71,11 @@ Public Module DataTypeLib
         AutoCast
     End Enum
 
+    Public Enum ProgGUI
+        AutoPass
+        AutoCast
+    End Enum
+
     Public Enum MonitorStatus
         Watching
         Paused
@@ -126,6 +134,22 @@ Public Module DataTypeLib
     Public Enum MsgRenderType
         msgClear
         msgDisplay
+    End Enum
+
+    Public Enum MsgBoxType
+        isQuestion
+        isAlert
+    End Enum
+
+    Public Enum MsgBtnType
+        isYes
+        isNo
+        isCancel
+    End Enum
+
+    Public Enum PromptType
+        isSave
+        isClose
     End Enum
 
 End Module
@@ -328,7 +352,7 @@ Public Class GUI_PrepData
 
     End Sub
 
-    Public Sub New(objGUI As progGui_AutoPass)
+    Public Sub New(objGUI As Window)
         guiAction = Sub()
                         Try
                             If objGUI.IsLoaded Then
@@ -599,4 +623,210 @@ End Class
 Public Class objTriggerHandler
     Public Property HandleAction As TriggerAction
     Public Property HandleEvent As Func(Of Task)
+End Class
+
+Public Module TriggerInvoker
+
+    Public cmdDispatcher As Dispatcher
+
+    Public Sub SetDispatcher()
+        cmdDispatcher = Application.Current.Dispatcher
+    End Sub
+
+End Module
+
+Public Class NoActivateMsgBox
+    Inherits osForms.Form
+
+    Private Const WS_EX_NOACTIVATE As Integer = &H8000000
+    Private Const WS_EX_TOOLWINDOW As Integer = &H80
+    Private Const WM_MOUSEACTIVATE As Integer = &H21
+    Private Const MA_NOACTIVATE As Integer = 3
+
+    Private Const IconSize As Integer = 48
+
+    Private lblMsg As New osForms.Label
+    Private picIcon As New osForms.PictureBox
+
+    Private ReadOnly objContentContainer As New osForms.TableLayoutPanel()
+    Private ReadOnly objBtnPanel As New osForms.FlowLayoutPanel()
+
+    Public Sub New(msgText As String, msgTitle As String, msgType As MsgBoxType)
+        PrepContentContainer()
+
+        GenContentContainer()
+
+        PrepMsgIcon(msgType)
+        PrepMsg(msgText)
+        PrepBtnContainer(msgType)
+        PrepPopupGui(msgTitle)
+
+        InitContentContainer()
+    End Sub
+
+    Private Sub PrepContentContainer()
+        objContentContainer.SuspendLayout()
+        CType(picIcon, System.ComponentModel.ISupportInitialize).BeginInit()
+        objBtnPanel.SuspendLayout()
+        Me.SuspendLayout()
+    End Sub
+
+    Private Sub InitContentContainer()
+        objContentContainer.ResumeLayout(False)
+        objContentContainer.PerformLayout()
+        CType(picIcon, System.ComponentModel.ISupportInitialize).EndInit()
+        objBtnPanel.ResumeLayout(False)
+        Me.ResumeLayout(False)
+    End Sub
+
+    Private Sub GenContentContainer()
+        With objContentContainer
+            .AutoSizeMode = osForms.AutoSizeMode.GrowAndShrink
+            .ColumnCount = 2
+            .ColumnStyles.Add(New osForms.ColumnStyle(osForms.SizeType.Absolute, 52.0!))
+            .ColumnStyles.Add(New osForms.ColumnStyle(osForms.SizeType.Percent, 100.0!))
+            .Controls.Add(picIcon, 0, 0)
+            .Controls.Add(lblMsg, 1, 0)
+            .Controls.Add(objBtnPanel, 0, 1)
+            .Dock = osForms.DockStyle.Fill
+            .Location = New osDraw.Point(0, 0)
+            .Margin = New osForms.Padding(4)
+            .Name = "objContentContainer"
+            .RowCount = 2
+            .RowStyles.Add(New osForms.RowStyle(osForms.SizeType.Absolute, 75.0!))
+            .RowStyles.Add(New osForms.RowStyle(osForms.SizeType.Absolute, 44.0!))
+            .Size = New osDraw.Size(447, 125)
+            .TabIndex = 0
+        End With
+    End Sub
+
+    Private Sub PrepMsgIcon(msgType As MsgBoxType)
+        picIcon.Size = New osDraw.Size(IconSize, IconSize)
+        picIcon.Margin = New osForms.Padding(2)
+        picIcon.SizeMode = osForms.PictureBoxSizeMode.StretchImage
+        picIcon.Anchor = CType((osForms.AnchorStyles.Left Or osForms.AnchorStyles.Right), osForms.AnchorStyles)
+        picIcon.Image = SetMsgIcon(msgType)
+    End Sub
+
+    Private Sub PrepPopupGui(msgTitle As String)
+        Text = msgTitle
+        FormBorderStyle = osForms.FormBorderStyle.FixedDialog
+        StartPosition = osForms.FormStartPosition.CenterScreen
+        ControlBox = False
+        ShowInTaskbar = False
+        TopMost = True
+        AutoScaleMode = osForms.AutoScaleMode.Font
+        AutoScaleDimensions = New osDraw.SizeF(6.0!, 13.0!)
+        DoubleBuffered = True
+        MinimizeBox = False
+        MaximizeBox = False
+        Size = New osDraw.Size(460, 164)
+        Controls.Add(objContentContainer)
+    End Sub
+
+    Private Sub PrepBtnContainer(msgType As MsgBoxType)
+        objContentContainer.SetColumnSpan(objBtnPanel, 2)
+
+        AddButtons(msgType)
+
+        objBtnPanel.Dock = osForms.DockStyle.Fill
+        objBtnPanel.FlowDirection = osForms.FlowDirection.RightToLeft
+        objBtnPanel.MaximumSize = New osDraw.Size(0, 44)
+        objBtnPanel.MinimumSize = New osDraw.Size(0, 44)
+        objBtnPanel.Name = "btnContainer"
+        objBtnPanel.TabIndex = 2
+    End Sub
+
+    Private Sub PrepMsg(msgText As String)
+        lblMsg.AutoSize = True
+        lblMsg.Dock = osForms.DockStyle.Fill
+        lblMsg.Font = New osDraw.Font("Segoe UI", 9.75!, osDraw.FontStyle.Regular, osDraw.GraphicsUnit.Point, CType(0, Byte))
+        lblMsg.Margin = New osForms.Padding(6)
+        lblMsg.Name = "txtMsg"
+        lblMsg.TabIndex = 1
+        lblMsg.Text = msgText
+    End Sub
+
+    Private Sub AddButtons(msgType As MsgBoxType)
+        Select Case msgType
+            Case MsgBoxType.isAlert
+                AddButton("No", osForms.DialogResult.No, False)
+                AddButton("Yes", osForms.DialogResult.Yes, True)
+            Case MsgBoxType.isQuestion
+                AddButton("Cancel", osForms.DialogResult.Cancel, False)
+                AddButton("No", osForms.DialogResult.No, False)
+                AddButton("Yes", osForms.DialogResult.Yes, True)
+        End Select
+    End Sub
+
+    Private Sub AddButton(btnText As String, btnResult As osForms.DialogResult, Optional isDefault As Boolean = False)
+        Dim objBtn = New osForms.Button() With {
+            .Text = btnText,
+            .DialogResult = btnResult,
+            .Size = New osDraw.Size(75, 38),
+            .FlatStyle = osForms.FlatStyle.Popup,
+            .UseVisualStyleBackColor = True
+        }
+
+        objBtnPanel.Controls.Add(objBtn)
+
+        If isDefault Then AcceptButton = objBtn
+        If btnResult = osForms.DialogResult.Cancel Then CancelButton = objBtn
+    End Sub
+
+    Private Function SetMsgIcon(mType As MsgBoxType) As osDraw.Bitmap
+        If mType = MsgBoxType.isAlert Then
+            Return osIcons.Warning.ToBitmap()
+        Else
+            Return osIcons.Question.ToBitmap()
+        End If
+    End Function
+
+    Protected Overrides ReadOnly Property CreateParams() As osForms.CreateParams
+        Get
+            Dim cp As osForms.CreateParams = MyBase.CreateParams
+            cp.ExStyle = cp.ExStyle Or WS_EX_NOACTIVATE Or WS_EX_TOOLWINDOW
+            Return cp
+        End Get
+    End Property
+
+    Protected Overrides Sub WndProc(ByRef m As osForms.Message)
+        If m.Msg = WM_MOUSEACTIVATE Then
+            m.Result = CType(MA_NOACTIVATE, IntPtr)
+            Return
+        End If
+        MyBase.WndProc(m)
+    End Sub
+
+    Public Shared Function ShowNoActivate(msg As String, title As String, mtype As MsgBoxType) As osForms.DialogResult
+        Using dlg As New NoActivateMsgBox(msg, title, mtype)
+            Return dlg.ShowDialog()
+        End Using
+    End Function
+
+End Class
+
+Public Class PromptData
+
+    Public Property Title As String
+    Public Property Msg As String
+    Public Property MsgType As MsgBoxType
+
+    Public Sub New()
+
+    End Sub
+
+    Public Sub New(pType As PromptType)
+        Select Case pType
+            Case PromptType.isSave
+                Msg = "Confirm Saving To Preferences?"
+                Title = "Save Preferences"
+                MsgType = MsgBoxType.isAlert
+            Case PromptType.isClose
+                Msg = "Settings have been changed... Save Changes?"
+                Title = "Save Changes"
+                MsgType = MsgBoxType.isQuestion
+        End Select
+    End Sub
+
 End Class

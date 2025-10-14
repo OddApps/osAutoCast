@@ -45,13 +45,10 @@ Public Class progGui_AutoCast
             .From = 0.0, .To = 1.0,
             .Duration = TimeSpan.FromMilliseconds(osFuncLib_Progress.ProgDuration),
             .FillBehavior = Animation.FillBehavior.HoldEnd,
-            .EasingFunction = New Animation.ExponentialEase() With {
-                .Exponent = 4,
-                .EasingMode = Animation.EasingMode.EaseInOut
-            }
+            .EasingFunction = New EaseInOutExpoEase
         }
 
-        Animation.Timeline.SetDesiredFrameRate(acProgRender, 40)
+        Animation.Timeline.SetDesiredFrameRate(acProgRender, 45)
 
         AddHandler acProgRender.Completed, Sub()
                                                TerminateAutoCast(True)
@@ -100,8 +97,8 @@ Public Class progGui_AutoCast
     End Sub
 
     Private Sub progGui_AutoCast_Closing(sender As Object, e As CancelEventArgs) Handles Me.Closing
-        e.Cancel = True
-        Hide()
+        'e.Cancel = True
+        'Hide()
     End Sub
 
 End Class

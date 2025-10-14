@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:osAutoCast"
         mc:Ignorable="d" Height="25" Width="110" ResizeMode="NoResize"
         WindowStyle="None" AllowsTransparency="False" ShowInTaskbar="False" 
-        Topmost="True" Focusable="False" ShowActivated="False">
+        Topmost="True" Focusable="False" ShowActivated="False" Background="#FF393939">
     <local:OddLib_ProgressBar x:Name="OddProgBar1" Width="110" Height="25" IsAutoPass="False" 
                           Background="#FF393939" BorderThickness="0" SnapsToDevicePixels="True" 
                           UseLayoutRounding="True" RenderOptions.BitmapScalingMode="LowQuality" />

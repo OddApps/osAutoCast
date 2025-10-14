@@ -37,12 +37,10 @@ Public Class progGui_AutoPass
             .From = 1.0, .To = 0.0,
             .Duration = TimeSpan.FromMilliseconds(osFuncLib_Progress.ProgDuration),
             .FillBehavior = Animation.FillBehavior.Stop,
-            .EasingFunction = New Animation.CubicEase With {
-                .EasingMode = Animation.EasingMode.EaseInOut
-            }
+            .EasingFunction = New EaseInOutExpoEase
         }
 
-        Animation.Timeline.SetDesiredFrameRate(apProgRender, 50)
+        Animation.Timeline.SetDesiredFrameRate(apProgRender, 45)
 
         AddHandler apProgRender.Completed, Sub()
                                                TerminateAutoPass(True)
@@ -50,12 +48,11 @@ Public Class progGui_AutoPass
 
         Me.OddProgBar_AP.BeginAnimation(OddLib_ProgressBar.ProgressValueProperty, apProgRender)
 
-        Using CancelStateReg As CancellationTokenRegistration = CoreDataLib.
-            objCancelState.Register(
-                Sub()
-                    Me.OddProgBar_AP.BeginAnimation(OddLib_ProgressBar.ProgressValueProperty, Nothing)
-                    TerminateAutoPass(False)
-                End Sub)
+        Using CancelStateReg As CancellationTokenRegistration = CoreDataLib.objCancelState.Register(
+            Sub()
+                Me.OddProgBar_AP.BeginAnimation(OddLib_ProgressBar.ProgressValueProperty, Nothing)
+                TerminateAutoPass(False)
+            End Sub)
 
             Dim apResult = Await chkAutoPassResult.Task
             Return AutoPass_HandleResult(apResult)

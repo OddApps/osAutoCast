@@ -12,6 +12,7 @@ Public Class osInMon
 
     Private Sub DoAppPrep()
         PrepPrefs()
+
         osHandler_GUI.PreloadForms(Me)
         osMenu_Init(Me)
     End Sub
@@ -68,6 +69,7 @@ Public Class osInMon
 
     Public Shared Sub StopMonitoring()
         If InputMon_Support Is Nothing Then Return
+
         InputMon_Support.Dispose()
         InputMon_Support = Nothing
     End Sub

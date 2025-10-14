@@ -71,7 +71,73 @@ Public NotInheritable Class osFuncLib_InputScan
         Return GetCursorPos(pt)
     End Function
 
+    Public Shared Sub FindPosGui(ByRef pt As Point)
+        GetCursorPos(pt)
+    End Sub
+
 End Class
+
+Public Module osFuncLib_Pos
+
+    <DllImport("user32.dll")>
+    Private Function GetCursorPos(ByRef lpPoint As Point) As Boolean
+    End Function
+
+    <DllImport("user32.dll")>
+    Private Function GetAsyncKeyState(vKey As Integer) As Short
+    End Function
+
+    <DllImport("user32.dll")>
+    Private Function GetKeyState(nVirtKey As Integer) As Short
+    End Function
+
+    <DllImport("user32.dll")>
+    Public Function RegisterHotKey(hWnd As IntPtr, id As Integer, fsModifiers As UInteger, vk As UInteger) As Boolean
+    End Function
+
+    <DllImport("user32.dll")>
+    Public Function UnregisterHotKey(hWnd As IntPtr, id As Integer) As Boolean
+    End Function
+
+    Public curMonitorStatus As MonitorStatus
+
+    Public isActionComplete As Boolean
+
+    Public Function GetMonitorState() As MonitorStatus
+        Return curMonitorStatus
+    End Function
+
+    Public Sub SetMonitorState(setMonStatus As MonitorStatus)
+        curMonitorStatus = setMonStatus
+    End Sub
+
+    Public Sub ActivateMonitor()
+        SetMonitorState(MonitorStatus.Watching)
+        osFuncLib_InputScan.isActionComplete = False
+    End Sub
+
+    Public Function isMonitorInStartup() As Boolean
+        Return curMonitorStatus = MonitorStatus.Starting
+    End Function
+
+    Public Function isMonitorActive() As Boolean
+        Return curMonitorStatus = MonitorStatus.Watching
+    End Function
+
+    Public Function isActionTriggered() As Boolean
+        Return curMonitorStatus = MonitorStatus.InCmd
+    End Function
+
+    Public Function FindProgPosition(ByRef pt As Point) As Boolean
+        Return GetCursorPos(pt)
+    End Function
+
+    Public Sub FindPosGui(ByRef pt As Point)
+        GetCursorPos(pt)
+    End Sub
+
+End Module
+
 
 Public NotInheritable Class osFuncLib_Progress
 
@@ -370,7 +436,7 @@ Public NotInheritable Class osFuncLib_AutoCast
 
         Dim isTask_AutoCast = osHandler_GUI.osGui_AutoCast.
             Dispatcher.InvokeAsync(Async Function()
-                                       Dim chkPos = osFuncLib_InputScan.FindProgPosition(ptPos)
+                                       osFuncLib_InputScan.FindPosGui(ptPos)
 
                                        osHandler_GUI.DisplayGUI(TriggerType.AutoCast, ptPos)
                                        osFuncLib_Progress.SetProgBlockData(TriggerType.AutoCast)
@@ -423,9 +489,10 @@ Public NotInheritable Class osFuncLib_AutoCast
 
     Private Shared Async Function FinalizeAutoCast() As Task
         Await Task.Delay(750)
-        osHandler_GUI.osGui_AutoCast.Dispatcher.Invoke(Sub()
-                                                           osHandler_GUI.osGui_AutoCast.Close()
-                                                       End Sub)
+        osHandler_GUI.osGui_AutoCast.Dispatcher.
+            Invoke(Sub()
+                       osHandler_GUI.ResetUI(TriggerAction.AutoCast, True)
+                   End Sub)
     End Function
 
     Private Shared Async Sub HoldInputs(doAsync As Boolean)
@@ -459,21 +526,22 @@ Public NotInheritable Class osFuncLib_ShowOpts
     Public Shared Async Function ExecuteDispOpts() As Task
         CoreDataLib.PrepUtilityTrigger(TriggerType.ShowPrefs)
 
-        osHandler_GUI.osGui_InputMonitor2.Dispatcher.Invoke(Sub()
-                                                                With osHandler_GUI.osGui_Prefs
-                                                                    .Show()
-                                                                    .Focus()
-                                                                    osPrefs_PrepHandlers()
-                                                                End With
-                                                            End Sub)
+        Application.Current.Dispatcher.Invoke(Sub()
+                                                  With osHandler_GUI.osGui_Prefs
+                                                      .Show()
+                                                      .Focus()
+                                                  End With
+                                              End Sub)
 
-        Await chkCloseSettings.Task
+        Await WaitUntilClosedAsync(osHandler_GUI.osGui_Prefs)
 
+        osHandler_GUI.ResetOptsUI()
         osFuncLib_InputScan.isActionComplete = True
     End Function
 
     Private Shared Sub osPrefs_PrepHandlers()
         chkCloseSettings = New TaskCompletionSource(Of Boolean)()
+
         Dim osGuiPrefs As osPrefs = osHandler_GUI.osGui_Prefs
 
         RemoveHandler osGuiPrefs.VisibleChanged, Nothing
@@ -483,7 +551,22 @@ Public NotInheritable Class osFuncLib_ShowOpts
                                                   End If
                                                   chkCloseSettings.TrySetResult(True)
                                               End Sub
+
+        AddHandler osGuiPrefs.FormClosing, Sub(sender As Object, e As EventArgs)
+                                               If osGuiPrefs.Visible Then
+                                                   Return
+                                               End If
+                                               chkCloseSettings.TrySetResult(True)
+                                           End Sub
     End Sub
+
+    Private Shared Function WaitUntilClosedAsync(f As Form) As Task
+        Dim tcs = New TaskCompletionSource(Of Object)(TaskCreationOptions.RunContinuationsAsynchronously)
+        AddHandler f.FormClosed, Sub(sender, e)
+                                     tcs.TrySetResult(Nothing)
+                                 End Sub
+        Return tcs.Task
+    End Function
 
     Private Shared Sub ResetStatus()
         If osFuncLib_InputScan.isActionComplete Then

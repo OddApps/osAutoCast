@@ -1,12 +1,21 @@
 ﻿Imports System.Windows.Forms
 Imports System.Windows.Threading
 Imports System.Threading
+Imports osDraw = System.Drawing
 
 Public NotInheritable Class osHandler_GUI
 
-    Private Shared ReadOnly _autoCast As New Lazy(Of progGui_AutoCast)(Function() New progGui_AutoCast())
+    'Public Shared Property osGui_Prefs As osPrefs = New osPrefs()
 
-    Public Shared ReadOnly Property osGui_Prefs As osPrefs = New osPrefs()
+    Private Shared _osPrefs As New Lazy(Of osPrefs)(
+    Function() New osPrefs(), LazyThreadSafetyMode.ExecutionAndPublication)
+    'Private Shared _osPrefs As Lazy(Of osPrefs)
+
+    Public Shared ReadOnly Property osGui_Prefs As osPrefs
+        Get
+            Return _osPrefs.Value
+        End Get
+    End Property
 
     Public Shared Property osGui_InputMonitor As Form
     Public Shared Property osGui_InputMonitor2 As Window
@@ -20,11 +29,8 @@ Public NotInheritable Class osHandler_GUI
         End Get
     End Property
 
-    Private Shared Function GenGUI_AP() As Lazy(Of progGui_AutoPass)
-        Return New Lazy(Of progGui_AutoPass)(Function()
-                                                 Return New progGui_AutoPass()
-                                             End Function, LazyThreadSafetyMode.ExecutionAndPublication)
-    End Function
+    Private Shared _autoCast As New Lazy(Of progGui_AutoCast)(
+    Function() New progGui_AutoCast(), LazyThreadSafetyMode.ExecutionAndPublication)
 
     Public Shared ReadOnly Property osGui_AutoCast As progGui_AutoCast
         Get
@@ -32,8 +38,29 @@ Public NotInheritable Class osHandler_GUI
         End Get
     End Property
 
+    Private Shared Sub GenerateGUI(objGenGui As TriggerAction)
+        Select Case objGenGui
+            Case TriggerAction.AutoPass
+                _autoPass = New Lazy(Of progGui_AutoPass)(Function()
+                                                              Return Application.Current.Dispatcher.Invoke(
+                                                              Function()
+                                                                  Return New progGui_AutoPass()
+                                                              End Function)
+                                                          End Function, LazyThreadSafetyMode.ExecutionAndPublication)
+            Case TriggerAction.AutoCast
+
+                _autoCast = New Lazy(Of progGui_AutoCast)(Function()
+                                                              Return Application.Current.Dispatcher.Invoke(
+                                                              Function()
+                                                                  Return New progGui_AutoCast()
+                                                              End Function)
+                                                          End Function, LazyThreadSafetyMode.ExecutionAndPublication)
+        End Select
+    End Sub
+
     Public Shared Sub PreloadForms(guiInputMon As Window)
         Dim handle As IntPtr = osGui_Prefs.Handle
+        osGui_Prefs.osPrefsPrep()
 
         Dim objOsInputMon As New osInputMonitor
         Dim tmpHandle = objOsInputMon.Handle
@@ -45,29 +72,18 @@ Public NotInheritable Class osHandler_GUI
         osGui_AutoPass.BeginPrep()
     End Sub
 
-    Public Shared Sub ResetGUI(guiType As TriggerType)
-        If guiType = TriggerType.AutoPass Then
-
-        End If
-    End Sub
-
-
-    Public Shared Sub DisplayGUI(guiType As DataTypeLib.TriggerType, Optional ptPosData As System.Drawing.Point = Nothing)
+    Public Shared Sub DisplayGUI(guiType As DataTypeLib.TriggerType, Optional ptPosData As osDraw.Point = Nothing)
         If guiType = DataTypeLib.TriggerType.AutoCast Then
             osGui_AutoCast.Dispatcher.Invoke(
                 Sub()
-                    Dim osGuiAutoCast As progGui_AutoCast = osGui_AutoCast
-                    Dim point As System.Drawing.Point = osFuncLib_Progress.CalcPosData(ptPosData)
-                    Dim size As System.Drawing.Size = osFuncLib_Progress.CalcProgSize(guiType)
-                    osGuiAutoCast.Left = point.X
-                    osGuiAutoCast.Top = point.Y
+                    With osFuncLib_Progress.CalcPosData(ptPosData)
+                        osGui_AutoCast.Left = .X
+                        osGui_AutoCast.Top = .Y
+                    End With
 
-                    CoreDataLib.ProcessProgressEvent(ProgMode.AutoCast, ProgEvent.Reset)
                     CoreDataLib.ProcessProgressEvent(ProgMode.AutoCast, ProgEvent.DispMsg, "Release Shift")
 
-                    osGuiAutoCast.Show()
-                    osGuiAutoCast.Width = size.Width
-                    osGuiAutoCast.Height = size.Height
+                    osGui_AutoCast.Show()
                 End Sub)
         ElseIf guiType = DataTypeLib.TriggerType.AutoPass Then
             osGui_AutoPass.Dispatcher.Invoke(
@@ -80,31 +96,34 @@ Public NotInheritable Class osHandler_GUI
         End If
     End Sub
 
+    Public Shared Sub ResetOptsUI()
+        _osPrefs = New Lazy(Of osPrefs)(
+            Function() New osPrefs(), LazyThreadSafetyMode.ExecutionAndPublication)
+
+        Dim handle As IntPtr = osGui_Prefs.Handle
+        osGui_Prefs.osPrefsPrep()
+    End Sub
+
     Public Shared Sub ResetUI(guiType As TriggerAction, Optional forceCreateNew As Boolean = False)
-        Select Case guiType
-            Case TriggerAction.AutoPass
-                If _autoPass.IsValueCreated Then
-                    Using objPrepData As New GUI_PrepData(_autoPass.Value)
-                        If objPrepData.guiIsLoaded Then
-                            If objPrepData.guiDispatch.CheckAccess() Then
-                                objPrepData.guiAction.Invoke()
-                            Else
-                                objPrepData.guiDispatch.Invoke(objPrepData.guiAction,
+        Dim guiReset = If(guiType = TriggerAction.AutoCast,
+            _autoCast.Value, _autoPass.Value)
+
+        Using objPrepData As New GUI_PrepData(guiReset)
+            If objPrepData.guiIsLoaded Then
+                If objPrepData.guiDispatch.CheckAccess() Then
+                    objPrepData.guiAction.Invoke()
+                Else
+                    objPrepData.guiDispatch.Invoke(objPrepData.guiAction,
                                                     DispatcherPriority.Normal)
-                            End If
-                        Else
-
-                        End If
-                    End Using
                 End If
+            End If
+        End Using
 
-                _autoPass = GenGUI_AP()
+        GenerateGUI(guiType)
 
-                If forceCreateNew Then
-                    Dim newAP = _autoPass.Value
-                    newAP.BeginPrep()
-                End If
-        End Select
+        If forceCreateNew Then
+            guiReset.BeginPrep()
+        End If
     End Sub
 
 End Class
@@ -118,5 +137,35 @@ Public Class BasePersistentForm
             Me.Hide()
         End If
         MyBase.OnFormClosing(e)
+    End Sub
+End Class
+
+Public Class NonActivatingForm
+    Inherits Form
+
+    Private Const WS_EX_NOACTIVATE As Integer = &H8000000
+    Private Const WS_EX_TOOLWINDOW As Integer = &H80
+    Private Const WM_MOUSEACTIVATE As Integer = &H21
+    Private Const MA_NOACTIVATE As Integer = 3
+
+    Protected Overrides ReadOnly Property CreateParams() As CreateParams
+        Get
+            Dim cp As CreateParams = MyBase.CreateParams
+
+            ' Skip NOACTIVATE style in the designer so it can render properly
+            If Not DesignMode Then
+                cp.ExStyle = cp.ExStyle Or WS_EX_NOACTIVATE Or WS_EX_TOOLWINDOW
+            End If
+
+            Return cp
+        End Get
+    End Property
+
+    Protected Overrides Sub WndProc(ByRef m As Message)
+        If Not DesignMode AndAlso m.Msg = WM_MOUSEACTIVATE Then
+            m.Result = CType(MA_NOACTIVATE, IntPtr)
+            Return
+        End If
+        MyBase.WndProc(m)
     End Sub
 End Class

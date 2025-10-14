@@ -49,8 +49,10 @@ Public Class OddLib_ProgressBar
                                   EnsureBitmapsSized()
 
                                   Using ProgRenderTarget = ProgRenderSurface.RenderOpen()
-                                      ProgRenderTarget.DrawRectangle(BgBrushOrDefault(), Nothing,
+                                      If IsAutoPass Then
+                                          ProgRenderTarget.DrawRectangle(BgBrushOrDefault(), Nothing,
                                                                      New Rect(0, 0, _pixelWidth, _pixelHeight))
+                                      End If
 
                                       Dim curEdge = EdgeFromChunk(_progChunk)
 
@@ -106,8 +108,10 @@ Public Class OddLib_ProgressBar
         Dim curEdge = EdgeFromChunk(_progChunk)
 
         Using ProgRenderTarget = ProgRenderSurface.RenderOpen()
-            ProgRenderTarget.DrawRectangle(BgBrushOrDefault(), Nothing,
+            If IsAutoPass Then
+                ProgRenderTarget.DrawRectangle(BgBrushOrDefault(), Nothing,
                                        New Rect(0, 0, _pixelWidth, _pixelHeight))
+            End If
 
             If ValidateBrush(curEdge) Then
                 ProgRenderTarget.DrawRectangle(_activeBrush, Nothing,
@@ -449,8 +453,10 @@ Public Class OddLib_ProgressBar
                     EnsureBitmapsSized()
 
                     Using ProgRenderTarget = ProgRenderSurface.RenderOpen()
-                        ProgRenderTarget.DrawRectangle(BgBrushOrDefault(), Nothing,
+                        If IsAutoPass Then
+                            ProgRenderTarget.DrawRectangle(BgBrushOrDefault(), Nothing,
                                                        New Rect(0, 0, _pixelWidth, _pixelHeight))
+                        End If
 
                         If ValidateProgEdge(includeProgress, curEdge) Then
                             ProgRenderTarget.DrawRectangle(_activeBrush, Nothing,
@@ -475,7 +481,9 @@ Public Class OddLib_ProgressBar
         If ProgRenderBitmap IsNot Nothing Then
             progDC.DrawImage(ProgRenderBitmap, New Rect(0, 0, ActualWidth, ActualHeight))
         Else
-            progDC.DrawRectangle(BgBrushOrDefault(), Nothing, New Rect(0, 0, ActualWidth, ActualHeight))
+            If IsAutoPass Then
+                progDC.DrawRectangle(BgBrushOrDefault(), Nothing, New Rect(0, 0, ActualWidth, ActualHeight))
+            End If
         End If
 
         If MsgRenderBitmap IsNot Nothing AndAlso isMsgDisplayed Then
@@ -730,7 +738,7 @@ Public Class OddLib_ProgressBar
         If isGpuOpt Then
             Me.MinDelta = 1.0 / _pixelWidth
         Else
-            Me.MinDelta = 2.0 / _pixelWidth
+            Me.MinDelta = 1.0 / _pixelWidth
         End If
     End Sub
 

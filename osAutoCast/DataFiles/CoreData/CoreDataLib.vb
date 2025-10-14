@@ -35,6 +35,7 @@ Public NotInheritable Class CoreDataLib
 
     Public Shared chkActionAbort As CancellationTokenSource
     Public Shared objCancelState As CancellationToken
+
     Public Shared InputMonSvc As InputMonitorService = Nothing
 
     Private Shared ReadOnly TriggerHandlers As (HandleAction As TriggerAction, HandleEvent As Func(Of Task))() = {
@@ -43,8 +44,6 @@ Public NotInheritable Class CoreDataLib
         (TriggerAction.ShowOpts, Function() osFuncLib_ShowOpts.ExecuteDispOpts()),
         (TriggerAction.ShowMenu, Function() osFuncLib_TrayMenu.DisplayMenuPopup())
     }
-
-    Private Shared ib As Integer = 0
 
     Public Shared Function GetFuse() As Integer
         Return osPrefStoreData.AutoCast_Fuse

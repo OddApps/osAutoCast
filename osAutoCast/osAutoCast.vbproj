@@ -166,10 +166,10 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="osPrefLoader.vb" />
-    <Compile Include="osPrefs.Designer.vb">
+    <Compile Include="DataFiles\InterfaceData\osPrefs.Designer.vb">
       <DependentUpon>osPrefs.vb</DependentUpon>
     </Compile>
-    <Compile Include="osPrefs.vb">
+    <Compile Include="DataFiles\InterfaceData\osPrefs.vb">
       <SubType>Form</SubType>
     </Compile>
     <Page Include="DataFiles\InterfaceData\progGui_AutoCast.xaml">
@@ -193,7 +193,6 @@
     <Compile Include="DataFiles\HandlerData\osHandler_GameFinder.vb" />
     <Compile Include="DataFiles\HandlerData\osHandler_Input.vb" />
     <Compile Include="DataFiles\InputMonData\InputMonService.vb" />
-    <Compile Include="DataFiles\InterfaceData\osData_Prefs.vb" />
     <Compile Include="DataFiles\InterfaceData\osHandler_GUI.vb">
       <SubType>Form</SubType>
     </Compile>
@@ -252,7 +251,7 @@
       <LastGenOutput>Resources.Designer.vb</LastGenOutput>
       <CustomToolNamespace>My.Resources</CustomToolNamespace>
     </EmbeddedResource>
-    <EmbeddedResource Include="osPrefs.resx">
+    <EmbeddedResource Include="DataFiles\InterfaceData\osPrefs.resx">
       <DependentUpon>osPrefs.vb</DependentUpon>
     </EmbeddedResource>
     <None Include="My Project\app.manifest" />

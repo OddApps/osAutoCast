@@ -28,13 +28,15 @@ Public Class InputMonitorService
         {InputAction.AP_Exec, DetectOpts.MonitorShift}
     }
 
+
+
     Private InputMonitorAbortSrc As CancellationTokenSource
 
     Private Shared InputMon_Support As IDisposable
     Private Shared InputMon_Observer As IDisposable
 
     Private Shared TriggerCmd As New Subject(Of TriggerAction)()
-    Private Shared _MonitorState As DataTypeLib.MonitorStatus
+    Private Shared _MonitorState As MonitorStatus
 
     Private Shared ReadOnly TriggerBindings As (TriggerCondition As Func(Of Boolean), TriggerHandler As TriggerAction)() = {
             (Function() CmdBind_AutoCast(), TriggerAction.AutoCast),
@@ -52,7 +54,7 @@ Public Class InputMonitorService
         End Set
     End Property
 
-    Public Shared Property MonitorState As DataTypeLib.MonitorStatus
+    Public Shared Property MonitorState As MonitorStatus
         Get
             Return _MonitorState
         End Get
@@ -216,7 +218,14 @@ Public Class InputMonitorService
                     SuspendMonitoring()
 
                     Try
-                        Await CoreDataLib.ExecuteTrigger(objInputAction)
+                        SetDispatcher()
+
+                        Dim execTrigger = cmdDispatcher.
+                            InvokeAsync(Async Function()
+                                            Await CoreDataLib.ExecuteTrigger(objInputAction)
+                                        End Function)
+
+                        Await execTrigger.Task.Unwrap
                     Finally
                         StartTriggerMonitor()
                     End Try
@@ -248,12 +257,6 @@ Public Class InputMonitorService
             Case Else
                 Return InputMon_ShiftDown()
         End Select
-    End Function
-
-    Public Shared Function InputTriggerDetected3(Optional DetectMode As DetectOpts = DetectOpts.MonitorAll) As Boolean
-
-        Return CmdBind_AutoCast() OrElse CmdBind_ShowOpts()
-
     End Function
 
     Public Shared Sub SuspendMonitoring()
