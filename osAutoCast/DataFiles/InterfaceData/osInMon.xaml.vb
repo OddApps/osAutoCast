@@ -91,8 +91,6 @@ Public Class osInMon
         Using osPrefManager As New osPrefLoader(CoreDataLib.osPrefIndex)
             osPrefManager.ProcessPrefIndex(CoreDataLib.osPrefIndex)
         End Using
-
-        osFuncLib_Progress.InitProgColors()
     End Sub
 
     Private Sub SetLoadText(txtLoad As LoadTextContent)

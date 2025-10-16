@@ -45,10 +45,12 @@ Public Class progGui_AutoCast
             .From = 0.0, .To = 1.0,
             .Duration = TimeSpan.FromMilliseconds(osFuncLib_Progress.ProgDuration),
             .FillBehavior = Animation.FillBehavior.HoldEnd,
-            .EasingFunction = New EaseInOutExpoEase
+            .EasingFunction = New Animation.QuadraticEase With {
+                .EasingMode = Animation.EasingMode.EaseInOut
+            }
         }
 
-        Animation.Timeline.SetDesiredFrameRate(acProgRender, 45)
+        Animation.Timeline.SetDesiredFrameRate(acProgRender, 60)
 
         AddHandler acProgRender.Completed, Sub()
                                                TerminateAutoCast(True)
@@ -68,6 +70,40 @@ Public Class progGui_AutoCast
         End Using
 
     End Function
+
+    'Public Async Function LaunchAutoCast() As Task(Of ProgResult)
+
+    '    Await AutoCast_Prep()
+
+    '    Dim acProgRender As New Animation.DoubleAnimation() With {
+    '        .From = 0.0, .To = 1.0,
+    '        .Duration = TimeSpan.FromMilliseconds(osFuncLib_Progress.ProgDuration),
+    '        .FillBehavior = Animation.FillBehavior.HoldEnd,
+    '        .EasingFunction = New Animation.QuadraticEase With {
+    '            .EasingMode = Animation.EasingMode.EaseInOut
+    '        }
+    '    }
+
+    '    Animation.Timeline.SetDesiredFrameRate(acProgRender, 60)
+
+    '    AddHandler acProgRender.Completed, Sub()
+    '                                           TerminateAutoCast(True)
+    '                                       End Sub
+
+    '    OddProgBar1.BeginAnimation(OddLib_ProgressBar.ProgressValueProperty, acProgRender)
+
+    '    Using CancelStateReg As CancellationTokenRegistration = CoreDataLib.
+    '        objCancelState.Register(
+    '            Sub()
+    '                OddProgBar1.BeginAnimation(OddLib_ProgressBar.ProgressValueProperty, Nothing)
+    '                TerminateAutoCast(False)
+    '            End Sub)
+
+    '        Dim acResult = Await chkAutoCastResult.Task
+    '        Return AutoCast_HandleResult(acResult)
+    '    End Using
+
+    'End Function
 
     Private Sub TerminateAutoCast(acComplete As Boolean)
         chkAutoCastResult.TrySetResult(acComplete)

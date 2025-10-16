@@ -40,32 +40,34 @@ Public Class OddLib_ProgressBar
 
         RenderOptions.SetBitmapScalingMode(Me, BitmapScalingMode.LowQuality)
 
-        AddHandler Me.Loaded, Sub()
-                                  SetSizeData()
+        AddHandler Me.Loaded,
+            Sub()
+                SetSizeData()
 
-                                  ApplyOptionalClip()
-                                  ValidateProgDV()
-                                  ValidateMsgDV()
-                                  EnsureBitmapsSized()
+                ApplyOptionalClip()
+                ValidateProgDV()
+                ValidateMsgDV()
+                EnsureBitmapsSized()
 
-                                  Using ProgRenderTarget = ProgRenderSurface.RenderOpen()
-                                      If IsAutoPass Then
-                                          ProgRenderTarget.DrawRectangle(BgBrushOrDefault(), Nothing,
-                                                                     New Rect(0, 0, _pixelWidth, _pixelHeight))
-                                      End If
+                Using ProgRenderTarget = ProgRenderSurface.RenderOpen()
+                    If IsAutoPass Then
+                        ProgRenderTarget.DrawRectangle(BgBrushOrDefault(), Nothing,
+                                                       New Rect(0, 0, _pixelWidth, _pixelHeight))
+                    End If
 
-                                      Dim curEdge = EdgeFromChunk(_progChunk)
+                    Dim curEdge = EdgeFromChunk(_progChunk)
 
-                                      If ValidateBrush(curEdge) Then
-                                          ProgRenderTarget.DrawRectangle(_activeBrush, Nothing, New Rect(0, 0, curEdge, _pixelHeight))
-                                      End If
-                                  End Using
+                    If ValidateBrush(curEdge) Then
+                        ProgRenderTarget.DrawRectangle(_activeBrush, Nothing,
+                                                       New Rect(0, 0, curEdge, _pixelHeight))
+                    End If
+                End Using
 
-                                  ProgRenderBitmap.Render(ProgRenderSurface)
-                                  objEdge_Prev = EdgeFromChunk(_progChunk)
+                ProgRenderBitmap.Render(ProgRenderSurface)
+                objEdge_Prev = EdgeFromChunk(_progChunk)
 
-                                  InvalidateVisual()
-                              End Sub
+                InvalidateVisual()
+            End Sub
 
         AddHandler Me.Loaded,
             Sub()
@@ -110,7 +112,7 @@ Public Class OddLib_ProgressBar
         Using ProgRenderTarget = ProgRenderSurface.RenderOpen()
             If IsAutoPass Then
                 ProgRenderTarget.DrawRectangle(BgBrushOrDefault(), Nothing,
-                                       New Rect(0, 0, _pixelWidth, _pixelHeight))
+                                               New Rect(0, 0, _pixelWidth, _pixelHeight))
             End If
 
             If ValidateBrush(curEdge) Then
@@ -144,10 +146,8 @@ Public Class OddLib_ProgressBar
 
     Private Shared Sub OnProgressValueChanged(objDependency As DependencyObject, e As DependencyPropertyChangedEventArgs)
         Dim objOsProgBar = DirectCast(objDependency, OddLib_ProgressBar)
-
         objOsProgBar.ProgressChunk = CDbl(e.NewValue)
     End Sub
-
 
     Public Shared ReadOnly BackgroundProperty As DependencyProperty =
         DependencyProperty.Register("Background", GetType(Brush), GetType(OddLib_ProgressBar),
@@ -227,7 +227,6 @@ Public Class OddLib_ProgressBar
         Dim objOsProg = SetOsProgObj(objDependency)
         objOsProg.ApplyOptionalClip()
     End Sub
-
 
     Public Shared ReadOnly MinDeltaProperty As DependencyProperty =
         DependencyProperty.Register(NameOf(MinDelta), GetType(Double), GetType(OddLib_ProgressBar),

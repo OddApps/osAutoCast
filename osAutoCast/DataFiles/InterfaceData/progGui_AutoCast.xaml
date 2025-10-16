@@ -10,4 +10,7 @@
     <local:OddLib_ProgressBar x:Name="OddProgBar1" Width="110" Height="25" IsAutoPass="False" 
                           Background="#FF393939" BorderThickness="0" SnapsToDevicePixels="True" 
                           UseLayoutRounding="True" RenderOptions.BitmapScalingMode="LowQuality" />
+    <!--<local:OddLib_ProgressBar x:Name="OddProgBar1" Width="110" Height="25" IsAutoPass="False" 
+                          Background="#FF393939" BorderThickness="0" SnapsToDevicePixels="True" 
+                          UseLayoutRounding="True" RenderOptions.BitmapScalingMode="LowQuality" />-->
 </Window>

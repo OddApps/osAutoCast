@@ -1,17 +1,23 @@
 ﻿Imports System.Drawing
 Imports System.Drawing.Drawing2D
 Imports System.Reactive.Linq
-Imports System.Reactive.Subjects
 Imports System.Runtime.CompilerServices
 Imports System.Runtime.InteropServices
 Imports System.Windows.Forms
 Imports System.Windows.Threading
-Imports System.Diagnostics
 Imports System.Text
 Imports System.Globalization
+Imports osAutoCast.DataTypeLib.TriggerType
+Imports osAutoCast.DataTypeLib.TriggerAction
+Imports osAutoCast.DataTypeLib.ProgMode
+Imports osAutoCast.DataTypeLib.ProgAction
+Imports osAutoCast.DataTypeLib.ProgStatus
+Imports osAutoCast.DataTypeLib.ProgEvent
+Imports osForms = System.Windows.Forms
+Imports osInput = System.Windows.Input
 Imports osBinder = System.Windows.Data
-Imports osControls = System.Windows.Controls
 Imports osColors = System.Windows.Media
+Imports osControls = System.Windows.Controls
 
 Public NotInheritable Class osFuncLib_InputScan
 
@@ -181,34 +187,26 @@ Public NotInheritable Class osFuncLib_Progress
     Public Shared objAutoPassProg As SmoothProgressBarr = Nothing
 
     Private Shared ProgStatusColors As New Dictionary(Of ProgStatus, Color) From {
-        {ProgStatus.Idle, Color.White},
-        {ProgStatus.Running, Color.FromArgb(82, 96, 117)},
-        {ProgStatus.Success, Color.ForestGreen},
-        {ProgStatus.Fail, Color.Maroon},
-        {ProgStatus.StartAP, Color.Maroon}
+        {Idle, Color.White},
+        {Running, Color.FromArgb(82, 96, 117)},
+        {Success, Color.ForestGreen},
+        {Fail, Color.Maroon},
+        {StartAP, Color.Maroon}
     }
 
     Private Shared ReadOnly ProgColorIdx_AutoCast As New Dictionary(Of ProgStatus, osColors.Color) From {
-        {ProgStatus.Idle, osColors.Color.FromRgb(57, 57, 57)},
-        {ProgStatus.Running, osColors.Color.FromRgb(82, 96, 117)},
-        {ProgStatus.Success, osColors.Color.FromRgb(34, 139, 34)},
-        {ProgStatus.Fail, osColors.Color.FromRgb(97, 20, 20)}
+        {Idle, osColors.Color.FromRgb(57, 57, 57)},
+        {Running, osColors.Color.FromRgb(82, 96, 117)},
+        {Success, osColors.Color.FromRgb(34, 139, 34)},
+        {Fail, osColors.Color.FromRgb(97, 20, 20)}
     }
 
     Private Shared ReadOnly ProgColorIdx_AutoPass As New Dictionary(Of ProgStatus, osColors.Color) From {
-        {ProgStatus.Idle, osColors.Color.FromRgb(57, 57, 57)},
-        {ProgStatus.Running, osColors.Color.FromRgb(82, 96, 117)},
-        {ProgStatus.Success, osColors.Color.FromRgb(34, 139, 34)},
-        {ProgStatus.Fail, osColors.Color.FromRgb(97, 20, 20)},
-        {ProgStatus.StartAP, osColors.Color.FromRgb(82, 96, 117)}
-    }
-
-    Private Shared ReadOnly ProgStatusColorsIndex As New Dictionary(Of ProgStatus, osColors.Color) From {
-        {ProgStatus.Idle, osColors.Color.FromRgb(57, 57, 57)},
-        {ProgStatus.Running, osColors.Color.FromRgb(82, 96, 117)},
-        {ProgStatus.Success, osColors.Color.FromRgb(34, 139, 34)},
-        {ProgStatus.Fail, osColors.Color.FromRgb(97, 20, 20)},
-        {ProgStatus.StartAP, osColors.Color.FromRgb(82, 96, 117)}
+        {Idle, osColors.Color.FromRgb(57, 57, 57)},
+        {Running, osColors.Color.FromRgb(82, 96, 117)},
+        {Success, osColors.Color.FromRgb(34, 139, 34)},
+        {Fail, osColors.Color.FromRgb(97, 20, 20)},
+        {StartAP, osColors.Color.FromRgb(82, 96, 117)}
     }
 
     Public Shared Sub SetProgContainer(pType As TriggerType)
@@ -223,15 +221,15 @@ Public NotInheritable Class osFuncLib_Progress
 
     Public Shared Function ApplyProgState(setAction As ProgAction, Optional isAutoPass As Boolean = False) As ProgStatus
         Select Case setAction
-            Case ProgAction.Reset
-                progCurStatus = ProgStatus.Idle
-            Case ProgAction.Activate
-                progCurStatus = If(isAutoPass, ProgStatus.StartAP,
-                    ProgStatus.Running)
-            Case ProgAction.Complete
-                progCurStatus = ProgStatus.Success
-            Case ProgAction.Abort
-                progCurStatus = ProgStatus.Fail
+            Case ResetProgress
+                progCurStatus = Idle
+            Case Activate
+                progCurStatus = If(isAutoPass, StartAP,
+                    Running)
+            Case Complete
+                progCurStatus = Success
+            Case Abort
+                progCurStatus = Fail
         End Select
 
         Return progCurStatus
@@ -242,15 +240,15 @@ Public NotInheritable Class osFuncLib_Progress
     End Function
 
     Public Shared Function IsProgRunning() As Boolean
-        Return osFuncLib_Progress.GetProgState() = ProgStatus.Running
+        Return osFuncLib_Progress.GetProgState() = Running
     End Function
 
     Public Shared Function ShowProgFull() As Boolean
-        Return progCurStatus = ProgStatus.Success OrElse progCurStatus = ProgStatus.Fail
+        Return progCurStatus = Success OrElse progCurStatus = Fail
     End Function
 
     Public Shared Function IsProgSuccess() As ProgStatus
-        Return progCurStatus = ProgStatus.Success
+        Return progCurStatus = Success
     End Function
 
     Public Shared Sub UpdateProgStatus(pType As TriggerAction, pAction As ProgAction)
@@ -272,7 +270,7 @@ Public NotInheritable Class osFuncLib_Progress
             Case TriggerType.AutoPass
                 osHandler_GUI.osGui_AutoPass.Dispatcher.
                     Invoke(Sub()
-                               If pStatus = ProgStatus.StartAP Then
+                               If pStatus = StartAP Then
                                    osHandler_GUI.osGui_AutoPass.OddProgBar_AP.SetProgress(1)
                                End If
 
@@ -285,36 +283,8 @@ Public NotInheritable Class osFuncLib_Progress
         Return sTime + CLng(Math.Round(valDuration * repCnt * repRate))
     End Function
 
-    Public Shared Sub ConstructProgContainer(progG As Graphics)
-        progG.SmoothingMode = SmoothingMode.AntiAlias
-        progG.Clear(Color.FromArgb(22, 22, 22))
-        progG.FillRectangle(ProgBrush_BG, ProgContainer)
-    End Sub
-
-    Public Shared Sub ConstructProgBorder(progG As Graphics, Optional noFill As Boolean = False)
-        progG.SmoothingMode = SmoothingMode.AntiAlias
-        If Not noFill Then progG.Clear(Color.FromArgb(22, 22, 22))
-        progG.DrawRectangle(ProgBrush_Border, ProgContainerBorder)
-    End Sub
-
-    Public Shared Sub ConstructProgFull(progG As Graphics, Optional noFill As Boolean = False)
-        progG.SmoothingMode = SmoothingMode.AntiAlias
-        If Not noFill Then progG.Clear(Color.FromArgb(22, 22, 22))
-        progG.DrawRectangle(ProgBrush_Border, ProgContainerBorder)
-    End Sub
-
-    Public Shared Sub InitProgColors()
-        ProgBrush_BG = New SolidBrush(Color.FromArgb(40, 40, 40))
-        ProgBrush_Active = New SolidBrush(Color.DeepSkyBlue)
-        ProgBrush_Border = New Pen(Color.Black, 2.0F)
-    End Sub
-
     Public Shared Function FetchProgColor(pStatus As ProgStatus) As Color
         Return ProgStatusColors(pStatus)
-    End Function
-
-    Public Shared Function FetchProgColor(pStatus As ProgStatus, idxColors As Boolean) As osColors.Color
-        Return ProgStatusColorsIndex(pStatus)
     End Function
 
     Public Shared Function FetchProgColor(pStatus As ProgStatus, pType As TriggerType) As osColors.Color
@@ -337,17 +307,6 @@ Public NotInheritable Class osFuncLib_Progress
     Public Shared Sub SetProgBlockData(trigType As TriggerType)
         ProgDuration = If(trigType = TriggerType.AutoCast, CoreDataLib.GetFuse(), CoreDataLib.GetSafetyTimer())
         ProgInv = 1.0 / ProgDuration
-    End Sub
-
-    Public Shared Sub DisplayProgress(guiAutoCast As Form, ptPos As Point)
-        guiAutoCast.Location = CalcPosData(ptPos)
-        guiAutoCast.Show()
-        guiAutoCast.Size = CalcProgSize()
-    End Sub
-
-    Public Shared Sub DisplayProgress(guiAutoPass As Form, isAutoPass As Boolean)
-        guiAutoPass.Show()
-        guiAutoPass.Invalidate()
     End Sub
 
     Public Shared Function EaseInOutExpo(x As Double) As Double
@@ -386,7 +345,6 @@ End Class
 Public NotInheritable Class osFuncLib_AutoCast
 
     Private Shared ptPos As Point
-    Private Shared objFuncLib_InputScan As New osFuncLib_InputScan()
 
     <DllImport("user32.dll", EntryPoint:="mouse_event", SetLastError:=True)>
     Private Shared Sub InvokeMouse(dwFlags As UInteger, dx As UInteger, dy As UInteger, cButtons As UInteger, dwExtraInfo As IntPtr)
@@ -432,18 +390,16 @@ Public NotInheritable Class osFuncLib_AutoCast
     End Sub
 
     Public Shared Async Function ExecuteAutoCast() As Task
-        ' Dim retProgResult As ProgResult = Nothing
+        Dim isTask_AutoCast = PrepDispatcher().InvokeAsync(
+            Async Function()
+                osFuncLib_InputScan.FindPosGui(ptPos)
 
-        Dim isTask_AutoCast = osHandler_GUI.osGui_AutoCast.
-            Dispatcher.InvokeAsync(Async Function()
-                                       osFuncLib_InputScan.FindPosGui(ptPos)
+                osHandler_GUI.DisplayGUI(TriggerType.AutoCast, ptPos)
+                osFuncLib_Progress.SetProgBlockData(TriggerType.AutoCast)
 
-                                       osHandler_GUI.DisplayGUI(TriggerType.AutoCast, ptPos)
-                                       osFuncLib_Progress.SetProgBlockData(TriggerType.AutoCast)
-
-                                       Dim retAC = Await osHandler_GUI.osGui_AutoCast.LaunchAutoCast()
-                                       Return retAC
-                                   End Function)
+                Dim retAC = Await osHandler_GUI.osGui_AutoCast.LaunchAutoCast()
+                Return retAC
+            End Function)
 
         Dim retProgResult = Await isTask_AutoCast.Task.Unwrap()
 
@@ -533,7 +489,7 @@ Public NotInheritable Class osFuncLib_ShowOpts
                                                   End With
                                               End Sub)
 
-        Await WaitUntilClosedAsync(osHandler_GUI.osGui_Prefs)
+        Await AnticipateExit(osHandler_GUI.osGui_Prefs)
 
         osHandler_GUI.ResetOptsUI()
         osFuncLib_InputScan.isActionComplete = True
@@ -560,20 +516,13 @@ Public NotInheritable Class osFuncLib_ShowOpts
                                            End Sub
     End Sub
 
-    Private Shared Function WaitUntilClosedAsync(f As Form) As Task
+    Private Shared Function AnticipateExit(guiPrefs As Form) As Task
         Dim tcs = New TaskCompletionSource(Of Object)(TaskCreationOptions.RunContinuationsAsynchronously)
-        AddHandler f.FormClosed, Sub(sender, e)
-                                     tcs.TrySetResult(Nothing)
-                                 End Sub
+        AddHandler guiPrefs.FormClosed, Sub(sender, e)
+                                            tcs.TrySetResult(Nothing)
+                                        End Sub
         Return tcs.Task
     End Function
-
-    Private Shared Sub ResetStatus()
-        If osFuncLib_InputScan.isActionComplete Then
-            osFuncLib_InputScan.isActionComplete = False
-        End If
-        osFuncLib_InputScan.SetMonitorState(MonitorStatus.Watching)
-    End Sub
 
 End Class
 
@@ -620,14 +569,14 @@ Public NotInheritable Class osFuncLib_AutoPass
                         CoreDataLib.ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.DispMsg, "AutoPassing")
                         InvokeAutoPass()
                     Else
-                        osFuncLib_Progress.UpdateProgStatus(TriggerAction.AutoPass, ProgAction.Abort)
+                        osFuncLib_Progress.UpdateProgStatus(TriggerAction.AutoPass, Abort)
 
                         CoreDataLib.ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.MaxFill)
                         CoreDataLib.ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.DispMsg, "AutoPass Cancelled")
                     End If
 
                 Case ProgResult.Cancelled
-                    osFuncLib_Progress.UpdateProgStatus(TriggerAction.AutoPass, ProgAction.Abort)
+                    osFuncLib_Progress.UpdateProgStatus(TriggerAction.AutoPass, Abort)
 
                     CoreDataLib.ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.MaxFill)
                     CoreDataLib.ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.DispMsg, "AutoPass Cancelled")
@@ -647,11 +596,48 @@ Public NotInheritable Class osFuncLib_AutoPass
 
 End Class
 
-
-
-
 Public Class MenuHostWindow
     Inherits Window
+
+    Private Const GWL_EXSTYLE As Integer = -20
+    Private Const WS_EX_NOACTIVATE As Integer = &H8000000
+    Private Const WS_EX_TOOLWINDOW As Integer = &H80
+
+    Private Const WM_MOUSEACTIVATE As Integer = &H21
+    Private Const MA_NOACTIVATE As Integer = 3
+
+    <DllImport("user32.dll", EntryPoint:="GetWindowLongW", SetLastError:=True)>
+    Private Shared Function GetWindowLong32(hWnd As IntPtr, nIndex As Integer) As Integer
+    End Function
+
+    <DllImport("user32.dll", EntryPoint:="SetWindowLongW", SetLastError:=True)>
+    Private Shared Function SetWindowLong32(hWnd As IntPtr, nIndex As Integer, dwNewLong As Integer) As Integer
+    End Function
+
+    <DllImport("user32.dll", EntryPoint:="GetWindowLongPtrW", SetLastError:=True)>
+    Private Shared Function GetWindowLongPtr64(hWnd As IntPtr, nIndex As Integer) As IntPtr
+    End Function
+
+    <DllImport("user32.dll", EntryPoint:="SetWindowLongPtrW", SetLastError:=True)>
+    Private Shared Function SetWindowLongPtr64(hWnd As IntPtr, nIndex As Integer, dwNewLong As IntPtr) As IntPtr
+    End Function
+
+    Private Shared Function GetWindowLongPtr(hWnd As IntPtr, nIndex As Integer) As IntPtr
+        If IntPtr.Size = 8 Then
+            Return GetWindowLongPtr64(hWnd, nIndex)
+        Else
+            Return New IntPtr(GetWindowLong32(hWnd, nIndex))
+        End If
+    End Function
+
+    Private Shared Function SetWindowLongPtr(hWnd As IntPtr, nIndex As Integer, dwNewLong As IntPtr) As IntPtr
+        If IntPtr.Size = 8 Then
+            Return SetWindowLongPtr64(hWnd, nIndex, dwNewLong)
+        Else
+            Return New IntPtr(SetWindowLong32(hWnd, nIndex, dwNewLong.ToInt32()))
+        End If
+    End Function
+
     Public Sub New()
         WindowStyle = WindowStyle.None
         AllowsTransparency = True
@@ -660,15 +646,81 @@ Public Class MenuHostWindow
         Width = 1
         Height = 1
         Topmost = True
+        ShowActivated = False
+    End Sub
+
+    Protected Overrides Sub OnSourceInitialized(e As EventArgs)
+        MyBase.OnSourceInitialized(e)
+
+        ' Skip in designer
+        If System.ComponentModel.DesignerProperties.GetIsInDesignMode(Me) Then Return
+
+        Dim hwnd = New Interop.WindowInteropHelper(Me).Handle
+
+        ' add NOACTIVATE (+ optionally TOOLWINDOW)
+        Dim ex = GetWindowLongPtr(hwnd, GWL_EXSTYLE)
+        Dim newEx As Integer = ex.ToInt32() Or WS_EX_NOACTIVATE Or WS_EX_TOOLWINDOW
+        SetWindowLongPtr(hwnd, GWL_EXSTYLE, New IntPtr(newEx))
+
+        ' hook window messages to prevent activation on click
+        Dim src = Interop.HwndSource.FromHwnd(hwnd)
+        If src IsNot Nothing Then
+            src.AddHook(New Interop.HwndSourceHook(AddressOf WndProcHook))
+        End If
+    End Sub
+
+    Private Function WndProcHook(hwnd As IntPtr,
+                                 msg As Integer,
+                                 wParam As IntPtr,
+                                  lParam As IntPtr,
+                                 ByRef handled As Boolean) As IntPtr
+        If msg = WM_MOUSEACTIVATE Then
+            handled = True
+            Return New IntPtr(MA_NOACTIVATE)
+        End If
+        Return IntPtr.Zero
+    End Function
+
+End Class
+
+Public Class MenuOverlayWindow
+    Inherits Window
+
+    Private Const GWL_EXSTYLE As Integer = -20
+    Private Const WS_EX_NOACTIVATE As Integer = &H8000000
+    Private Const WS_EX_TOOLWINDOW As Integer = &H80
+
+    <DllImport("user32.dll", EntryPoint:="GetWindowLongPtrW", SetLastError:=True)>
+    Private Shared Function GetWindowLongPtr(hWnd As IntPtr, nIndex As Integer) As IntPtr
+    End Function
+    <DllImport("user32.dll", EntryPoint:="SetWindowLongPtrW", SetLastError:=True)>
+    Private Shared Function SetWindowLongPtr(hWnd As IntPtr, nIndex As Integer, dwNewLong As IntPtr) As IntPtr
+    End Function
+
+    Public Sub New()
+        WindowStyle = WindowStyle.None
+        AllowsTransparency = True
+        Background = Windows.Media.Brushes.Black       ' Transparent but still hit-testable
+        ShowInTaskbar = False
+        Topmost = True
+        ShowActivated = False                  ' don't activate
+        Opacity = 0.01                           ' fully transparent but clickable
+    End Sub
+
+    Protected Overrides Sub OnSourceInitialized(e As EventArgs)
+        MyBase.OnSourceInitialized(e)
+        Dim hwnd = New Interop.WindowInteropHelper(Me).Handle
+        Dim ex = GetWindowLongPtr(hwnd, GWL_EXSTYLE).ToInt64()
+        ex = ex Or WS_EX_NOACTIVATE Or WS_EX_TOOLWINDOW
+        SetWindowLongPtr(hwnd, GWL_EXSTYLE, New IntPtr(ex))
     End Sub
 End Class
 
 Module osFuncLib_TrayMenu
 
-    Private Property osIsEnabled As Boolean
+    Private _inputSub As InputManager
 
-    'Private osTrayIcon As New NotifyIcon
-    'Private osTrayMenu As ContextMenuStrip
+    Private Property osIsEnabled As Boolean
 
     Private objInputMon As osInMon
 
@@ -678,28 +730,87 @@ Module osFuncLib_TrayMenu
 
     Private objMenuHost As MenuHostWindow
 
+    Private osMenuObj As osControls.ContextMenu
+
+    Private osMenuOverlay As MenuOverlayWindow
+
+    Private osMenu_EnDis As osControls.MenuItem
+    Private osMenu_GameOpts As osControls.MenuItem
+    Private osGameMenu_Play As osControls.MenuItem
+    Private osGameMenu_Leave As osControls.MenuItem
+    Private osMenu_Opts As osControls.MenuItem
+    Private osMenuExit As osControls.MenuItem
+
+    Private Const GWL_EXSTYLE As Integer = -20
+    Private Const WS_EX_NOACTIVATE As Integer = &H8000000
+
+    <DllImport("user32.dll", SetLastError:=True)>
+    Private Function GetWindowLong(hWnd As IntPtr, nIndex As Integer) As Integer
+    End Function
+
+    <DllImport("user32.dll", SetLastError:=True)>
+    Private Function SetWindowLong(hWnd As IntPtr, nIndex As Integer, dwNewLong As Integer) As Integer
+    End Function
+
     Public Async Function DisplayMenuPopup() As Task
         CoreDataLib.PrepUtilityTrigger(TriggerType.ShowMenu)
 
-        Dim objPopupMenu = CoreDataLib.osPopupMenu
+        Dim objGetMenu = CoreDataLib.osPopupMenu
 
-        Await Application.Current.
-            Dispatcher.InvokeAsync(
+        Await Application.Current.Dispatcher.InvokeAsync(
             Sub()
+                osMenuOverlay = New MenuOverlayWindow()
+
+                With osMenuOverlay
+                    Dim vr = SystemInformation.VirtualScreen
+                    .Left = vr.Left
+                    .Top = vr.Top
+                    .Width = vr.Width
+                    .Height = vr.Height
+
+                    AddHandler .MouseDown, Sub() ClosePopupMenu()
+                    AddHandler .MouseWheel, Sub() ClosePopupMenu()
+
+                    .Show()
+                End With
+
                 GenMenuHost()
 
-                objPopupMenu.PlacementTarget = objMenuHost
-                objPopupMenu.Placement = Primitives.PlacementMode.MousePoint
+                With objGetMenu
+                    .PlacementTarget = objMenuHost
+                    .Placement = Primitives.PlacementMode.MousePoint
+                    .StaysOpen = False
+                    .IsOpen = True
+                End With
 
-                objPopupMenu.IsOpen = True
+                SetNoActivateStyleForContextMenu(osMenuObj)
+
             End Sub)
 
         osFuncLib_InputScan.isActionComplete = True
     End Function
 
+    Private Sub ClosePopupMenu()
+
+        CoreDataLib.osPopupMenu.IsOpen = False
+
+        If osMenuOverlay IsNot Nothing Then
+            osMenuOverlay.Close()
+            osMenuOverlay = Nothing
+        End If
+
+    End Sub
+
     Private Sub CloseMenuHost()
-        objMenuHost.Close()
-        objMenuHost = Nothing
+        Try
+            objMenuHost.Close()
+        Catch ex As Exception
+
+        End Try
+
+        If objMenuHost IsNot Nothing Then
+            objMenuHost = Nothing
+        End If
     End Sub
 
     Private Sub GenMenuHost()
@@ -715,7 +826,6 @@ Module osFuncLib_TrayMenu
             .Top = p.Y
 
             .Show()
-            .Activate()
         End With
     End Sub
 
@@ -730,7 +840,7 @@ Module osFuncLib_TrayMenu
 
     Private Function ConfirmStatusChange(newStatus As Boolean) As UpdateStatus
         If newStatus = False Then
-            Select Case MsgBox("Disable OddScript?", vbYesNo,
+            Select Case MsgBox("Disable osAutoCast?", vbYesNo,
                                    "Confirm...")
                 Case vbYes
                     osFuncLib_InputScan.SetMonitorState(MonitorStatus.Paused)
@@ -760,15 +870,15 @@ Module osFuncLib_TrayMenu
     Private Sub UpdateTrayIcon(chkStatus As Boolean)
         If chkStatus Then
             CoreDataLib.osTrayIcon.Icon = My.Resources.osIcon
-            CoreDataLib.osTrayIcon.Text = "OddScriptxX | Enabled"
+            CoreDataLib.osTrayIcon.Text = "osAutoCast | Enabled"
         Else
             CoreDataLib.osTrayIcon.Icon = My.Resources.osIcon_Disabled
-            CoreDataLib.osTrayIcon.Text = "OddScriptxX | Disabled"
+            CoreDataLib.osTrayIcon.Text = "osAutoCast | Disabled"
         End If
     End Sub
 
     Private Sub UpdateTrayText(isEnabled As Boolean)
-        CoreDataLib.osTrayIcon.Text = If(isEnabled, "OddMTGA | Enabled", "OddMTGA | Disabled")
+        CoreDataLib.osTrayIcon.Text = If(isEnabled, "osAutoCast | Enabled", "osAutoCast | Disabled")
     End Sub
 
     Public Sub UpdateTray(isEnabled As Boolean)
@@ -777,56 +887,49 @@ Module osFuncLib_TrayMenu
     End Sub
 
     Private Sub PrepTrayMenu(objOsMenu As osControls.ContextMenu)
-        CoreDataLib.osTrayIcon = New Forms.NotifyIcon With {
+        CoreDataLib.osTrayIcon = New NotifyIcon With {
             .Icon = My.Resources.osIcon,
-            .Text = "OddMTGA | Enabled",
+            .Text = "osAutoCast | Enabled",
             .Visible = True
         }
 
         AddHandler CoreDataLib.osTrayIcon.MouseUp,
-            Sub(sender As Object, e As System.Windows.Forms.MouseEventArgs)
-                If e.Button = System.Windows.Forms.MouseButtons.Right Then
-                    GenMenuHost()
-
-                    objOsMenu.PlacementTarget = objMenuHost
-                    objOsMenu.Placement = Primitives.PlacementMode.MousePoint
-
-                    objOsMenu.IsOpen = True
+            Async Sub(sender As Object, e As MouseEventArgs)
+                If e.Button = osForms.MouseButtons.Right Then
+                    Await DisplayMenuPopup()
                 End If
             End Sub
-
     End Sub
 
-    Private Function GenMenuItem(txtMenu As String) As ToolStripMenuItem
-        Return New ToolStripMenuItem(txtMenu)
+    Private Function CreateMenuItem(menuHeader As String) As osControls.MenuItem
+        Return New osControls.MenuItem With {.Header = menuHeader}
     End Function
 
-    Private Function GenMenuItem2(header As String) As osControls.MenuItem
-        Return New osControls.MenuItem With {.Header = header}
-    End Function
+    Private Sub CreateMenuItem(menuHeader As String, ByRef objMenu As osControls.MenuItem, Optional isEnable As Boolean = False)
+        If isEnable Then
+            objMenu = New osControls.MenuItem With {
+                .Header = "Enabled",
+                .IsCheckable = True,
+                .IsChecked = True,
+                .Name = "osMenuEnDis"
+            }
+        Else
+            objMenu = New osControls.MenuItem With {
+                .Header = menuHeader
+            }
+        End If
+    End Sub
 
-    Private Function PopulateMenu_Popup() As osControls.ContextMenu
-        Dim osMenuObj As New osControls.ContextMenu With {
+    Private Sub EstablishPopupMenu(ByRef objPopupMenu As osControls.ContextMenu)
+        objPopupMenu = New osControls.ContextMenu With {
             .FontFamily = New osColors.FontFamily("Trebuchet MS"),
             .FontSize = 14
         }
+    End Sub
 
-        Dim osMenu_EnDis As New osControls.MenuItem With {
-            .Header = "Enabled",
-            .IsCheckable = True,
-            .IsChecked = True,
-            .Name = "osMenuEnDis"
-        }
-
-        Dim osMenu_GameOpts = GenMenuItem2("MTG Menu")
-        Dim osGameMenu_Play = GenMenuItem2("Play Game")
-        Dim osGameMenu_Leave = GenMenuItem2("Leave Game")
-
+    Private Sub PopulatePopupMenu()
         osMenu_GameOpts.Items.Add(osGameMenu_Play)
         osMenu_GameOpts.Items.Add(osGameMenu_Leave)
-
-        Dim osMenu_Opts = GenMenuItem2("Preferences")
-        Dim osMenuExit = GenMenuItem2("Exit")
 
         With osMenuObj
             .Items.Add(osMenu_EnDis)
@@ -836,24 +939,24 @@ Module osFuncLib_TrayMenu
             .Items.Add(osMenu_Opts)
             .Items.Add(osMenuExit)
         End With
+    End Sub
 
-        ' Handlers (async where you had it)
+    Private Sub SetMenuHandlers()
+
         AddHandler osMenu_Opts.Click,
             Async Sub()
                 osFuncLib_InputScan.SetMonitorState(MonitorStatus.InCmd)
                 Await osFuncLib_ShowOpts.ExecuteDispOpts()
 
-                CloseMenuHost()
+                ClosePopupMenu()
             End Sub
 
         AddHandler osMenuExit.Click,
             Sub()
-                Dim chkConfirmExit = MsgBox("Are you sure you want to exit OddScript?",
-                                            vbYesNo + vbQuestion, "Confirm Close")
+                Dim chkConfirmExit = GetResponse(PromptType.CloseApp)
+                If chkConfirmExit = DialogResult.No Then Exit Sub
 
-                If chkConfirmExit = vbNo Then Exit Sub
-
-                CloseMenuHost()
+                ClosePopupMenu()
                 osStopApp()
             End Sub
 
@@ -866,64 +969,42 @@ Module osFuncLib_TrayMenu
                 }
 
                 Process.Start(procStart_MTGA)
-                CloseMenuHost()
+                ClosePopupMenu()
             End Sub
 
         AddHandler osGameMenu_Leave.Click,
             Sub()
-                Dim chkConfirmCloseGame = MsgBox("Are you sure you want to close MTG Arena?",
-                                                 vbYesNo + vbQuestion, "Confirm Close")
-                If chkConfirmCloseGame = vbYes Then
+                Dim chkConfirmCloseGame = GetResponse(PromptType.GameMenu_Leave)
+
+                If chkConfirmCloseGame = DialogResult.Yes Then
                     Dim cmdCloseMTGA = CmdRunner.RunCmd("taskkill", "/f /im MTGA.exe")
                 End If
 
-                CloseMenuHost()
+                ClosePopupMenu()
             End Sub
 
-        Return osMenuObj
-    End Function
+        AddHandler osMenuObj.Closed, Sub()
+                                         CloseMenuHost()
+                                     End Sub
 
-    Public Function PopulateMenu_Tray() As ContextMenuStrip
-        Dim osMenuComponents As New System.ComponentModel.Container()
+    End Sub
 
-        Dim osMenuObj As New ContextMenuStrip(osMenuComponents)
+    Private Sub PopulateMenu_Popup(ByRef objSetMenu As osControls.ContextMenu)
+        EstablishPopupMenu(osMenuObj)
 
-        Dim osMenu_EnDis As New ToolStripMenuItem("Enabled") With {
-            .Checked = True,
-            .CheckState = CheckState.Checked,
-            .Name = "osMenuEnDis"
-        }
+        CreateMenuItem("Enabled", osMenu_EnDis, True)
+        CreateMenuItem("MTG Menu", osMenu_GameOpts)
+        CreateMenuItem("Play Game", osGameMenu_Play)
+        CreateMenuItem("Leave Game", osGameMenu_Leave)
+        CreateMenuItem("Preferences", osMenu_Opts)
+        CreateMenuItem("Exit", osMenuExit)
 
-        Dim osMenu_GameOpts = GenMenuItem("MTG Menu")
-        Dim osGameMenu_Play = GenMenuItem("Play Game")
-        Dim osGameMenu_Leave = GenMenuItem("Leave Game")
-        Dim osMenu_Opts = GenMenuItem("Preferences")
-        Dim osMenuExit = GenMenuItem("Exit")
+        PopulatePopupMenu()
 
-        osMenu_GameOpts.DropDownItems.AddRange(New ToolStripItem() {osGameMenu_Play, osGameMenu_Leave})
-        osMenuObj.Items.AddRange(New ToolStripItem() {osMenu_EnDis, New ToolStripSeparator(), osMenu_GameOpts, New ToolStripSeparator(), osMenu_Opts, osMenuExit})
+        SetMenuHandlers()
 
-        osMenuObj.Font = New Font("Trebuchet MS", 11.25F, FontStyle.Regular)
-        osMenuObj.RenderMode = ToolStripRenderMode.Professional
-        osMenuObj.ShowCheckMargin = True
-
-        AddHandler osMenu_Opts.Click,
-            Async Sub()
-                osFuncLib_InputScan.SetMonitorState(MonitorStatus.InCmd)
-                Await osFuncLib_ShowOpts.ExecuteDispOpts()
-            End Sub
-
-        AddHandler osMenuExit.Click,
-            Sub()
-                Dim chkConfirmExit = MsgBox("Are you sure you want to exit OddScript?",
-                                            vbYesNo + vbQuestion, "Confirm Close")
-
-                If chkConfirmExit = vbNo Then Exit Sub
-                osStopApp()
-            End Sub
-
-        Return osMenuObj
-    End Function
+        objSetMenu = osMenuObj
+    End Sub
 
     Private Sub osStopApp()
         CoreDataLib.osTrayIcon.Visible = False
@@ -932,21 +1013,11 @@ Module osFuncLib_TrayMenu
 
     Public Sub osMenu_Init(objInMon As osInMon)
 
-        CoreDataLib.osTrayMenu = PopulateMenu_Tray()
-        CoreDataLib.osPopupMenu = PopulateMenu_Popup()
-
+        PopulateMenu_Popup(CoreDataLib.osPopupMenu)
         PrepTrayMenu(CoreDataLib.osPopupMenu)
 
         osIsEnabled = True
         objInputMon = objInMon
-
-        With New osFuncData(AddressOf GetEnabledStatus, AddressOf ConfirmStatusChange,
-                            AddressOf SetNewStatus, AddressOf UpdateTrayIcon)
-
-            osMenuFuncBinder.BindChecked(CoreDataLib.osTrayMenu.Items.Item("osMenuEnDis"),
-                             .osFunc_GetStatus, .osFunc_ApplyStatus,
-                             .osFunc_ConfirmStatus, .osFunc_UpdateIcon)
-        End With
 
         With New osMenuFuncData(AddressOf GetEnabledStatus, AddressOf VerifyStatusChange)
             osMenuFuncBinder.BindChecked_Popup(CoreDataLib.osPopupMenu.Items.Item(0),
@@ -955,18 +1026,12 @@ Module osFuncLib_TrayMenu
 
     End Sub
 
-    Public Sub AttachClkMon()
-        If MenuCloseClkMon Is Nothing Then
-            MenuCloseClkMon = New ObserveMenuCloseClick(CoreDataLib.osTrayMenu)
-        End If
-
-        Forms.Application.AddMessageFilter(MenuCloseClkMon)
-    End Sub
-
-    Private Sub DetachClkMon()
-        If MenuCloseClkMon IsNot Nothing Then
-            Forms.Application.RemoveMessageFilter(MenuCloseClkMon)
-        End If
+    Private Sub SetNoActivateStyleForContextMenu(cm As osControls.ContextMenu)
+        Dim src = TryCast(PresentationSource.FromVisual(cm), Interop.HwndSource)
+        If src Is Nothing Then Return
+        Dim h = src.Handle
+        Dim ex = GetWindowLong(h, GWL_EXSTYLE)
+        SetWindowLong(h, GWL_EXSTYLE, ex Or WS_EX_NOACTIVATE)
     End Sub
 
 End Module
@@ -1028,6 +1093,13 @@ Module osFuncLib_UI
     Public Function PrepDispatcher(Optional IsAutoPass As Boolean = False) As Dispatcher
         Return If(IsAutoPass, osHandler_GUI.osGui_AutoPass.Dispatcher,
             osHandler_GUI.osGui_AutoCast.Dispatcher)
+    End Function
+
+    Public Function GetResponse(pType As PromptType) As DialogResult
+        With New PromptData(pType)
+            Dim chkPromptResponse = ResponseBox.ShowNoActivate(.Msg, .Title, .MsgType)
+            Return chkPromptResponse
+        End With
     End Function
 
     Public Sub SetRoundedCorners(panel As Panel, radius As Integer)
@@ -1240,13 +1312,7 @@ Public Class osMenuFuncBinder
     End Function
 
     Private Shared Sub ApplyTrayBinding(TrayMenuObj As DependencyObject, TrayMenuBinder As osBinder.Binding)
-
         BindingOperations.SetBinding(TrayMenuObj, TrayIconBridge.IsEnabledProperty, TrayMenuBinder)
-
-    End Sub
-
-    Public Shared Sub BindTrayIcon(objMenuAdapt As MenuFuncAdapter)
-
     End Sub
 
     Public Shared Sub BindChecked_Popup(objMenuItem As osControls.MenuItem,

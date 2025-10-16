@@ -161,7 +161,6 @@ Public NotInheritable Class CoreDataLib
         If isUtilityTrigger(pType) Then Return True
 
         If VerifyRunStatus() Then
-            'osFuncLib_Progress.SetProgStatus(ProgAction.Activate, pType)
             osFuncLib_Progress.UpdateProgStatus(pType, ProgAction.Activate)
             StartCancelWatcher(pType)
 
@@ -186,16 +185,16 @@ Public NotInheritable Class CoreDataLib
         While Not cts.Token.IsCancellationRequested
             If pType = TriggerType.AutoCast Then
                 If Not InputMonSvc.DetectTrigger(DetectOpts.MonitorMouse) Then
-                    Await osHandler_GUI.osGui_AutoCast.Dispatcher.InvokeAsync(Sub()
-                                                                                  cts.Cancel()
-                                                                              End Sub)
+                    Await PrepDispatcher().InvokeAsync(Sub()
+                                                           cts.Cancel()
+                                                       End Sub)
                     Exit While
                 End If
             ElseIf pType = TriggerType.AutoPass AndAlso
                        Not InputMonSvc.DetectTrigger(DetectOpts.MonitorShift) Then
-                Await osHandler_GUI.osGui_AutoPass.Dispatcher.InvokeAsync(Sub()
-                                                                              cts.Cancel()
-                                                                          End Sub)
+                Await PrepDispatcher(True).InvokeAsync(Sub()
+                                                           cts.Cancel()
+                                                       End Sub)
                 Exit While
             End If
             Await Task.Delay(5)

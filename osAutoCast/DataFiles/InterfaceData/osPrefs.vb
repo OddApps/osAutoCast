@@ -7,6 +7,11 @@ Public Class osPrefs
 
     Private objPrefTracker As osPrefTracker(Of osPrefStore)
 
+    Private Const GWL_EXSTYLE As Integer = -20
+    Private Const WS_EX_NOACTIVATE As Integer = &H8000000
+    Private Const WM_MOUSEACTIVATE As Integer = &H21
+    Private Const MA_NOACTIVATE As Integer = 3
+
     Protected Overrides ReadOnly Property CreateParams As CreateParams
         Get
             Dim cp As CreateParams = MyBase.CreateParams
@@ -18,9 +23,6 @@ Public Class osPrefs
     End Property
 
     Protected Overrides Sub WndProc(ByRef m As Message)
-        Const WM_MOUSEACTIVATE As Integer = &H21
-        Const MA_NOACTIVATE As Integer = 3
-
         If Not DesignMode AndAlso m.Msg = WM_MOUSEACTIVATE Then
             m.Result = CType(MA_NOACTIVATE, IntPtr)
             Return
@@ -50,9 +52,9 @@ Public Class osPrefs
 
     End Sub
 
-    Private Sub btnSavePrefs_Click(sender As Object, e As EventArgs) Handles btnSavePrefs.Click
+    Private Sub SavePrefs(sender As Object, e As EventArgs) Handles btnSavePrefs.Click
         If objPrefTracker.HasChanges Then
-            Dim chkDoSave = ConfirmPromptResponse(PromptType.isSave)
+            Dim chkDoSave = GetResponse(PromptType.Prefs_Save)
 
             If chkDoSave = DialogResult.Yes Then
                 CoreDataLib.osPrefIndex.SavePrefsFile()
@@ -66,12 +68,10 @@ Public Class osPrefs
         End If
     End Sub
 
-    Private Sub osPrefs_FormClosing(sender As Object, e As FormClosingEventArgs) Handles Me.FormClosing
+    Private Sub ClosePrefs(sender As Object, e As FormClosingEventArgs) Handles Me.FormClosing
         If objPrefTracker.HasChanges Then
             If Not isSaved Then
-                Dim chkDoClose = ConfirmPromptResponse(PromptType.isClose)
-
-                Select Case chkDoClose
+                Select Case GetResponse(PromptType.Prefs_Close)
                     Case DialogResult.Yes
                         CoreDataLib.osPrefIndex.SavePrefsFile()
                     Case DialogResult.No
@@ -79,18 +79,20 @@ Public Class osPrefs
                     Case DialogResult.Cancel
                         e.Cancel = True
                 End Select
-
             End If
         End If
     End Sub
 
-    Private Function ConfirmPromptResponse(pType As PromptType) As DialogResult
-        With New PromptData(pType)
-            Dim chkPromptResponse = NoActivateMsgBox.ShowNoActivate(.Msg, .Title, .MsgType)
-            Return chkPromptResponse
-        End With
-    End Function
+    Private Sub txtAutoCastFuse_MouseWheel(sender As Object, e As MouseEventArgs) Handles txtAutoCastFuse.MouseWheel
+        Dim objVal_ACF = DirectCast(sender, NumericUpDown)
 
+        If e.Delta > 0 Then
+            objVal_ACF.Value = Math.Min(objVal_ACF.Maximum, objVal_ACF.Value + 10D)
+        ElseIf e.Delta < 0 Then
+            objVal_ACF.Value = Math.Max(objVal_ACF.Minimum, objVal_ACF.Value - 10D)
+        End If
 
+        CType(e, HandledMouseEventArgs).Handled = True
+    End Sub
 
 End Class

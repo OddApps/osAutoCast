@@ -150,6 +150,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="DataFiles\ModelData\OddLibProgressBarConcept.vb" />
     <Compile Include="osi.Designer.vb">
       <DependentUpon>osi.vb</DependentUpon>
     </Compile>
