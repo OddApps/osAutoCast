@@ -858,8 +858,57 @@ Public Class PromptData
             Case PromptType.CloseApp
                 Msg = "Are you sure you want to exit osAutoCast?"
                 Title = "Close osAutoCast"
-                MsgType = MsgBoxType.isQuestion
+                MsgType = MsgBoxType.isAlert
         End Select
     End Sub
 
+End Class
+
+Public Class ProgressValData
+    Implements IDisposable
+
+    Private disposedValue As Boolean
+
+    Private ProgressDuration As TimeSpan
+    Private ProgressEase As Func(Of Double, Double)
+
+    Public Property ProgressComplete As Boolean
+
+    Public Sub New()
+
+    End Sub
+
+    Public Sub New(pDur As TimeSpan, Optional pEasing As Func(Of Double, Double) = Nothing)
+        ProgressDuration = pDur
+        ProgressEase = pEasing
+
+        ProgressComplete = False
+    End Sub
+
+    Public Sub CalcProgress(pElapsed As Stopwatch, ByRef objProgVal As Double)
+        Dim progElapsed = pElapsed.Elapsed
+        Dim progVal = Math.Min(1.0, progElapsed.TotalMilliseconds / ProgressDuration.TotalMilliseconds)
+
+        objProgVal = If(ProgressEase Is Nothing, progVal, ProgressEase(progVal))
+        If progVal >= 1.0 Then ProgressComplete = True
+    End Sub
+
+    Protected Overridable Sub Dispose(disposing As Boolean)
+        If Not disposedValue Then
+            If disposing Then
+                ProgressDuration = Nothing
+                ProgressEase = Nothing
+            End If
+
+            ' TODO: free unmanaged resources (unmanaged objects) and override finalizer
+            ' TODO: set large fields to null
+            disposedValue = True
+        End If
+    End Sub
+
+    Public Sub Dispose() Implements IDisposable.Dispose
+        ' Do not change this code. Put cleanup code in 'Dispose(disposing As Boolean)' method
+        Dispose(disposing:=True)
+        GC.SuppressFinalize(Me)
+    End Sub
 End Class

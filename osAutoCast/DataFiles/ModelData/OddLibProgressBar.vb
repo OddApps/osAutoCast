@@ -2,6 +2,8 @@
 Imports System.Windows.Media
 Imports System.Windows.Media.Imaging
 Imports System.Windows.Threading
+Imports System.Diagnostics
+Imports System.Threading
 
 Public Class OddLib_ProgressBar
     Inherits FrameworkElement
@@ -26,19 +28,38 @@ Public Class OddLib_ProgressBar
     Private ProgGraphic_Full As Drawing = Nothing
     Private _backgroundDrawing As Drawing = Nothing
 
+    Private _pendingPrime As Boolean
+
     Private Shared ReadOnly DefaultBg As SolidColorBrush = New SolidColorBrush(Color.FromRgb(57, 57, 57))
+
+    Public Event ProgressComplete As EventHandler
+    Public Event ProgressFailed As EventHandler
+
+    Private objProgValData As ProgressValData
+
+    Private ProgressTimer As DispatcherTimer = Nothing
+    Private ProgressWatch As Stopwatch = Nothing
+    Private ProgressDuration As TimeSpan
+    Private AutoResetProgress As Boolean
+    Private ProgressTaskSrc As TaskCompletionSource(Of Boolean) = Nothing
+    Private ProgressEaseFunc As Func(Of Double, Double) = Nothing
 
     Shared Sub New()
         DefaultBg.Freeze()
     End Sub
-
-    Private _pendingPrime As Boolean
 
     Public Sub New()
         SnapsToDevicePixels = True
         UseLayoutRounding = True
 
         RenderOptions.SetBitmapScalingMode(Me, BitmapScalingMode.LowQuality)
+
+        If Not IsAutoPass Then
+            ProgressTimer = New DispatcherTimer(DispatcherPriority.Render) With {
+                .Interval = TimeSpan.FromMilliseconds(10)
+            }
+            AddHandler ProgressTimer.Tick, AddressOf UpdateProgress
+        End If
 
         AddHandler Me.Loaded,
             Sub()
@@ -267,7 +288,6 @@ Public Class OddLib_ProgressBar
     End Property
 
 #End Region
-
 
 #Region "Progress API"
 
@@ -593,11 +613,13 @@ Public Class OddLib_ProgressBar
     End Function
 
     Private Function ProcessProgress(pVal As Double) As Double
-        Dim valClamped As Double = Math.Max(0.0, Math.Min(1.0, pVal))
+        Dim valClamped = Math.Max(0.0, Math.Min(1.0, pVal))
 
         If _pixelWidth > 0 Then
-            Dim progStep As Double = 1.0 / _pixelWidth   ' 1 pixel in normalized units
-            valClamped = Math.Round(valClamped / progStep, 1) * progStep
+            Dim progStep As Double = 1.0 / _pixelWidth
+
+            valClamped = If(IsAutoPass, Math.Round(valClamped / progStep, 1) * progStep,
+                Math.Round(valClamped / progStep) * progStep)
         End If
 
         Return valClamped
@@ -681,13 +703,14 @@ Public Class OddLib_ProgressBar
         _progChunk = setProgVal
     End Sub
 
-    Private Function CalcProgress(msDuration As Long) As Double
-        Return CDbl(Math.Min(1.0, msDuration * osFuncLib_Progress.ProgInv))
-    End Function
-
     Private Function EdgeFromChunk(objChunk As Double) As Integer
         If ActualWidth <= 0 Then Return 0
-        Return CInt(Math.Round(ActualWidth * objChunk))
+
+        If Not IsAutoPass Then
+            If objChunk >= 1.0 - Double.Epsilon Then Return _pixelWidth
+        End If
+
+        Return Math.Round(_pixelWidth * objChunk, 2)
     End Function
 
     Private Function GenProgRect(rX As Double, rY As Double, rW As Double, rH As Double) As Rect
@@ -818,6 +841,79 @@ Public Class OddLib_ProgressBar
     Private Shared Function SetOsProgObj(objDO As DependencyObject) As OddLib_ProgressBar
         Return DirectCast(objDO, OddLib_ProgressBar)
     End Function
+
+#Region "Sweep Animation"
+
+    Private Sub ClearProgress()
+        ProgressTimer.Stop()
+        ProgressWatch = Stopwatch.StartNew()
+    End Sub
+
+    Private Sub StartProgress(pDuration As TimeSpan, pEasing As Func(Of Double, Double))
+        ClearProgress()
+
+        ProgressDuration = pDuration
+        AutoResetProgress = False
+        ProgressEaseFunc = pEasing
+
+        ProgressTimer.Start()
+    End Sub
+
+    Public Function BeginProgress(pDuration As TimeSpan, objAbortToken As CancellationToken,
+                                  pEasing As Func(Of Double, Double)) As Task
+        InitProgressTask(pDuration, pEasing, ProgressTaskSrc)
+
+        objAbortToken.Register(
+            Sub()
+                SetProgressResult(ProgResult.Cancelled)
+            End Sub)
+
+        StartProgress(pDuration, pEasing)
+        Return ProgressTaskSrc.Task
+    End Function
+
+    Private Sub InitProgressTask(pDuration As TimeSpan, pEasing As Func(Of Double, Double),
+                                 ByRef objChkResult As TaskCompletionSource(Of Boolean))
+        objProgValData = New ProgressValData(pDuration, pEasing)
+
+        If objChkResult IsNot Nothing Then objChkResult = Nothing
+        objChkResult = New TaskCompletionSource(Of Boolean)(TaskCreationOptions.
+                                                    RunContinuationsAsynchronously)
+    End Sub
+
+    Public Sub SetProgressResult(Optional setResult As ProgResult = Nothing)
+        ProgressTimer.Stop()
+        ProgressWatch?.Stop()
+
+        Select Case setResult
+            Case ProgResult.Cancelled
+                ProgressTaskSrc?.TrySetResult(False)
+                RaiseEvent ProgressFailed(Me, EventArgs.Empty)
+            Case ProgResult.Completed
+                ProgressTaskSrc?.TrySetResult(True)
+                RaiseEvent ProgressComplete(Me, EventArgs.Empty)
+        End Select
+
+        ProgressTaskSrc = Nothing
+
+        If objProgValData IsNot Nothing Then
+            objProgValData.Dispose()
+            objProgValData = Nothing
+        End If
+    End Sub
+
+    Private Sub UpdateProgress(sender As Object, e As EventArgs)
+        If ProgressWatch Is Nothing Then Return
+
+        objProgValData.CalcProgress(ProgressWatch, ProgressChunk)
+
+        If objProgValData.ProgressComplete Then
+            SetProgressResult(ProgResult.Completed)
+        End If
+    End Sub
+
+#End Region
+
 
 #End Region
 

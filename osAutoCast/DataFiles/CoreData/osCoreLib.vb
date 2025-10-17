@@ -13,6 +13,7 @@ Imports osAutoCast.DataTypeLib.ProgMode
 Imports osAutoCast.DataTypeLib.ProgAction
 Imports osAutoCast.DataTypeLib.ProgStatus
 Imports osAutoCast.DataTypeLib.ProgEvent
+Imports osAutoCast.CoreDataLib
 Imports osForms = System.Windows.Forms
 Imports osInput = System.Windows.Input
 Imports osBinder = System.Windows.Data
@@ -20,6 +21,9 @@ Imports osColors = System.Windows.Media
 Imports osControls = System.Windows.Controls
 
 Public NotInheritable Class osFuncLib_InputScan
+
+    Public Shared curMonitorStatus As MonitorStatus
+    Public Shared isActionComplete As Boolean
 
     <DllImport("user32.dll")>
     Private Shared Function GetCursorPos(ByRef lpPoint As Point) As Boolean
@@ -40,10 +44,6 @@ Public NotInheritable Class osFuncLib_InputScan
     <DllImport("user32.dll")>
     Public Shared Function UnregisterHotKey(hWnd As IntPtr, id As Integer) As Boolean
     End Function
-
-    Public Shared curMonitorStatus As MonitorStatus
-
-    Public Shared isActionComplete As Boolean
 
     Public Sub New()
     End Sub
@@ -144,7 +144,6 @@ Public Module osFuncLib_Pos
 
 End Module
 
-
 Public NotInheritable Class osFuncLib_Progress
 
     Public Shared progValue As Double = 0.0F
@@ -156,6 +155,7 @@ Public NotInheritable Class osFuncLib_Progress
 
     Public Shared progSteps As Integer = 200
 
+    Public Shared ProgTimeSpan As TimeSpan
     Public Shared ProgDuration As Integer
     Public Shared ProgInv As Double
 
@@ -210,8 +210,8 @@ Public NotInheritable Class osFuncLib_Progress
     }
 
     Public Shared Sub SetProgContainer(pType As TriggerType)
-        ProgContainer = New Rectangle(0, 0, CoreDataLib.GetProgSize(pType), CoreDataLib.GetProgSize(pType, True))
-        ProgContainerBorder = New Rectangle(0, 0, CoreDataLib.GetProgSize(pType) - 1, CoreDataLib.GetProgSize(pType, True) - 1)
+        ProgContainer = New Rectangle(0, 0, GetProgSize(pType), GetProgSize(pType, True))
+        ProgContainerBorder = New Rectangle(0, 0, GetProgSize(pType) - 1, GetProgSize(pType, True) - 1)
     End Sub
 
     Public Shared Sub SetProgState(newStatus As ProgStatus)
@@ -292,20 +292,21 @@ Public NotInheritable Class osFuncLib_Progress
     End Function
 
     Public Shared Function CalcPosData(ptPos As Point) As Point
-        Return New Point(ptPos.X - CInt(Math.Round(CoreDataLib.GetProgSize(TriggerType.AutoCast) / 2.0)),
-                         ptPos.Y - CoreDataLib.GetProgSize(TriggerType.AutoCast, True) - 22)
+        Return New Point(ptPos.X - CInt(Math.Round(GetProgSize(TriggerType.AutoCast) / 2.0)),
+                         ptPos.Y - GetProgSize(TriggerType.AutoCast, True) - 22)
     End Function
 
     Public Shared Function CalcProgSize() As System.Drawing.Size
-        Return New System.Drawing.Size(CoreDataLib.GetProgSize(TriggerType.AutoCast), CoreDataLib.GetProgSize(TriggerType.AutoCast, True))
+        Return New System.Drawing.Size(GetProgSize(TriggerType.AutoCast), GetProgSize(TriggerType.AutoCast, True))
     End Function
 
     Public Shared Function CalcProgSize(pType As TriggerType) As System.Drawing.Size
-        Return New System.Drawing.Size(CoreDataLib.GetProgSize(pType), CoreDataLib.GetProgSize(pType, True))
+        Return New System.Drawing.Size(GetProgSize(pType), GetProgSize(pType, True))
     End Function
 
     Public Shared Sub SetProgBlockData(trigType As TriggerType)
-        ProgDuration = If(trigType = TriggerType.AutoCast, CoreDataLib.GetFuse(), CoreDataLib.GetSafetyTimer())
+        ProgDuration = If(trigType = TriggerType.AutoCast, GetFuse(), GetSafetyTimer())
+        ProgTimeSpan = TimeSpan.FromMilliseconds(ProgDuration)
         ProgInv = 1.0 / ProgDuration
     End Sub
 
@@ -363,7 +364,7 @@ Public NotInheritable Class osFuncLib_AutoCast
     End Sub
 
     Public Shared Async Sub InvokeAutoCast()
-        If CoreDataLib.isRTC() Then
+        If isRTC() Then
             Await Task.Delay(75)
             Await osHandler_Input.SuppressInput()
             ExecClicker(True)
@@ -377,7 +378,7 @@ Public NotInheritable Class osFuncLib_AutoCast
     End Sub
 
     Public Shared Async Sub EngageAutoCast()
-        If CoreDataLib.isRTC() Then
+        If isRTC() Then
             Await Task.Delay(75)
             ExecClicker(True)
             HoldInputs(True)
@@ -408,39 +409,37 @@ Public NotInheritable Class osFuncLib_AutoCast
     End Function
 
     Private Shared Async Function ProcessResult(acResult As ProgResult) As Task
-        Try
-            Select Case acResult
-                Case ProgResult.Completed
-                    If CoreDataLib.isRTC() Then
-                        CoreDataLib.ProcessProgressEvent(ProgMode.AutoCast, ProgEvent.DispMsg, "Release To Cast")
-                        Await CoreDataLib.InputMonSvc.AnticipateInput(InputAction.AC_RTC)
-                    End If
 
-                    Dim procComplete = PrepDispatcher().InvokeAsync(
-                        Async Function()
+        Dim procTask As DispatcherOperation(Of Task) = Nothing
+
+        Select Case acResult
+            Case ProgResult.Completed
+                procTask = PrepDispatcher().InvokeAsync(
+                    Async Function()
+                        If isRTC() Then
+                            ProcessProgressEvent(ProgMode.AutoCast, DispMsg, "Release To Cast")
+                            Await InputMonSvc.AnticipateInput(InputAction.AC_RTC)
+
                             Await Task.Delay(100)
-                            CoreDataLib.ProcessProgressEvent(ProgMode.AutoCast, ProgEvent.DispMsg, "Casting")
-                        End Function)
-                    Await procComplete.Task.Unwrap()
+                        End If
 
-                    EngageAutoCast()
-                Case ProgResult.Cancelled
-                    Dim procFail = PrepDispatcher().InvokeAsync(
-                        Async Function()
-                            CoreDataLib.ProcessProgressEvent(ProgMode.AutoCast, ProgEvent.MaxFill)
-                            Await Task.Delay(24)
+                        ProcessProgressEvent(ProgMode.AutoCast, DispMsg, "Casting")
 
-                            CoreDataLib.ProcessProgressEvent(ProgMode.AutoCast,
-                                                             ProgEvent.DispMsg, "Cancelled")
-                        End Function)
+                        EngageAutoCast()
+                    End Function)
+            Case ProgResult.Cancelled
+                procTask = PrepDispatcher().InvokeAsync(
+                    Async Function()
+                        ProcessProgressEvent(ProgMode.AutoCast, MaxFill)
+                        ProcessProgressEvent(ProgMode.AutoCast, DispMsg, "Cancelled")
 
-                    Await procFail.Task.Unwrap()
-            End Select
+                        Await Task.Delay(10)
+                    End Function)
+        End Select
 
-            Await FinalizeAutoCast()
-        Catch ex As Exception
+        Await procTask.Task.Unwrap()
 
-        End Try
+        Await FinalizeAutoCast()
     End Function
 
     Private Shared Async Function FinalizeAutoCast() As Task
@@ -480,7 +479,7 @@ Public NotInheritable Class osFuncLib_ShowOpts
     Private Shared chkCloseSettings As TaskCompletionSource(Of Boolean)
 
     Public Shared Async Function ExecuteDispOpts() As Task
-        CoreDataLib.PrepUtilityTrigger(TriggerType.ShowPrefs)
+        PrepUtilityTrigger(TriggerType.ShowPrefs)
 
         Application.Current.Dispatcher.Invoke(Sub()
                                                   With osHandler_GUI.osGui_Prefs
@@ -529,7 +528,7 @@ End Class
 Public NotInheritable Class osFuncLib_AutoPass
 
     Public Shared Async Sub InvokeAutoPass()
-        CoreDataLib.SetGameFocus()
+        SetGameFocus()
         Await Task.Delay(100)
         osHandler_Input.InjectAutoPassInputs()
     End Sub
@@ -552,7 +551,7 @@ Public NotInheritable Class osFuncLib_AutoPass
     End Function
 
     Private Shared Async Function AnticipateLaunchAP() As Task(Of Boolean)
-        Dim chkExecAP = Await CoreDataLib.InputMonSvc.AnticipateInput(InputAction.AP_Exec)
+        Dim chkExecAP = Await InputMonSvc.AnticipateInput(InputAction.AP_Exec)
         Return chkExecAP
     End Function
 
@@ -560,26 +559,26 @@ Public NotInheritable Class osFuncLib_AutoPass
         Try
             Select Case acResult
                 Case ProgResult.Completed
-                    CoreDataLib.ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.DispMsg, "Release Shift To AutoPass | Press C To Cancel")
-                    CoreDataLib.ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.MaxFill)
+                    ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.DispMsg, "Release Shift To AutoPass | Press C To Cancel")
+                    ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.MaxFill)
 
                     Dim chkLaunchAP = Await AnticipateLaunchAP()
 
                     If chkLaunchAP Then
-                        CoreDataLib.ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.DispMsg, "AutoPassing")
+                        ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.DispMsg, "AutoPassing")
                         InvokeAutoPass()
                     Else
                         osFuncLib_Progress.UpdateProgStatus(TriggerAction.AutoPass, Abort)
 
-                        CoreDataLib.ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.MaxFill)
-                        CoreDataLib.ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.DispMsg, "AutoPass Cancelled")
+                        ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.MaxFill)
+                        ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.DispMsg, "AutoPass Cancelled")
                     End If
 
                 Case ProgResult.Cancelled
                     osFuncLib_Progress.UpdateProgStatus(TriggerAction.AutoPass, Abort)
 
-                    CoreDataLib.ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.MaxFill)
-                    CoreDataLib.ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.DispMsg, "AutoPass Cancelled")
+                    ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.MaxFill)
+                    ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.DispMsg, "AutoPass Cancelled")
             End Select
 
             Await FinalizeAutoPass()
@@ -652,28 +651,22 @@ Public Class MenuHostWindow
     Protected Overrides Sub OnSourceInitialized(e As EventArgs)
         MyBase.OnSourceInitialized(e)
 
-        ' Skip in designer
         If System.ComponentModel.DesignerProperties.GetIsInDesignMode(Me) Then Return
 
-        Dim hwnd = New Interop.WindowInteropHelper(Me).Handle
+        Dim objHwnd = New Interop.WindowInteropHelper(Me).Handle
 
-        ' add NOACTIVATE (+ optionally TOOLWINDOW)
-        Dim ex = GetWindowLongPtr(hwnd, GWL_EXSTYLE)
+        Dim ex = GetWindowLongPtr(objHwnd, GWL_EXSTYLE)
         Dim newEx As Integer = ex.ToInt32() Or WS_EX_NOACTIVATE Or WS_EX_TOOLWINDOW
-        SetWindowLongPtr(hwnd, GWL_EXSTYLE, New IntPtr(newEx))
+        SetWindowLongPtr(objHwnd, GWL_EXSTYLE, New IntPtr(newEx))
 
-        ' hook window messages to prevent activation on click
-        Dim src = Interop.HwndSource.FromHwnd(hwnd)
-        If src IsNot Nothing Then
-            src.AddHook(New Interop.HwndSourceHook(AddressOf WndProcHook))
+        Dim objHwndSrc = Interop.HwndSource.FromHwnd(objHwnd)
+        If objHwndSrc IsNot Nothing Then
+            objHwndSrc.AddHook(New Interop.HwndSourceHook(AddressOf WndProcHook))
         End If
     End Sub
 
-    Private Function WndProcHook(hwnd As IntPtr,
-                                 msg As Integer,
-                                 wParam As IntPtr,
-                                  lParam As IntPtr,
-                                 ByRef handled As Boolean) As IntPtr
+    Private Function WndProcHook(hwnd As IntPtr, msg As Integer, wParam As IntPtr,
+                                 lParam As IntPtr, ByRef handled As Boolean) As IntPtr
         If msg = WM_MOUSEACTIVATE Then
             handled = True
             Return New IntPtr(MA_NOACTIVATE)
@@ -753,9 +746,9 @@ Module osFuncLib_TrayMenu
     End Function
 
     Public Async Function DisplayMenuPopup() As Task
-        CoreDataLib.PrepUtilityTrigger(TriggerType.ShowMenu)
+        PrepUtilityTrigger(TriggerType.ShowMenu)
 
-        Dim objGetMenu = CoreDataLib.osPopupMenu
+        Dim objGetMenu = osPopupMenu
 
         Await Application.Current.Dispatcher.InvokeAsync(
             Sub()
@@ -792,7 +785,7 @@ Module osFuncLib_TrayMenu
 
     Private Sub ClosePopupMenu()
 
-        CoreDataLib.osPopupMenu.IsOpen = False
+        osPopupMenu.IsOpen = False
 
         If osMenuOverlay IsNot Nothing Then
             osMenuOverlay.Close()
@@ -869,16 +862,16 @@ Module osFuncLib_TrayMenu
 
     Private Sub UpdateTrayIcon(chkStatus As Boolean)
         If chkStatus Then
-            CoreDataLib.osTrayIcon.Icon = My.Resources.osIcon
-            CoreDataLib.osTrayIcon.Text = "osAutoCast | Enabled"
+            osTrayIcon.Icon = My.Resources.osIcon
+            osTrayIcon.Text = "osAutoCast | Enabled"
         Else
-            CoreDataLib.osTrayIcon.Icon = My.Resources.osIcon_Disabled
-            CoreDataLib.osTrayIcon.Text = "osAutoCast | Disabled"
+            osTrayIcon.Icon = My.Resources.osIcon_Disabled
+            osTrayIcon.Text = "osAutoCast | Disabled"
         End If
     End Sub
 
     Private Sub UpdateTrayText(isEnabled As Boolean)
-        CoreDataLib.osTrayIcon.Text = If(isEnabled, "osAutoCast | Enabled", "osAutoCast | Disabled")
+        osTrayIcon.Text = If(isEnabled, "osAutoCast | Enabled", "osAutoCast | Disabled")
     End Sub
 
     Public Sub UpdateTray(isEnabled As Boolean)
@@ -887,13 +880,13 @@ Module osFuncLib_TrayMenu
     End Sub
 
     Private Sub PrepTrayMenu(objOsMenu As osControls.ContextMenu)
-        CoreDataLib.osTrayIcon = New NotifyIcon With {
+        osTrayIcon = New NotifyIcon With {
             .Icon = My.Resources.osIcon,
             .Text = "osAutoCast | Enabled",
             .Visible = True
         }
 
-        AddHandler CoreDataLib.osTrayIcon.MouseUp,
+        AddHandler osTrayIcon.MouseUp,
             Async Sub(sender As Object, e As MouseEventArgs)
                 If e.Button = osForms.MouseButtons.Right Then
                     Await DisplayMenuPopup()
@@ -963,8 +956,8 @@ Module osFuncLib_TrayMenu
         AddHandler osGameMenu_Play.Click,
             Sub()
                 Dim procStart_MTGA As New ProcessStartInfo With {
-                    .FileName = CoreDataLib.dirMtgaExe,
-                    .WorkingDirectory = CoreDataLib.dirMtga,
+                    .FileName = dirMtgaExe,
+                    .WorkingDirectory = dirMtga,
                     .WindowStyle = ProcessWindowStyle.Maximized
                 }
 
@@ -1007,20 +1000,20 @@ Module osFuncLib_TrayMenu
     End Sub
 
     Private Sub osStopApp()
-        CoreDataLib.osTrayIcon.Visible = False
+        osTrayIcon.Visible = False
         End
     End Sub
 
     Public Sub osMenu_Init(objInMon As osInMon)
 
-        PopulateMenu_Popup(CoreDataLib.osPopupMenu)
-        PrepTrayMenu(CoreDataLib.osPopupMenu)
+        PopulateMenu_Popup(osPopupMenu)
+        PrepTrayMenu(osPopupMenu)
 
         osIsEnabled = True
         objInputMon = objInMon
 
         With New osMenuFuncData(AddressOf GetEnabledStatus, AddressOf VerifyStatusChange)
-            osMenuFuncBinder.BindChecked_Popup(CoreDataLib.osPopupMenu.Items.Item(0),
+            osMenuFuncBinder.BindChecked_Popup(osPopupMenu.Items.Item(0),
                                          .osMenuFunc_GetStatus, .osMenuFunc_ApplyStatus)
         End With
 
@@ -1146,6 +1139,12 @@ Module osFuncLib_UI
         ctrlPanel.Invalidate()
     End Sub
 
+    Public Function EaseInOutExpo(x As Double) As Double
+        If x = 0.0 Then Return 0.0
+        If x = 1.0 Then Return 1.0
+        Return If(x < 0.5, Math.Pow(2, 20 * x - 10) / 2, (2 - Math.Pow(2, -20 * x + 10)) / 2)
+    End Function
+
 End Module
 
 'Public Class BoolToEnabledTextConverter
@@ -1210,7 +1209,6 @@ End Class
 
 Public Class TrayIconBridge
     Inherits DependencyObject
-
     Public Property NotifyIcon As NotifyIcon
 
     Public Shared ReadOnly IsEnabledProperty As DependencyProperty =
