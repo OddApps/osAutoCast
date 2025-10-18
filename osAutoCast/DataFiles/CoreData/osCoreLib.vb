@@ -13,6 +13,7 @@ Imports osAutoCast.DataTypeLib.ProgMode
 Imports osAutoCast.DataTypeLib.ProgAction
 Imports osAutoCast.DataTypeLib.ProgStatus
 Imports osAutoCast.DataTypeLib.ProgEvent
+Imports osAutoCast.DataTypeLib.ProgEaseVals
 Imports osAutoCast.CoreDataLib
 Imports osForms = System.Windows.Forms
 Imports osInput = System.Windows.Input
@@ -185,6 +186,8 @@ Public NotInheritable Class osFuncLib_Progress
     Public Shared progFont_AP As New Font("Segoe UI", 10, FontStyle.Bold)
 
     Public Shared objAutoPassProg As SmoothProgressBarr = Nothing
+
+    Public Shared ReadOnly ProgBG As SolidColorBrush = New SolidColorBrush(osColors.Color.FromRgb(57, 57, 57))
 
     Private Shared ProgStatusColors As New Dictionary(Of ProgStatus, Color) From {
         {Idle, Color.White},
@@ -792,6 +795,7 @@ Module osFuncLib_TrayMenu
             osMenuOverlay = Nothing
         End If
 
+        Dim doGameFocus = SetGameFocus()
     End Sub
 
     Private Sub CloseMenuHost()
@@ -1090,7 +1094,7 @@ Module osFuncLib_UI
 
     Public Function GetResponse(pType As PromptType) As DialogResult
         With New PromptData(pType)
-            Dim chkPromptResponse = ResponseBox.ShowNoActivate(.Msg, .Title, .MsgType)
+            Dim chkPromptResponse = ResponseBox.DisplayPopup(.Msg, .Title, .MsgType)
             Return chkPromptResponse
         End With
     End Function
@@ -1139,11 +1143,60 @@ Module osFuncLib_UI
         ctrlPanel.Invalidate()
     End Sub
 
-    Public Function EaseInOutExpo(x As Double) As Double
-        If x = 0.0 Then Return 0.0
-        If x = 1.0 Then Return 1.0
-        Return If(x < 0.5, Math.Pow(2, 20 * x - 10) / 2, (2 - Math.Pow(2, -20 * x + 10)) / 2)
+    Public Function EaseInOutExpo(pDuration As Double) As Double
+        If pDuration = 0.0 Then Return 0.0
+        If pDuration = 1.0 Then Return 1.0
+        Return If(pDuration < 0.5, Math.Pow(2, 20 * pDuration - 10) / 2,
+            (2 - Math.Pow(2, -20 * pDuration + 10)) / 2)
     End Function
+
+    Public Function EaseProgress(pDuration As Double) As Double
+        If pDuration <= 0 Then Return 0
+        If pDuration >= 1 Then Return 1
+
+        Dim valDuration As Double = pDuration
+
+        For i As Integer = 0 To 4
+            Dim x As Double = CalcEase(valDuration, 0.0, eVal_x1, eVal_x2, 1.0)
+            Dim dx As Double = CalcEaseSupport(valDuration, 0.0, eVal_x1, eVal_x2, 1.0)
+
+            If dx = 0 Then Exit For
+
+            valDuration -= (x - pDuration) / dx
+            valDuration = Math.Max(0, Math.Min(1, valDuration))
+        Next
+
+        Return CalcEase(valDuration, 0.0, eVal_y1, eVal_y2, 1.0)
+    End Function
+
+    Public Function EaseInOutCirc(x As Double) As Double
+        If x < 0.5 Then
+            Return (1.0 - Math.Sqrt(1.0 - Math.Pow(2.0 * x, 2))) / 2.0
+        Else
+            Return (Math.Sqrt(1.0 - Math.Pow(-2.0 * x + 2.0, 2)) + 1.0) / 2.0
+        End If
+    End Function
+
+
+    Private Function ConvDur(pDuration As Double, cntEval As Integer) As Double
+        Return (1 - pDuration) * cntEval
+    End Function
+
+    Private Function CalcEase(t As Double, p0 As Double, p1 As Double, p2 As Double, p3 As Double) As Double
+        Dim mt As Double = 1 - t
+        Return mt * mt * mt * p0 +
+               3 * mt * mt * t * p1 +
+               3 * mt * t * t * p2 +
+               t * t * t * p3
+    End Function
+
+    Private Function CalcEaseSupport(t As Double, p0 As Double, p1 As Double, p2 As Double, p3 As Double) As Double
+        Dim mt As Double = 1 - t
+        Return 3 * mt * mt * (p1 - p0) +
+               6 * mt * t * (p2 - p1) +
+               3 * t * t * (p3 - p2)
+    End Function
+
 
 End Module
 

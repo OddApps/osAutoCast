@@ -30,22 +30,20 @@ Public Class OddLib_ProgressBar
 
     Private _pendingPrime As Boolean
 
-    Private Shared ReadOnly DefaultBg As SolidColorBrush = New SolidColorBrush(Color.FromRgb(57, 57, 57))
-
     Public Event ProgressComplete As EventHandler
     Public Event ProgressFailed As EventHandler
 
     Private objProgValData As ProgressValData
 
-    Private ProgressTimer As DispatcherTimer = Nothing
-    Private ProgressWatch As Stopwatch = Nothing
-    Private ProgressDuration As TimeSpan
     Private AutoResetProgress As Boolean
-    Private ProgressTaskSrc As TaskCompletionSource(Of Boolean) = Nothing
+    Private ProgressDuration As TimeSpan
+    Private ProgressWatch As Stopwatch = Nothing
+    Private ProgressTimer As DispatcherTimer = Nothing
     Private ProgressEaseFunc As Func(Of Double, Double) = Nothing
+    Private ProgressTaskSrc As TaskCompletionSource(Of Boolean) = Nothing
 
     Shared Sub New()
-        DefaultBg.Freeze()
+        osFuncLib_Progress.ProgBG.Freeze()
     End Sub
 
     Public Sub New()
@@ -55,8 +53,9 @@ Public Class OddLib_ProgressBar
         RenderOptions.SetBitmapScalingMode(Me, BitmapScalingMode.LowQuality)
 
         If Not IsAutoPass Then
-            ProgressTimer = New DispatcherTimer(DispatcherPriority.Render) With {
-                .Interval = TimeSpan.FromMilliseconds(10)
+            ProgressTimer = New DispatcherTimer(DispatcherPriority.Send) With {
+                .Interval = TimeSpan.FromMilliseconds(25),
+                .IsEnabled = False
             }
             AddHandler ProgressTimer.Tick, AddressOf UpdateProgress
         End If
@@ -172,7 +171,7 @@ Public Class OddLib_ProgressBar
 
     Public Shared ReadOnly BackgroundProperty As DependencyProperty =
         DependencyProperty.Register("Background", GetType(Brush), GetType(OddLib_ProgressBar),
-                                    New FrameworkPropertyMetadata(DefaultBg, AddressOf OnBackgroundChanged))
+                                    New FrameworkPropertyMetadata(osFuncLib_Progress.ProgBG, AddressOf OnBackgroundChanged))
 
     Public Property Background As Brush
         Get
@@ -296,8 +295,9 @@ Public Class OddLib_ProgressBar
             Return _progChunk
         End Get
         Set(value As Double)
+            Debug.WriteLine($"val: {value}")
             Dim valProgress = ProcessProgress(value)
-
+            Debug.WriteLine($"valp: {valProgress}")
             PrimeIfReady()
 
             If ValidateProgress(valProgress) Then Return
@@ -619,7 +619,7 @@ Public Class OddLib_ProgressBar
             Dim progStep As Double = 1.0 / _pixelWidth
 
             valClamped = If(IsAutoPass, Math.Round(valClamped / progStep, 1) * progStep,
-                Math.Round(valClamped / progStep) * progStep)
+                Math.Round(valClamped / progStep, 1) * progStep)
         End If
 
         Return valClamped
@@ -718,7 +718,7 @@ Public Class OddLib_ProgressBar
     End Function
 
     Private Function BgBrushOrDefault() As Brush
-        Return If(Background, DirectCast(DefaultBg, Brush))
+        Return If(Background, DirectCast(osFuncLib_Progress.ProgBG, Brush))
     End Function
 
     Private Sub ValidateMsgDV()
@@ -819,7 +819,6 @@ Public Class OddLib_ProgressBar
         End If
     End Sub
 
-
     Private Shared Function ValidateProgFreeze(objPF As Freezable) As Boolean
         If objPF IsNot Nothing AndAlso objPF.CanFreeze AndAlso Not objPF.IsFrozen Then
             Return True
@@ -845,7 +844,9 @@ Public Class OddLib_ProgressBar
 #Region "Sweep Animation"
 
     Private Sub ClearProgress()
+        ProgressTimer.IsEnabled = True
         ProgressTimer.Stop()
+
         ProgressWatch = Stopwatch.StartNew()
     End Sub
 
@@ -860,7 +861,7 @@ Public Class OddLib_ProgressBar
     End Sub
 
     Public Function BeginProgress(pDuration As TimeSpan, objAbortToken As CancellationToken,
-                                  pEasing As Func(Of Double, Double)) As Task
+                                  Optional pEasing As Func(Of Double, Double) = Nothing) As Task
         InitProgressTask(pDuration, pEasing, ProgressTaskSrc)
 
         objAbortToken.Register(
@@ -913,7 +914,6 @@ Public Class OddLib_ProgressBar
     End Sub
 
 #End Region
-
 
 #End Region
 

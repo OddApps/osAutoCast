@@ -26,32 +26,31 @@ Public Class progGui_AutoCast
     End Function
 
     Private Sub InitiateAutoCast()
+        Dim evProgComplete As EventHandler = Sub() SetAutoCastResult(True)
+        Dim evProgFail As EventHandler = Sub() SetAutoCastResult(False)
+
         With OddProgBar1
-            AddHandler .ProgressComplete, Sub() SetAutoCastResult(True)
-            AddHandler .ProgressFailed, Sub() SetAutoCastResult(False)
+            RemoveHandler .ProgressComplete, evProgComplete
+            RemoveHandler .ProgressFailed, evProgFail
+
+            AddHandler .ProgressComplete, evProgComplete
+            AddHandler .ProgressFailed, evProgFail
         End With
     End Sub
 
     Public Async Function LaunchAutoCast() As Task(Of ProgResult)
-
         Await AutoCast_Prep()
 
-        AddHandler OddProgBar1.ProgressComplete, Sub()
-                                                     SetAutoCastResult(True)
-                                                 End Sub
+        Dim acProgTask = OddProgBar1.
+            BeginProgress(ProgTimeSpan, objCancelState, AddressOf EaseInOutCirc)
 
-        AddHandler OddProgBar1.ProgressFailed, Sub()
-                                                   SetAutoCastResult(False)
-                                               End Sub
-
-        Dim acStartTask = OddProgBar1.BeginProgress(ProgTimeSpan, objCancelState, AddressOf EaseInOutExpo)
-
-        Await acStartTask
+        Await acProgTask
 
         Return AutoCast_HandleResult(AutoCastComplete)
     End Function
 
     Private Sub SetAutoCastResult(acComplete As Boolean)
+        Debug.WriteLine(OddProgBar1.ProgressChunk)
         AutoCastComplete = acComplete
     End Sub
 

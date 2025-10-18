@@ -154,6 +154,20 @@ Public Module DataTypeLib
         CloseApp
     End Enum
 
+    Public Enum ProgEaseVals
+        eVal_x1 = 0.83
+        eVal_y1 = 0.1
+        eVal_x2 = 0.5
+        eVal_y2 = 0.91
+    End Enum
+
+    'Public Enum ProgEaseVals
+    '    eVal_x1 = 0.9
+    '    eVal_y1 = 0.13
+    '    eVal_x2 = 0.63
+    '    eVal_y2 = 0.82
+    'End Enum
+
 End Module
 
 Public Class InjectInputData
@@ -699,7 +713,6 @@ Public Class ResponseBox
             .RowCount = 2
             .RowStyles.Add(GenContainerRow(True))
             .RowStyles.Add(GenContainerRow())
-            '.Size = New osDraw.Size(447, 125)
             .TabIndex = 0
         End With
     End Sub
@@ -710,7 +723,7 @@ Public Class ResponseBox
             .Margin = New osForms.Padding(2)
             .SizeMode = osForms.PictureBoxSizeMode.StretchImage
             .Anchor = CType((osForms.AnchorStyles.Left Or osForms.AnchorStyles.Right), osForms.AnchorStyles)
-            .Image = SetMsgIcon(msgType)
+            .Image = SetMsgIcon(msgType).ToBitmap()
         End With
     End Sub
 
@@ -783,12 +796,9 @@ Public Class ResponseBox
         If btnResult = osForms.DialogResult.Cancel Then CancelButton = objBtn
     End Sub
 
-    Private Function SetMsgIcon(mType As MsgBoxType) As osDraw.Bitmap
-        If mType = MsgBoxType.isAlert Then
-            Return osIcons.Warning.ToBitmap()
-        Else
-            Return osIcons.Question.ToBitmap()
-        End If
+    Private Function SetMsgIcon(mType As MsgBoxType) As osDraw.Icon
+        Return If(mType = MsgBoxType.isAlert,
+            osIcons.Warning, osIcons.Question)
     End Function
 
     Private Function GenContainerCol(Optional isIconCol As Boolean = False) As osForms.ColumnStyle
@@ -800,11 +810,8 @@ Public Class ResponseBox
     End Function
 
     Private Function GenContainerRow(Optional isBtnRow As Boolean = False) As osForms.RowStyle
-        If isBtnRow Then
-            Return New osForms.RowStyle(osForms.SizeType.Absolute, 75.0!)
-        Else
-            Return New osForms.RowStyle(osForms.SizeType.Absolute, 44.0!)
-        End If
+        Return New osForms.RowStyle(osForms.SizeType.Absolute,
+                                    If(isBtnRow, 75.0!, 44.0!))
     End Function
 
     Protected Overrides ReadOnly Property CreateParams() As osForms.CreateParams
@@ -823,7 +830,7 @@ Public Class ResponseBox
         MyBase.WndProc(m)
     End Sub
 
-    Public Shared Function ShowNoActivate(msg As String, title As String, mtype As MsgBoxType) As osForms.DialogResult
+    Public Shared Function DisplayPopup(msg As String, title As String, mtype As MsgBoxType) As osForms.DialogResult
         Using dlg As New ResponseBox(msg, title, mtype)
             Return dlg.ShowDialog()
         End Using
@@ -887,7 +894,7 @@ Public Class ProgressValData
 
     Public Sub CalcProgress(pElapsed As Stopwatch, ByRef objProgVal As Double)
         Dim progElapsed = pElapsed.Elapsed
-        Dim progVal = Math.Min(1.0, progElapsed.TotalMilliseconds / ProgressDuration.TotalMilliseconds)
+        Dim progVal = Math.Min(1.0, Math.Round(progElapsed.TotalMilliseconds / ProgressDuration.TotalMilliseconds, 2))
 
         objProgVal = If(ProgressEase Is Nothing, progVal, ProgressEase(progVal))
         If progVal >= 1.0 Then ProgressComplete = True
