@@ -3,9 +3,9 @@ Imports System.IO
 Imports System.Reflection
 Imports System.Runtime.InteropServices.ComTypes
 Imports System.Windows.Forms
+Imports osAutoCast.DataTypeLib.PrefBinder
 
 Public Class osPrefStore
-
     Implements INotifyPropertyChanged
 
     Public osPrefStoreBindings As Dictionary(Of String, Binding)
@@ -20,6 +20,12 @@ Public Class osPrefStore
     Private _MainOpts_acProgW As Integer
     Private _VisualQuality As Integer
 
+    Private PrefBinderIdx As New Dictionary(Of PrefBinder, PrefBindData) From {
+        {AC_Fuse, New PrefBindData("Text", "AutoCast_Fuse")},
+        {AC_RTC, New PrefBindData("Checked", "AutoCast_RTC")},
+        {AP_SafetyTimer, New PrefBindData("Text", "AutoPass_SafetyTimer")}
+    }
+
     Public Event PropertyChanged As PropertyChangedEventHandler Implements INotifyPropertyChanged.PropertyChanged
 
     Private Sub OnPropertyChanged(Optional propertyName As String = Nothing)
@@ -28,17 +34,24 @@ Public Class osPrefStore
 
     Public Function GetPrefBindDefs() As Dictionary(Of String, PrefBindingDef)
         Return New Dictionary(Of String, PrefBindingDef) From {
-            {"acFuse", New PrefBindingDef With {.ControlProp = "Text", .DataProp = "AutoCast_Fuse"}},
-            {"apSafetyTimer", New PrefBindingDef With {.ControlProp = "Text", .DataProp = "AutoPass_SafetyTimer"}},
-            {"acRTC", New PrefBindingDef With {.ControlProp = "Checked", .DataProp = "AutoCast_RTC"}}
+            {"acFuse", New PrefBindingDef With {.ControlProp = PrefBinderIdx(AC_Fuse).BindType, .DataProp = PrefBinderIdx(AC_Fuse).BindRecord}},
+            {"apSafetyTimer", New PrefBindingDef With {.ControlProp = PrefBinderIdx(AP_SafetyTimer).BindType, .DataProp = PrefBinderIdx(AP_SafetyTimer).BindRecord}},
+            {"acRTC", New PrefBindingDef With {.ControlProp = PrefBinderIdx(AC_RTC).BindType, .DataProp = PrefBinderIdx(AC_RTC).BindRecord}}
         }
+    End Function
+
+    Private Function PopulateBinding(pBinder As PrefBinder) As Binding
+        With PrefBinderIdx(pBinder)
+            Return New Binding(.BindType, CoreDataLib.osPrefStoreData,
+                               .BindRecord, False, DataSourceUpdateMode.OnPropertyChanged)
+        End With
     End Function
 
     Public Sub GenPrefBinds()
         osPrefStoreBindings = New Dictionary(Of String, Binding) From {
-            {"acFuse", New Binding("Text", CoreDataLib.osPrefStoreData, "AutoCast_Fuse", False, DataSourceUpdateMode.OnPropertyChanged)},
-            {"apSafetyTimer", New Binding("Text", CoreDataLib.osPrefStoreData, "AutoPass_SafetyTimer", False, DataSourceUpdateMode.OnPropertyChanged)},
-            {"acRTC", New Binding("Checked", CoreDataLib.osPrefStoreData, "AutoCast_RTC", False, DataSourceUpdateMode.OnPropertyChanged)}
+            {"acFuse", PopulateBinding(AC_Fuse)},
+            {"apSafetyTimer", PopulateBinding(AP_SafetyTimer)},
+            {"acRTC", PopulateBinding(AC_RTC)}
         }
     End Sub
 

@@ -1,6 +1,6 @@
 ﻿Class Application
     Private Sub Application_Startup(sender As Object, e As StartupEventArgs) Handles Me.Startup
-        RenderOptions.ProcessRenderMode = Interop.RenderMode.SoftwareOnly
+        ' RenderOptions.ProcessRenderMode = Interop.RenderMode.SoftwareOnly
     End Sub
 
     ' Application-level events, such as Startup, Exit, and DispatcherUnhandledException

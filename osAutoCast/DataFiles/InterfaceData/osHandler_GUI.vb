@@ -41,20 +41,23 @@ Public NotInheritable Class osHandler_GUI
     Private Shared Sub GenerateGUI(objGenGui As TriggerAction)
         Select Case objGenGui
             Case TriggerAction.AutoPass
-                _autoPass = New Lazy(Of progGui_AutoPass)(Function()
-                                                              Return Application.Current.Dispatcher.Invoke(
-                                                              Function()
-                                                                  Return New progGui_AutoPass()
-                                                              End Function)
-                                                          End Function, LazyThreadSafetyMode.ExecutionAndPublication)
+                _autoPass = New Lazy(Of progGui_AutoPass)(
+                    Function()
+                        Return Application.Current.Dispatcher.
+                        Invoke(
+                        Function()
+                            Return New progGui_AutoPass()
+                        End Function)
+                    End Function, LazyThreadSafetyMode.ExecutionAndPublication)
             Case TriggerAction.AutoCast
 
-                _autoCast = New Lazy(Of progGui_AutoCast)(Function()
-                                                              Return Application.Current.Dispatcher.Invoke(
-                                                              Function()
-                                                                  Return New progGui_AutoCast()
-                                                              End Function)
-                                                          End Function, LazyThreadSafetyMode.ExecutionAndPublication)
+                _autoCast = New Lazy(Of progGui_AutoCast)(
+                    Function()
+                        Return Application.Current.Dispatcher.
+                        Invoke(Function()
+                                   Return New progGui_AutoCast()
+                               End Function)
+                    End Function, LazyThreadSafetyMode.ExecutionAndPublication)
         End Select
     End Sub
 
@@ -76,7 +79,7 @@ Public NotInheritable Class osHandler_GUI
         If guiType = DataTypeLib.TriggerType.AutoCast Then
             osGui_AutoCast.Dispatcher.Invoke(
                 Sub()
-                    With osFuncLib_Progress.CalcPosData(ptPosData)
+                    With SetPosData(ptPosData)
                         osGui_AutoCast.Left = .X
                         osGui_AutoCast.Top = .Y
                     End With

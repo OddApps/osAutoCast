@@ -5,19 +5,18 @@ Imports System.Windows.Threading
 
 Public NotInheritable Class CoreDataLib
 
+#Disable Warning IDE0060 ' Remove unused parameter
     Private Sub New()
     End Sub
 
-    Private Shared isDebug As Boolean = False
+    Private Shared ReadOnly isDebug As Boolean = False
 
     Public Shared osTrayIcon As Forms.NotifyIcon
-    Public Shared osTrayMenu As Forms.ContextMenuStrip
-
     Public Shared osPopupMenu As System.Windows.Controls.ContextMenu
 
     Public Shared dirProgFiles As String = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles)
-    Public Shared dirMtga As String = Path.Combine(dirProgFiles, "Wizards of the Coast", "MTGA",
-                                                   "MTGALauncher")
+    Public Shared dirMtga As String = Path.Combine(dirProgFiles, "Wizards of the Coast",
+                                                   "MTGA", "MTGALauncher")
     Public Shared dirMtgaExe As String = Path.Combine(dirMtga, "MTGALauncher.exe")
 
     Public Shared osAppDataDir As String = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData)
@@ -101,7 +100,9 @@ Public NotInheritable Class CoreDataLib
         End If
     End Function
 
+
     Public Shared Function ChkExecPermission(tType As TriggerAction) As Boolean
+
         If Not IsDebugBuild() Then
             Return DetectGameUI.FocusMTGA()
         Else
@@ -249,5 +250,5 @@ Public NotInheritable Class CoreDataLib
     Private Shared Function PrepareProgEvent(pEventElement As OddLib_ProgressBar) As ProgressEvent
         Return New ProgressEvent(pEventElement)
     End Function
-
+#Enable Warning IDE0060 ' Remove unused parameter
 End Class

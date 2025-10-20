@@ -113,6 +113,12 @@
     <Reference Include="Microsoft.Bcl.AsyncInterfaces, Version=10.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.Bcl.AsyncInterfaces.10.0.0-rc.1.25451.107\lib\net462\Microsoft.Bcl.AsyncInterfaces.dll</HintPath>
     </Reference>
+    <Reference Include="SharpDX, Version=4.2.0.0, Culture=neutral, PublicKeyToken=b4dcf0f35e5521f1, processorArchitecture=MSIL">
+      <HintPath>..\packages\SharpDX.4.2.0\lib\net45\SharpDX.dll</HintPath>
+    </Reference>
+    <Reference Include="SharpDX.Direct3D9, Version=4.2.0.0, Culture=neutral, PublicKeyToken=b4dcf0f35e5521f1, processorArchitecture=MSIL">
+      <HintPath>..\packages\SharpDX.Direct3D9.4.2.0\lib\net45\SharpDX.Direct3D9.dll</HintPath>
+    </Reference>
     <Reference Include="System.Core" />
     <Reference Include="System.Drawing" />
     <Reference Include="System.Reactive, Version=6.1.0.0, Culture=neutral, PublicKeyToken=94bc3704cddfc263, processorArchitecture=MSIL">
@@ -150,16 +156,11 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
-    <Compile Include="DataFiles\ModelData\OddLibProgressBarConcept.vb" />
-    <Compile Include="osi.Designer.vb">
-      <DependentUpon>osi.vb</DependentUpon>
-    </Compile>
-    <Compile Include="osi.vb">
-      <SubType>Form</SubType>
-    </Compile>
+    <Compile Include="DataFiles\InterfaceData\OddProgGui_ACc.vb" />
     <Compile Include="DataFiles\InterfaceData\osInMon.xaml.vb">
       <DependentUpon>osInMon.xaml</DependentUpon>
     </Compile>
+    <Compile Include="GlobalSuppressions.vb" />
     <Compile Include="osInputMonitor.Designer.vb">
       <DependentUpon>osInputMonitor.vb</DependentUpon>
     </Compile>
@@ -197,7 +198,6 @@
     <Compile Include="DataFiles\InterfaceData\osHandler_GUI.vb">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="DataFiles\InterfaceData\osInterfaceData.vb" />
     <Compile Include="DataFiles\InterfaceData\progGui_AutoCast.xaml.vb">
       <DependentUpon>progGui_AutoCast.xaml</DependentUpon>
     </Compile>

@@ -7,6 +7,8 @@ Imports System.Windows.Forms
 Imports System.Windows.Threading
 Imports System.Text
 Imports System.Globalization
+Imports System.Windows.Markup
+Imports System.Xml
 Imports osAutoCast.DataTypeLib.TriggerType
 Imports osAutoCast.DataTypeLib.TriggerAction
 Imports osAutoCast.DataTypeLib.ProgMode
@@ -19,8 +21,11 @@ Imports osForms = System.Windows.Forms
 Imports osInput = System.Windows.Input
 Imports osBinder = System.Windows.Data
 Imports osColors = System.Windows.Media
+Imports osThreads = System.Threading
 Imports osControls = System.Windows.Controls
 
+#Disable Warning IDE0060 ' Remove unused parameter
+#Disable Warning IDE1006 ' Remove unused parameter
 Public NotInheritable Class osFuncLib_InputScan
 
     Public Shared curMonitorStatus As MonitorStatus
@@ -139,9 +144,14 @@ Public Module osFuncLib_Pos
         Return GetCursorPos(pt)
     End Function
 
-    Public Sub FindPosGui(ByRef pt As Point)
+    Public Sub GetPosGui(ByRef pt As Point)
         GetCursorPos(pt)
     End Sub
+
+    Public Function SetPosData(ptPos As Point) As Point
+        Return New Point(ptPos.X - CInt(Math.Round(GetProgSize(TriggerType.AutoCast) / 2.0)),
+                         ptPos.Y - GetProgSize(TriggerType.AutoCast, True) - 22)
+    End Function
 
 End Module
 
@@ -187,7 +197,7 @@ Public NotInheritable Class osFuncLib_Progress
 
     Public Shared objAutoPassProg As SmoothProgressBarr = Nothing
 
-    Public Shared ReadOnly ProgBG As SolidColorBrush = New SolidColorBrush(osColors.Color.FromRgb(57, 57, 57))
+    Public Shared ReadOnly ProgBG As New SolidColorBrush(osColors.Color.FromRgb(57, 57, 57))
 
     Private Shared ProgStatusColors As New Dictionary(Of ProgStatus, Color) From {
         {Idle, Color.White},
@@ -396,10 +406,12 @@ Public NotInheritable Class osFuncLib_AutoCast
     Public Shared Async Function ExecuteAutoCast() As Task
         Dim isTask_AutoCast = PrepDispatcher().InvokeAsync(
             Async Function()
-                osFuncLib_InputScan.FindPosGui(ptPos)
+                GetPosGui(ptPos)
 
                 osHandler_GUI.DisplayGUI(TriggerType.AutoCast, ptPos)
                 osFuncLib_Progress.SetProgBlockData(TriggerType.AutoCast)
+                'osHandler_GUI.DisplayGUI(TriggerType.AutoCast, ptPos)
+                ' osFuncLib_Progress.SetProgBlockData(TriggerType.AutoCast)
 
                 Dim retAC = Await osHandler_GUI.osGui_AutoCast.LaunchAutoCast()
                 Return retAC
@@ -774,7 +786,7 @@ Module osFuncLib_TrayMenu
 
                 With objGetMenu
                     .PlacementTarget = objMenuHost
-                    .Placement = Primitives.PlacementMode.MousePoint
+                    .Placement = osControls.Primitives.PlacementMode.MousePoint
                     .StaysOpen = False
                     .IsOpen = True
                 End With
@@ -1177,6 +1189,56 @@ Module osFuncLib_UI
         End If
     End Function
 
+    Public Function EaseCustom(t As Double) As Double
+        ' 1) Clamp input
+        t = Math.Max(0.0, Math.Min(1.0, t))
+
+        ' 2) First 10% linear
+        Const threshold As Double = 0.15
+        If t < threshold Then
+            Return t
+        End If
+
+        ' 3) Map the rest [0.1…1] → [0…1]
+        Dim u As Double = (t - threshold) / (1.0 - threshold)
+
+        ' 4) Sine ease-in/out: slow start & slow end
+        '    y_sine = -(cos(π·u) - 1) / 2
+        Dim ySine As Double = -(Math.Cos(Math.PI * u) - 1) / 2
+
+        ' 5) Scale back into [0.1…1]
+        Return threshold + ySine * (1.0 - threshold)
+    End Function
+
+    Public Function EaseLinearThenExpoIn(t As Double,
+                                     Optional threshold As Double = 0.15,
+                                     Optional k As Double = 5.7) As Double
+
+        ' Clamp input
+        t = Math.Max(0.0, Math.Min(1.0, t))
+
+        ' 1) First segment: pure linear [0 … threshold]
+        If t < threshold Then
+            Return t
+        End If
+
+        ' 2) Remap t from [threshold…1] → u ∈ [0…1]
+        Dim u As Double = (t - threshold) / (1.0 - threshold)
+
+        ' 3) Exponential ease-in: y ∈ [0…1]
+        Dim yExp As Double
+        If u <= 0.0 Then
+            yExp = 0.0
+        ElseIf u >= 1.0 Then
+            yExp = 1.0
+        Else
+            ' Classic ease-in expo: starts very slowly, then accelerates
+            yExp = Math.Pow(2, k * (u - 1.0))
+        End If
+
+        ' 4) Scale back into [threshold…1]
+        Return threshold + yExp * (1.0 - threshold)
+    End Function
 
     Private Function ConvDur(pDuration As Double, cntEval As Integer) As Double
         Return (1 - pDuration) * cntEval
@@ -1428,6 +1490,12 @@ Module ControlExtensions
         Return defaultValue
     End Function
 
+    <Runtime.CompilerServices.Extension>
+    Public Function FreezeReturn(Of T As Freezable)(item As T) As T
+        If item.CanFreeze Then item.Freeze()
+        Return item
+    End Function
+
 End Module
 
 Public NotInheritable Class TextBlockExtensions
@@ -1611,3 +1679,22 @@ Public Module CmdRunner
         Return (code, outSb.ToString().TrimEnd(), errSb.ToString().TrimEnd())
     End Function
 End Module
+
+
+
+Module CloneHelpers
+
+    Public Function CloneElement(Of T As FrameworkElement)(guiXaml As T) As T
+        Dim xamlProGui As String = XamlWriter.Save(guiXaml)
+
+        Using objReader As New System.IO.StringReader(xamlProGui),
+            objXamlReader As XmlReader = XmlReader.Create(objReader)
+            Return CType(XamlReader.Load(objXamlReader), T)
+        End Using
+
+    End Function
+
+End Module
+
+#Enable Warning IDE0060 ' Remove unused parame
+#Enable Warning IDE1006 ' Remove unused parameterter

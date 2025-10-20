@@ -4,6 +4,7 @@ Imports System.Windows.Media.Imaging
 Imports System.Windows.Threading
 Imports System.Diagnostics
 Imports System.Threading
+Imports osColor = System.Windows.Media
 
 Public Class OddLib_ProgressBar
     Inherits FrameworkElement
@@ -42,6 +43,9 @@ Public Class OddLib_ProgressBar
     Private ProgressEaseFunc As Func(Of Double, Double) = Nothing
     Private ProgressTaskSrc As TaskCompletionSource(Of Boolean) = Nothing
 
+    Public Property BarBrush As Brush = New SolidColorBrush(Color.FromRgb(0, 200, 0)).FreezeReturn()
+    Public Property BackBrush As Brush = New SolidColorBrush(Color.FromRgb(57, 57, 57)).FreezeReturn()
+
     Shared Sub New()
         osFuncLib_Progress.ProgBG.Freeze()
     End Sub
@@ -50,14 +54,16 @@ Public Class OddLib_ProgressBar
         SnapsToDevicePixels = True
         UseLayoutRounding = True
 
+        RenderOptions.SetEdgeMode(Me, EdgeMode.Aliased)
         RenderOptions.SetBitmapScalingMode(Me, BitmapScalingMode.LowQuality)
 
         If Not IsAutoPass Then
-            ProgressTimer = New DispatcherTimer(DispatcherPriority.Send) With {
-                .Interval = TimeSpan.FromMilliseconds(25),
-                .IsEnabled = False
-            }
-            AddHandler ProgressTimer.Tick, AddressOf UpdateProgress
+
+            'ProgressTimer = New DispatcherTimer(DispatcherPriority.Send) With {
+            '    .Interval = TimeSpan.FromMilliseconds(25),
+            '    .IsEnabled = False
+            '}
+            'AddHandler ProgressTimer.Tick, AddressOf UpdateProgress
         End If
 
         AddHandler Me.Loaded,
@@ -150,6 +156,133 @@ Public Class OddLib_ProgressBar
 #End Region
 
 #Region "Dependency Properties"
+
+    Public Shared ReadOnly ProgressProperty As DependencyProperty =
+        DependencyProperty.Register("Progress",
+            GetType(Double), GetType(OddLib_ProgressBar),
+            New FrameworkPropertyMetadata(0.0,
+                FrameworkPropertyMetadataOptions.AffectsRender,
+                AddressOf OnProgressChanged, AddressOf CoerceProgress))
+
+    Public Property Progress As Double
+        Get
+            Return CDbl(GetValue(ProgressProperty))
+        End Get
+        Set(value As Double)
+            SetValue(ProgressProperty, Math.Max(0.0, Math.Min(100.0, value)))
+        End Set
+    End Property
+
+    Private Shared Function CoerceProgress(d As DependencyObject, baseValue As Object) As Object
+        Dim v = CDbl(baseValue)
+        Return Math.Max(0.0, Math.Min(100.0, v))
+    End Function
+
+    Private Shared Sub OnProgressChanged(d As DependencyObject, e As DependencyPropertyChangedEventArgs)
+        Dim ctrl = DirectCast(d, OddLib_ProgressBar)
+        ctrl._display = CDbl(e.NewValue)
+        ctrl.InvalidateVisual()
+    End Sub
+
+    Private _display As Double = 0.0      ' current shown value
+    Private _startTimestamp As Long             ' high-res start time
+    Private _durationMs As Double           ' total duration
+    Private _autoReset As Boolean          ' reset to 0 at end?
+    Private _easingFn As Func(Of Double, Double)
+    Private _sweepTcs As TaskCompletionSource(Of Boolean)
+    Private _cancelReg As CancellationTokenRegistration
+    Private _lastPixel As Integer = -1     ' last drawn pixel width
+
+    Public Sub BeginProgress(duration As TimeSpan,
+                             Optional fromStart As Boolean = True,
+                             Optional autoReset As Boolean = False,
+                             Optional ct As CancellationToken = Nothing,
+                             Optional easingFn As Func(Of Double, Double) = Nothing)
+        ' Cancel any existing run
+        CancelProgress()
+        ' Set up new awaiter
+        _sweepTcs = New TaskCompletionSource(Of Boolean)(TaskCreationOptions.RunContinuationsAsynchronously)
+        ' Cancellation registration
+        _cancelReg.Dispose()
+        If ct.CanBeCanceled Then
+            _cancelReg = ct.Register(Sub()
+                                         CancelProgress()
+                                         _sweepTcs.TrySetCanceled()
+                                     End Sub)
+        End If
+
+        ' Initialize state
+        _durationMs = duration.TotalMilliseconds
+        _autoReset = autoReset
+        _easingFn = If(easingFn, Function(x) x)
+        If fromStart Then
+            _display = 0.0
+            _lastPixel = -1
+        End If
+        InvalidateVisual()
+
+        ' Start timing and hook frame event
+        _startTimestamp = Stopwatch.GetTimestamp()
+        AddHandler CompositionTarget.Rendering, AddressOf OnFrame
+    End Sub
+
+    ''' <summary>
+    ''' Async version: completes when sweep reaches end or is cancelled.
+    ''' </summary>
+    Public Function BeginProgressAsync(duration As TimeSpan,
+                                       Optional fromStart As Boolean = True,
+                                       Optional autoReset As Boolean = False,
+                                       Optional ct As CancellationToken = Nothing,
+                                       Optional easingFn As Func(Of Double, Double) = Nothing) As Task(Of Boolean)
+        BeginProgress(duration, fromStart, autoReset, ct, easingFn)
+        Return _sweepTcs.Task
+    End Function
+
+    ''' <summary>
+    ''' Frame callback: computes elapsed, maps through easing, and invalidates only on pixel change.
+    ''' </summary>
+    Private Sub OnFrame(sender As Object, e As EventArgs)
+        ' Calculate elapsed ms
+        Dim elapsedMs = (Stopwatch.GetTimestamp() - _startTimestamp) * 1000.0 / Stopwatch.Frequency
+        Dim t = Math.Min(1.0, elapsedMs / _durationMs)
+        ' Raw eased fraction clamped [0..1]
+        Dim rawFraction = Math.Min(1.0, Math.Max(0.0, _easingFn(t)))
+
+        ' Compute new pixel width
+        Dim w = ActualWidth
+        Dim newPx = If(w > 0, CInt(Math.Round(w * rawFraction)), 0)
+        ' Only redraw when pixel width changes
+        If newPx <> _lastPixel Then
+            _lastPixel = newPx
+            _display = rawFraction * 100.0
+            InvalidateVisual()
+        End If
+
+        ' Finish if duration elapsed
+        If t >= 1.0 Then
+            RemoveHandler CompositionTarget.Rendering, AddressOf OnFrame
+            ' Ensure exact final state
+            If _autoReset Then
+                _display = 0.0
+                _lastPixel = 0
+            Else
+                _display = 100.0
+                _lastPixel = CInt(Math.Round(w))
+            End If
+            InvalidateVisual()
+            _cancelReg.Dispose()
+            _sweepTcs.TrySetResult(True)
+        End If
+    End Sub
+
+    ''' <summary>
+    ''' Cancels any active sweep and unregisters the frame callback.
+    ''' </summary>
+    Public Sub CancelProgress()
+        RemoveHandler CompositionTarget.Rendering, AddressOf OnFrame
+        _cancelReg.Dispose()
+        If _sweepTcs IsNot Nothing Then _sweepTcs.TrySetCanceled()
+    End Sub
 
     Public Shared ReadOnly ProgressValueProperty As DependencyProperty =
         DependencyProperty.Register("ProgressValue", GetType(Double), GetType(OddLib_ProgressBar),
@@ -295,9 +428,9 @@ Public Class OddLib_ProgressBar
             Return _progChunk
         End Get
         Set(value As Double)
-            Debug.WriteLine($"val: {value}")
+            'Debug.WriteLine($"val: {value}")
             Dim valProgress = ProcessProgress(value)
-            Debug.WriteLine($"valp: {valProgress}")
+            ' Debug.WriteLine($"valp: {valProgress}")
             PrimeIfReady()
 
             If ValidateProgress(valProgress) Then Return
@@ -497,25 +630,43 @@ Public Class OddLib_ProgressBar
     Protected Overrides Sub OnRender(progDC As DrawingContext)
         MyBase.OnRender(progDC)
 
-        If ProgRenderBitmap IsNot Nothing Then
-            progDC.DrawImage(ProgRenderBitmap, New Rect(0, 0, ActualWidth, ActualHeight))
-        Else
-            If IsAutoPass Then
-                progDC.DrawRectangle(BgBrushOrDefault(), Nothing, New Rect(0, 0, ActualWidth, ActualHeight))
+        If IsAutoPass Then
+            If ProgRenderBitmap IsNot Nothing Then
+                progDC.DrawImage(ProgRenderBitmap, New Rect(0, 0, ActualWidth, ActualHeight))
+            Else
+                If IsAutoPass Then
+                    progDC.DrawRectangle(BgBrushOrDefault(), Nothing, New Rect(0, 0, ActualWidth, ActualHeight))
+                End If
             End If
-        End If
 
-        If MsgRenderBitmap IsNot Nothing AndAlso isMsgDisplayed Then
-            progDC.DrawImage(MsgRenderBitmap, New Rect(0, 0, ActualWidth, ActualHeight))
-        End If
+            If MsgRenderBitmap IsNot Nothing AndAlso isMsgDisplayed Then
+                progDC.DrawImage(MsgRenderBitmap, New Rect(0, 0, ActualWidth, ActualHeight))
+            End If
 
-        If BorderThickness > 0 AndAlso BorderBrush IsNot Nothing Then
-            Dim objPen = ApplyPen(BorderBrush, BorderThickness)
-            Dim objFreeze = TryCast(objPen, Freezable)
+            If BorderThickness > 0 AndAlso BorderBrush IsNot Nothing Then
+                Dim objPen = ApplyPen(BorderBrush, BorderThickness)
+                Dim objFreeze = TryCast(objPen, Freezable)
 
-            EstablishProgFreeze(objFreeze)
+                EstablishProgFreeze(objFreeze)
 
-            progDC.DrawRectangle(Nothing, objPen, New Rect(0.5, 0.5, Math.Max(0, ActualWidth - 1), Math.Max(0, ActualHeight - 1)))
+                progDC.DrawRectangle(Nothing, objPen, New Rect(0.5, 0.5, Math.Max(0, ActualWidth - 1), Math.Max(0, ActualHeight - 1)))
+            End If
+        Else
+            Dim w = ActualWidth
+            Dim h = ActualHeight
+            If w <= 0 OrElse h <= 0 Then Return
+
+            ' background
+            progDC.DrawRectangle(BackBrush, Nothing, New Rect(0, 0, w, h))
+            ' foreground
+            Dim filledPixels = CInt(Math.Round(w * (_display / 100.0)))
+            If filledPixels > 0 Then
+                progDC.DrawRectangle(BarBrush, Nothing, New Rect(0, 0, filledPixels, h))
+            End If
+
+            If MsgRenderBitmap IsNot Nothing AndAlso isMsgDisplayed Then
+                progDC.DrawImage(MsgRenderBitmap, New Rect(0, 0, ActualWidth, ActualHeight))
+            End If
         End If
     End Sub
 
@@ -743,11 +894,19 @@ Public Class OddLib_ProgressBar
 
     Private Sub EnsureBitmapsSized()
         If ValidateProgRender() Then
-            ProgRenderBitmap = New RenderTargetBitmap(_pixelWidth, _pixelHeight, 96, 96, PixelFormats.Pbgra32)
+            Try
+                ProgRenderBitmap = New RenderTargetBitmap(_pixelWidth, _pixelHeight, 96, 96, PixelFormats.Pbgra32)
+            Catch ex As Exception
+                ProgRenderBitmap = New RenderTargetBitmap(110, 25, 96, 96, PixelFormats.Pbgra32)
+            End Try
         End If
 
         If ValidateMsgRender() Then
-            MsgRenderBitmap = New RenderTargetBitmap(_pixelWidth, _pixelHeight, 96, 96, PixelFormats.Pbgra32)
+            Try
+                MsgRenderBitmap = New RenderTargetBitmap(_pixelWidth, _pixelHeight, 96, 96, PixelFormats.Pbgra32)
+            Catch ex As Exception
+                MsgRenderBitmap = New RenderTargetBitmap(110, 25, 96, 96, PixelFormats.Pbgra32)
+            End Try
         End If
     End Sub
 

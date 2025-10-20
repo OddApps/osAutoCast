@@ -6,7 +6,7 @@ Public Class osInMon
     Private InputMonitorAbortSrc As CancellationTokenSource
 
     Private Async Sub MainWindow_Loaded(sender As Object, e As EventArgs) Handles Me.Loaded
-        Await Task.Delay(1000)
+        Await Task.Delay(2000)
         osInitialize()
     End Sub
 

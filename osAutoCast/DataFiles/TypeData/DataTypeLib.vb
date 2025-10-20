@@ -11,6 +11,15 @@ Imports osIcons = System.Drawing.SystemIcons
 
 Public Module DataTypeLib
 
+#Region "Input Montitor Operation Types"
+
+    Public Enum MonitorStatus
+        Watching
+        Paused
+        InCmd
+        Starting
+    End Enum
+
     Public Enum DetectOpts
         MonitorMouse
         MonitorMouseR
@@ -25,20 +34,30 @@ Public Module DataTypeLib
         CancelUpdate
     End Enum
 
+    Public Enum InjectType
+        Shift_D
+        Shift_U
+        Enter_D
+        Enter_U
+    End Enum
+
+    Public Enum InputAction
+        AC_Start
+        AC_RTC
+        AP_Start
+        AP_Exec
+    End Enum
+
+#End Region
+
+#Region "Progress Types"
+
     Public Enum ProgStatus
         Idle
         Running
         Success
         Fail
         StartAP
-    End Enum
-
-    Public Enum ActionState
-        inIdle
-        inInit
-        inProgress
-        inComplete
-        inFailed
     End Enum
 
     Public Enum ProgAction
@@ -71,17 +90,21 @@ Public Module DataTypeLib
         AutoCast
     End Enum
 
-    Public Enum ProgGUI
-        AutoPass
-        AutoCast
+    Public Enum MsgRenderType
+        msgClear
+        msgDisplay
     End Enum
 
-    Public Enum MonitorStatus
-        Watching
-        Paused
-        InCmd
-        Starting
+    Public Enum ProgEaseVals
+        eVal_x1 = 0.83
+        eVal_y1 = 0.1
+        eVal_x2 = 0.5
+        eVal_y2 = 0.91
     End Enum
+
+#End Region
+
+#Region "Trigger Types"
 
     Public Enum TriggerAction
         AutoCast
@@ -93,10 +116,6 @@ Public Module DataTypeLib
         None
     End Enum
 
-    Public Enum SimulClick
-        SingleClk
-    End Enum
-
     Public Enum TriggerType
         AutoCast
         AutoPass
@@ -104,19 +123,9 @@ Public Module DataTypeLib
         ShowMenu
     End Enum
 
-    Public Enum InjectType
-        Shift_D
-        Shift_U
-        Enter_D
-        Enter_U
-    End Enum
+#End Region
 
-    Public Enum InputAction
-        AC_Start
-        AC_RTC
-        AP_Start
-        AP_Exec
-    End Enum
+#Region "UI Types"
 
     Public Enum LoadTextContent
         isLoading
@@ -131,20 +140,13 @@ Public Module DataTypeLib
         Message
     End Enum
 
-    Public Enum MsgRenderType
-        msgClear
-        msgDisplay
-    End Enum
+#End Region
+
+#Region "General Types"
 
     Public Enum MsgBoxType
         isQuestion
         isAlert
-    End Enum
-
-    Public Enum MsgBtnType
-        isYes
-        isNo
-        isCancel
     End Enum
 
     Public Enum PromptType
@@ -154,19 +156,13 @@ Public Module DataTypeLib
         CloseApp
     End Enum
 
-    Public Enum ProgEaseVals
-        eVal_x1 = 0.83
-        eVal_y1 = 0.1
-        eVal_x2 = 0.5
-        eVal_y2 = 0.91
+    Public Enum PrefBinder
+        AC_Fuse
+        AC_RTC
+        AP_SafetyTimer
     End Enum
 
-    'Public Enum ProgEaseVals
-    '    eVal_x1 = 0.9
-    '    eVal_y1 = 0.13
-    '    eVal_x2 = 0.63
-    '    eVal_y2 = 0.82
-    'End Enum
+#End Region
 
 End Module
 
@@ -216,6 +212,22 @@ Public Class InjectInputData
         Dispose(disposing:=True)
         GC.SuppressFinalize(Me)
     End Sub
+End Class
+
+Public Class PrefBindData
+
+    Public Property BindType As String
+    Public Property BindRecord As String
+
+    Public Sub New()
+
+    End Sub
+
+    Public Sub New(bType As String, bRecord As String)
+        BindType = bType
+        BindRecord = bRecord
+    End Sub
+
 End Class
 
 Public Class ProgTextPos
