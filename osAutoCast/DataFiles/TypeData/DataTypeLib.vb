@@ -71,6 +71,7 @@ Public Module DataTypeLib
         Reset
         MaxFill
         DispMsg
+        DispMsg_AC
         ClrMsg
         Starter
     End Enum
