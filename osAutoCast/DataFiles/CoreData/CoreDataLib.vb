@@ -143,31 +143,47 @@ Public NotInheritable Class CoreDataLib
     End Function
 
     Public Shared Async Function ExecuteTrigger(tType As TriggerAction) As Task
-        If ValidateTrigger(tType) Then
+        Dim objHandlerEvent As Func(Of Task) = Nothing
+
+        Dim objTriggerVal = ValidateTrigger(tType)
+
+        If ProcessTrigger(objTriggerVal) Then
             InputMonSvc.SelectState(MonitorStatus.InCmd)
 
-            Dim objHandlerEvent = TriggerHandlers.
+            objHandlerEvent = TriggerHandlers.
                  FirstOrDefault(Function(TriggerHandle) TriggerHandle.HandleAction = tType,
                                 (TriggerAction.None, CType(Nothing, Func(Of Task)))).HandleEvent
+        Else
+            ResolveAction()
+            Exit Function
+        End If
 
-            If objHandlerEvent IsNot Nothing Then
-                Await objHandlerEvent()
+        If objHandlerEvent IsNot Nothing Then
+            If objTriggerVal = TriggerValidation.ValidTrigger Then
+                Await osHandler_GUI.LauchGui(tType)
+                osFuncLib_Progress.UpdateProgStatus(tType, ProgAction.Activate)
             End If
+
+            Await objHandlerEvent()
         End If
 
         ResolveAction()
     End Function
 
-    Public Shared Function ValidateTrigger(pType As TriggerAction) As Boolean
-        If isUtilityTrigger(pType) Then Return True
+    Private Shared Function ProcessTrigger(valType As TriggerValidation) As Boolean
+        Return Not valType = TriggerValidation.InvalidTrigger
+    End Function
+
+    Public Shared Function ValidateTrigger(pType As TriggerAction) As TriggerValidation
+        If isUtilityTrigger(pType) Then Return TriggerValidation.ValidUtility
 
         If VerifyRunStatus() Then
-            osFuncLib_Progress.UpdateProgStatus(pType, ProgAction.Activate)
+
             StartCancelWatcher(pType)
 
-            Return True
+            Return TriggerValidation.ValidTrigger
         Else
-            Return False
+            Return TriggerValidation.InvalidTrigger
         End If
     End Function
 

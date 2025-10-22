@@ -1,5 +1,6 @@
 ﻿Imports System.Reactive.Linq
 Imports System.Threading
+Imports System.Windows.Forms
 
 Public Class osInMon
     Private Shared InputMon_Support As IDisposable
@@ -48,6 +49,23 @@ Public Class osInMon
 
         Visibility = Visibility.Hidden
         Hide()
+
+        Dim ov As New OddLibProgressBarD3D() With {
+            .FormBorderStyle = FormBorderStyle.None,
+            .BackColor = System.Drawing.Color.Red
+        }
+
+        ov.SetProgSize(110, 25)
+        ov.SetProgPosition(400, 400)
+
+        ov.BeginPrep()
+
+        ov.DisplayMsg("test", TriggerType.AutoCast)
+        ov.Show() ' ensure handle
+        ov.BackColor = System.Drawing.Color.Red
+        Dim completed = Await ov.RunProgressAsync(TimeSpan.FromMilliseconds(1200), AddressOf OddLibProgressBarD3D.EaseInOutSine)
+        ov.Close()
+
     End Sub
 
     Private Sub InitTriggerMonitor()

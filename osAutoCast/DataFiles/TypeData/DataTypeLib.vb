@@ -5,9 +5,12 @@ Imports System.Reflection
 Imports System.Windows
 Imports System.Windows.Media
 Imports System.Windows.Threading
-Imports osForms = System.Windows.Forms
 Imports osDraw = System.Drawing
+Imports osRect = SharpDX.Mathematics.Interop
+Imports osText = SharpDX.DirectWrite
+Imports osForms = System.Windows.Forms
 Imports osIcons = System.Drawing.SystemIcons
+Imports osTarget = SharpDX.Direct2D1
 
 Public Module DataTypeLib
 
@@ -124,6 +127,12 @@ Public Module DataTypeLib
         ShowMenu
     End Enum
 
+    Public Enum TriggerValidation
+        ValidTrigger
+        ValidUtility
+        InvalidTrigger
+    End Enum
+
 #End Region
 
 #Region "UI Types"
@@ -161,6 +170,12 @@ Public Module DataTypeLib
         AC_Fuse
         AC_RTC
         AP_SafetyTimer
+    End Enum
+
+    Public Enum BarLayoutMode
+        StretchToWindow        ' Track width stretches to window, fixed height
+        FixedSizeCentered      ' Use BarTrackWidth/Height, centered
+        FixedAt                ' Use BarRect (X,Y,W,H) exactly
     End Enum
 
 #End Region
@@ -314,6 +329,40 @@ Public Class ProgMsg
     Private Function ComposeTypeFace() As Typeface
         Return New Typeface(New FontFamily("Segoe UI"), FontStyles.Normal,
                             FontWeights.Bold, FontStretches.Normal)
+    End Function
+
+End Class
+
+Public Class ProgressMsg
+
+    Public Property MsgText As String
+    Public Property Format As osText.TextFormat
+    Public Property Location As osRect.RawRectangleF
+
+    Public Sub New()
+
+    End Sub
+
+    Public Sub New(txtMsg As String, pType As TriggerType,
+                   ByRef pWriteFactory As osText.Factory)
+
+        msgText = txtMsg
+        Format = ApplyMsgFormat(pWriteFactory)
+        Location = SetMsgLocation(pType)
+    End Sub
+
+    Private Function ApplyMsgFormat(ByRef pWriteFactory As osText.Factory) As osText.TextFormat
+        Return New osText.TextFormat(pWriteFactory, "Segoe UI", osText.FontWeight.Bold,
+                                     osText.FontStyle.Normal, 14.0F) With {
+                                         .TextAlignment = osText.TextAlignment.Center,
+                                         .ParagraphAlignment = osText.ParagraphAlignment.Center
+                                    }
+    End Function
+
+    Private Function SetMsgLocation(pType As TriggerType) As osRect.RawRectangleF
+        With CoreDataLib.FetchProgSizeReport(pType)
+            Return New osRect.RawRectangleF(0, 0, .Item("pW"), .Item("pH"))
+        End With
     End Function
 
 End Class

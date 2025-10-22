@@ -17,6 +17,7 @@ Imports osAutoCast.DataTypeLib.ProgStatus
 Imports osAutoCast.DataTypeLib.ProgEvent
 Imports osAutoCast.DataTypeLib.ProgEaseVals
 Imports osAutoCast.CoreDataLib
+Imports osRect = SharpDX.Mathematics.Interop
 Imports osForms = System.Windows.Forms
 Imports osInput = System.Windows.Input
 Imports osBinder = System.Windows.Data
@@ -199,6 +200,8 @@ Public NotInheritable Class osFuncLib_Progress
 
     Public Shared ReadOnly ProgBG As New SolidColorBrush(osColors.Color.FromRgb(57, 57, 57))
 
+    Public Shared TextColorARGB As osRect.RawColor4 = New osRect.RawColor4(1.0F, 1.0F, 1.0F, 1.0F)
+
     Private Shared ProgStatusColors As New Dictionary(Of ProgStatus, Color) From {
         {Idle, Color.White},
         {Running, Color.FromArgb(82, 96, 117)},
@@ -264,21 +267,21 @@ Public NotInheritable Class osFuncLib_Progress
         Return progCurStatus = Success
     End Function
 
-    Public Shared Sub UpdateProgStatus(pType As TriggerAction, pAction As ProgAction)
+    Public Shared Sub UpdateProgStatus(pType As TriggerAction, pAction As ProgAction, Optional pUpdate As Boolean = False)
         Dim isValAP = If(pType = TriggerAction.AutoPass, True, False)
         Dim getProgStatus = ApplyProgState(pAction, isValAP)
 
-        ApplyProgColor(pType, getProgStatus)
+        ApplyProgColor(pType, getProgStatus, pUpdate)
     End Sub
 
-    Private Shared Sub ApplyProgColor(pType As TriggerType, pStatus As ProgStatus)
+    Private Shared Sub ApplyProgColor(pType As TriggerType, pStatus As ProgStatus, Optional pUpdate As Boolean = False)
         progColorData = FetchProgColor(pStatus, pType)
 
         Select Case pType
             Case TriggerType.AutoCast
                 osHandler_GUI.osGui_AutoCast.Dispatcher.
                     Invoke(Sub()
-                               osHandler_GUI.osGui_AutoCast.OddProgBar1.SetProgColor(progColorData)
+                               osHandler_GUI.osGui_AutoCast.OddProgBar1.SetProgColor(progColorData, pUpdate)
                            End Sub)
             Case TriggerType.AutoPass
                 osHandler_GUI.osGui_AutoPass.Dispatcher.

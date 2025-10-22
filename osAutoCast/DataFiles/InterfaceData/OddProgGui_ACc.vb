@@ -408,24 +408,5 @@ Public Class OddProgGui_ACc
         End SyncLock
     End Sub
 
-    Public Function BeginOverlaySweep(duration As TimeSpan,
-                                      Optional easingFn As Func(Of Double, Double) = Nothing,
-                                      Optional ct As CancellationToken = Nothing) As Task(Of Boolean)
-        Return _bar.BeginProgressAsync(duration, True, False, ct, easingFn)
-    End Function
-
-    ''' <summary>
-    ''' Public API to drive the overlay progress.
-    ''' </summary>
-    Public Async Function BeginOverlaySweep() As Task(Of ProgResult)
-        Dim sweepTask = Await _bar.BeginProgressAsync(
-    osFuncLib_Progress.ProgTimeSpan,
-    fromStart:=True,
-    autoReset:=False,
-    ct:=CoreDataLib.objCancelState,
-    easingFn:=AddressOf EaseLinearThenExpoIn)
-
-        Return ProgResult.Completed
-    End Function
 End Class
 

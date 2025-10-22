@@ -20,8 +20,10 @@ Public NotInheritable Class osHandler_GUI
     Public Shared Property osGui_InputMonitor As Form
     Public Shared Property osGui_InputMonitor2 As Window
 
-    Private Shared _autoPass As New Lazy(Of progGui_AutoPass)(
-    Function() New progGui_AutoPass(), LazyThreadSafetyMode.ExecutionAndPublication)
+    'Private Shared _autoPass As New Lazy(Of progGui_AutoPass)(
+    'Function() New progGui_AutoPass(), LazyThreadSafetyMode.ExecutionAndPublication)
+
+    Private Shared _autoPass As Lazy(Of progGui_AutoPass)
 
     Public Shared ReadOnly Property osGui_AutoPass As progGui_AutoPass
         Get
@@ -29,9 +31,10 @@ Public NotInheritable Class osHandler_GUI
         End Get
     End Property
 
-    Private Shared _autoCast As New Lazy(Of progGui_AutoCast)(
-    Function() New progGui_AutoCast(), LazyThreadSafetyMode.ExecutionAndPublication)
+    'Private Shared _autoCast As New Lazy(Of progGui_AutoCast)(
+    'Function() New progGui_AutoCast(), LazyThreadSafetyMode.ExecutionAndPublication)
 
+    Private Shared _autoCast As Lazy(Of progGui_AutoCast)
     Public Shared ReadOnly Property osGui_AutoCast As progGui_AutoCast
         Get
             Return _autoCast.Value
@@ -71,9 +74,23 @@ Public NotInheritable Class osHandler_GUI
         osGui_InputMonitor = objOsInputMon
         osGui_InputMonitor2 = guiInputMon
 
-        osGui_AutoCast.BeginPrep()
-        osGui_AutoPass.BeginPrep()
+        ' osGui_AutoCast.BeginPrep()
+        ' osGui_AutoPass.BeginPrep()
     End Sub
+
+    Public Shared Async Function LauchGui(progGui As TriggerAction) As Task
+
+        Dim guiTask = Task.Run(Sub()
+                                   GenerateGUI(progGui)
+
+                                   Dim guiReset = If(progGui = TriggerAction.AutoCast,
+                                   _autoCast.Value, _autoPass.Value)
+
+                                   guiReset.BeginPrep()
+                               End Sub)
+
+        Await guiTask
+    End Function
 
     Public Shared Sub DisplayGUI(guiType As DataTypeLib.TriggerType, Optional ptPosData As osDraw.Point = Nothing)
         If guiType = DataTypeLib.TriggerType.AutoCast Then

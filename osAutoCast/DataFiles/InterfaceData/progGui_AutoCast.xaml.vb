@@ -42,7 +42,7 @@ Public Class progGui_AutoCast
         Await AutoCast_Prep()
 
         Dim acProgTask = OddProgBar1.
-            BeginProgress(ProgTimeSpan, objCancelState, AddressOf EaseInOutCirc)
+            InitiateProgress(ProgTimeSpan, objCancelState, AddressOf EaseInOutCirc)
 
         Await acProgTask
 
@@ -50,14 +50,14 @@ Public Class progGui_AutoCast
     End Function
 
     Private Sub SetAutoCastResult(acComplete As Boolean)
-        Debug.WriteLine(OddProgBar1.ProgressChunk)
+        'Debug.WriteLine(OddProgBar1.ProgressChunk)
         AutoCastComplete = acComplete
     End Sub
 
     Private Function AutoCast_HandleResult(acComplete As Boolean) As ProgResult
         If acComplete Then
             UpdateProgStatus(TriggerAction.AutoCast,
-                             ProgAction.Complete)
+                             ProgAction.Complete, True)
             SetProgResult(acComplete, retProgResult)
         Else
             UpdateProgStatus(TriggerAction.AutoCast,

@@ -7,9 +7,9 @@ Imports System.Threading
 Imports SharpDX.Direct3D9
 Imports System.Windows.Interop
 Imports System.Drawing
+Imports osRect = SharpDX.Mathematics.Interop
 Imports osDraw = System.Drawing
 Imports osColor = System.Windows.Media
-Imports osD3 = SharpDX.Mathematics.Interop
 
 Public Class OddLib_ProgressBar
     Inherits FrameworkElement
@@ -25,7 +25,6 @@ Public Class OddLib_ProgressBar
     Private _pixelWidth As Integer
     Private _pixelHeight As Integer
 
-    Private _progChunk As Double
     Private objEdge_Prev As Integer
     Private isPendingDraw As Boolean
 
@@ -61,6 +60,12 @@ Public Class OddLib_ProgressBar
     Private surfaceWidth As Integer = 1
     Private surfaceHeight As Integer = 1
 
+    Private osCurrent = Application.Current
+
+    Private _startTicks As Long
+    Private _durationMs As Double
+    Private _lastPx As Integer = -1
+
     Shared Sub New()
         osFuncLib_Progress.ProgBG.Freeze()
     End Sub
@@ -69,71 +74,10 @@ Public Class OddLib_ProgressBar
         SnapsToDevicePixels = True
         UseLayoutRounding = True
 
-        AddHandler Me.SizeChanged, AddressOf OnSizeChanged
-
         RenderOptions.SetEdgeMode(Me, EdgeMode.Aliased)
         RenderOptions.SetBitmapScalingMode(Me, BitmapScalingMode.LowQuality)
 
-        If Not IsAutoPass Then
-
-            ProgressTimer = New DispatcherTimer(DispatcherPriority.Send) With {
-                .Interval = TimeSpan.FromMilliseconds(25),
-                .IsEnabled = False
-            }
-            AddHandler ProgressTimer.Tick, AddressOf UpdateProgress
-        End If
-
-        AddHandler Me.Loaded,
-            Sub()
-                SetSizeData()
-
-                ApplyOptionalClip()
-                ValidateProgDV()
-                ValidateMsgDV()
-                EnsureBitmapsSized()
-
-                Using ProgRenderTarget = ProgRenderSurface.RenderOpen()
-                    If IsAutoPass Then
-                        ProgRenderTarget.DrawRectangle(BgBrushOrDefault(), Nothing,
-                                                       New Rect(0, 0, _pixelWidth, _pixelHeight))
-                    End If
-
-                    Dim curEdge = EdgeFromChunk(_progChunk)
-
-                    If ValidateBrush(curEdge) Then
-                        ProgRenderTarget.DrawRectangle(_activeBrush, Nothing,
-                                                       New Rect(0, 0, curEdge, _pixelHeight))
-                    End If
-                End Using
-
-                ProgRenderBitmap.Render(ProgRenderSurface)
-                objEdge_Prev = EdgeFromChunk(_progChunk)
-
-                InvalidateVisual()
-            End Sub
-
-        AddHandler Me.Loaded,
-            Sub()
-                If _pendingPrime Then
-                    _pendingPrime = False
-                    PrimeFirstFrame()
-                End If
-            End Sub
-
-        AddHandler Me.Loaded,
-            Sub()
-                If _pixelWidth > 0 Then
-                    CalcMinDelta(IsGpuOptimized())
-                End If
-            End Sub
-
-        AddHandler Me.SizeChanged,
-            Sub()
-                If ValidatePendingPrime() Then
-                    _pendingPrime = False
-                    PrimeFirstFrame()
-                End If
-            End Sub
+        ImplementEvents()
     End Sub
 
     Public Sub PrimeFirstFrame(Optional chunk As Double? = Nothing)
@@ -174,132 +118,20 @@ Public Class OddLib_ProgressBar
 
 #Region "Dependency Properties"
 
-    Public Shared ReadOnly ProgressProperty As DependencyProperty =
-        DependencyProperty.Register("Progress",
-            GetType(Double), GetType(OddLib_ProgressBar),
-            New FrameworkPropertyMetadata(0.0,
-                FrameworkPropertyMetadataOptions.AffectsRender,
-                AddressOf OnProgressChanged, AddressOf CoerceProgress))
-
+    Private _progress As Double
     Public Property Progress As Double
         Get
-            Return CDbl(GetValue(ProgressProperty))
+            Return _progress
         End Get
-        Set(value As Double)
-            SetValue(ProgressProperty, Math.Max(0.0, Math.Min(100.0, value)))
+        Set(pDur As Double)
+            If ProgressEaseFunc IsNot Nothing Then
+                _progress = ProgressEaseFunc(pDur)
+            Else
+                _progress = pDur
+            End If
         End Set
     End Property
 
-    Private Shared Function CoerceProgress(d As DependencyObject, baseValue As Object) As Object
-        Dim v = CDbl(baseValue)
-        Return Math.Max(0.0, Math.Min(100.0, v))
-    End Function
-
-    Private Shared Sub OnProgressChanged(d As DependencyObject, e As DependencyPropertyChangedEventArgs)
-        Dim ctrl = DirectCast(d, OddLib_ProgressBar)
-        ctrl._display = CDbl(e.NewValue)
-        ctrl.InvalidateVisual()
-    End Sub
-
-    Private _display As Double = 0.0      ' current shown value
-    Private _startTimestamp As Long             ' high-res start time
-    Private _durationMs As Double           ' total duration
-    Private _autoReset As Boolean          ' reset to 0 at end?
-    Private _easingFn As Func(Of Double, Double)
-    Private _sweepTcs As TaskCompletionSource(Of Boolean)
-    Private _cancelReg As CancellationTokenRegistration
-    Private _lastPixel As Integer = -1     ' last drawn pixel width
-
-    Public Sub BeginProgress(duration As TimeSpan,
-                             Optional fromStart As Boolean = True,
-                             Optional autoReset As Boolean = False,
-                             Optional ct As CancellationToken = Nothing,
-                             Optional easingFn As Func(Of Double, Double) = Nothing)
-        ' Cancel any existing run
-        CancelProgress()
-        ' Set up new awaiter
-        _sweepTcs = New TaskCompletionSource(Of Boolean)(TaskCreationOptions.RunContinuationsAsynchronously)
-        ' Cancellation registration
-        _cancelReg.Dispose()
-        If ct.CanBeCanceled Then
-            _cancelReg = ct.Register(Sub()
-                                         CancelProgress()
-                                         _sweepTcs.TrySetCanceled()
-                                     End Sub)
-        End If
-
-        ' Initialize state
-        _durationMs = duration.TotalMilliseconds
-        _autoReset = autoReset
-        _easingFn = If(easingFn, Function(x) x)
-        If fromStart Then
-            _display = 0.0
-            _lastPixel = -1
-        End If
-        InvalidateVisual()
-
-        ' Start timing and hook frame event
-        _startTimestamp = Stopwatch.GetTimestamp()
-        AddHandler CompositionTarget.Rendering, AddressOf OnFrame
-    End Sub
-
-    ''' <summary>
-    ''' Async version: completes when sweep reaches end or is cancelled.
-    ''' </summary>
-    Public Function BeginProgressAsync(duration As TimeSpan,
-                                       Optional fromStart As Boolean = True,
-                                       Optional autoReset As Boolean = False,
-                                       Optional ct As CancellationToken = Nothing,
-                                       Optional easingFn As Func(Of Double, Double) = Nothing) As Task(Of Boolean)
-        BeginProgress(duration, fromStart, autoReset, ct, easingFn)
-        Return _sweepTcs.Task
-    End Function
-
-    ''' <summary>
-    ''' Frame callback: computes elapsed, maps through easing, and invalidates only on pixel change.
-    ''' </summary>
-    Private Sub OnFrame(sender As Object, e As EventArgs)
-        ' Calculate elapsed ms
-        Dim elapsedMs = (Stopwatch.GetTimestamp() - _startTimestamp) * 1000.0 / Stopwatch.Frequency
-        Dim t = Math.Min(1.0, elapsedMs / _durationMs)
-        ' Raw eased fraction clamped [0..1]
-        Dim rawFraction = Math.Min(1.0, Math.Max(0.0, _easingFn(t)))
-
-        ' Compute new pixel width
-        Dim w = ActualWidth
-        Dim newPx = If(w > 0, CInt(Math.Round(w * rawFraction)), 0)
-        ' Only redraw when pixel width changes
-        If newPx <> _lastPixel Then
-            _lastPixel = newPx
-            _display = rawFraction * 100.0
-            InvalidateVisual()
-        End If
-
-        ' Finish if duration elapsed
-        If t >= 1.0 Then
-            RemoveHandler CompositionTarget.Rendering, AddressOf OnFrame
-            ' Ensure exact final state
-            If _autoReset Then
-                _display = 0.0
-                _lastPixel = 0
-            Else
-                _display = 100.0
-                _lastPixel = CInt(Math.Round(w))
-            End If
-            InvalidateVisual()
-            _cancelReg.Dispose()
-            _sweepTcs.TrySetResult(True)
-        End If
-    End Sub
-
-    ''' <summary>
-    ''' Cancels any active sweep and unregisters the frame callback.
-    ''' </summary>
-    Public Sub CancelProgress()
-        RemoveHandler CompositionTarget.Rendering, AddressOf OnFrame
-        _cancelReg.Dispose()
-        If _sweepTcs IsNot Nothing Then _sweepTcs.TrySetCanceled()
-    End Sub
 
     Public Shared ReadOnly ProgressValueProperty As DependencyProperty =
         DependencyProperty.Register("ProgressValue", GetType(Double), GetType(OddLib_ProgressBar),
@@ -471,14 +303,14 @@ Public Class OddLib_ProgressBar
 
 #Region "Progress API"
 
+    Private _progChunk As Double
     Public Property ProgressChunk As Double
         Get
             Return _progChunk
         End Get
         Set(value As Double)
-            'Debug.WriteLine($"val: {value}")
             Dim valProgress = ProcessProgress(value)
-            ' Debug.WriteLine($"valp: {valProgress}")
+
             PrimeIfReady()
 
             If ValidateProgress(valProgress) Then Return
@@ -694,109 +526,109 @@ Public Class OddLib_ProgressBar
     Protected Overrides Sub OnRender(progDC As DrawingContext)
         MyBase.OnRender(progDC)
 
-        If ProgD3D_Image Is Nothing OrElse ProgD3D_Surface Is Nothing Then
-            ' Fallback (unchanged)
-            If Not IsAutoPass Then
-                Dim pW = ActualWidth, pH = ActualHeight
-                progDC.DrawRectangle(BackBrush, Nothing, GenProgRect(0, 0, pW, pH))
-                Dim filledPixels = CInt(Math.Round(pW * (_display / 100.0)))
+        If IsAutoPass Then
+            If ProgRenderBitmap IsNot Nothing Then
+                progDC.DrawImage(ProgRenderBitmap, New Rect(0, 0, ActualWidth, ActualHeight))
+            Else
+                If IsAutoPass Then
+                    progDC.DrawRectangle(BgBrushOrDefault(), Nothing, New Rect(0, 0, ActualWidth, ActualHeight))
+                End If
+            End If
+
+            If MsgRenderBitmap IsNot Nothing AndAlso isMsgDisplayed Then
+                progDC.DrawImage(MsgRenderBitmap, New Rect(0, 0, ActualWidth, ActualHeight))
+            End If
+
+            If BorderThickness > 0 AndAlso BorderBrush IsNot Nothing Then
+                Dim objPen = ApplyPen(BorderBrush, BorderThickness)
+                Dim objFreeze = TryCast(objPen, Freezable)
+
+                EstablishProgFreeze(objFreeze)
+
+                progDC.DrawRectangle(Nothing, objPen, New Rect(0.5, 0.5, Math.Max(0, ActualWidth - 1), Math.Max(0, ActualHeight - 1)))
+            End If
+        Else
+            If ProgD3D_Image Is Nothing OrElse ProgD3D_Surface Is Nothing Then
+                progDC.DrawRectangle(BackBrush, Nothing, GenProgRect(0, 0, ActualWidth, ActualHeight))
+
+                Dim filledPixels = CInt(Math.Round(ActualWidth * Progress))
                 If filledPixels > 0 Then
                     progDC.DrawRectangle(BarBrush, Nothing,
-                                     New Rect(If(ProgressFlow = ProgFlow.Descending, pW - filledPixels, 0),
-                                              0, filledPixels, pH))
+                                     New Rect(If(ProgressFlow = ProgFlow.Descending, ActualWidth - filledPixels, 0),
+                                              0, filledPixels, ActualHeight))
                 End If
-            Else
-                If ProgRenderBitmap IsNot Nothing Then
-                    progDC.DrawImage(ProgRenderBitmap, GenProgRect(0, 0, ActualWidth, ActualHeight))
-                End If
+
+                Return
             End If
-            Return
-        End If
 
-        ' Use Direct3D to render the progress bar content
-        Dim wPixels As Integer = CInt(Math.Max(1, Math.Round(ActualWidth)))
-        Dim hPixels As Integer = CInt(Math.Max(1, Math.Round(ActualHeight)))
-        Dim fillFraction As Double = If(_display <> 0.0, _display / 100.0, _progChunk) ' 0..1
-        Dim fillWidth As Integer = CInt(Math.Round(wPixels * fillFraction))
+            ' Use Direct3D to render the progress bar content
+            Dim wPixels As Integer = CInt(Math.Max(1, Math.Round(ActualWidth)))
+            Dim hPixels As Integer = CInt(Math.Max(1, Math.Round(ActualHeight)))
 
-        ' If first frame or size changed -> full prime (clear + draw current), then track baseline
+            Dim fillWidth As Integer = CInt(Math.Round(wPixels * Progress))
 
-        ProgD3D_Image.Lock()
-        ProgD3D_Device.SetRenderTarget(0, ProgD3D_Surface)
+            ' If first frame or size changed -> full prime (clear + draw current), then track baseline
+            ProgD3D_Image.Lock()
+            ProgD3D_Device.SetRenderTarget(0, ProgD3D_Surface)
 
-        Dim firstOrResized As Boolean = (_lastFilledWidth < 0) OrElse (wPixels <> _lastWPixels) OrElse (hPixels <> _lastHPixels)
+            Dim firstOrResized As Boolean = (_lastFilledWidth < 0) OrElse (wPixels <> _lastWPixels) OrElse (hPixels <> _lastHPixels)
 
-        If firstOrResized Then
-            ' Full background once
-            DrawBackground()
+            If firstOrResized Then
+                ' Full background once
+                DrawBackground()
 
-            ' Draw current fill once (respect flow)
-            If fillWidth > 0 Then
-                If ProgressFlow = ProgFlow.Descending Then
-                    ' Right-anchored: [w - fillWidth, w)
-                    Dim rx = New SharpDX.Mathematics.Interop.RawRectangle(wPixels - fillWidth, 0, wPixels, hPixels)
-                    DrawProgress(rx)
-                    ProgD3D_Image.AddDirtyRect(New Int32Rect(wPixels - fillWidth, 0, fillWidth, hPixels))
-                Else
+                ' Draw current fill once (respect flow)
+                If fillWidth > 0 Then
                     ' Left-anchored: [0, fillWidth)
                     Dim rx = New SharpDX.Mathematics.Interop.RawRectangle(0, 0, fillWidth, hPixels)
+
                     DrawProgress(rx)
                     ProgD3D_Image.AddDirtyRect(New Int32Rect(0, 0, fillWidth, hPixels))
+                Else
+                    ' nothing filled, but background changed
+                    ProgD3D_Image.AddDirtyRect(New Int32Rect(0, 0, wPixels, hPixels))
                 End If
-            Else
-                ' nothing filled, but background changed
-                ProgD3D_Image.AddDirtyRect(New Int32Rect(0, 0, wPixels, hPixels))
+
+                _lastFilledWidth = fillWidth
+                _lastWPixels = wPixels
+                _lastHPixels = hPixels
+
+                ProgD3D_Image.Unlock()
+                progDC.DrawImage(ProgD3D_Image, New Rect(0, 0, ActualWidth, ActualHeight))
+
+                If DisplayProgressText Then
+                    With ProgressText
+                        progDC.DrawText(.txtComposed, .txtLocation)
+                    End With
+                End If
+                Return
             End If
 
-            _lastFilledWidth = fillWidth
-            _lastWPixels = wPixels
-            _lastHPixels = hPixels
+            If Progress >= 1 Then
+                DrawProgress(True)
+                ProgD3D_Image.AddDirtyRect(New Int32Rect(0, 0, ActualWidth, hPixels))
+            Else
+                If fillWidth <> _lastFilledWidth Then
+
+                    Dim x1 As Integer = Math.Min(_lastFilledWidth, fillWidth)
+                    Dim x2 As Integer = Math.Max(_lastFilledWidth, fillWidth)
+
+                    Dim wDelta As Integer = x2 - x1
+
+                    If wDelta > 0 Then
+                        DrawProgress(x1, x2)
+                        ProgD3D_Image.AddDirtyRect(New Int32Rect(x1, 0, wDelta, hPixels))
+                    End If
+
+                    _lastFilledWidth = fillWidth
+                End If
+            End If
 
             ProgD3D_Image.Unlock()
+
+            ' Draw the updated D3DImage onto the WPF surface
             progDC.DrawImage(ProgD3D_Image, New Rect(0, 0, ActualWidth, ActualHeight))
-
-            If DisplayProgressText Then
-                With ProgressText
-                    progDC.DrawText(.txtComposed, .txtLocation)
-                End With
-            End If
-            Return
         End If
-
-        ' ---- DELTA ONLY ----
-        If fillWidth <> _lastFilledWidth Then
-            Dim x1 As Integer, x2 As Integer
-
-            If ProgressFlow = ProgFlow.Descending Then
-                ' Right-anchored: convert widths into right-edge coordinates
-                Dim curLeft As Integer = wPixels - fillWidth
-                Dim prevLeft As Integer = wPixels - _lastFilledWidth
-                x1 = Math.Min(curLeft, prevLeft)
-                x2 = Math.Max(curLeft, prevLeft)
-                Dim strip = New SharpDX.Mathematics.Interop.RawRectangle(x1, 0, x2, hPixels)
-
-                ' Filling to the left (bar grows right->left): paint strip with FG
-                DrawProgress(strip)
-
-                ProgD3D_Image.AddDirtyRect(New Int32Rect(x1, 0, Math.Max(1, x2 - x1), hPixels))
-            Else
-                ' Left-anchored: normal L->R
-                x1 = Math.Min(_lastFilledWidth, fillWidth)
-                x2 = Math.Max(_lastFilledWidth, fillWidth)
-                Dim strip = New SharpDX.Mathematics.Interop.RawRectangle(x1, 0, x2, hPixels)
-
-                DrawProgress(strip)
-
-                ProgD3D_Image.AddDirtyRect(New Int32Rect(x1, 0, Math.Max(1, x2 - x1), hPixels))
-            End If
-
-            _lastFilledWidth = fillWidth
-        End If
-
-        ProgD3D_Image.Unlock()
-
-        ' Draw the updated D3DImage onto the WPF surface
-        progDC.DrawImage(ProgD3D_Image, New Rect(0, 0, ActualWidth, ActualHeight))
 
         If DisplayProgressText Then
             With ProgressText
@@ -811,8 +643,7 @@ Public Class OddLib_ProgressBar
         End With
     End Function
 
-    Private Sub SetLoadingProcedures(sender As Object, e As RoutedEventArgs)
-
+    Private Sub ImplementEvents()
 
         AddHandler Me.Loaded,
            Sub()
@@ -849,7 +680,7 @@ Public Class OddLib_ProgressBar
                       InvalidateVisual()
                   End Sub
 
-               AddHandler Me.Loaded,
+        AddHandler Me.Loaded,
                    Sub()
                        If _pendingPrime Then
                            _pendingPrime = False
@@ -857,41 +688,29 @@ Public Class OddLib_ProgressBar
                        End If
                    End Sub
 
-               AddHandler Me.Loaded,
+        AddHandler Me.Loaded,
                    Sub()
                        If _pixelWidth > 0 Then
                            CalcMinDelta(IsGpuOptimized())
                        End If
                    End Sub
 
-               AddHandler Me.SizeChanged,
+        AddHandler Me.SizeChanged,
                    Sub()
                        If ValidatePendingPrime() Then
                            _pendingPrime = False
                            PrimeFirstFrame()
                        End If
+                       If ProgD3D_Device IsNot Nothing Then
+                           ResizeSurface()
+                       End If
                    End Sub
-               'ProgD3D = New Direct3DEx()
 
-               'Dim creationFlags = CreateFlags.HardwareVertexProcessing Or
-               '                     CreateFlags.Multithreaded Or
-               '                     CreateFlags.FpuPreserve
+        AddHandler Me.Unloaded, Sub()
+                                    ProgressBarUnload()
+                                End Sub
 
-               'Dim presentParams = New PresentParameters With {
-               '    .Windowed = True,
-               '    .SwapEffect = SwapEffect.Discard,
-               '    .DeviceWindowHandle = (New WindowInteropHelper(Application.Current.MainWindow)).Handle
-               '}
-               'ProgD3D_Device = New DeviceEx(ProgD3D, 0, DeviceType.Hardware, presentParams.DeviceWindowHandle, creationFlags, presentParams)
-
-               '' 2. Create the WPF ProgD3D_Image and initial Direct3D surface
-               'ProgD3D_Image = New D3DImage()
-               'CreateOrResizeSurface(CInt(Math.Max(1, Math.Round(Me.ActualWidth))),
-               '                      CInt(Math.Max(1, Math.Round(Me.ActualHeight))))
-
-               '' Handle surface availability changes (e.g. device lost or window min/maximize)
-               'AddHandler ProgD3D_Image.IsFrontBufferAvailableChanged, AddressOf OnBackBufferAvailableChanged
-           End Sub
+    End Sub
 
     Private Sub InitDrawProgress()
         ProgD3D = New Direct3DEx()
@@ -901,20 +720,14 @@ Public Class OddLib_ProgressBar
                              CreateFlags.FpuPreserve
 
         Dim presentParams = New PresentParameters With {
-            .Windowed = True,
-            .SwapEffect = SwapEffect.Discard,
-            .DeviceWindowHandle = (New WindowInteropHelper(Application.Current.MainWindow)).Handle
+            .Windowed = True, .SwapEffect = SwapEffect.Discard,
+            .DeviceWindowHandle = New WindowInteropHelper(osCurrent.MainWindow).Handle
         }
-        ProgD3D_Device = New DeviceEx(ProgD3D, 0, DeviceType.Hardware, presentParams.DeviceWindowHandle, creationFlags, presentParams)
 
-        ' 2. Create the WPF ProgD3D_Image and initial Direct3D surface
+        ProgD3D_Device = New DeviceEx(ProgD3D, 0, DeviceType.Hardware, presentParams.DeviceWindowHandle,
+                                      creationFlags, presentParams)
+
         ProgD3D_Image = New D3DImage()
-    End Sub
-
-    Private Sub OnSizeChanged(sender As Object, e As SizeChangedEventArgs)
-        If ProgD3D_Device IsNot Nothing Then
-            ResizeSurface()
-        End If
     End Sub
 
     Private Sub ResizeSurface()
@@ -928,6 +741,7 @@ Public Class OddLib_ProgressBar
         ProgD3D_Image.Lock()
         ProgD3D_Image.SetBackBuffer(D3DResourceType.IDirect3DSurface9, ProgD3D_Surface.NativePointer)
         ProgD3D_Image.Unlock()
+
         InvalidateVisual()
     End Sub
 
@@ -940,16 +754,12 @@ Public Class OddLib_ProgressBar
         End If
     End Sub
 
-    ' Clean up device on unload (optional, if control can be removed or app closing)
-    Private Sub OddLib_ProgressBar_Unloaded(sender As Object, e As RoutedEventArgs) Handles Me.Unloaded
-        RemoveHandler ProgD3D_Image.IsFrontBufferAvailableChanged, AddressOf OnBackBufferAvailableChanged
-
+    Private Sub ProgressBarUnload()
         If ProgD3D_Surface IsNot Nothing Then ProgD3D_Surface.Dispose()
         If ProgD3D_Device IsNot Nothing Then ProgD3D_Device.Dispose()
         If ProgD3D IsNot Nothing Then ProgD3D.Dispose()
     End Sub
 
-    ' Creates a new Direct3D render target surface (lockable) and attaches it to the ProgD3D_Image
     Private Sub CreateOrResizeSurface(width As Integer, height As Integer)
         If width < 1 OrElse height < 1 Then Exit Sub  ' no surface if control not yet properly sized
 
@@ -966,27 +776,41 @@ Public Class OddLib_ProgressBar
         ProgD3D_Image.Unlock()
     End Sub
 
-    Private Function GenRawRect(pRight As Integer, pBottom As Integer, Optional pValue As Integer = 0) As osD3.RawRectangle
-        Return New osD3.RawRectangle(pValue, 0, pRight, pBottom)
+    Private Function GenRawRect(pRight As Integer, pBottom As Integer, Optional pValue As Integer = 0) As osRect.RawRectangle
+        Return New osRect.RawRectangle(pValue, 0, pRight, pBottom)
     End Function
 
-    Private Sub DrawProgress(pRec As osD3.RawRectangle)
+    Private Sub DrawProgress(isFull As Boolean)
         With ActiveBrushColor
-            Dim objProgColor = New osD3.RawColorBGRA(.B, .G, .R, .A)
+            Dim objProgColor = New osRect.RawColorBGRA(.B, .G, .R, .A)
+            ProgD3D_Device.ColorFill(ProgD3D_Surface, New osRect.RawRectangle(0, 0, ActualWidth, ActualHeight), objProgColor)
+        End With
+    End Sub
+
+    Private Sub DrawProgress(pStart As Integer, pVal As Integer)
+        With ActiveBrushColor
+            Dim objProgColor = New osRect.RawColorBGRA(.B, .G, .R, .A)
+            ProgD3D_Device.ColorFill(ProgD3D_Surface, New osRect.RawRectangle(pStart, 0, pVal, ActualHeight), objProgColor)
+        End With
+    End Sub
+
+    Private Sub DrawProgress(pRec As osRect.RawRectangle)
+        With ActiveBrushColor
+            Dim objProgColor = New osRect.RawColorBGRA(.B, .G, .R, .A)
             ProgD3D_Device.ColorFill(ProgD3D_Surface, pRec, objProgColor)
         End With
     End Sub
 
     Private Sub DrawBackground()
         With bgBrushColor
-            Dim objBgColor = New osD3.RawColorBGRA(.B, .G, .R, .A)
+            Dim objBgColor = New osRect.RawColorBGRA(.B, .G, .R, .A)
             ProgD3D_Device.Clear(ClearFlags.Target, objBgColor, 1.0F, 0)
         End With
     End Sub
 
     Private Sub DrawBackground(isNew As Boolean)
         With bgBrushColor
-            Dim objBgColor = New osD3.RawColorBGRA(.B, .G, .R, .A)
+            Dim objBgColor = New osRect.RawColorBGRA(.B, .G, .R, .A)
             ProgD3D_Device.ColorFill(ProgD3D_Surface, Nothing, objBgColor)
         End With
     End Sub
@@ -994,34 +818,140 @@ Public Class OddLib_ProgressBar
     Protected Overrides Sub OnRenderSizeChanged(sizeInfo As SizeChangedInfo)
         MyBase.OnRenderSizeChanged(sizeInfo)
 
-        If ProgD3D_Device IsNot Nothing Then
-            Dim newW As Integer = CInt(Math.Max(1, Math.Round(Me.ActualWidth)))
-            Dim newH As Integer = CInt(Math.Max(1, Math.Round(Me.ActualHeight)))
-            CreateOrResizeSurface(newW, newH)
+        If IsAutoPass Then
+            If ActualWidth > 0 AndAlso ActualHeight > 0 Then
+                SetSizeData()
+
+                Me.MinDelta = 1.0 / _pixelWidth
+
+                ApplyOptionalClip()
+
+                ValidateProgDV()
+                ValidateMsgDV()
+                EnsureBitmapsSized()
+
+                RebuildBackingBitmap(includeProgress:=True)
+
+
+            End If
+        Else
+            If ProgD3D_Image Is Nothing OrElse ProgD3D_Device Is Nothing Then Exit Sub
+
+            Dim w As Integer = CInt(Math.Max(1, Math.Round(ActualWidth)))
+            Dim h As Integer = CInt(Math.Max(1, Math.Round(ActualHeight)))
+
+            ' Recreate render target to match new size
+            If ProgD3D_Surface IsNot Nothing Then ProgD3D_Surface.Dispose()
+
+            ProgD3D_Surface = SharpDX.Direct3D9.Surface.CreateRenderTarget(
+        ProgD3D_Device, w, h,
+        SharpDX.Direct3D9.Format.A8R8G8B8,
+        SharpDX.Direct3D9.MultisampleType.None, 0, True)
+
+            ' Attach new surface to the D3DImage
+            ProgD3D_Image.Lock()
+            ProgD3D_Image.SetBackBuffer(D3DResourceType.IDirect3DSurface9, ProgD3D_Surface.NativePointer)
+
+            ' Prime once: clear BG, then draw current fill (so next frames can delta-draw)
+            ProgD3D_Device.SetRenderTarget(0, ProgD3D_Surface)
+            DrawBackground()
+
+            Dim fillW As Integer = Math.Max(0, Math.Min(w, CInt(Math.Round(w * Progress))))
+
+            If fillW > 0 Then
+                DrawProgress(New SharpDX.Mathematics.Interop.RawRectangle(0, 0, fillW, h))
+            End If
+
+            ' Mark updated region (whole surface is fine on size change)
+            ProgD3D_Image.AddDirtyRect(New Int32Rect(0, 0, w, h))
+            ProgD3D_Image.Unlock()
+
+            ' Reset delta trackers so next OnRender only paints the small strip
+            _lastFilledWidth = fillW
         End If
 
-        If ActualWidth > 0 AndAlso ActualHeight > 0 Then
-            SetSizeData()
 
-            Me.MinDelta = 1.0 / _pixelWidth
-
-            ApplyOptionalClip()
-
-            ValidateProgDV()
-            ValidateMsgDV()
-            EnsureBitmapsSized()
-
-            RebuildBackingBitmap(includeProgress:=True)
-
-            If isMsgDisplayed Then
-                ClearMsg()
-            End If
+        If isMsgDisplayed Then
+            ClearMsg()
         End If
     End Sub
 
 #End Region
 
 #Region "Helpers you already had (kept, trimmed to match new pipeline)"
+
+
+    Public Function InitiateProgress(pDuration As TimeSpan, objAbortToken As CancellationToken,
+                                     Optional pEasing As Func(Of Double, Double) = Nothing) As Task(Of Boolean)
+
+        PrepProgressTask(pDuration, pEasing, ProgressTaskSrc)
+        PrepProgressHandlers(objAbortToken)
+
+        Return ProgressTaskSrc.Task
+    End Function
+
+    Private Sub PrepProgressHandlers(objAbortToken As CancellationToken)
+        objAbortToken.Register(
+            Sub()
+                SetProgressResult(ProgResult.Cancelled)
+            End Sub)
+
+        AddHandler CompositionTarget.Rendering, AddressOf OnFramer
+    End Sub
+
+    Private Sub PrepProgressTask(pDuration As TimeSpan, pEasing As Func(Of Double, Double),
+                            ByRef objChkResult As TaskCompletionSource(Of Boolean))
+
+        RemoveHandler CompositionTarget.Rendering, AddressOf OnFramer
+
+        _durationMs = pDuration.TotalMilliseconds
+        ProgressEaseFunc = If(pEasing, Function(x) x)
+        _lastPx = -1
+        _startTicks = Stopwatch.GetTimestamp()
+
+        If objChkResult IsNot Nothing Then objChkResult = Nothing
+
+        objChkResult = New TaskCompletionSource(Of Boolean)(TaskCreationOptions.
+                                                            RunContinuationsAsynchronously)
+    End Sub
+
+    Public Sub SetProgressResult(Optional setResult As ProgResult = Nothing)
+        RemoveHandler CompositionTarget.Rendering, AddressOf OnFramer
+
+        Select Case setResult
+            Case ProgResult.Cancelled
+                ProgressTaskSrc?.TrySetResult(False)
+                RaiseEvent ProgressFailed(Me, EventArgs.Empty)
+            Case ProgResult.Completed
+                ProgressTaskSrc?.TrySetResult(True)
+                RaiseEvent ProgressComplete(Me, EventArgs.Empty)
+        End Select
+
+        ProgressTaskSrc = Nothing
+    End Sub
+
+    Private Function CalcDuration() As Double
+        Dim valDur = (Stopwatch.GetTimestamp() - _startTicks) * 1000.0 / Stopwatch.Frequency
+        Return Math.Max(0.0, Math.Min(1.0, valDur / _durationMs))
+    End Function
+
+    Private Sub OnFramer(sender As Object, e As EventArgs)
+        Progress = CalcDuration()
+
+        Dim w = CInt(Math.Round(ActualWidth))
+
+        Dim newPx = CInt(Math.Round(w * Progress))
+
+        If newPx <> _lastPx Then
+            _lastPx = newPx
+            InvalidateVisual()   ' triggers D3D delta strip paint in OnRender
+        End If
+
+
+        If Progress >= 1.0 Then
+            SetProgressResult(ProgResult.Completed)
+        End If
+    End Sub
 
     Private Function ApplyProgContainer(width As Double, height As Double, radius As Double) As Geometry
         Dim objPathFigure As New PathFigure With {
@@ -1077,9 +1007,11 @@ Public Class OddLib_ProgressBar
         Return New Windows.Size(sR, sR)
     End Function
 
-    Public Sub SetProgColor(pColor As osColor.Color)
+    Public Sub SetProgColor(pColor As osColor.Color, Optional pUpdate As Boolean = False)
         ActiveBrush = New SolidColorBrush(pColor)
         ActiveBrushColor = pColor
+
+        If pUpdate Then InvalidateVisual()
     End Sub
 
     Private Function AllocDispatcher() As Dispatcher
@@ -1327,84 +1259,6 @@ Public Class OddLib_ProgressBar
     Private Shared Function SetOsProgObj(objDO As DependencyObject) As OddLib_ProgressBar
         Return DirectCast(objDO, OddLib_ProgressBar)
     End Function
-
-#Region "Sweep Animation"
-
-    Private Sub ClearProgress()
-        ProgressTimer.IsEnabled = True
-        ProgressTimer.Stop()
-
-        ProgressWatch = Stopwatch.StartNew()
-    End Sub
-
-    Private Sub StartProgress(pDuration As TimeSpan, pEasing As Func(Of Double, Double))
-        ClearProgress()
-
-        ProgressDuration = pDuration
-        AutoResetProgress = False
-        ProgressEaseFunc = pEasing
-
-        ProgressTimer.Start()
-    End Sub
-
-    Public Function BeginProgress(pDuration As TimeSpan, objAbortToken As CancellationToken,
-                                  Optional pEasing As Func(Of Double, Double) = Nothing) As Task
-        InitProgressTask(pDuration, pEasing, ProgressTaskSrc)
-
-        objAbortToken.Register(
-            Sub()
-                SetProgressResult(ProgResult.Cancelled)
-            End Sub)
-
-        StartProgress(pDuration, pEasing)
-        Return ProgressTaskSrc.Task
-    End Function
-
-    Private Sub InitProgressTask(pDuration As TimeSpan, pEasing As Func(Of Double, Double),
-                                 ByRef objChkResult As TaskCompletionSource(Of Boolean))
-        objProgValData = New ProgressValData(pDuration, pEasing)
-
-        If objChkResult IsNot Nothing Then objChkResult = Nothing
-        objChkResult = New TaskCompletionSource(Of Boolean)(TaskCreationOptions.
-                                                    RunContinuationsAsynchronously)
-    End Sub
-
-    Public Sub SetProgressResult(Optional setResult As ProgResult = Nothing)
-        ProgressTimer.Stop()
-        ProgressWatch?.Stop()
-
-        Select Case setResult
-            Case ProgResult.Cancelled
-                ProgressTaskSrc?.TrySetResult(False)
-                RaiseEvent ProgressFailed(Me, EventArgs.Empty)
-            Case ProgResult.Completed
-                ProgressTaskSrc?.TrySetResult(True)
-                RaiseEvent ProgressComplete(Me, EventArgs.Empty)
-        End Select
-
-        ProgressTaskSrc = Nothing
-
-        If objProgValData IsNot Nothing Then
-            objProgValData.Dispose()
-            objProgValData = Nothing
-        End If
-    End Sub
-
-    Private Sub UpdateProgress(sender As Object, e As EventArgs)
-        If ProgressWatch Is Nothing Then Return
-
-        objProgValData.CalcProgress(ProgressWatch, ProgressChunk)
-
-        If objProgValData.ProgressComplete Then
-            SetProgressResult(ProgResult.Completed)
-        End If
-    End Sub
-
-
-
-
-
-#End Region
 
 #End Region
 
