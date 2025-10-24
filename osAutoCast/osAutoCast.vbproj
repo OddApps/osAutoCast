@@ -165,14 +165,17 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="DataFiles\HandlerData\ProgGuiHandler_AutoCast.xaml.vb">
+      <DependentUpon>ProgGuiHandler_AutoCast.xaml</DependentUpon>
+    </Compile>
     <Compile Include="DataFiles\InterfaceData\OddProgGui_ACc.vb" />
     <Compile Include="DataFiles\InterfaceData\osInMon.xaml.vb">
       <DependentUpon>osInMon.xaml</DependentUpon>
     </Compile>
-    <Compile Include="DataFiles\ModelData\OddLibProgressBarD3D.Designer.vb">
-      <DependentUpon>OddLibProgressBarD3D.vb</DependentUpon>
+    <Compile Include="DataFiles\ModelData\ProgBarGui_AutoCast.Designer.vb">
+      <DependentUpon>ProgBarGui_AutoCast.vb</DependentUpon>
     </Compile>
-    <Compile Include="DataFiles\ModelData\OddLibProgressBarD3D.vb">
+    <Compile Include="DataFiles\ModelData\ProgBarGui_AutoCast.vb">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="GlobalSuppressions.vb" />
@@ -189,6 +192,10 @@
     <Compile Include="DataFiles\InterfaceData\osPrefs.vb">
       <SubType>Form</SubType>
     </Compile>
+    <Page Include="DataFiles\HandlerData\ProgGuiHandler_AutoCast.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="DataFiles\InterfaceData\progGui_AutoCast.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>

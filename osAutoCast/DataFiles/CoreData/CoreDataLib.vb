@@ -80,6 +80,19 @@ Public NotInheritable Class CoreDataLib
         End Select
     End Function
 
+    Public Shared Function GetProgSizeReport(isProgType As TriggerType) As ProgSizeReport
+        Select Case isProgType
+            Case TriggerType.AutoCast
+                Return New ProgSizeReport(osPrefStoreData.MainOpts_acProgW,
+                                          osPrefStoreData.MainOpts_acProgH)
+            Case TriggerType.AutoPass
+                Return New ProgSizeReport(osPrefStoreData.MainOpts_apProgW,
+                                          osPrefStoreData.MainOpts_apProgH)
+            Case Else
+                Return Nothing
+        End Select
+    End Function
+
     Public Shared Function GetSafetyTimer() As Integer
         Return osPrefStoreData.AutoPass_SafetyTimer
     End Function
@@ -160,7 +173,7 @@ Public NotInheritable Class CoreDataLib
 
         If objHandlerEvent IsNot Nothing Then
             If objTriggerVal = TriggerValidation.ValidTrigger Then
-                Await osHandler_GUI.LauchGui(tType)
+                Await osHandler_GUI.LaunchGui(tType)
                 osFuncLib_Progress.UpdateProgStatus(tType, ProgAction.Activate)
             End If
 
@@ -172,6 +185,10 @@ Public NotInheritable Class CoreDataLib
 
     Private Shared Function ProcessTrigger(valType As TriggerValidation) As Boolean
         Return Not valType = TriggerValidation.InvalidTrigger
+    End Function
+
+    Private Shared Function TriggerInvalidated(valType As TriggerValidation) As Boolean
+        Return valType = TriggerValidation.InvalidTrigger
     End Function
 
     Public Shared Function ValidateTrigger(pType As TriggerAction) As TriggerValidation
@@ -224,37 +241,72 @@ Public NotInheritable Class CoreDataLib
     End Sub
 
     Public Shared Sub ProcessProgressEvent(pMode As ProgMode, pEvent As ProgEvent, ParamArray pEventData() As Object)
-        Dim objProgEventType As TriggerType = Nothing
-
-        Dim osProgElement As OddLib_ProgressBar =
-            Function() As OddLib_ProgressBar
-                Select Case pMode
-                    Case ProgMode.AutoCast
-                        objProgEventType = TriggerType.AutoCast
-                        Return osHandler_GUI.osGui_AutoCast.OddProgBar1
-                    Case ProgMode.AutoPass
-                        objProgEventType = TriggerType.AutoPass
-                        Return osHandler_GUI.osGui_AutoPass.OddProgBar_AP
-                    Case Else
-                        Return Nothing
-                End Select
-            End Function.Invoke()
-
         Dim strEventData As String = ""
 
-        Try
-            strEventData = pEventData(0).ToString()
-        Catch ex As Exception
+        Dim objProgEventType = If(pMode = ProgMode.AutoCast,
+            TriggerType.AutoCast, TriggerType.AutoPass)
 
-        End Try
+        If pMode = ProgMode.AutoCast Then
+            Try
+                strEventData = pEventData(0).ToString()
+            Catch ex As Exception
 
-        With PrepareProgEvent(osProgElement)
-            .evDispatch.Invoke(
-                Sub()
-                    .evAction(GenerateProgEventData(pEvent, objProgEventType,
-                                                    strEventData))
-                End Sub)
-        End With
+            End Try
+
+            With PrepareProgEvent(osHandler_GUI.osGui_AutoCastHandler)
+                .evDispatch.Invoke(
+                    Sub()
+                        .evAction(GenerateProgEventData(pEvent, objProgEventType,
+                                                        strEventData))
+                    End Sub)
+            End With
+        Else
+            Dim osProgElement = osHandler_GUI.osGui_AutoPass.OddProgBar_AP
+
+            Try
+                strEventData = pEventData(0).ToString()
+            Catch ex As Exception
+
+            End Try
+
+            With PrepareProgEvent(osProgElement)
+                .evDispatch.Invoke(
+                    Sub()
+                        .evAction(GenerateProgEventData(pEvent, objProgEventType,
+                                                        strEventData))
+                    End Sub)
+            End With
+        End If
+    End Sub
+
+    Public Shared Sub ProcessProgressEvent2(pMode As ProgMode, pEvent As ProgEvent, ParamArray pEventData() As Object)
+        Dim objProgEventType As TriggerType = Nothing
+
+        Select Case pMode
+            Case ProgMode.AutoCast
+                objProgEventType = TriggerType.AutoCast
+
+            Case ProgMode.AutoPass
+                objProgEventType = TriggerType.AutoPass
+
+                Dim osProgElement As OddLib_ProgressBar = osHandler_GUI.osGui_AutoPass.OddProgBar_AP
+
+                Dim strEventData As String = ""
+
+                Try
+                    strEventData = pEventData(0).ToString()
+                Catch ex As Exception
+
+                End Try
+
+                With PrepareProgEvent(osProgElement)
+                    .evDispatch.Invoke(
+                        Sub()
+                            .evAction(GenerateProgEventData(pEvent, objProgEventType,
+                                                            strEventData))
+                        End Sub)
+                End With
+        End Select
     End Sub
 
     Private Shared Function GenerateProgEventData(pEvent As ProgEvent,
@@ -266,5 +318,10 @@ Public NotInheritable Class CoreDataLib
     Private Shared Function PrepareProgEvent(pEventElement As OddLib_ProgressBar) As ProgressEvent
         Return New ProgressEvent(pEventElement)
     End Function
+
+    Private Shared Function PrepareProgEvent(pEventElement As ProgGuiHandler_AutoCast) As ProgressEvent
+        Return New ProgressEvent(pEventElement)
+    End Function
+
 #Enable Warning IDE0060 ' Remove unused parameter
 End Class

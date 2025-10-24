@@ -128,6 +128,8 @@ Public Module DataTypeLib
     End Enum
 
     Public Enum TriggerValidation
+        ValidAutoCast
+        ValidAutoPass
         ValidTrigger
         ValidUtility
         InvalidTrigger
@@ -268,6 +270,21 @@ Public Class ProgTextPos
     End Sub
 End Class
 
+Public Class ProgSizeReport
+    Public Property pWidth As Integer
+    Public Property pHeight As Integer
+
+    Public Sub New()
+
+    End Sub
+
+    Public Sub New(pW As Integer, pH As Integer)
+        pWidth = pW
+        pHeight = pH
+    End Sub
+
+End Class
+
 Public Class ProgMsg
 
     Public Property txtComposed As FormattedText
@@ -352,11 +369,16 @@ Public Class ProgressMsg
     End Sub
 
     Private Function ApplyMsgFormat(ByRef pWriteFactory As osText.Factory) As osText.TextFormat
-        Return New osText.TextFormat(pWriteFactory, "Segoe UI", osText.FontWeight.Bold,
-                                     osText.FontStyle.Normal, 14.0F) With {
-                                         .TextAlignment = osText.TextAlignment.Center,
-                                         .ParagraphAlignment = osText.ParagraphAlignment.Center
-                                    }
+        Try
+            Return New osText.TextFormat(pWriteFactory, "Segoe UI",
+                                         osText.FontWeight.Bold, osText.FontStyle.Normal, 14.0F) With
+                                            {
+                                             .TextAlignment = osText.TextAlignment.Center,
+                                             .ParagraphAlignment = osText.ParagraphAlignment.Center
+                                            }
+        Catch ex As Exception
+
+        End Try
     End Function
 
     Private Function SetMsgLocation(pType As TriggerType) As osRect.RawRectangleF
@@ -492,6 +514,11 @@ Public Class ProgressEvent
     Public Sub New(pEventElement As OddLib_ProgressBar)
         Me.evDispatch = pEventElement.Parent.Dispatcher
         Me.evAction = AddressOf pEventElement.PerformProgressEvent
+    End Sub
+
+    Public Sub New(pEventElement As ProgGuiHandler_AutoCast)
+        Me.evDispatch = pEventElement.Dispatcher
+        Me.evAction = AddressOf pEventElement.acProgressGui.PerformProgressEvent
     End Sub
 
     Public Sub New()

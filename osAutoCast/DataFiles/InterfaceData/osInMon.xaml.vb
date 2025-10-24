@@ -50,21 +50,19 @@ Public Class osInMon
         Visibility = Visibility.Hidden
         Hide()
 
-        Dim ov As New OddLibProgressBarD3D() With {
-            .FormBorderStyle = FormBorderStyle.None,
-            .BackColor = System.Drawing.Color.Red
-        }
+        'Dim ov As New ProgBarGui_AutoCast() With {
+        '    .FormBorderStyle = FormBorderStyle.None
+        '}
 
-        ov.SetProgSize(110, 25)
-        ov.SetProgPosition(400, 400)
+        'ov.SetProgSize(110, 25)
+        'ov.SetProgPosition(400, 400)
 
-        ov.BeginPrep()
+        'ov.BeginPrep()
 
-        ov.DisplayMsg("test", TriggerType.AutoCast)
-        ov.Show() ' ensure handle
-        ov.BackColor = System.Drawing.Color.Red
-        Dim completed = Await ov.RunProgressAsync(TimeSpan.FromMilliseconds(1200), AddressOf OddLibProgressBarD3D.EaseInOutSine)
-        ov.Close()
+        'ov.DisplayMsg("test", TriggerType.AutoCast)
+        'ov.Show() ' ensure handle
+        ' Dim completed = Await ov.InitiateProgress(TimeSpan.FromMilliseconds(1200), AddressOf OddLibProgressBarD3D.EaseInOutSine)
+        'ov.Close()
 
     End Sub
 

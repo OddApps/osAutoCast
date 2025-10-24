@@ -41,6 +41,13 @@ Public NotInheritable Class osHandler_GUI
         End Get
     End Property
 
+    Private Shared _autoCastGuiHandler As Lazy(Of ProgGuiHandler_AutoCast)
+    Public Shared ReadOnly Property osGui_AutoCastHandler As ProgGuiHandler_AutoCast
+        Get
+            Return _autoCastGuiHandler.Value
+        End Get
+    End Property
+
     Private Shared Sub GenerateGUI(objGenGui As TriggerAction)
         Select Case objGenGui
             Case TriggerAction.AutoPass
@@ -53,12 +60,11 @@ Public NotInheritable Class osHandler_GUI
                         End Function)
                     End Function, LazyThreadSafetyMode.ExecutionAndPublication)
             Case TriggerAction.AutoCast
-
-                _autoCast = New Lazy(Of progGui_AutoCast)(
+                _autoCastGuiHandler = New Lazy(Of ProgGuiHandler_AutoCast)(
                     Function()
                         Return Application.Current.Dispatcher.
                         Invoke(Function()
-                                   Return New progGui_AutoCast()
+                                   Return New ProgGuiHandler_AutoCast
                                End Function)
                     End Function, LazyThreadSafetyMode.ExecutionAndPublication)
         End Select
@@ -78,32 +84,46 @@ Public NotInheritable Class osHandler_GUI
         ' osGui_AutoPass.BeginPrep()
     End Sub
 
-    Public Shared Async Function LauchGui(progGui As TriggerAction) As Task
+    Public Shared Async Function LaunchGui(progGui As TriggerAction) As Task
 
-        Dim guiTask = Task.Run(Sub()
-                                   GenerateGUI(progGui)
+        Select Case progGui
+            Case TriggerAction.AutoCast
+                GenerateGUI(progGui)
+                osGui_AutoCastHandler.BeginPrep()
+            Case TriggerAction.AutoPass
+                Dim guiTask = Task.Run(Sub()
+                                           GenerateGUI(progGui)
 
-                                   Dim guiReset = If(progGui = TriggerAction.AutoCast,
-                                   _autoCast.Value, _autoPass.Value)
+                                           Dim guiReset = If(progGui = TriggerAction.AutoCast,
+                                           _autoCastGuiHandler.Value, _autoPass.Value)
 
-                                   guiReset.BeginPrep()
-                               End Sub)
+                                           guiReset.BeginPrep()
+                                       End Sub)
 
-        Await guiTask
+                Await guiTask
+        End Select
+
+
+        'Dim guiTask = Application.Current.
+        '    Dispatcher.InvokeAsync(
+        '    Function()
+        '        GenerateGUI(progGui)
+
+        '        Dim guiReset = If(progGui = TriggerAction.AutoCast,
+        '        _autoCastGuiHandler.Value, _autoPass.Value)
+
+        '        guiReset.BeginPrep()
+        '        Return 1
+        '    End Function)
+
+        'Await guiTask
     End Function
 
     Public Shared Sub DisplayGUI(guiType As DataTypeLib.TriggerType, Optional ptPosData As osDraw.Point = Nothing)
         If guiType = DataTypeLib.TriggerType.AutoCast Then
-            osGui_AutoCast.Dispatcher.Invoke(
+            osGui_AutoCastHandler.Dispatcher.Invoke(
                 Sub()
-                    With SetPosData(ptPosData)
-                        osGui_AutoCast.Left = .X
-                        osGui_AutoCast.Top = .Y
-                    End With
-
-                    CoreDataLib.ProcessProgressEvent(ProgMode.AutoCast, ProgEvent.DispMsg, "Release Shift")
-
-                    osGui_AutoCast.Show()
+                    osGui_AutoCastHandler.InitiateAutoCast()
                 End Sub)
         ElseIf guiType = DataTypeLib.TriggerType.AutoPass Then
             osGui_AutoPass.Dispatcher.Invoke(
@@ -126,7 +146,7 @@ Public NotInheritable Class osHandler_GUI
 
     Public Shared Sub ResetUI(guiType As TriggerAction, Optional forceCreateNew As Boolean = False)
         Dim guiReset = If(guiType = TriggerAction.AutoCast,
-            _autoCast.Value, _autoPass.Value)
+            _autoCastGuiHandler.Value, _autoPass.Value)
 
         Using objPrepData As New GUI_PrepData(guiReset)
             If objPrepData.guiIsLoaded Then
@@ -139,9 +159,8 @@ Public NotInheritable Class osHandler_GUI
             End If
         End Using
 
-        GenerateGUI(guiType)
-
         If forceCreateNew Then
+            GenerateGUI(guiType)
             guiReset.BeginPrep()
         End If
     End Sub

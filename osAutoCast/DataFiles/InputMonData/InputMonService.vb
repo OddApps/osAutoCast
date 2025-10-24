@@ -28,17 +28,16 @@ Public Class InputMonitorService
         {InputAction.AP_Exec, DetectOpts.MonitorShift}
     }
 
-
-
-    Private InputMonitorAbortSrc As CancellationTokenSource
-
     Private Shared InputMon_Support As IDisposable
     Private Shared InputMon_Observer As IDisposable
 
     Private Shared TriggerCmd As New Subject(Of TriggerAction)()
     Private Shared _MonitorState As MonitorStatus
 
-    Private Shared ReadOnly TriggerBindings As (TriggerCondition As Func(Of Boolean), TriggerHandler As TriggerAction)() = {
+    Private Shared InputMon_Timer As TimeSpan = TimeSpan.FromMilliseconds(200)
+
+    Private Shared ReadOnly TriggerBindings As (TriggerCondition As Func(Of Boolean),
+        TriggerHandler As TriggerAction)() = {
             (Function() CmdBind_AutoCast(), TriggerAction.AutoCast),
             (Function() CmdBind_AutoPass(), TriggerAction.AutoPass),
             (Function() CmdBind_ShowOpts(), TriggerAction.ShowOpts),
@@ -194,7 +193,7 @@ Public Class InputMonitorService
     End Function
 
     Private Shared Sub ActivateTriggerMonitor()
-        InputMon_Observer = Observable.Interval(TimeSpan.FromMilliseconds(200)).
+        InputMon_Observer = Observable.Interval(InputMon_Timer).
             Select(Function(chkDuration) EvalInputActionInternal()).
             Where(Function(getTrigger) getTrigger <> TriggerAction.None).
             Subscribe(Sub(taskTrigger) TriggerCmd.OnNext(taskTrigger))

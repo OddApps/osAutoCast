@@ -279,10 +279,12 @@ Public NotInheritable Class osFuncLib_Progress
 
         Select Case pType
             Case TriggerType.AutoCast
-                osHandler_GUI.osGui_AutoCast.Dispatcher.
-                    Invoke(Sub()
-                               osHandler_GUI.osGui_AutoCast.OddProgBar1.SetProgColor(progColorData, pUpdate)
-                           End Sub)
+                With osHandler_GUI.osGui_AutoCastHandler
+                    .Dispatcher.Invoke(
+                        Sub()
+                            .acProgressGui.SetProgColor(progColorData, pUpdate)
+                        End Sub)
+                End With
             Case TriggerType.AutoPass
                 osHandler_GUI.osGui_AutoPass.Dispatcher.
                     Invoke(Sub()
@@ -411,12 +413,10 @@ Public NotInheritable Class osFuncLib_AutoCast
             Async Function()
                 GetPosGui(ptPos)
 
-                osHandler_GUI.DisplayGUI(TriggerType.AutoCast, ptPos)
                 osFuncLib_Progress.SetProgBlockData(TriggerType.AutoCast)
-                'osHandler_GUI.DisplayGUI(TriggerType.AutoCast, ptPos)
-                ' osFuncLib_Progress.SetProgBlockData(TriggerType.AutoCast)
+                osHandler_GUI.DisplayGUI(TriggerType.AutoCast, ptPos)
 
-                Dim retAC = Await osHandler_GUI.osGui_AutoCast.LaunchAutoCast()
+                Dim retAC = Await osHandler_GUI.osGui_AutoCastHandler.LaunchAutoCast()
                 Return retAC
             End Function)
 
@@ -462,9 +462,10 @@ Public NotInheritable Class osFuncLib_AutoCast
 
     Private Shared Async Function FinalizeAutoCast() As Task
         Await Task.Delay(750)
-        osHandler_GUI.osGui_AutoCast.Dispatcher.
+        osHandler_GUI.osGui_AutoCastHandler.Dispatcher.
             Invoke(Sub()
-                       osHandler_GUI.ResetUI(TriggerAction.AutoCast, True)
+                       osHandler_GUI.osGui_AutoCastHandler.acProgressGui.Close()
+                       osHandler_GUI.ResetUI(TriggerAction.AutoCast)
                    End Sub)
     End Function
 
@@ -1104,7 +1105,8 @@ Module osFuncLib_UI
 
     Public Function PrepDispatcher(Optional IsAutoPass As Boolean = False) As Dispatcher
         Return If(IsAutoPass, osHandler_GUI.osGui_AutoPass.Dispatcher,
-            osHandler_GUI.osGui_AutoCast.Dispatcher)
+            osHandler_GUI.osGui_AutoCastHandler.Dispatcher)
+
     End Function
 
     Public Function GetResponse(pType As PromptType) As DialogResult
@@ -1457,6 +1459,8 @@ End Class
 
 Module ControlExtensions
 
+
+
     <Extension()>
     Public Function InvokeAsync(ctrl As Control, action As Action) As Task
         Dim tcs As New TaskCompletionSource(Of Object)()
@@ -1497,6 +1501,11 @@ Module ControlExtensions
     Public Function FreezeReturn(Of T As Freezable)(item As T) As T
         If item.CanFreeze Then item.Freeze()
         Return item
+    End Function
+
+    <Runtime.CompilerServices.Extension>
+    Public Function GetWidth(ByVal rectf As osRect.RawRectangleF) As Single
+        Return rectf.Right - rectf.Left
     End Function
 
 End Module
@@ -1632,11 +1641,9 @@ Public Module CmdRunner
         Dim outSb As New StringBuilder()
         Dim errSb As New StringBuilder()
 
-        ' Build the full command line that cmd.exe will execute
-        ' Example final: /c chcp 65001 & ipconfig /all
         Dim inner As New StringBuilder()
         inner.Append("/c ")
-        If forceUtf8 Then inner.Append("chcp 65001 >nul & ") ' make stdout UTF-8 to avoid mojibake
+        If forceUtf8 Then inner.Append("chcp 65001 >nul & ")
         inner.Append(cmd)
         If Not String.IsNullOrWhiteSpace(arguments) Then
             inner.Append(" "c).Append(arguments)
@@ -1645,7 +1652,7 @@ Public Module CmdRunner
         Dim psi As New ProcessStartInfo() With {
             .FileName = "cmd.exe",
             .Arguments = inner.ToString(),
-            .UseShellExecute = False,            ' must be False to redirect
+            .UseShellExecute = False,
             .RedirectStandardOutput = True,
             .RedirectStandardError = True,
             .CreateNoWindow = True,
@@ -1657,7 +1664,6 @@ Public Module CmdRunner
         Dim p As New Process()
         p.StartInfo = psi
 
-        ' Async read to avoid deadlocks
         AddHandler p.OutputDataReceived, Sub(sender, e)
                                              If e.Data IsNot Nothing Then outSb.AppendLine(e.Data)
                                          End Sub
@@ -1674,16 +1680,14 @@ Public Module CmdRunner
             Try : p.Kill() : Catch : End Try
             errSb.AppendLine($"Timed out after {timeoutMs} ms")
         Else
-            ' Ensure async handlers flush
             p.WaitForExit()
         End If
 
         Dim code As Integer = If(exited, p.ExitCode, -1)
+
         Return (code, outSb.ToString().TrimEnd(), errSb.ToString().TrimEnd())
     End Function
 End Module
-
-
 
 Module CloneHelpers
 
