@@ -474,7 +474,7 @@ Public Class GUI_PrepData
     Private Sub guiAction_AutoCast(objGui As ProgGuiHandler_AutoCast)
         With objGui
             Try
-                .acProgressGui.Close()
+                ' .acProgressGui.Close()
 
                 .IsHitTestVisible = False
                 .Opacity = 0
@@ -569,7 +569,7 @@ Public Class ProgressEvent
 
     Public Sub New(pEventElement As ProgGuiHandler_AutoCast)
         Me.evDispatch = pEventElement.Dispatcher
-        Me.evAction = AddressOf pEventElement.acProgressGui.PerformProgressEvent
+        '     Me.evAction = AddressOf pEventElement.acProgressGui.PerformProgressEvent
     End Sub
 
     Public Sub New()

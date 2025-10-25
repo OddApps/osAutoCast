@@ -45,12 +45,24 @@ Public NotInheritable Class osHandler_GUI
         End Get
     End Property
 
-    Private Shared _autoCastProgress As Lazy(Of ProgBarGui_AutoCast)
+    Private Shared _autoCastProgress As New Lazy(Of ProgBarGui_AutoCast)(
+    Function()
+        With CoreDataLib.GetProgSizeReport(TriggerType.AutoCast)
+            Return New ProgBarGui_AutoCast(.pWidth, .pHeight)
+        End With
+    End Function, LazyThreadSafetyMode.ExecutionAndPublication)
     Public Shared ReadOnly Property osGui_AutoCastProgress As ProgBarGui_AutoCast
         Get
             Return _autoCastProgress.Value
         End Get
     End Property
+
+    'Private Shared _autoCastProgress As Lazy(Of ProgBarGui_AutoCast)
+    'Public Shared ReadOnly Property osGui_AutoCastProgress As ProgBarGui_AutoCast
+    '    Get
+    '        Return _autoCastProgress.Value
+    '    End Get
+    'End Property
 
     Private Shared Sub GenerateGUI(objGenGui As TriggerAction)
         Select Case objGenGui

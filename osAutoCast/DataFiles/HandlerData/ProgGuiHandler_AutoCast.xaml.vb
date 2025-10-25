@@ -52,29 +52,55 @@ Public Class ProgGuiHandler_AutoCast
     Public Async Function LaunchAutoCast() As Task(Of ProgResult)
         Await AutoCast_Prep()
 
-        Dim acProgTask = acProgressGui.
-            BeginProgress(ProgTimeSpan, objCancelState, AddressOf EaseCustom)
-        Await acProgTask
-
-        Return AutoCast_HandleResult(AutoCastComplete)
+        Try
+            Dim acProgTask = acProgressGui.BeginProgress(ProgTimeSpan, objCancelState, AddressOf EaseCustom)
+            Await acProgTask
+            Return AutoCast_HandleResult(AutoCastComplete)
+        Finally
+            UnsetProgressEvents()             ' <— important
+        End Try
     End Function
 
     Private Sub SetAutoCastResult(acComplete As Boolean)
         AutoCastComplete = acComplete
     End Sub
+    Private _evProgComplete As EventHandler
+    Private _evProgFail As EventHandler
 
     Private Sub SetProgressEvents()
-        Dim evProgComplete As EventHandler = Sub() SetAutoCastResult(True)
-        Dim evProgFail As EventHandler = Sub() SetAutoCastResult(False)
+        ' If already wired for this acProgressGui, bail
+        If _evProgComplete IsNot Nothing Then Exit Sub
 
-        With acProgressGui
-            RemoveHandler .ProgressSuccess, evProgComplete
-            RemoveHandler .ProgressFail, evProgFail
+        _evProgComplete = Sub() SetAutoCastResult(True)
+        _evProgFail = Sub() SetAutoCastResult(False)
 
-            AddHandler .ProgressSuccess, evProgComplete
-            AddHandler .ProgressFail, evProgFail
-        End With
+        AddHandler acProgressGui.ProgressSuccess, _evProgComplete
+        AddHandler acProgressGui.ProgressFail, _evProgFail
     End Sub
+
+    ' Call once when you’re done (end of LaunchAutoCast / right before disposing GUI):
+    Private Sub UnsetProgressEvents()
+        If _evProgComplete IsNot Nothing Then
+            RemoveHandler acProgressGui.ProgressSuccess, _evProgComplete
+            _evProgComplete = Nothing
+        End If
+        If _evProgFail IsNot Nothing Then
+            RemoveHandler acProgressGui.ProgressFail, _evProgFail
+            _evProgFail = Nothing
+        End If
+    End Sub
+    'Private Sub SetProgressEvents()
+    '    Dim evProgComplete As EventHandler = Sub() SetAutoCastResult(True)
+    '    Dim evProgFail As EventHandler = Sub() SetAutoCastResult(False)
+
+    '    With acProgressGui
+    '        RemoveHandler .ProgressSuccess, evProgComplete
+    '        RemoveHandler .ProgressFail, evProgFail
+
+    '        AddHandler .ProgressSuccess, evProgComplete
+    '        AddHandler .ProgressFail, evProgFail
+    '    End With
+    'End Sub
 
     Private Function AutoCast_HandleResult(acComplete As Boolean) As ProgResult
         If acComplete Then
