@@ -12,17 +12,16 @@ Public Class ProgGuiHandler_AutoCast
     Private pHeight As Integer
     Private pWidth As Integer
 
-    Private chkAutoCastResult As TaskCompletionSource(Of Boolean)
     Private retProgResult As ProgResult = Nothing
 
     Private AutoCastComplete As Boolean
 
-    Public acProgressGui As ProgBarGui_AutoCast
+    Public acProgressGui As ProgBarGui_AutoCast = Nothing
 
     Private acProgLoc As osDraw.Point
 
     Private Async Function AutoCast_Prep() As Task
-        Await ProgressDelay(5)
+        Await Task.Delay(5)
         acProgressGui.DisplayMsg("Release Shift", TriggerType.AutoCast)
 
         Await InputMonSvc.AnticipateInput(InputAction.AC_Start)
@@ -109,5 +108,6 @@ Public Class ProgGuiHandler_AutoCast
         setProgResult = If(pResult, ProgResult.Completed,
             ProgResult.Cancelled)
     End Sub
+
 
 End Class

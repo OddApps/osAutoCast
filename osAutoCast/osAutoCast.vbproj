@@ -168,7 +168,6 @@
     <Compile Include="DataFiles\HandlerData\ProgGuiHandler_AutoCast.xaml.vb">
       <DependentUpon>ProgGuiHandler_AutoCast.xaml</DependentUpon>
     </Compile>
-    <Compile Include="DataFiles\InterfaceData\OddProgGui_ACc.vb" />
     <Compile Include="DataFiles\InterfaceData\osInMon.xaml.vb">
       <DependentUpon>osInMon.xaml</DependentUpon>
     </Compile>

@@ -1,4 +1,4 @@
-﻿<Window x:Name="winHandler_AutoCast" x:Class="ProgGuiHandler_AutoCast"
+﻿<Window x:Class="ProgGuiHandler_AutoCast"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -8,7 +8,7 @@
         AllowsTransparency="True" ShowInTaskbar="False" Topmost="True"
         Background="Transparent" WindowStartupLocation="CenterScreen"
         Title="ProgGuiHandler_AutoCast" Height="5" Width="5"
-        Opacity="0.01" ShowActivated="False">
+        Opacity="0.01" ShowActivated="False" Focusable="False">
     <Grid>
 
     </Grid>

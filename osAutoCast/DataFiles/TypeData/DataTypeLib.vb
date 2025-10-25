@@ -781,15 +781,16 @@ Public Class objTriggerHandler
     Public Property HandleEvent As Func(Of Task)
 End Class
 
-Public Module TriggerInvoker
+Public NotInheritable Class TriggerInvoker
 
-    Public cmdDispatcher As Dispatcher
+    Public Shared cmdDispatcher As Dispatcher
 
-    Public Sub SetDispatcher()
+    Public Shared Sub SetDispatcher()
+        cmdDispatcher = Nothing
         cmdDispatcher = Application.Current.Dispatcher
     End Sub
 
-End Module
+End Class
 
 Public Class ResponseBox
     Inherits osForms.Form

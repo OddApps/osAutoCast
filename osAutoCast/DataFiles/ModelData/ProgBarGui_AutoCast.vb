@@ -178,7 +178,7 @@ Public Class ProgBarGui_AutoCast
         dxgiAdapter.Dispose()
 
         ' Direct2D / DirectWrite
-        progD2DFactory = New FactoryD2D(osFactoryType.SingleThreaded, DebugLevel.None)
+        progD2DFactory = New FactoryD2D(osFactoryType.MultiThreaded, DebugLevel.None)
         progDwriteFactory = New FactoryDW(SharpDX.DirectWrite.FactoryType.Shared)
 
         CreateTargetResources()
