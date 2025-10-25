@@ -85,38 +85,23 @@ Public NotInheritable Class osHandler_GUI
     End Sub
 
     Public Shared Async Function LaunchGui(progGui As TriggerAction) As Task
-
         Select Case progGui
             Case TriggerAction.AutoCast
                 GenerateGUI(progGui)
                 osGui_AutoCastHandler.BeginPrep()
             Case TriggerAction.AutoPass
-                Dim guiTask = Task.Run(Sub()
-                                           GenerateGUI(progGui)
+                Dim guiTask = Task.Run(
+                    Sub()
+                        GenerateGUI(progGui)
 
-                                           Dim guiReset = If(progGui = TriggerAction.AutoCast,
-                                           _autoCastGuiHandler.Value, _autoPass.Value)
+                        Dim guiReset = If(progGui = TriggerAction.AutoCast,
+                        _autoCastGuiHandler.Value, _autoPass.Value)
 
-                                           guiReset.BeginPrep()
-                                       End Sub)
+                        guiReset.BeginPrep()
+                    End Sub)
 
                 Await guiTask
         End Select
-
-
-        'Dim guiTask = Application.Current.
-        '    Dispatcher.InvokeAsync(
-        '    Function()
-        '        GenerateGUI(progGui)
-
-        '        Dim guiReset = If(progGui = TriggerAction.AutoCast,
-        '        _autoCastGuiHandler.Value, _autoPass.Value)
-
-        '        guiReset.BeginPrep()
-        '        Return 1
-        '    End Function)
-
-        'Await guiTask
     End Function
 
     Public Shared Sub DisplayGUI(guiType As DataTypeLib.TriggerType, Optional ptPosData As osDraw.Point = Nothing)
@@ -148,10 +133,10 @@ Public NotInheritable Class osHandler_GUI
         Dim guiReset = If(guiType = TriggerAction.AutoCast,
             _autoCastGuiHandler.Value, _autoPass.Value)
 
-        Using objPrepData As New GUI_PrepData(guiReset)
+        Using objPrepData As New GUI_PrepData(guiType, guiReset)
             If objPrepData.guiIsLoaded Then
                 If objPrepData.guiDispatch.CheckAccess() Then
-                    objPrepData.guiAction.Invoke()
+                    objPrepData.guiAction.Invoke(guiReset)
                 Else
                     objPrepData.guiDispatch.Invoke(objPrepData.guiAction,
                                                     DispatcherPriority.Normal)

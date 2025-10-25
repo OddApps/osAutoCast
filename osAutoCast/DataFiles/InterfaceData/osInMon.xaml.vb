@@ -49,21 +49,6 @@ Public Class osInMon
 
         Visibility = Visibility.Hidden
         Hide()
-
-        'Dim ov As New ProgBarGui_AutoCast() With {
-        '    .FormBorderStyle = FormBorderStyle.None
-        '}
-
-        'ov.SetProgSize(110, 25)
-        'ov.SetProgPosition(400, 400)
-
-        'ov.BeginPrep()
-
-        'ov.DisplayMsg("test", TriggerType.AutoCast)
-        'ov.Show() ' ensure handle
-        ' Dim completed = Await ov.InitiateProgress(TimeSpan.FromMilliseconds(1200), AddressOf OddLibProgressBarD3D.EaseInOutSine)
-        'ov.Close()
-
     End Sub
 
     Private Sub InitTriggerMonitor()

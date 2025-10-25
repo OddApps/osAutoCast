@@ -464,7 +464,6 @@ Public NotInheritable Class osFuncLib_AutoCast
         Await Task.Delay(750)
         osHandler_GUI.osGui_AutoCastHandler.Dispatcher.
             Invoke(Sub()
-                       osHandler_GUI.osGui_AutoCastHandler.acProgressGui.Close()
                        osHandler_GUI.ResetUI(TriggerAction.AutoCast)
                    End Sub)
     End Function
@@ -1267,23 +1266,6 @@ Module osFuncLib_UI
 
 End Module
 
-'Public Class BoolToEnabledTextConverter
-'    Implements IValueConverter
-
-'    Public Function Convert(value As Object, targetType As Type, parameter As Object, culture As CultureInfo) As Object _
-'        Implements IValueConverter.Convert
-'        Dim b = False
-'        If value IsNot Nothing Then b = System.Convert.ToBoolean(value)
-'        Return If(b, "Enabled", "Disabled")
-'    End Function
-
-'    Public Function ConvertBack(value As Object, targetType As Type, parameter As Object, culture As CultureInfo) As Object _
-'        Implements IValueConverter.ConvertBack
-'        ' Not used
-'        Throw New NotSupportedException()
-'    End Function
-'End Class
-
 Public Class isEnabledConverter
     Implements IValueConverter
 
@@ -1318,7 +1300,6 @@ Public Class MenuFuncAdapter
         End Set
     End Property
 
-    ' Call this if the underlying state changes elsewhere and you want the UI to refresh
     Public Sub Refresh()
         RaiseEvent PropertyChanged(Me, New System.ComponentModel.PropertyChangedEventArgs(NameOf(Value)))
     End Sub
@@ -1329,14 +1310,12 @@ End Class
 
 Public Class TrayIconBridge
     Inherits DependencyObject
+
     Public Property NotifyIcon As NotifyIcon
 
     Public Shared ReadOnly IsEnabledProperty As DependencyProperty =
-        DependencyProperty.Register(
-            NameOf(IsEnabled),
-            GetType(Boolean),
-            GetType(TrayIconBridge),
-            New PropertyMetadata(True, AddressOf OnIsEnabledChanged))
+        DependencyProperty.Register(NameOf(IsEnabled), GetType(Boolean), GetType(TrayIconBridge),
+                                    New PropertyMetadata(True, AddressOf OnIsEnabledChanged))
 
     Public Property IsEnabled As Boolean
         Get
@@ -1348,12 +1327,17 @@ Public Class TrayIconBridge
     End Property
 
     Private Shared Sub OnIsEnabledChanged(d As DependencyObject, e As DependencyPropertyChangedEventArgs)
-        Dim br = DirectCast(d, TrayIconBridge)
-        If br.NotifyIcon Is Nothing Then Exit Sub
-        Dim onOff = CBool(e.NewValue)
-        br.NotifyIcon.Icon = If(onOff, My.Resources.osIcon, My.Resources.osIcon_Disabled)
-        br.NotifyIcon.Text = If(onOff, "osAutoCast (Enabled)", "osAutoCast (Disabled)")
-        br.NotifyIcon.Visible = True
+        Dim objTrayIcon = DirectCast(d, TrayIconBridge)
+
+        With objTrayIcon
+            If .NotifyIcon Is Nothing Then Exit Sub
+
+            Dim onOff = CBool(e.NewValue)
+            .NotifyIcon.Icon = If(onOff, My.Resources.osIcon, My.Resources.osIcon_Disabled)
+            .NotifyIcon.Text = If(onOff, "osAutoCast | Enabled", "osAutoCast | Disabled")
+            .NotifyIcon.Visible = True
+        End With
+
     End Sub
 End Class
 
@@ -1452,14 +1436,11 @@ Public Class osMenuFuncBinder
                                                       End If
                                                   End Sub
 
-
     End Sub
 
 End Class
 
 Module ControlExtensions
-
-
 
     <Extension()>
     Public Function InvokeAsync(ctrl As Control, action As Action) As Task
@@ -1508,6 +1489,17 @@ Module ControlExtensions
         Return rectf.Right - rectf.Left
     End Function
 
+    <Runtime.CompilerServices.Extension>
+    Public Sub SafeDispose(Of T As {Class, IDisposable})(ByRef obj As T)
+        If obj IsNot Nothing Then
+            Try
+                obj.Dispose()
+            Finally
+                obj = Nothing
+            End Try
+        End If
+    End Sub
+
 End Module
 
 Public NotInheritable Class TextBlockExtensions
@@ -1546,7 +1538,6 @@ Public NotInheritable Class TextBlockExtensions
         Return CBool(obj.GetValue(IsHookedProperty))
     End Function
 
-    ' Shared descriptor for TextBlock.Text changes
     Private Shared ReadOnly TextDescriptor As System.ComponentModel.DependencyPropertyDescriptor =
             System.ComponentModel.DependencyPropertyDescriptor.FromProperty(TextBlock.TextProperty, GetType(TextBlock))
 
@@ -1631,12 +1622,9 @@ End Class
 
 Public Module CmdRunner
 
-    Public Function RunCmd(cmd As String,
-                           Optional arguments As String = "",
-                           Optional timeoutMs As Integer = 30000,
-                           Optional workingDir As String = Nothing,
-                           Optional forceUtf8 As Boolean = True) _
-                           As (ExitCode As Integer, StdOut As String, StdErr As String)
+    Public Function RunCmd(cmd As String, Optional arguments As String = "",
+                           Optional timeoutMs As Integer = 30000, Optional workingDir As String = Nothing,
+                           Optional forceUtf8 As Boolean = True) As (ExitCode As Integer, StdOut As String, StdErr As String)
 
         Dim outSb As New StringBuilder()
         Dim errSb As New StringBuilder()

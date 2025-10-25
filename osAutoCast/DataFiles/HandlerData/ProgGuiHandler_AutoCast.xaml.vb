@@ -22,13 +22,12 @@ Public Class ProgGuiHandler_AutoCast
     Private acProgLoc As osDraw.Point
 
     Private Async Function AutoCast_Prep() As Task
-        Await Task.Delay(100)
+        Await ProgressDelay(5)
         acProgressGui.DisplayMsg("Release Shift", TriggerType.AutoCast)
 
         Await InputMonSvc.AnticipateInput(InputAction.AC_Start)
 
         ProcessProgressEvent(ProgMode.AutoCast, ProgEvent.ClrMsg)
-        UpdateProgStatus(TriggerAction.AutoCast, ProgAction.Activate)
 
         Await Task.Delay(375)
     End Function
@@ -40,25 +39,22 @@ Public Class ProgGuiHandler_AutoCast
             GetPosGui(acProgLoc)
             Dim locProg = SetPosData(acProgLoc)
 
-            ' .BeginPrep()
-
-            .Show()
             .Left = locProg.X
             .Top = locProg.Y
-            '  .Invalidate()
+            .Show()
             .DrawBG()
-            ' .DisplayMsg("Release Shift", TriggerType.AutoCast)
-            '  .SetProgress01(0)
-            '.Left = locProg.X
-            '.Top = locProg.Y
         End With
+    End Sub
+
+    Private Sub SetProgLocation(acComplete As Boolean)
+        AutoCastComplete = acComplete
     End Sub
 
     Public Async Function LaunchAutoCast() As Task(Of ProgResult)
         Await AutoCast_Prep()
 
         Dim acProgTask = acProgressGui.
-            BeginProgress(ProgTimeSpan, objCancelState, AddressOf EaseInOutCirc)
+            BeginProgress(ProgTimeSpan, objCancelState, AddressOf EaseCustom)
         Await acProgTask
 
         Return AutoCast_HandleResult(AutoCastComplete)
@@ -88,7 +84,7 @@ Public Class ProgGuiHandler_AutoCast
             SetProgResult(acComplete, retProgResult)
         Else
             UpdateProgStatus(TriggerAction.AutoCast,
-                             ProgAction.Abort)
+                             ProgAction.Abort, True)
             SetProgResult(acComplete, retProgResult)
         End If
 
@@ -104,14 +100,9 @@ Public Class ProgGuiHandler_AutoCast
     End Sub
 
     Private Function CreateProgressGui() As ProgBarGui_AutoCast
-        Dim progSizeReport = GetProgSizeReport(TriggerType.AutoCast)
-
-        Return New ProgBarGui_AutoCast With {
-            .FormBorderStyle = osForms.FormBorderStyle.None,
-            .ProgressHeight = progSizeReport.pHeight,
-            .ProgressWidth = progSizeReport.pWidth,
-            .BackColor = osDraw.Color.FromArgb(57, 57, 57)
-        }
+        With GetProgSizeReport(TriggerType.AutoCast)
+            Return New ProgBarGui_AutoCast(.pWidth, .pHeight)
+        End With
     End Function
 
     Private Sub SetProgResult(pResult As Boolean, ByRef setProgResult As ProgResult)

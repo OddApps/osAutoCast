@@ -94,6 +94,12 @@ Public Module DataTypeLib
         AutoCast
     End Enum
 
+    Public Enum ProgColorObj
+        BackG
+        Active
+        Msg
+    End Enum
+
     Public Enum MsgRenderType
         msgClear
         msgDisplay
@@ -361,11 +367,13 @@ Public Class ProgressMsg
     End Sub
 
     Public Sub New(txtMsg As String, pType As TriggerType,
-                   ByRef pWriteFactory As osText.Factory)
+                   ByRef pWriteFactory As osText.Factory, ByRef pFormat As osText.TextFormat)
 
-        msgText = txtMsg
+        MsgText = txtMsg
         Format = ApplyMsgFormat(pWriteFactory)
         Location = SetMsgLocation(pType)
+
+        pFormat = Format
     End Sub
 
     Private Function ApplyMsgFormat(ByRef pWriteFactory As osText.Factory) As osText.TextFormat
@@ -377,7 +385,7 @@ Public Class ProgressMsg
                                              .ParagraphAlignment = osText.ParagraphAlignment.Center
                                             }
         Catch ex As Exception
-
+            Return Nothing
         End Try
     End Function
 
@@ -444,9 +452,38 @@ Public Class GUI_PrepData
 
     Private disposedValue As Boolean
 
-    Public Property guiAction As Action
+    Public Property guiAction As Action(Of Window)
     Public Property guiDispatch As Dispatcher
     Public Property guiIsLoaded As Boolean
+
+
+    Private Sub guiAction_AutoPass(objGui As progGui_AutoPass)
+        With objGui
+            Try
+                If .IsLoaded Then
+                    .IsHitTestVisible = False
+                    .Opacity = 0
+                    .Close()
+                End If
+            Catch
+
+            End Try
+        End With
+    End Sub
+
+    Private Sub guiAction_AutoCast(objGui As ProgGuiHandler_AutoCast)
+        With objGui
+            Try
+                .acProgressGui.Close()
+
+                .IsHitTestVisible = False
+                .Opacity = 0
+                .Close()
+            Catch
+
+            End Try
+        End With
+    End Sub
 
     Public Sub New()
 
@@ -466,6 +503,20 @@ Public Class GUI_PrepData
                     End Sub
 
         guiDispatch = objGUI.Dispatcher
+        guiIsLoaded = guiDispatch IsNot Nothing AndAlso Not guiDispatch.HasShutdownStarted
+    End Sub
+
+    Public Sub New(guiTrigger As TriggerAction, objWin As Window)
+
+        Select Case guiTrigger
+            Case TriggerAction.AutoCast
+                guiAction = AddressOf guiAction_AutoCast
+                guiDispatch = objWin.Dispatcher
+            Case TriggerAction.AutoPass
+                guiAction = AddressOf guiAction_AutoPass
+                guiDispatch = objWin.Dispatcher
+        End Select
+
         guiIsLoaded = guiDispatch IsNot Nothing AndAlso Not guiDispatch.HasShutdownStarted
     End Sub
 
