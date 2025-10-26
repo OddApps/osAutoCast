@@ -6,7 +6,7 @@ Imports osFactoryType = SharpDX.Direct2D1.FactoryType
 Imports osProgDeviceContext = SharpDX.Direct3D11.DeviceContext
 Imports osProgFactoryD2D = SharpDX.Direct2D1.Factory
 Imports FactoryDW = SharpDX.DirectWrite.Factory
-Imports osProgFactoryDXGI = SharpDX.DXGI.Factory
+Imports osProgDXGIFactory = SharpDX.DXGI.Factory
 
 Public NotInheritable Class GraphicsHandler
 
@@ -28,8 +28,8 @@ Public NotInheritable Class GraphicsHandler
         End Get
     End Property
 
-    Private Shared _progDxgiFactory As osProgFactoryDXGI
-    Public Shared ReadOnly Property pDxgiFactory As osProgFactoryDXGI
+    Private Shared _progDxgiFactory As osProgDXGIFactory
+    Public Shared ReadOnly Property pDxgiFactory As osProgDXGIFactory
         Get
             EnsureCreated()
             Return _progDxgiFactory

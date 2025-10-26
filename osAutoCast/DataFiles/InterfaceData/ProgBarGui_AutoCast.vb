@@ -17,6 +17,7 @@ Imports osProgDeviceContext = SharpDX.Direct3D11.DeviceContext
 Imports osProgFactoryD2D = SharpDX.Direct2D1.Factory
 Imports osProgFactoryDW = SharpDX.DirectWrite.Factory
 Imports osProgFactoryDXGI = SharpDX.DXGI.Factory
+Imports osFormat = SharpDX.DXGI.Format
 Imports AlphaMode = SharpDX.Direct2D1.AlphaMode
 Imports D2DPixelFormat = SharpDX.Direct2D1.PixelFormat
 Imports MapFlags = SharpDX.Direct3D11.MapFlags
@@ -26,9 +27,19 @@ Imports osDraw = System.Drawing
 Imports osText = SharpDX.DirectWrite
 Imports osColor = System.Windows.Media
 Imports osForms = System.Windows.Forms
-
+Imports SharpDX.D3DCompiler
 
 Public Class ProgBarGui_AutoCast
+
+    Private progSwapChain2 As SwapChain2        ' set when Flip-Model is used
+    Private frameLatencyEvent As IntPtr = IntPtr.Zero
+
+    ' WaitForSingleObjectEx
+    <System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError:=False)>
+    Private Shared Function WaitForSingleObjectEx(hHandle As IntPtr, dwMilliseconds As Integer, bAlertable As Boolean) As UInteger
+    End Function
+    Private Const WAIT_OBJECT_0 As UInteger = 0UI
+    Private Const INFINITE As Integer = -1
 
     Private Const WS_EX_NOACTIVATE As Integer = &H8000000
     Private Const WS_EX_TOOLWINDOW As Integer = &H80
@@ -170,20 +181,60 @@ Public Class ProgBarGui_AutoCast
     End Sub
 
     Private Sub InitDeviceAndSwapChain()
-        Dim mode = New ModeDescription(ProgressWidth, ProgressHeight,
-                                       New Rational(60, 1), SharpDX.DXGI.Format.B8G8R8A8_UNorm)
+        Dim w = ProgressWidth
+        Dim h = ProgressHeight
 
-        Dim scDesc = New SwapChainDescription() With {
-            .BufferCount = 2,
-            .ModeDescription = mode,
-            .IsWindowed = True,
-            .OutputHandle = Me.Handle,
-            .SampleDescription = New SampleDescription(1, 0),
-            .SwapEffect = SwapEffect.Discard,
-            .Usage = Usage.RenderTargetOutput
-        }
+        If w <= 0 OrElse h <= 0 Then
+            w = Math.Max(1, Me.ClientSize.Width)
+            h = Math.Max(1, Me.ClientSize.Height)
+        End If
 
-        progSwapChain = New SwapChain(GraphicsHandler.pDxgiFactory, GraphicsHandler.pDevice, scDesc)
+        progSwapChain = Nothing
+        progSwapChain2 = Nothing
+
+        frameLatencyEvent = IntPtr.Zero
+
+        Try
+            Using objFactory2 = progDxgiFactory.QueryInterface(Of SharpDX.DXGI.Factory2)()
+                Dim objSwapChainDesc = New SwapChainDescription1 With {
+                    .Width = w, .Height = h,
+                    .Format = osFormat.B8G8R8A8_UNorm,
+                    .BufferCount = 2,
+                    .Usage = Usage.RenderTargetOutput,
+                    .SampleDescription = New SampleDescription(1, 0),
+                    .Scaling = Scaling.Stretch,
+                    .SwapEffect = SwapEffect.FlipDiscard,
+                    .AlphaMode = AlphaMode.Ignore
+                }
+
+                Dim objSwapChain = New SwapChain1(objFactory2, progDevice, Me.Handle, objSwapChainDesc)
+
+                progSwapChain = objSwapChain.QueryInterface(Of SwapChain)()
+
+                progSwapChain2 = objSwapChain.QueryInterface(Of SwapChain2)()
+                progSwapChain2.MaximumFrameLatency = 1
+
+                frameLatencyEvent = progSwapChain2.FrameLatencyWaitableObject
+
+                objSwapChain.Dispose()
+            End Using
+        Catch
+
+        End Try
+
+        If progSwapChain Is Nothing Then
+            Dim scDesc = New SwapChainDescription With {
+                .BufferCount = 2,
+                .ModeDescription = New ModeDescription(w, h, New Rational(60, 1), osFormat.B8G8R8A8_UNorm),
+                .IsWindowed = True,
+                .OutputHandle = Me.Handle,
+                .SampleDescription = New SampleDescription(1, 0),
+                .SwapEffect = SwapEffect.Discard,
+                .Usage = Usage.RenderTargetOutput
+            }
+
+            progSwapChain = New SwapChain(progDxgiFactory, progDevice, scDesc)
+        End If
 
         CreateTargetResources()
         DrawBG()
@@ -197,12 +248,12 @@ Public Class ProgBarGui_AutoCast
 
             Using dxgiSurface As Surface = backBuffer.QueryInterface(Of Surface)()
                 Dim props = New RenderTargetProperties(RenderTargetType.Default,
-                    New D2DPixelFormat(SharpDX.DXGI.Format.B8G8R8A8_UNorm, AlphaMode.Ignore),
+                    New D2DPixelFormat(osFormat.B8G8R8A8_UNorm, AlphaMode.Ignore),
                     96.0F, 96.0F, RenderTargetUsage.None, Direct2D1.FeatureLevel.Level_DEFAULT)
 
                 progTarget = New RenderTarget(progD2DFactory, dxgiSurface, props) With {
                     .AntialiasMode = AntialiasMode.Aliased,
-                    .TextAntialiasMode = Direct2D1.TextAntialiasMode.Cleartype = AntialiasMode.Aliased
+                    .TextAntialiasMode = Direct2D1.TextAntialiasMode.Cleartype
                 }
             End Using
         End Using
@@ -258,15 +309,39 @@ Public Class ProgBarGui_AutoCast
         progBrush_Text.SafeDispose()
         progMsg_Config.SafeDispose()
 
-        GraphicsHandler.FlushDevice()
+        GraphicsHandler.FlushDevice() ' ClearState + Flush on the shared context
 
         If fullDump Then
+            If progSwapChain2 IsNot Nothing Then
+                frameLatencyEvent = IntPtr.Zero
+                progSwapChain2.SafeDispose()
+                progSwapChain2 = Nothing
+            End If
             progSwapChain.SafeDispose()
+            progSwapChain = Nothing
         End If
 
         GC.Collect()
         GC.WaitForPendingFinalizers()
     End Sub
+
+    'Private Sub ObjectDump(Optional fullDump As Boolean = False)
+    '    progRTV.SafeDispose()
+    '    progTarget.SafeDispose()
+    '    progBrush_BG.SafeDispose()
+    '    progBrush_Active.SafeDispose()
+    '    progBrush_Text.SafeDispose()
+    '    progMsg_Config.SafeDispose()
+
+    '    GraphicsHandler.FlushDevice()
+
+    '    If fullDump Then
+    '        progSwapChain.SafeDispose()
+    '    End If
+
+    '    GC.Collect()
+    '    GC.WaitForPendingFinalizers()
+    'End Sub
 
     Private Sub InitiateProgress()
         ProgressStatus = ProgStatus.Running
@@ -345,47 +420,90 @@ Public Class ProgBarGui_AutoCast
     End Function
 
     Private Async Function StartProgression(isSnapped As Boolean) As Task(Of ProgStatus)
-
         Do
             If StopProgress() Then Exit Do
-
             CalculateProgress()
 
+            If frameLatencyEvent <> IntPtr.Zero Then
+                If WaitForSingleObjectEx(frameLatencyEvent, INFINITE, False) <> WAIT_OBJECT_0 Then
+                    Await Task.Yield()
+                End If
+            Else
+                Await Task.Yield()
+            End If
+
             Dim curFillPx As Integer = ClampInt(Math.Floor(ProgressValue * ProgressTrack.GetWidth() + 0.000001),
-                                                0, ProgressTrack.GetWidth())
+                                            0, ProgressTrack.GetWidth())
 
             progTarget.BeginDraw()
 
             If curFillPx <> _lastFillPx Then
                 Dim x1 As Integer = ProgressTrack.Left + Math.Min(_lastFillPx, curFillPx)
                 Dim x2 As Integer = ProgressTrack.Left + Math.Max(_lastFillPx, curFillPx)
-
                 Dim strip As New osRect.RawRectangleF(x1, 0, x2 - x1, ProgressTrack.Bottom)
-
                 progTarget.FillRectangle(strip, progBrush_Active)
                 _lastFillPx = curFillPx
             End If
 
             If DisplayProgressText Then
                 progTarget.DrawText(ProgressText.MsgText, ProgressText.Format,
-                                    ProgressText.Location, progBrush_Text, DrawTextOptions.Clip)
+                                ProgressText.Location, progBrush_Text, DrawTextOptions.Clip)
             End If
 
             progTarget.EndDraw()
-
             progSwapChain.Present(1, PresentFlags.None)
 
             If ProgressValue >= 1 Then
                 ProgressStatus = Success
                 Exit Do
             End If
-
-            Await Task.Yield()
         Loop Until Not ProgressStatus = ProgStatus.Running
 
         Return ProgressStatus
-
     End Function
+
+    'Private Async Function StartProgression(isSnapped As Boolean) As Task(Of ProgStatus)
+
+    '    Do
+    '        If StopProgress() Then Exit Do
+
+    '        CalculateProgress()
+
+    '        Dim curFillPx As Integer = ClampInt(Math.Floor(ProgressValue * ProgressTrack.GetWidth() + 0.000001),
+    '                                            0, ProgressTrack.GetWidth())
+
+    '        progTarget.BeginDraw()
+
+    '        If curFillPx <> _lastFillPx Then
+    '            Dim x1 As Integer = ProgressTrack.Left + Math.Min(_lastFillPx, curFillPx)
+    '            Dim x2 As Integer = ProgressTrack.Left + Math.Max(_lastFillPx, curFillPx)
+
+    '            Dim strip As New osRect.RawRectangleF(x1, 0, x2 - x1, ProgressTrack.Bottom)
+
+    '            progTarget.FillRectangle(strip, progBrush_Active)
+    '            _lastFillPx = curFillPx
+    '        End If
+
+    '        If DisplayProgressText Then
+    '            progTarget.DrawText(ProgressText.MsgText, ProgressText.Format,
+    '                                ProgressText.Location, progBrush_Text, DrawTextOptions.Clip)
+    '        End If
+
+    '        progTarget.EndDraw()
+
+    '        progSwapChain.Present(1, PresentFlags.None)
+
+    '        If ProgressValue >= 1 Then
+    '            ProgressStatus = Success
+    '            Exit Do
+    '        End If
+
+    '        Await Task.Yield()
+    '    Loop Until Not ProgressStatus = ProgStatus.Running
+
+    '    Return ProgressStatus
+
+    'End Function
 
 
     Private Async Function StartProgression() As Task(Of ProgStatus)
@@ -440,7 +558,7 @@ Public Class ProgBarGui_AutoCast
     End Function
 
     Public Sub SetProgressResult(progStatus As ProgStatus)
-        Dim setResult = If(progStatus = progStatus.Success,
+        Dim setResult = If(progStatus = ProgStatus.Success,
             ProgResult.Completed, ProgResult.Cancelled)
 
         Select Case setResult
