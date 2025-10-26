@@ -279,12 +279,11 @@ Public NotInheritable Class osFuncLib_Progress
 
         Select Case pType
             Case TriggerType.AutoCast
-                With osHandler_GUI.osGui_AutoCastHandler
-                    .Dispatcher.Invoke(
+                Application.Current.
+                    Dispatcher.Invoke(
                         Sub()
-                            .acProgressGui.SetProgColor(progColorData, pUpdate)
+                            osHandler_GUI.osGui_AutoCastProgress.SetProgColor(progColorData, pUpdate)
                         End Sub)
-                End With
             Case TriggerType.AutoPass
                 osHandler_GUI.osGui_AutoPass.Dispatcher.
                     Invoke(Sub()
@@ -409,14 +408,14 @@ Public NotInheritable Class osFuncLib_AutoCast
     End Sub
 
     Public Shared Async Function ExecuteAutoCast() As Task
-        Dim isTask_AutoCast = PrepDispatcher().InvokeAsync(
+        Dim isTask_AutoCast = Application.Current.Dispatcher.InvokeAsync(
             Async Function()
                 GetPosGui(ptPos)
 
                 osFuncLib_Progress.SetProgBlockData(TriggerType.AutoCast)
                 osHandler_GUI.DisplayGUI(TriggerType.AutoCast, ptPos)
 
-                Dim retAC = Await osHandler_GUI.osGui_AutoCastHandler.LaunchAutoCast()
+                Dim retAC = Await osHandler_GUI.osGui_AutoCastProgress.LaunchAutoCast()
                 Return retAC
             End Function)
 
@@ -432,7 +431,7 @@ Public NotInheritable Class osFuncLib_AutoCast
 
         Select Case acResult
             Case ProgResult.Completed
-                procTask = PrepDispatcher().InvokeAsync(
+                procTask = Application.Current.Dispatcher.InvokeAsync(
                     Async Function()
                         If isRTC() Then
                             ProcessProgressEvent(ProgMode.AutoCast, DispMsg, "Release To Cast")
@@ -462,7 +461,7 @@ Public NotInheritable Class osFuncLib_AutoCast
 
     Private Shared Async Function FinalizeAutoCast() As Task
         Await Task.Delay(750)
-        osHandler_GUI.osGui_AutoCastHandler.Dispatcher.
+        Application.Current.Dispatcher.
             Invoke(Sub()
                        osHandler_GUI.ResetUI(TriggerAction.AutoCast)
                    End Sub)
@@ -1104,7 +1103,7 @@ Module osFuncLib_UI
 
     Public Function PrepDispatcher(Optional IsAutoPass As Boolean = False) As Dispatcher
         Return If(IsAutoPass, osHandler_GUI.osGui_AutoPass.Dispatcher,
-            osHandler_GUI.osGui_AutoCastHandler.Dispatcher)
+            Application.Current.Dispatcher)
 
     End Function
 

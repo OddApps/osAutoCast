@@ -219,9 +219,9 @@ Public NotInheritable Class CoreDataLib
         While Not cts.Token.IsCancellationRequested
             If pType = TriggerType.AutoCast Then
                 If Not InputMonSvc.DetectTrigger(DetectOpts.MonitorMouse) Then
-                    Await PrepDispatcher().InvokeAsync(Sub()
-                                                           cts.Cancel()
-                                                       End Sub)
+                    Await Application.Current.Dispatcher.InvokeAsync(Sub()
+                                                                         cts.Cancel()
+                                                                     End Sub)
                     Exit While
                 End If
             ElseIf pType = TriggerType.AutoPass AndAlso
@@ -253,7 +253,7 @@ Public NotInheritable Class CoreDataLib
 
             End Try
 
-            With PrepareProgEvent(osHandler_GUI.osGui_AutoCastHandler)
+            With PrepareProgEvent(osHandler_GUI.osGui_AutoCastProgress)
                 .evDispatch.Invoke(
                     Sub()
                         .evAction(GenerateProgEventData(pEvent, objProgEventType,
@@ -319,7 +319,7 @@ Public NotInheritable Class CoreDataLib
         Return New ProgressEvent(pEventElement)
     End Function
 
-    Private Shared Function PrepareProgEvent(pEventElement As ProgGuiHandler_AutoCast) As ProgressEvent
+    Private Shared Function PrepareProgEvent(pEventElement As ProgBarGui_AutoCast) As ProgressEvent
         Return New ProgressEvent(pEventElement)
     End Function
 

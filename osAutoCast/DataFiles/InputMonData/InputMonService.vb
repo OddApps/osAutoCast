@@ -226,6 +226,9 @@ Public Class InputMonitorService
 
                         Await objExecTrigger.Task.Unwrap
                     Finally
+                        GC.Collect()
+                        GC.WaitForPendingFinalizers()
+
                         StartTriggerMonitor()
                     End Try
                 End If

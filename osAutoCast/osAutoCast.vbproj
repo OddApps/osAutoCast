@@ -13,6 +13,8 @@
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <Deterministic>true</Deterministic>
     <IsWebBootstrapper>false</IsWebBootstrapper>
+    <NuGetPackageImportStamp>
+    </NuGetPackageImportStamp>
     <PublishUrl>publish\</PublishUrl>
     <Install>true</Install>
     <InstallFrom>Disk</InstallFrom>
@@ -29,8 +31,6 @@
     <UseApplicationTrust>false</UseApplicationTrust>
     <PublishWizardCompleted>true</PublishWizardCompleted>
     <BootstrapperEnabled>true</BootstrapperEnabled>
-    <NuGetPackageImportStamp>
-    </NuGetPackageImportStamp>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>x64</PlatformTarget>
@@ -165,16 +165,14 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
-    <Compile Include="DataFiles\HandlerData\ProgGuiHandler_AutoCast.xaml.vb">
-      <DependentUpon>ProgGuiHandler_AutoCast.xaml</DependentUpon>
-    </Compile>
+    <Compile Include="DataFiles\HandlerData\GraphicsHandler.vb" />
     <Compile Include="DataFiles\InterfaceData\osInMon.xaml.vb">
       <DependentUpon>osInMon.xaml</DependentUpon>
     </Compile>
-    <Compile Include="DataFiles\ModelData\ProgBarGui_AutoCast.Designer.vb">
+    <Compile Include="DataFiles\InterfaceData\ProgBarGui_AutoCast.Designer.vb">
       <DependentUpon>ProgBarGui_AutoCast.vb</DependentUpon>
     </Compile>
-    <Compile Include="DataFiles\ModelData\ProgBarGui_AutoCast.vb">
+    <Compile Include="DataFiles\InterfaceData\ProgBarGui_AutoCast.vb">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="GlobalSuppressions.vb" />
@@ -191,14 +189,6 @@
     <Compile Include="DataFiles\InterfaceData\osPrefs.vb">
       <SubType>Form</SubType>
     </Compile>
-    <Page Include="DataFiles\HandlerData\ProgGuiHandler_AutoCast.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="DataFiles\InterfaceData\progGui_AutoCast.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
     <Page Include="DataFiles\InterfaceData\progGui_AutoPass.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -218,9 +208,6 @@
     <Compile Include="DataFiles\InputMonData\InputMonService.vb" />
     <Compile Include="DataFiles\InterfaceData\osHandler_GUI.vb">
       <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="DataFiles\InterfaceData\progGui_AutoCast.xaml.vb">
-      <DependentUpon>progGui_AutoCast.xaml</DependentUpon>
     </Compile>
     <Compile Include="DataFiles\InterfaceData\progGui_AutoPass.xaml.vb">
       <DependentUpon>progGui_AutoPass.xaml</DependentUpon>

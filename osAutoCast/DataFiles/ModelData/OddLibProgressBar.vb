@@ -1015,7 +1015,7 @@ Public Class OddLib_ProgressBar
     End Sub
 
     Private Function AllocDispatcher() As Dispatcher
-        Return If(Not IsAutoPass, osHandler_GUI.osGui_AutoCastHandler.Dispatcher,
+        Return If(Not IsAutoPass, Application.Current.Dispatcher,
             osHandler_GUI.osGui_AutoPass.Dispatcher)
     End Function
 

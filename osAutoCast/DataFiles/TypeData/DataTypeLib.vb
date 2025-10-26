@@ -471,20 +471,6 @@ Public Class GUI_PrepData
         End With
     End Sub
 
-    Private Sub guiAction_AutoCast(objGui As ProgGuiHandler_AutoCast)
-        With objGui
-            Try
-                ' .acProgressGui.Close()
-
-                .IsHitTestVisible = False
-                .Opacity = 0
-                .Close()
-            Catch
-
-            End Try
-        End With
-    End Sub
-
     Public Sub New()
 
     End Sub
@@ -510,7 +496,6 @@ Public Class GUI_PrepData
 
         Select Case guiTrigger
             Case TriggerAction.AutoCast
-                guiAction = AddressOf guiAction_AutoCast
                 guiDispatch = objWin.Dispatcher
             Case TriggerAction.AutoPass
                 guiAction = AddressOf guiAction_AutoPass
@@ -567,9 +552,9 @@ Public Class ProgressEvent
         Me.evAction = AddressOf pEventElement.PerformProgressEvent
     End Sub
 
-    Public Sub New(pEventElement As ProgGuiHandler_AutoCast)
-        Me.evDispatch = pEventElement.Dispatcher
-        '     Me.evAction = AddressOf pEventElement.acProgressGui.PerformProgressEvent
+    Public Sub New(pEventElement As ProgBarGui_AutoCast)
+        Me.evDispatch = Application.Current.Dispatcher
+        Me.evAction = AddressOf pEventElement.PerformProgressEvent
     End Sub
 
     Public Sub New()

@@ -14,9 +14,9 @@ Imports osProgDevice = SharpDX.Direct3D11.Device
 Imports osFeatureLevel = SharpDX.Direct3D.FeatureLevel
 Imports osFactoryType = SharpDX.Direct2D1.FactoryType
 Imports osProgDeviceContext = SharpDX.Direct3D11.DeviceContext
-Imports FactoryD2D = SharpDX.Direct2D1.Factory
-Imports FactoryDW = SharpDX.DirectWrite.Factory
-Imports FactoryDXGI = SharpDX.DXGI.Factory
+Imports osProgFactoryD2D = SharpDX.Direct2D1.Factory
+Imports osProgFactoryDW = SharpDX.DirectWrite.Factory
+Imports osProgFactoryDXGI = SharpDX.DXGI.Factory
 Imports AlphaMode = SharpDX.Direct2D1.AlphaMode
 Imports D2DPixelFormat = SharpDX.Direct2D1.PixelFormat
 Imports MapFlags = SharpDX.Direct3D11.MapFlags
@@ -27,6 +27,7 @@ Imports osText = SharpDX.DirectWrite
 Imports osColor = System.Windows.Media
 Imports osForms = System.Windows.Forms
 
+
 Public Class ProgBarGui_AutoCast
 
     Private Const WS_EX_NOACTIVATE As Integer = &H8000000
@@ -34,14 +35,39 @@ Public Class ProgBarGui_AutoCast
     Private Const WS_EX_TRANSPARENT As Integer = &H20
     Private Const WS_EX_TOPMOST As Integer = &H8
 
-    Private progDevice As osProgDevice
-    Private progContext As osProgDeviceContext
     Private progSwapChain As SwapChain
     Private progRTV As RenderTargetView
-    Private progDxgiFactory As FactoryDXGI
 
-    Private progD2DFactory As FactoryD2D
-    Private progDwriteFactory As FactoryDW
+    Public ReadOnly Property progDevice As osProgDevice
+        Get
+            Return GraphicsHandler.pDevice
+        End Get
+    End Property
+
+    Public ReadOnly Property progContext As osProgDeviceContext
+        Get
+            Return GraphicsHandler.pContext
+        End Get
+    End Property
+
+    Public ReadOnly Property progDxgiFactory As osProgFactoryDXGI
+        Get
+            Return GraphicsHandler.pDxgiFactory
+        End Get
+    End Property
+
+    Public ReadOnly Property progD2DFactory As osProgFactoryD2D
+        Get
+            Return GraphicsHandler.pD2DFactory
+        End Get
+    End Property
+
+    Public ReadOnly Property progDwriteFactory As osProgFactoryDW
+        Get
+            Return GraphicsHandler.pDWFactory
+        End Get
+    End Property
+
     Private progTarget As RenderTarget
 
     Private progBrush_BG As SolidColorBrush
@@ -49,8 +75,6 @@ Public Class ProgBarGui_AutoCast
     Private progBrush_Text As SolidColorBrush
 
     Private progMsg_Config As TextFormat
-
-    Private ProgressTaskSrc As TaskCompletionSource(Of Boolean)
 
     Public Event ProgressSuccess As EventHandler
     Public Event ProgressFail As EventHandler
@@ -134,7 +158,7 @@ Public Class ProgBarGui_AutoCast
 
     Protected Overrides Sub OnFormClosed(e As FormClosedEventArgs)
         MyBase.OnFormClosed(e)
-        ObjectDump(True)
+        ObjectDump()
     End Sub
 
     Protected Overrides Sub OnHandleCreated(e As EventArgs)
@@ -146,19 +170,6 @@ Public Class ProgBarGui_AutoCast
     End Sub
 
     Private Sub InitDeviceAndSwapChain()
-        If progDevice IsNot Nothing Then Return
-        Dim flags = DeviceCreationFlags.BgraSupport
-        ' If you kept it conditionally, change to a safe try/fallback:
-
-        progDevice = New osProgDevice(DriverType.Hardware, flags)
-
-        progContext = progDevice.ImmediateContext ' optional; only if you use D3D11 draws
-
-        Dim dxgiDevice = progDevice.QueryInterface(Of SharpDX.DXGI.Device)()
-        Dim dxgiAdapter = dxgiDevice.Adapter
-
-        progDxgiFactory = dxgiAdapter.GetParent(Of SharpDX.DXGI.Factory)()
-
         Dim mode = New ModeDescription(ProgressWidth, ProgressHeight,
                                        New Rational(60, 1), SharpDX.DXGI.Format.B8G8R8A8_UNorm)
 
@@ -172,21 +183,14 @@ Public Class ProgBarGui_AutoCast
             .Usage = Usage.RenderTargetOutput
         }
 
-        progSwapChain = New SwapChain(progDxgiFactory, progDevice, scDesc)
-
-        dxgiDevice.Dispose()
-        dxgiAdapter.Dispose()
-
-        ' Direct2D / DirectWrite
-        progD2DFactory = New FactoryD2D(osFactoryType.MultiThreaded, DebugLevel.None)
-        progDwriteFactory = New FactoryDW(SharpDX.DirectWrite.FactoryType.Shared)
+        progSwapChain = New SwapChain(GraphicsHandler.pDxgiFactory, GraphicsHandler.pDevice, scDesc)
 
         CreateTargetResources()
         DrawBG()
     End Sub
 
     Private Sub CreateTargetResources()
-        ObjectDump()
+        ' ObjectDump()
 
         Using backBuffer As Texture2D = progSwapChain.GetBackBuffer(Of Texture2D)(0)
             progRTV = New RenderTargetView(progDevice, backBuffer)
@@ -246,7 +250,7 @@ Public Class ProgBarGui_AutoCast
         ' nothing extra needed; swapchain size already set in init
     End Sub
 
-    Private Sub ObjectDump(Optional doAll As Boolean = False)
+    Private Sub ObjectDump(Optional fullDump As Boolean = False)
         progRTV.SafeDispose()
         progTarget.SafeDispose()
         progBrush_BG.SafeDispose()
@@ -254,26 +258,24 @@ Public Class ProgBarGui_AutoCast
         progBrush_Text.SafeDispose()
         progMsg_Config.SafeDispose()
 
-        If doAll Then
-            progD2DFactory.SafeDispose()
-            progDwriteFactory.SafeDispose()
+        GraphicsHandler.FlushDevice()
+
+        If fullDump Then
             progSwapChain.SafeDispose()
-            progDxgiFactory.SafeDispose()
-            progContext.SafeDispose()
-            progDevice.SafeDispose()
         End If
+
+        GC.Collect()
+        GC.WaitForPendingFinalizers()
     End Sub
 
     Private Sub InitiateProgress()
-        Dim uiContext = SynchronizationContext.Current
-
         ProgressStatus = ProgStatus.Running
         ProgressStartTime = Stopwatch.GetTimestamp()
     End Sub
 
     Private Sub ConfigureProgress(pDuration As TimeSpan, objAbortToken As CancellationToken, Optional pEasing As Func(Of Double, Double) = Nothing)
         SetProgressDuration(pDuration)
-        ProgressEaseFunc = If(pEasing, AddressOf EaseInOutSine)
+        ProgressEaseFunc = If(pEasing, Function(x) x)
 
         objAbortToken.Register(
             Sub()
@@ -438,7 +440,7 @@ Public Class ProgBarGui_AutoCast
     End Function
 
     Public Sub SetProgressResult(progStatus As ProgStatus)
-        Dim setResult = If(progStatus = ProgStatus.Success,
+        Dim setResult = If(progStatus = progStatus.Success,
             ProgResult.Completed, ProgResult.Cancelled)
 
         Select Case setResult
@@ -524,4 +526,104 @@ Public Class ProgBarGui_AutoCast
         End Get
     End Property
 
+    Private Async Function AutoCast_Prep() As Task
+        Await Task.Delay(10)
+        DisplayMsg("Release Shift", TriggerType.AutoCast)
+
+        Await CoreDataLib.InputMonSvc.AnticipateInput(InputAction.AC_Start)
+
+        CoreDataLib.ProcessProgressEvent(ProgMode.AutoCast, ProgEvent.ClrMsg)
+
+        Await Task.Delay(375)
+    End Function
+
+    Private acProgLoc As osDraw.Point
+
+    Private AutoCastComplete As Boolean
+
+    Public Sub InitiateAutoCast()
+        With Me
+            SetProgressEvents()
+
+            GetPosGui(acProgLoc)
+            Dim locProg = SetPosData(acProgLoc)
+
+            .Left = locProg.X
+            .Top = locProg.Y
+
+            .Show()
+            .DrawBG()
+        End With
+    End Sub
+
+    Private Sub SetProgLocation(acComplete As Boolean)
+        AutoCastComplete = acComplete
+    End Sub
+
+    Public Async Function LaunchAutoCast() As Task(Of ProgResult)
+        Await AutoCast_Prep()
+
+        Try
+            Dim acProgTask = BeginProgress(osFuncLib_Progress.ProgTimeSpan, CoreDataLib.objCancelState)
+            Await acProgTask
+            Return AutoCast_HandleResult(AutoCastComplete)
+        Finally
+            UnsetProgressEvents()             ' <— important
+        End Try
+    End Function
+
+    Private Sub SetAutoCastResult(acComplete As Boolean)
+        AutoCastComplete = acComplete
+    End Sub
+
+    Private _evProgComplete As EventHandler
+    Private _evProgFail As EventHandler
+
+    Private Sub SetProgressEvents()
+        ' If already wired for this acProgressGui, bail
+        If _evProgComplete IsNot Nothing Then Exit Sub
+
+        _evProgComplete = Sub() SetAutoCastResult(True)
+        _evProgFail = Sub() SetAutoCastResult(False)
+
+        AddHandler ProgressSuccess, _evProgComplete
+        AddHandler ProgressFail, _evProgFail
+    End Sub
+
+    ' Call once when you’re done (end of LaunchAutoCast / right before disposing GUI):
+    Private Sub UnsetProgressEvents()
+        If _evProgComplete IsNot Nothing Then
+            RemoveHandler ProgressSuccess, _evProgComplete
+            _evProgComplete = Nothing
+        End If
+        If _evProgFail IsNot Nothing Then
+            RemoveHandler ProgressFail, _evProgFail
+            _evProgFail = Nothing
+        End If
+    End Sub
+
+    Private retProgResult As ProgResult = Nothing
+
+    Private Function AutoCast_HandleResult(acComplete As Boolean) As ProgResult
+        If acComplete Then
+            osFuncLib_Progress.UpdateProgStatus(TriggerAction.AutoCast,
+                             ProgAction.Complete, True)
+            SetProgResult(acComplete, retProgResult)
+        Else
+            osFuncLib_Progress.UpdateProgStatus(TriggerAction.AutoCast,
+                             ProgAction.Abort, True)
+            SetProgResult(acComplete, retProgResult)
+        End If
+
+        Return retProgResult
+    End Function
+
+    Private Sub SetProgResult(pResult As Boolean, ByRef setProgResult As ProgResult)
+        setProgResult = If(pResult, ProgResult.Completed,
+            ProgResult.Cancelled)
+    End Sub
+
+    Private Sub ProgBarGui_AutoCast_Disposed(sender As Object, e As EventArgs) Handles Me.Disposed
+
+    End Sub
 End Class
