@@ -11,6 +11,7 @@ Imports osText = SharpDX.DirectWrite
 Imports osForms = System.Windows.Forms
 Imports osIcons = System.Drawing.SystemIcons
 Imports osTarget = SharpDX.Direct2D1
+Imports osProgColor = SharpDX.Mathematics.Interop.RawColor4
 
 Public Module DataTypeLib
 
@@ -106,11 +107,22 @@ Public Module DataTypeLib
     End Enum
 
     Public Enum ProgEaseVals
-        eVal_x1 = 0.83
-        eVal_y1 = 0.1
-        eVal_x2 = 0.5
-        eVal_y2 = 0.91
+        eVal_x1 = 0.99
+        eVal_y1 = 0.67
+        eVal_x2 = 0.4
+        eVal_y2 = 0.92
     End Enum
+
+    <Runtime.InteropServices.StructLayout(Runtime.InteropServices.LayoutKind.Sequential)>
+    Public Structure ProgBarCB
+        Public prevValue As Single
+        Public currValue As Single
+        Public flags As Single
+        Public pad As Single
+        Public pcoloractive As osProgColor
+        Public pcolorbg As osProgColor
+    End Structure
+
 
 #End Region
 

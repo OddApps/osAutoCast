@@ -24,6 +24,7 @@ Imports osBinder = System.Windows.Data
 Imports osColors = System.Windows.Media
 Imports osThreads = System.Threading
 Imports osControls = System.Windows.Controls
+Imports osUtilities = SharpDX.Utilities
 
 #Disable Warning IDE0060 ' Remove unused parameter
 #Disable Warning IDE1006 ' Remove unused parameter
@@ -1213,33 +1214,28 @@ Module osFuncLib_UI
         Return threshold + ySine * (1.0 - threshold)
     End Function
 
-    Public Function EaseLinearThenExpoIn(t As Double,
-                                     Optional threshold As Double = 0.15,
-                                     Optional k As Double = 5.7) As Double
+    Public Function EaseLinearThenExpoIn(valProg As Double) As Double
 
-        ' Clamp input
-        t = Math.Max(0.0, Math.Min(1.0, t))
+        Dim threshold As Double = 0.15
+        Dim k As Double = 5.7
 
-        ' 1) First segment: pure linear [0 … threshold]
-        If t < threshold Then
-            Return t
+        valProg = Math.Max(0.0, Math.Min(1.0, valProg))
+
+        If valProg < threshold Then
+            Return valProg
         End If
 
-        ' 2) Remap t from [threshold…1] → u ∈ [0…1]
-        Dim u As Double = (t - threshold) / (1.0 - threshold)
-
-        ' 3) Exponential ease-in: y ∈ [0…1]
+        Dim u As Double = (valProg - threshold) / (1.0 - threshold)
         Dim yExp As Double
+
         If u <= 0.0 Then
             yExp = 0.0
         ElseIf u >= 1.0 Then
             yExp = 1.0
         Else
-            ' Classic ease-in expo: starts very slowly, then accelerates
             yExp = Math.Pow(2, k * (u - 1.0))
         End If
 
-        ' 4) Scale back into [threshold…1]
         Return threshold + yExp * (1.0 - threshold)
     End Function
 
@@ -1492,7 +1488,7 @@ Module ControlExtensions
     Public Sub SafeDispose(Of T As {Class, IDisposable})(ByRef obj As T)
         If obj IsNot Nothing Then
             Try
-                obj.Dispose()
+                osUtilities.Dispose(obj)
             Finally
                 obj = Nothing
             End Try

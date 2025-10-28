@@ -24,7 +24,11 @@ Partial Class ProgBarGui_AutoCast
     Private Sub InitializeComponent()
         components = New System.ComponentModel.Container
         Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.None
-        Me.ClientSize = New System.Drawing.Size(110, 25)
+
+        With CoreDataLib.GetProgSizeReport(TriggerType.AutoCast)
+            Me.ClientSize = New System.Drawing.Size(.pWidth, .pHeight)
+        End With
+
         Me.Text = "Form1"
     End Sub
 End Class

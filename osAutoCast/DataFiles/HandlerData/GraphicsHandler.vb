@@ -60,8 +60,9 @@ Public NotInheritable Class GraphicsHandler
         SyncLock _initLock
             If _progDevice IsNot Nothing Then Return
 
-            Dim flags = DeviceCreationFlags.BgraSupport
-            _progDevice = New osProgDevice(DriverType.Hardware, flags)
+            Dim deviceFlags As DeviceCreationFlags = DeviceCreationFlags.BgraSupport
+
+            _progDevice = New osProgDevice(DriverType.Hardware, deviceFlags)
             _progContext = _progDevice.ImmediateContext
 
             Using dxgiDev = _progDevice.QueryInterface(Of SharpDX.DXGI.Device)()
