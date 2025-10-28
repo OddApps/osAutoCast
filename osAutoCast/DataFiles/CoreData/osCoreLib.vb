@@ -328,6 +328,12 @@ Public NotInheritable Class osFuncLib_Progress
         ProgInv = 1.0 / ProgDuration
     End Sub
 
+    Public Shared Function EaseInExpo(t As Double) As Double
+        If t <= 0.0 Then Return 0.0
+        If t >= 1.0 Then Return 1.0
+        Return Math.Pow(2.0, 10.0 * (t - 1.0))
+    End Function
+
     Public Shared Function EaseInOutExpo(x As Double) As Double
         If x = 0.0 Then Return 0.0
         If x = 1.0 Then Return 1.0
@@ -358,6 +364,8 @@ Public NotInheritable Class osFuncLib_Progress
     Public Shared Function EaseOutCubic(t As Double) As Double
         Return 1.0 - Math.Pow(1.0 - t, 3)
     End Function
+
+
 
 End Class
 

@@ -149,44 +149,76 @@ Public Class ProgBarGui_AutoCast
     End Property
 
     Private Const objShader_Vertex As String =
-"struct VSOut { float4 pos:SV_Position; float2 uv:TEXCOORD0; };
-VSOut VSMain(uint vid:SV_VertexID){
+"struct VSOut {
+	float4 pos:SV_Position;
+	float2 uv:TEXCOORD0;
+};
+
+VSOut VSMain(uint vid:SV_VertexID) {
     float2 p[3] = { float2(-1,-1), float2(-1,3), float2(3,-1) };
-    VSOut o; o.pos=float4(p[vid],0,1); o.uv=0.5*(p[vid]+1); return o; }"
+    VSOut o;
+	o.pos=float4(p[vid],0,1);
+	o.uv=0.5*(p[vid]+1);
+	return o;
+}"
 
     Private Const objShader_Pixel As String =
 "cbuffer Bar : register(b0){
     float prevValue;
     float currValue;
+    float invSize;
     float flags;
-    float pad;
     float4 pcoloractive;
     float4 pcolorbg;
-}
+};
 
 struct PSIn {
 	float4 pos:SV_Position;
 	float2 uv:TEXCOORD0;
 };
 
-float band_mask(float a, float b, float u){
-    return step(a, u) * step(u, b);
+float snap_to_pixel(float t, float invSize) {
+    float px = 1.0 / invSize;
+    float p  = round(t * px);
+    return p * invSize;
+}
+
+float aa_step(float edge, float x, float invSize) {
+    float half = 0.5 * invSize;
+    return smoothstep(edge - half, edge + half, x);
+}
+
+float aa_band(float a, float b, float x, float invSize) {
+    float lo = min(a,b);
+    float hi = max(a,b);
+
+    hi = max(hi, lo + invSize);
+
+    float left  = aa_step(lo, x, invSize);
+    float right = 1.0 - aa_step(hi, x, invSize);
+    return saturate(left * right);
 }
 
 float4 PSMain(PSIn pin) : SV_Target {
-	float u = (flags >= 1.0) ? (1.0 - pin.uv.y) : pin.uv.x;
+    bool vertical = (bool)((uint)flags & 1u);
+    float u = vertical ? (1.0 - pin.uv.y) : pin.uv.x;
 
-	float a = min(prevValue, currValue);
-	float b = max(prevValue, currValue);
+    float a = snap_to_pixel(prevValue, invSize);
+    float b = snap_to_pixel(currValue, invSize);
 
-	if (a == b) discard;
+    if (a == b) discard;
 
-	float m = band_mask(a, b, u);
+    float m = aa_band(a, b, u, invSize);
+    if (m <= 0.0) discard;
 
-	if (m <= 0.0) discard;
+    bool inc = (currValue >= prevValue);
+    float4 col = inc ? pcoloractive : pcolorbg;
 
-	float inc = (currValue >= prevValue) ? 1.0 : 0.0;
-	return lerp(pcolorbg, pcoloractive, inc);
+    if (((uint)flags & 2u) != 0u) {
+        col.rgb = col.rgb;
+    }
+
+    return col;
 }"
 
     Public Sub New(pW As Integer, pH As Integer)
@@ -457,16 +489,36 @@ float4 PSMain(PSIn pin) : SV_Target {
             pVS = New VertexShader(GraphicsHandler.pDevice, vsbc)
         End Using
 
+        'Using psbc = ShaderBytecode.Compile(objShader_Pixel, "PSMain", "ps_5_0", ShaderFlags.OptimizationLevel3)
+        '    Utilities.Dispose(pPS)
+        '    pPS = New PixelShader(GraphicsHandler.pDevice, psbc)
+        'End Using
+
         Using psbc = ShaderBytecode.Compile(objShader_Pixel, "PSMain", "ps_5_0", ShaderFlags.OptimizationLevel3)
-            Utilities.Dispose(pPS)
+            pPS?.Dispose()
             pPS = New PixelShader(GraphicsHandler.pDevice, psbc)
+
+            ' Sanity check the cbuffer size expected by the shader
+            Using refl = New SharpDX.D3DCompiler.ShaderReflection(psbc)
+                Dim cbuf = refl.GetConstantBuffer(0)
+                Dim expected As Integer = cbuf.Description.Size ' bytes
+                Dim actual As Integer = Utilities.SizeOf(Of ProgBarCB)()
+                If expected <> actual Then
+                    Throw New InvalidOperationException($"CB size mismatch: shader expects {expected} bytes, struct is {actual} bytes.")
+                End If
+            End Using
         End Using
 
-        Utilities.Dispose(pCB)
-
-        pCB = New Buffer(progDevice, Utilities.SizeOf(Of ProgBarCB)(),
-                 ResourceUsage.Default, BindFlags.ConstantBuffer,
-                 CpuAccessFlags.None, ResourceOptionFlags.None, 0)
+        Dim cbd = New BufferDescription With {
+    .SizeInBytes = Utilities.SizeOf(Of ProgBarCB)(), ' 48
+    .Usage = ResourceUsage.Dynamic,
+    .BindFlags = BindFlags.ConstantBuffer,
+    .CpuAccessFlags = CpuAccessFlags.Write,
+    .OptionFlags = ResourceOptionFlags.None,
+    .StructureByteStride = 0
+}
+        pCB?.Dispose()
+        pCB = New osProgBuffer(progDevice, cbd)
 
         With objProgContext
             .InputAssembler.PrimitiveTopology = PrimitiveTopology.TriangleList
@@ -486,6 +538,62 @@ float4 PSMain(PSIn pin) : SV_Target {
     End Sub
 
     Private lastProgress As Single = 0.0F
+
+    Private Sub DrawDeltaPrecise(progress01 As Single, vertical As Boolean)
+        Dim tPrev = lastProgress
+        Dim tCurr = Math.Max(0.0F, Math.Min(1.0F, progress01))
+        If tPrev = tCurr Then Return
+
+        ' Bar pixel size on the active axis
+        Dim barW = ProgressTrack.GetWidth()
+        If barW <= 0 Then Return
+
+        ' Limit raster to the bar rect (scissor or viewport)
+        Dim barH = ProgressTrack.Bottom
+        progContext.Rasterizer.SetViewport(New osViewPort With {
+        .X = ProgressTrack.Left, .Y = 0,
+        .Width = Math.Max(1, CSng(barW)),
+        .Height = Math.Max(1, CSng(barH)),
+        .MinDepth = 0.0F, .MaxDepth = 1.0F
+    })
+
+        Dim left = ProgressTrack.Left
+        Dim top = 0
+        Dim right = left + ProgressTrack.GetWidth()
+        Dim bottom = ProgressTrack.Bottom
+
+        progContext.Rasterizer.State = scissorState
+        progContext.Rasterizer.SetScissorRectangle(left, top, right, bottom)
+
+        ' Build CB
+        Dim cb As New ProgBarCB With {
+            .prevValue = tPrev,
+            .currValue = tCurr,
+            .invSize = 1.0F / CSng(Math.Max(1, barW)),
+            .flags = 0.0F,
+            .pcoloractive = CreateProgColor(ProgColorObj.Active),
+            .pcolorbg = CreateProgColor(ProgColorObj.BackG)
+        }
+
+        ' Map/Discard update (fast, avoids driver copies)
+        Dim box = progContext.MapSubresource(pCB, 0, MapMode.WriteDiscard, Direct3D11.MapFlags.None)
+        Utilities.Write(box.DataPointer, cb)
+        progContext.UnmapSubresource(pCB, 0)
+
+        ' Bind & draw
+        With progContext
+            .OutputMerger.SetTargets(progRTV)
+            .InputAssembler.PrimitiveTopology = SharpDX.Direct3D.PrimitiveTopology.TriangleList
+            .VertexShader.Set(pVS)
+            .PixelShader.Set(pPS)
+            .PixelShader.SetConstantBuffer(0, pCB)
+            .Draw(3, 0)
+        End With
+
+        ' Cleanup
+        progContext.Rasterizer.State = Nothing
+        lastProgress = tCurr
+    End Sub
 
     Private Sub DrawDelta(progress01 As Single)
         Dim tPrev = lastProgress
@@ -759,7 +867,7 @@ float4 PSMain(PSIn pin) : SV_Target {
         ProgressValue = ProgressEaseFunc(progVal)
 
         progTarget.BeginDraw()
-        DrawDelta(CSng(ProgressValue))
+        DrawDeltaPrecise(CSng(ProgressValue), False)
     End Sub
 
     Private Function VerifyProgLimits(progVal As Double) As Single
@@ -885,16 +993,6 @@ float4 PSMain(PSIn pin) : SV_Target {
         End If
     End Sub
 
-    Public Shared Function EaseInOutSine(x As Double) As Double
-        Return -(Math.Cos(Math.PI * x) - 1.0) / 2.0
-    End Function
-
-    Public Shared Function EaseInOutExpo(x As Double) As Double
-        If x = 0 Then Return 0
-        If x = 1 Then Return 1
-        Return If(x < 0.5, Math.Pow(2, 20 * x - 10) / 2, (2 - Math.Pow(2, -20 * x + 10)) / 2)
-    End Function
-
     Private Async Function AutoCast_Prep() As Task
         Await Task.Delay(20)
         DisplayMsg("Release Shift", TriggerType.AutoCast)
@@ -975,7 +1073,7 @@ float4 PSMain(PSIn pin) : SV_Target {
 
         Try
             Await BeginProgress(osFuncLib_Progress.ProgTimeSpan,
-                                           CoreDataLib.objCancelState, AddressOf EaseInOutCirc)
+                                           CoreDataLib.objCancelState, AddressOf EaseInExpo)
 
             Return AutoCast_HandleResult(AutoCastComplete)
         Finally

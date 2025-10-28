@@ -117,8 +117,8 @@ Public Module DataTypeLib
     Public Structure ProgBarCB
         Public prevValue As Single
         Public currValue As Single
+        Public invSize As Single      ' 1.0f / (bar pixel width or height)
         Public flags As Single
-        Public pad As Single
         Public pcoloractive As osProgColor
         Public pcolorbg As osProgColor
     End Structure
