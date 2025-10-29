@@ -171,6 +171,7 @@ Public NotInheritable Class osFuncLib_Progress
     Public Shared ProgTimeSpan As TimeSpan
     Public Shared ProgDuration As Integer
     Public Shared ProgInv As Double
+    Public Shared ProgWidthInv As Single
 
     Public Shared progBlock_W As Single
     Public Shared progBlock_H As Integer = 25
@@ -326,13 +327,8 @@ Public NotInheritable Class osFuncLib_Progress
         ProgDuration = If(trigType = TriggerType.AutoCast, GetFuse(), GetSafetyTimer())
         ProgTimeSpan = TimeSpan.FromMilliseconds(ProgDuration)
         ProgInv = 1.0 / ProgDuration
+        ProgWidthInv = 1.0 / CalcProgSize(DataTypeLib.TriggerType.AutoCast).Width
     End Sub
-
-    Public Shared Function EaseInExpo(t As Double) As Double
-        If t <= 0.0 Then Return 0.0
-        If t >= 1.0 Then Return 1.0
-        Return Math.Pow(2.0, 10.0 * (t - 1.0))
-    End Function
 
     Public Shared Function EaseInOutExpo(x As Double) As Double
         If x = 0.0 Then Return 0.0
@@ -1167,6 +1163,64 @@ Module osFuncLib_UI
         ctrlPanel.Invalidate()
     End Sub
 
+    Public Function EaseCubicBezier(x As Double) As Double
+        If x <= 0.0 Then Return 0.0
+        If x >= 1.0 Then Return 1.0
+
+        ' Bezier basis (p0=(0,0), p3=(1,1))
+        Dim ax As Double = 3 * eVal_x1
+        Dim bx As Double = 3 * (eVal_x2 - eVal_x1) - ax
+        Dim cx As Double = 1 - ax - bx
+
+        Dim ay As Double = 3 * eVal_y1
+        Dim by_ As Double = 3 * (eVal_y2 - eVal_y1) - ay
+        Dim cy As Double = 1 - ay - by_
+
+        ' Evaluate x(t), y(t), x'(t)
+        Dim xOfT As Func(Of Double, Double) =
+        Function(t)
+            Return ((cx * t + bx) * t + ax) * t
+        End Function
+        Dim dxOfT As Func(Of Double, Double) =
+        Function(t) (3 * cx * t + 2 * bx) * t + ax
+        Dim yOfT As Func(Of Double, Double) =
+        Function(t) ((cy * t + by_) * t + ay) * t
+
+        ' 2) Invert x(t)=x → find t via Newton, fallback to bisection
+        Dim tt As Double = x ' good initial guess
+        For i = 0 To 5
+            Dim xt = xOfT(tt) - x
+            Dim dxt = dxOfT(tt)
+            If Math.Abs(dxt) < 0.000001 Then Exit For
+            tt -= xt / dxt
+            If tt < 0 Then tt = 0
+            If tt > 1 Then tt = 1
+        Next
+
+        ' If Newton didn’t converge well, refine with bisection
+        Dim lo As Double = 0.0, hi As Double = 1.0
+        For i = 0 To 12
+            Dim xt = xOfT(tt)
+            If Math.Abs(xt - x) < 0.000001 Then Exit For
+            If xt < x Then
+                lo = tt
+            Else
+                hi = tt
+            End If
+            tt = 0.5 * (lo + hi)
+        Next
+
+        ' 3) Return y(t)
+        Return yOfT(tt)
+    End Function
+
+
+    Public Function EaseInExpo(t As Double) As Double
+        If t <= 0.0 Then Return 0.0
+        If t >= 1.0 Then Return 1.0
+        Return Math.Pow(2.0, 10.0 * (t - 1.0))
+    End Function
+
     Public Function EaseInOutExpo(pDuration As Double) As Double
         If pDuration = 0.0 Then Return 0.0
         If pDuration = 1.0 Then Return 1.0
@@ -1225,7 +1279,7 @@ Module osFuncLib_UI
     Public Function EaseLinearThenExpoIn(valProg As Double) As Double
 
         Dim threshold As Double = 0.15
-        Dim k As Double = 5.7
+        Dim k As Double = 9
 
         valProg = Math.Max(0.0, Math.Min(1.0, valProg))
 
@@ -1245,6 +1299,27 @@ Module osFuncLib_UI
         End If
 
         Return threshold + yExp * (1.0 - threshold)
+    End Function
+
+    Public Function EaseLinearThenOutQuad(t As Double) As Double
+        t = Math.Max(0.0, Math.Min(1.0, t))
+
+        ' 2) Threshold for switching from linear to cubic
+        Const threshold As Double = 0.15
+
+        ' 3) If we're in the first 15%, just return t (linear)
+        If t < threshold Then
+            Return t
+        End If
+
+        ' 4) Remap the remaining [threshold…1] to [0…1]
+        Dim u As Double = (t - threshold) / (1.0 - threshold)
+
+        ' 5) Ease-Out-Cubic: y = 1 − (1−u)³
+        Dim yCubic As Double = 1.0 - Math.Pow(1.0 - u, 3)
+
+        ' 6) Scale that back into the [threshold…1] portion of the output
+        Return threshold + yCubic * (1.0 - threshold)
     End Function
 
     Private Function ConvDur(pDuration As Double, cntEval As Integer) As Double

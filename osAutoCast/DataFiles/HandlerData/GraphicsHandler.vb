@@ -3,10 +3,12 @@ Imports SharpDX.Direct3D11
 Imports SharpDX.DXGI
 Imports osProgDevice = SharpDX.Direct3D11.Device
 Imports osFactoryType = SharpDX.Direct2D1.FactoryType
+Imports osDwFactoryType = SharpDX.DirectWrite.FactoryType
 Imports osProgDeviceContext = SharpDX.Direct3D11.DeviceContext
 Imports osProgFactoryD2D = SharpDX.Direct2D1.Factory
 Imports FactoryDW = SharpDX.DirectWrite.Factory
-Imports osProgDXGIFactory = SharpDX.DXGI.Factory
+Imports osProgDxgiDevice = SharpDX.DXGI.Device
+Imports osProgDxgiFactory = SharpDX.DXGI.Factory
 
 Public NotInheritable Class GraphicsHandler
 
@@ -15,7 +17,7 @@ Public NotInheritable Class GraphicsHandler
     Private Shared _progDevice As osProgDevice
     Public Shared ReadOnly Property pDevice As osProgDevice
         Get
-            ' EnsureCreated()
+            EnsureCreated()
             Return _progDevice
         End Get
     End Property
@@ -52,28 +54,31 @@ Public NotInheritable Class GraphicsHandler
         End Get
     End Property
 
-    Private Sub New()  ' Prevent instantiation
+    Private Sub New()
     End Sub
 
     Public Shared Sub EnsureCreated()
+
         If _progDevice IsNot Nothing Then Return
+
         SyncLock _initLock
             If _progDevice IsNot Nothing Then Return
 
-            Dim deviceFlags As DeviceCreationFlags = DeviceCreationFlags.BgraSupport
+            Dim deviceFlags = DeviceCreationFlags.BgraSupport
 
             _progDevice = New osProgDevice(DriverType.Hardware, deviceFlags)
             _progContext = _progDevice.ImmediateContext
 
-            Using dxgiDev = _progDevice.QueryInterface(Of SharpDX.DXGI.Device)()
+            Using dxgiDev = _progDevice.QueryInterface(Of osProgDxgiDevice)()
                 Using adapter = dxgiDev.Adapter
-                    _progDxgiFactory = adapter.GetParent(Of SharpDX.DXGI.Factory)()
+                    _progDxgiFactory = adapter.GetParent(Of osProgDxgiFactory)()
                 End Using
             End Using
 
             _progD2dFactory = New osProgFactoryD2D(osFactoryType.MultiThreaded)
-            _progDwFactory = New FactoryDW(SharpDX.DirectWrite.FactoryType.Shared)
+            _progDwFactory = New FactoryDW(osDwFactoryType.Shared)
         End SyncLock
+
     End Sub
 
     Public Shared Sub FlushDevice()

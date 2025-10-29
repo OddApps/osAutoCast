@@ -73,11 +73,12 @@ Public Module DataTypeLib
 
     Public Enum ProgEvent
         Reset
+        ClrMsg
         MaxFill
+        Starter
+        PrepMsg
         DispMsg
         DispMsg_AC
-        ClrMsg
-        Starter
     End Enum
 
     Public Enum ProgResult
@@ -107,10 +108,10 @@ Public Module DataTypeLib
     End Enum
 
     Public Enum ProgEaseVals
-        eVal_x1 = 0.99
-        eVal_y1 = 0.67
-        eVal_x2 = 0.4
-        eVal_y2 = 0.92
+        eVal_x1 = 0.42
+        eVal_y1 = 0.12
+        eVal_x2 = 0.49
+        eVal_y2 = 0.95
     End Enum
 
     <Runtime.InteropServices.StructLayout(Runtime.InteropServices.LayoutKind.Sequential)>
@@ -199,6 +200,83 @@ Public Module DataTypeLib
     End Enum
 
 #End Region
+
+End Module
+
+Public Module ProgShaderData
+
+    Public Const objShader_Vertex As String =
+"struct VSOut {
+	float4 pos:SV_Position;
+	float2 uv:TEXCOORD0;
+};
+
+VSOut VSMain(uint vid:SV_VertexID) {
+    float2 p[3] = { float2(-1,-1), float2(-1,3), float2(3,-1) };
+    VSOut o;
+	o.pos=float4(p[vid],0,1);
+	o.uv=0.5*(p[vid]+1);
+	return o;
+}"
+
+    Public Const objShader_Pixel As String =
+"cbuffer Bar : register(b0) {
+    float prevValue;
+    float currValue;
+    float invSize;
+    float flags;
+    float4 pcoloractive;
+    float4 pcolorbg;
+};
+
+struct PSIn {
+	float4 pos:SV_Position;
+	float2 uv:TEXCOORD0;
+};
+
+float snap_to_pixel(float t, float invSize) {
+    float px = 1.0 / invSize;
+    float p  = round(t * px);
+    return p * invSize;
+}
+
+float aa_step(float edge, float x, float invSize) {
+    float half = 0.5 * invSize;
+    return smoothstep(edge - half, edge + half, x);
+}
+
+float aa_band(float a, float b, float x, float invSize) {
+    float lo = min(a,b);
+    float hi = max(a,b);
+
+    hi = max(hi, lo + invSize);
+
+    float left  = aa_step(lo, x, invSize);
+    float right = 1.0 - aa_step(hi, x, invSize);
+    return saturate(left * right);
+}
+
+float4 PSMain(PSIn pin) : SV_Target {
+    bool vertical = (bool)((uint)flags & 1u);
+    float u = vertical ? (1.0 - pin.uv.y) : pin.uv.x;
+
+    float a = snap_to_pixel(prevValue, invSize);
+    float b = snap_to_pixel(currValue, invSize);
+
+    if (a == b) discard;
+
+    float m = aa_band(a, b, u, invSize);
+    if (m <= 0.0) discard;
+
+    bool inc = (currValue >= prevValue);
+    float4 col = inc ? pcoloractive : pcolorbg;
+
+    if (((uint)flags & 2u) != 0u) {
+        col.rgb = col.rgb;
+    }
+
+    return col;
+}"
 
 End Module
 
@@ -382,6 +460,7 @@ Public Class ProgressMsg
                    ByRef pWriteFactory As osText.Factory, ByRef pFormat As osText.TextFormat)
 
         MsgText = txtMsg
+
         Format = ApplyMsgFormat(pWriteFactory)
         Location = SetMsgLocation(pType)
 
@@ -390,12 +469,12 @@ Public Class ProgressMsg
 
     Private Function ApplyMsgFormat(ByRef pWriteFactory As osText.Factory) As osText.TextFormat
         Try
-            Return New osText.TextFormat(pWriteFactory, "Segoe UI",
-                                         osText.FontWeight.Bold, osText.FontStyle.Normal, 14.0F) With
-                                            {
+            Return New osText.TextFormat(pWriteFactory, "Trebuchet MS",
+                                         osText.FontWeight.Bold, osText.FontStyle.Normal,
+                                         osText.FontStretch.Condensed, 14.0F) With {
                                              .TextAlignment = osText.TextAlignment.Center,
                                              .ParagraphAlignment = osText.ParagraphAlignment.Center
-                                            }
+                                        }
         Catch ex As Exception
             Return Nothing
         End Try
