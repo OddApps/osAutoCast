@@ -78,7 +78,8 @@ Public Module DataTypeLib
         Starter
         PrepMsg
         DispMsg
-        DispMsg_AC
+        ShowFull
+        ShowFullMsg
     End Enum
 
     Public Enum ProgResult
@@ -100,6 +101,7 @@ Public Module DataTypeLib
         BackG
         Active
         Msg
+        Abort
     End Enum
 
     Public Enum MsgRenderType
@@ -116,12 +118,18 @@ Public Module DataTypeLib
 
     <Runtime.InteropServices.StructLayout(Runtime.InteropServices.LayoutKind.Sequential)>
     Public Structure ProgBarCB
-        Public prevValue As Single
-        Public currValue As Single
-        Public invSize As Single      ' 1.0f / (bar pixel width or height)
-        Public flags As Single
-        Public pcoloractive As osProgColor
-        Public pcolorbg As osProgColor
+        Public prevValue As Single          ' previous normalized progress [0..1]
+        Public currValue As Single          ' current  normalized progress [0..1]
+        Public invSize As Single          ' 1.0f / bar pixel length (W for horizontal, H for vertical)
+        Public flags As Single          ' bit0 = vertical
+
+        Public pcoloractive As osProgColor  ' fill color
+        Public pcolorbg As osProgColor  ' bg color (used on decrease)
+
+        Public barOffset As Single          ' LEFT (px) for horizontal, TOP (px) for vertical
+        Public pad0 As Single
+        Public pad1 As Single
+        Public pad2 As Single
     End Structure
 
 
@@ -224,17 +232,22 @@ VSOut VSMain(uint vid:SV_VertexID) {
     float prevValue;
     float currValue;
     float invSize;
-    float flags;
+    float flags;          // bit0 = vertical
     float4 pcoloractive;
     float4 pcolorbg;
+    float barOffset;      // in pixels: left for horizontal, top for vertical
+    float pad0;
+    float pad1;
+    float pad2;
 };
 
 struct PSIn {
-	float4 pos:SV_Position;
-	float2 uv:TEXCOORD0;
+	float4 pos:SV_Position;   // pixel coords after viewport transform
+	float2 uv:TEXCOORD0;      // not used for placement anymore
 };
 
 float snap_to_pixel(float t, float invSize) {
+    // invSize = delta in 't' per 1 pixel, so rounding is in pixel units
     float px = 1.0 / invSize;
     float p  = round(t * px);
     return p * invSize;
@@ -248,21 +261,32 @@ float aa_step(float edge, float x, float invSize) {
 float aa_band(float a, float b, float x, float invSize) {
     float lo = min(a,b);
     float hi = max(a,b);
-
+    // Ensure at least 1 pixel thickness to avoid disappearing when a~b
     hi = max(hi, lo + invSize);
-
     float left  = aa_step(lo, x, invSize);
     float right = 1.0 - aa_step(hi, x, invSize);
     return saturate(left * right);
 }
 
 float4 PSMain(PSIn pin) : SV_Target {
-    bool vertical = (bool)((uint)flags & 1u);
-    float u = vertical ? (1.0 - pin.uv.y) : pin.uv.x;
+    bool vertical = ((uint)flags & 1u) != 0u;
+
+    // Map pixel position inside the bar to normalized [0..1] along the fill axis.
+    float u;
+    if (vertical) {
+        // pos.y grows downward; make 0 at top, 1 at bottom then flip (top fills first)
+        float yLocal = (pin.pos.y - barOffset) * invSize;  // 0..1 downwards
+        u = 1.0 - yLocal;                                  // 0 at bottom, 1 at top (matches old logic)
+    } else {
+        float xLocal = (pin.pos.x - barOffset) * invSize;  // 0..1 across the bar width
+        u = xLocal;
+    }
+
+    // Clamp early—outside the bar we discard.
+    if (u < 0.0 || u > 1.0) discard;
 
     float a = snap_to_pixel(prevValue, invSize);
     float b = snap_to_pixel(currValue, invSize);
-
     if (a == b) discard;
 
     float m = aa_band(a, b, u, invSize);
@@ -271,12 +295,9 @@ float4 PSMain(PSIn pin) : SV_Target {
     bool inc = (currValue >= prevValue);
     float4 col = inc ? pcoloractive : pcolorbg;
 
-    if (((uint)flags & 2u) != 0u) {
-        col.rgb = col.rgb;
-    }
-
     return col;
-}"
+}
+"
 
 End Module
 

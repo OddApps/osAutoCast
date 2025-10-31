@@ -87,12 +87,17 @@ Public Class ProgBarGui_AutoCast
 
     Private guiColor_BG As osDraw.Color = osDraw.Color.FromArgb(57, 57, 57)
 
+    Private _cts As CancellationTokenSource
+
     Private progStartPos As osDraw.Point
 
     Private lastProgress As Single = 0.0F
 
     Private osProgScissorState As RasterizerState
     Private osProgViewPort As osViewPort
+
+    Private accumTex As Texture2D
+    Private accumRTV As RenderTargetView
 
     Private _displayProgressText As Boolean = False
     Public Property DisplayProgressText As Boolean
@@ -169,6 +174,7 @@ Public Class ProgBarGui_AutoCast
 
         ProgressEaseFunc = If(pEase, Function(x) x)
 
+        GraphicsHandler.EnsureCreated()
         InitDeviceAndSwapChain()
 
         ProgressStatus = ProgStatus.Idle
@@ -184,17 +190,19 @@ Public Class ProgBarGui_AutoCast
         progSwapChain = Nothing
         frameLatencyEvent = IntPtr.Zero
 
+
+
         Try
             Dim osProgSC1 As SwapChain1 = Nothing
 
             Using osProgFactory2 = progDxgiFactory.QueryInterface(Of SharpDX.DXGI.Factory2)()
                 osProgSC1 = New SwapChain1(osProgFactory2, GraphicsHandler.pDevice,
-                                           Me.Handle, New SwapChainDescription1 With {
-                                               .Width = Math.Max(1, ProgressWidth), .Height = Math.Max(1, ProgressHeight),
-                                               .Format = osFormat.B8G8R8A8_UNorm, .BufferCount = 2, .Usage = Usage.RenderTargetOutput,
-                                               .SampleDescription = New SampleDescription(1, 0), .Scaling = Scaling.Stretch,
-                                               .SwapEffect = SwapEffect.FlipDiscard, .AlphaMode = AlphaMode.Ignore
-                                           })
+                                               Me.Handle, New SwapChainDescription1 With {
+                                                   .Width = Math.Max(1, ProgressWidth), .Height = Math.Max(1, ProgressHeight),
+                                                   .Format = osFormat.B8G8R8A8_UNorm, .BufferCount = 2, .Usage = Usage.RenderTargetOutput,
+                                                   .SampleDescription = New SampleDescription(1, 0), .Scaling = Scaling.None,
+                                                   .SwapEffect = SwapEffect.FlipSequential, .AlphaMode = AlphaMode.Ignore, .Flags = SwapChainFlags.FrameLatencyWaitAbleObject
+                                               })
             End Using
 
             progSwapChain1 = osProgSC1
@@ -203,8 +211,8 @@ Public Class ProgBarGui_AutoCast
             progSwapChain2.MaximumFrameLatency = 1
 
             frameLatencyEvent = progSwapChain2.FrameLatencyWaitableObject
-        Catch
-
+        Catch ex As Exception
+            Debug.WriteLine($"[InitDeviceAndSwapChain] ")
         End Try
 
         If progSwapChain1 Is Nothing Then
@@ -233,15 +241,19 @@ Public Class ProgBarGui_AutoCast
                                    New Rational(60, 1), osFormat.B8G8R8A8_UNorm)
     End Function
 
-    Private Sub PresentDirty()
-        progTarget.EndDraw()
+    Private Sub PresentDirty(Optional isDirty As Boolean = False)
+        ' progTarget.EndDraw()
 
         If progSwapChain1 IsNot Nothing Then
-            Dim pp As New SharpDX.DXGI.PresentParameters With {
-                .DirtyRectangles = GenTrackArray()
-            }
+            If isDirty Then
+                Dim pp As New SharpDX.DXGI.PresentParameters With {
+                    .DirtyRectangles = GenTrackArray()
+                }
 
-            progSwapChain1.Present(1, PresentFlags.None, pp)
+                progSwapChain1.Present(1, PresentFlags.None, pp)
+            Else
+                progSwapChain1.Present(1, PresentFlags.None)
+            End If
         Else
             progSwapChain.Present(1, PresentFlags.None)
         End If
@@ -265,7 +277,7 @@ Public Class ProgBarGui_AutoCast
         progRTV.SafeDispose()
         progTarget.SafeDispose()
 
-        Using backBuffer As Texture2D = progSwapChain.GetBackBuffer(Of Texture2D)(0)
+        Using backBuffer As Texture2D = progSwapChain1.GetBackBuffer(Of Texture2D)(0)
             progRTV = New RenderTargetView(progDevice, backBuffer)
 
             Using dxgiSurface As Surface = backBuffer.QueryInterface(Of Surface)()
@@ -301,6 +313,33 @@ Public Class ProgBarGui_AutoCast
             }
         End Using
 
+        ' --- Accumulation RT: same size/format as backbuffer, persists content across frames ---
+        accumRTV.SafeDispose()
+        accumTex.SafeDispose()
+
+        Dim bbSizeW = CInt(osProgViewPort.Width)
+        Dim bbSizeH = CInt(osProgViewPort.Height)
+
+        Dim accumDesc As New Texture2DDescription With {
+    .Width = bbSizeW,
+    .Height = bbSizeH,
+    .MipLevels = 1,
+    .ArraySize = 1,
+    .Format = osFormat.B8G8R8A8_UNorm,
+    .SampleDescription = New SampleDescription(1, 0),
+    .Usage = ResourceUsage.Default,
+    .BindFlags = BindFlags.RenderTarget Or BindFlags.ShaderResource,
+    .CpuAccessFlags = CpuAccessFlags.None,
+    .OptionFlags = ResourceOptionFlags.None
+}
+
+        accumTex = New Texture2D(progDevice, accumDesc)
+        accumRTV = New RenderTargetView(progDevice, accumTex)
+
+        ' Initialize with your BG color so first frame is defined
+        progContext.ClearRenderTargetView(accumRTV, progColor_BG)
+
+        ClearAccumToBackground()
         progContext.OutputMerger.SetTargets(progRTV)
         progContext.Rasterizer.SetViewport(osProgViewPort)
 
@@ -358,7 +397,45 @@ Public Class ProgBarGui_AutoCast
 
         Dim barH = ProgressTrack.Bottom
         Dim barW = ProgressTrack.GetWidth()
+        If barW <= 0 Then Return
 
+        progContext.Rasterizer.SetViewport(New osViewPort With {
+                                               .X = ProgressTrack.Left, .Y = 0,
+                                               .Width = Math.Max(1, CSng(barW)),
+                                               .Height = Math.Max(1, CSng(barH)),
+                                               .MinDepth = 0.0F, .MaxDepth = 1.0F
+                                           })
+
+        With ProgressTrack
+            progContext.Rasterizer.State = osProgScissorState
+            progContext.Rasterizer.SetScissorRectangle(.Left, .Top, .Right, .Bottom)
+        End With
+
+        With progContext
+            Dim box = .MapSubresource(pCB, 0, MapMode.WriteDiscard,
+                                             Direct3D11.MapFlags.None)
+            Utilities.Write(box.DataPointer,
+                        GetProgCB(tPrev, tCurr))
+
+            .UnmapSubresource(pCB, 0)
+
+            .InputAssembler.PrimitiveTopology = PrimitiveTopology.TriangleList
+
+            .VertexShader.Set(pVS)
+            .PixelShader.Set(pPS)
+            .PixelShader.SetConstantBuffer(0, pCB)
+
+            .Draw(3, 0)
+        End With
+
+        progContext.Rasterizer.State = Nothing
+        lastProgress = tCurr
+    End Sub
+
+    ' Paint the whole bar area as a solid fill using the pixel shader.
+    Private Sub PrepFullProg()
+        Dim barH = ProgressTrack.Bottom
+        Dim barW = ProgressTrack.GetWidth()
         If barW <= 0 Then Return
 
         progContext.Rasterizer.SetViewport(New osViewPort With {
@@ -374,13 +451,13 @@ Public Class ProgBarGui_AutoCast
         End With
 
         Dim box = progContext.MapSubresource(pCB, 0, MapMode.WriteDiscard, Direct3D11.MapFlags.None)
+        Dim a = GetProgCB(0.0F, 1.0F)
 
-        Utilities.Write(box.DataPointer, GetProgCB(tPrev, tCurr))
+        Utilities.Write(box.DataPointer, GetProgCB(0.0F, 1.0F))
         progContext.UnmapSubresource(pCB, 0)
 
         With progContext
-            .OutputMerger.SetTargets(progRTV)
-            .InputAssembler.PrimitiveTopology = SharpDX.Direct3D.PrimitiveTopology.TriangleList
+            .InputAssembler.PrimitiveTopology = PrimitiveTopology.TriangleList
             .VertexShader.Set(pVS)
             .PixelShader.Set(pPS)
             .PixelShader.SetConstantBuffer(0, pCB)
@@ -388,8 +465,9 @@ Public Class ProgBarGui_AutoCast
         End With
 
         progContext.Rasterizer.State = Nothing
-        lastProgress = tCurr
+        lastProgress = 1.0F
     End Sub
+
 
     Public Sub DisplayMsg(txtMsg As String, pType As TriggerType)
         ProgressText = New ProgressMsg(txtMsg, pType,
@@ -405,7 +483,11 @@ Public Class ProgBarGui_AutoCast
         End If
 
         progTarget.EndDraw()
-        progSwapChain.Present(1, PresentFlags.None)
+        If progSwapChain1 IsNot Nothing Then
+            progSwapChain1.Present(1, PresentFlags.None)
+        Else
+            progSwapChain.Present(1, PresentFlags.None)
+        End If
     End Sub
 
     Public Sub PrepareMsg(txtMsg As String, pType As TriggerType)
@@ -423,7 +505,12 @@ Public Class ProgBarGui_AutoCast
         progTarget.FillRectangle(ProgressTrack, progBrush_BG)
 
         progTarget.EndDraw()
-        progSwapChain.Present(1, PresentFlags.None)
+
+        If progSwapChain1 IsNot Nothing Then
+            progSwapChain1.Present(1, PresentFlags.None)
+        Else
+            progSwapChain.Present(1, PresentFlags.None)
+        End If
     End Sub
 
     Private Sub ResizeSwapChain(w As Integer, h As Integer)
@@ -444,7 +531,8 @@ Public Class ProgBarGui_AutoCast
             If progTarget IsNot Nothing Then
                 progTarget.Flush()
             End If
-        Catch
+        Catch ex As Exception
+            Debug.WriteLine($"[ObjectDump] {ex.Source}")
 
         End Try
 
@@ -485,7 +573,8 @@ Public Class ProgBarGui_AutoCast
             Using dxgiDev3 = progDevice.QueryInterface(Of SharpDX.DXGI.Device3)()
                 dxgiDev3.Trim()
             End Using
-        Catch
+        Catch ex As Exception
+            Debug.WriteLine($"[ObjectDump2] {ex.Source}")
 
         End Try
 
@@ -498,10 +587,12 @@ Public Class ProgBarGui_AutoCast
         ProgressClock_StartTime = Stopwatch.GetTimestamp()
     End Sub
 
-    Private Sub ConfigureProgress(pDuration As TimeSpan, objAbortToken As CancellationToken)
+    Private Sub ConfigureProgress(pDuration As TimeSpan, objAbortToken As CancellationTokenSource)
         SetProgressDuration(pDuration)
 
-        objAbortToken.Register(
+        _cts = CancellationTokenSource.CreateLinkedTokenSource(objAbortToken.Token)
+
+        _cts.Token.Register(
             Sub()
                 ProgressStatus = ProgStatus.Fail
             End Sub)
@@ -512,7 +603,7 @@ Public Class ProgBarGui_AutoCast
         ProgressFuse = pDuration.TotalMilliseconds
     End Sub
 
-    Public Async Function BeginProgress(pDuration As TimeSpan, objAbortToken As CancellationToken) As Task(Of Boolean)
+    Public Async Function BeginProgress(pDuration As TimeSpan, objAbortToken As CancellationTokenSource) As Task(Of Boolean)
 
         ConfigureProgress(pDuration, objAbortToken)
         InitiateProgress()
@@ -563,6 +654,7 @@ Public Class ProgBarGui_AutoCast
     Private Function CreateProgColor(objColor As ProgColorObj) As osProgColor
         Select Case objColor
             Case ProgColorObj.Active
+                Dim a = New osProgColor(CalcRGB(82), CalcRGB(96), CalcRGB(117), 1.0F)
                 Return New osProgColor(CalcRGB(82), CalcRGB(96), CalcRGB(117), 1.0F)
             Case ProgColorObj.BackG
                 Return New osProgColor(CalcRGB(57), CalcRGB(57), CalcRGB(57), 1.0F)
@@ -570,6 +662,13 @@ Public Class ProgBarGui_AutoCast
 
         End Select
     End Function
+
+    Private Sub ClearAccumToBackground()
+        If progContext Is Nothing OrElse accumRTV Is Nothing Then Exit Sub
+
+        progContext.OutputMerger.SetTargets(accumRTV)
+        progContext.ClearRenderTargetView(accumRTV, CreateProgColor(ProgColorObj.BackG))
+    End Sub
 
     Private Function ApplyColor(Optional isMsg As Boolean = False) As osProgColor
         Return If(isMsg, New osProgColor(0.0F, 0.0F, 0.0F, 1.0F),
@@ -593,8 +692,17 @@ Public Class ProgBarGui_AutoCast
     Private Sub RenderProgress()
         CalculateProgress()
 
-        progTarget.BeginDraw()
-        DrawDeltaPrecise(CSng(ProgressValue), False)
+        progContext.OutputMerger.SetTargets(accumRTV)
+        DrawDeltaPrecise(CSng(ProgressValue), vertical:=False)
+
+        ' 2) copy accumulation → back-buffer  (source, destination)
+        progContext.OutputMerger.SetTargets(CType(Nothing, RenderTargetView))
+        Using bb As Texture2D = If(progSwapChain1 IsNot Nothing,
+                           progSwapChain1.GetBackBuffer(Of Texture2D)(0),
+                           progSwapChain.GetBackBuffer(Of Texture2D)(0))
+            progContext.CopyResource(accumTex, bb)   ' ← correct (src: accumTex → dst: backbuffer)
+        End Using
+
     End Sub
 
     Private Function VerifyProgLimits(progVal As Double) As Single
@@ -608,10 +716,9 @@ Public Class ProgBarGui_AutoCast
     End Function
 
     Private Async Function StartProgression(isSnapped As Boolean) As Task(Of ProgStatus)
-        progContext.ClearRenderTargetView(progRTV, progColor_BG)
-        progSwapChain.Present(1, PresentFlags.None)
 
         ResetProgressTimer()
+        ClearAccumToBackground()
 
         Do
             If StopProgress() Then Exit Do
@@ -624,14 +731,9 @@ Public Class ProgBarGui_AutoCast
                 Await Task.Yield()
             End If
 
+
             RenderProgress()
-
-            'If DisplayProgressText Then
-            '    progTarget.DrawText(ProgressText.MsgText, ProgressText.Format,
-            '                    ProgressText.Location, progBrush_Text, DrawTextOptions.Clip)
-            'End If
-
-            PresentDirty()
+            PresentDirty(True)
 
             If ProgressValue >= 1.0F Then
                 ProgressStatus = ProgStatus.Success
@@ -643,7 +745,7 @@ Public Class ProgBarGui_AutoCast
     End Function
 
     Private Function StopProgress() As Boolean
-        If Not ProgressStatus = ProgStatus.Running Then
+        If Not ProgressStatus = ProgStatus.Running OrElse _cts.IsCancellationRequested Then
             Return True
         Else
             Return False
@@ -665,22 +767,13 @@ Public Class ProgBarGui_AutoCast
     End Sub
 
     Public Sub DrawBG()
-
         With progTarget
             .BeginDraw()
-            .Clear(New osProgColor(0, 0, 0, 0))
-
-            .FillRectangle(ProgressTrack, progBrush_BG)
-
-            If DisplayProgressText Then
-                progTarget.DrawText(ProgressText.MsgText, ProgressText.Format,
-                                ProgressText.Location, progBrush_Text, DrawTextOptions.Clip)
-            End If
-
+            .Clear(progColor_BG)
             .EndDraw()
         End With
 
-        'progSwapChain.Present(1, PresentFlags.None)
+        progSwapChain1.Present(1, PresentFlags.None)
     End Sub
 
     Private Function ComputeTrackRect() As osRect.RawRectangleF
@@ -699,13 +792,16 @@ Public Class ProgBarGui_AutoCast
         Return cVal / 255.0F
     End Function
 
-    Private Function GetProgCB(tPrev As Single, tCurr As Single) As ProgBarCB
+    Private Function GetProgCB(valPrev As Single, valCurrent As Single) As ProgBarCB
         Return New ProgBarCB With {
-            .prevValue = tPrev, .currValue = tCurr,
-            .invSize = ProgWidthInv,
+            .prevValue = valPrev,
+            .currValue = valCurrent,
+            .invSize = 1.0F / (ProgressTrack.Right - ProgressTrack.Left),
             .flags = 0.0F,
-            .pcoloractive = CreateProgColor(ProgColorObj.Active),
-            .pcolorbg = CreateProgColor(ProgColorObj.BackG)
+            .pcoloractive = progColor_Active,
+            .pcolorbg = progColor_BG,
+            .barOffset = ProgressTrack.Left,
+            .pad0 = 0.0F, .pad1 = 0.0F, .pad2 = 0.0F
         }
     End Function
 
@@ -717,13 +813,32 @@ Public Class ProgBarGui_AutoCast
               '  DisplayMaxVal()
             Case ProgEvent.DispMsg
                 DisplayMsg(doEvent.evDispMsg, doEvent.evTrigger)
-            Case ProgEvent.DispMsg_AC
-                DisplayMsg(doEvent.evDispMsg, doEvent.evTrigger)
             Case ProgEvent.ClrMsg
                 ClearMsg()
             Case ProgEvent.PrepMsg
                 ClearMsg()
+            Case ProgEvent.ShowFullMsg
+                DispProgressFull()
+                DisplayMsg(doEvent.evDispMsg, doEvent.evTrigger)
         End Select
+    End Sub
+
+    Private Sub DispProgressFull()
+        With progContext
+            .OutputMerger.SetTargets(accumRTV)
+
+            PrepFullProg()
+
+            .OutputMerger.SetTargets(CType(Nothing, RenderTargetView))
+            Using bb As Texture2D = If(progSwapChain1 IsNot Nothing,
+                progSwapChain1.GetBackBuffer(Of Texture2D)(0),
+                progSwapChain.GetBackBuffer(Of Texture2D)(0))
+
+                .CopyResource(accumTex, bb)
+            End Using
+        End With
+
+        '   PresentDirty(True)
     End Sub
 
     Public Sub SetProgColor(pColor As osColor.Color, Optional pUpdate As Boolean = False)
@@ -741,13 +856,18 @@ Public Class ProgBarGui_AutoCast
                 .EndDraw()
             End With
 
-            progSwapChain.Present(1, PresentFlags.None)
+            If progSwapChain1 IsNot Nothing Then
+                progSwapChain1.Present(1, PresentFlags.None)
+            Else
+                progSwapChain.Present(1, PresentFlags.None)
+            End If
         End If
     End Sub
 
     Private Async Function AutoCast_Prep() As Task
         DisplayMsg("Release Shift", TriggerType.AutoCast)
 
+        Await Task.Delay(10)
         Await CoreDataLib.InputMonSvc.AnticipateInput(InputAction.AC_Start)
 
         CoreDataLib.ProcessProgressEvent(ProgMode.AutoCast, ProgEvent.ClrMsg)
@@ -786,7 +906,7 @@ Public Class ProgBarGui_AutoCast
             .Top = locProg.Y
 
             .Show()
-            ' .DrawBG()
+            .DrawBG()
         End With
     End Sub
 
@@ -798,7 +918,8 @@ Public Class ProgBarGui_AutoCast
         Await AutoCast_Prep()
 
         Try
-            Await BeginProgress(osFuncLib_Progress.ProgTimeSpan, CoreDataLib.objCancelState)
+
+            Await BeginProgress(osFuncLib_Progress.ProgTimeSpan, CoreDataLib.chkActionAbort)
 
             Return AutoCast_HandleResult(AutoCastComplete)
         Finally
@@ -834,11 +955,11 @@ Public Class ProgBarGui_AutoCast
     Private Function AutoCast_HandleResult(acComplete As Boolean) As ProgResult
         If acComplete Then
             osFuncLib_Progress.UpdateProgStatus(TriggerAction.AutoCast,
-                             ProgAction.Complete, True)
+                             ProgAction.Complete)
             SetProgResult(acComplete, retProgResult)
         Else
             osFuncLib_Progress.UpdateProgStatus(TriggerAction.AutoCast,
-                             ProgAction.Abort, True)
+                             ProgAction.Abort)
             SetProgResult(acComplete, retProgResult)
         End If
 
@@ -855,26 +976,10 @@ Public Class ProgBarGui_AutoCast
         TopMost = True
     End Sub
 
-    'Protected Overrides Sub OnResize(e As EventArgs)
-    '    MyBase.OnResize(e)
-
-    '    If progSwapChain IsNot Nothing AndAlso ProgressWidth > 0 AndAlso ProgressHeight > 0 Then
-    '        ResizeSwapChain(ProgressWidth, ProgressHeight)
-    '        DrawBG()
-    '    End If
-    'End Sub
-
     Protected Overrides Sub OnFormClosed(e As FormClosedEventArgs)
         MyBase.OnFormClosed(e)
         ObjectDump(True)
     End Sub
-
-    'Protected Overrides Sub OnHandleCreated(e As EventArgs)
-    '    MyBase.OnHandleCreated(e)
-    '    InitDeviceAndSwapChain()
-
-    '    ProgressStatus = ProgStatus.Idle
-    'End Sub
 
     Protected Overrides ReadOnly Property CreateParams As CreateParams
         Get

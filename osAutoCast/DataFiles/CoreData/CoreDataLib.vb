@@ -247,11 +247,9 @@ Public NotInheritable Class CoreDataLib
             TriggerType.AutoCast, TriggerType.AutoPass)
 
         If pMode = ProgMode.AutoCast Then
-            Try
+            If pEventData.Length > 0 Then
                 strEventData = pEventData(0).ToString()
-            Catch ex As Exception
-
-            End Try
+            End If
 
             With PrepareProgEvent(osHandler_GUI.osGui_AutoCastProgress)
                 .evDispatch.Invoke(
@@ -263,11 +261,9 @@ Public NotInheritable Class CoreDataLib
         Else
             Dim osProgElement = osHandler_GUI.osGui_AutoPass.OddProgBar_AP
 
-            Try
+            If pEventData.Length > 0 Then
                 strEventData = pEventData(0).ToString()
-            Catch ex As Exception
-
-            End Try
+            End If
 
             With PrepareProgEvent(osProgElement)
                 .evDispatch.Invoke(

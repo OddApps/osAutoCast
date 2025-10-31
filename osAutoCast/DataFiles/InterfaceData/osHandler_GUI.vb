@@ -43,7 +43,7 @@ Public NotInheritable Class osHandler_GUI
             Case TriggerAction.AutoCast
                 With CoreDataLib.GetProgSizeReport(TriggerType.AutoCast)
                     _autoCastProgress = New ProgBarGui_AutoCast(.pWidth, .pHeight,
-                                                                AddressOf EaseLinearThenOutQuad)
+                                                                AddressOf EaseProgress)
                 End With
 
                 Dim guiLoad = _autoCastProgress.Handle

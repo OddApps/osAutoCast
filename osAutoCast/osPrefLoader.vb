@@ -61,6 +61,8 @@ Public Class osPrefStore
                 Dim prefStoreData As PrefStoreData = GenPrefObj(pBind)
                 CoreDataLib.osPrefIndex.SavePref(prefStoreData.pType, prefStoreData.pName, Convert.ToString(prefStoreData.pVal))
             Next
+        Catch ex As Exception
+            Dim a = 1
         Finally
             ' No explicit enumerator disposal needed in VB.NET For Each
         End Try
@@ -380,9 +382,7 @@ Class osPrefLoader
     End Function
 
     Private Function FormatPrefType(strPrefLine As String) As String
-        Try
-            Return strPrefLine.Substring(1, strPrefLine.IndexOf("-"c) - 1)
-        Catch ex As Exception
+        If isPrefType(strPrefLine, True) Then
             Dim dashIdx = strPrefLine.IndexOf("-"c)
             Dim pipeIdx = strPrefLine.IndexOf("|"c)
 
@@ -391,7 +391,10 @@ Class osPrefLoader
             End If
 
             Return strPrefLine.Substring(dashIdx + 1, pipeIdx - dashIdx - 1)
-        End Try
+        Else
+            Return strPrefLine.Substring(1, strPrefLine.IndexOf("-"c) - 1)
+        End If
+
     End Function
 
     Private Function FormatPrefType(strPrefLine As String, endHeader As Boolean) As String

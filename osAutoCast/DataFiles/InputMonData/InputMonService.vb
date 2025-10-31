@@ -34,7 +34,7 @@ Public Class InputMonitorService
     Private Shared TriggerCmd As New Subject(Of TriggerAction)()
     Private Shared _MonitorState As MonitorStatus
 
-    Private Shared InputMon_Timer As TimeSpan = TimeSpan.FromMilliseconds(200)
+    Private Shared InputMon_Timer As TimeSpan = TimeSpan.FromMilliseconds(100)
 
     Private Shared ReadOnly TriggerBindings As (TriggerCondition As Func(Of Boolean),
         TriggerHandler As TriggerAction)() = {
@@ -166,30 +166,62 @@ Public Class InputMonitorService
     End Function
 
     Private Shared Async Function InputDetection(inputType As TriggerType, Optional initAction As Boolean = False) As Task(Of Boolean)
-        Dim chkInput As Boolean
 
-        Select Case inputType
-            Case TriggerType.AutoCast
-                While CoreDataLib.InputMonSvc.DetectTrigger(SelAction(initAction))
-                    Await Task.Delay(10)
-                End While
-                chkInput = True
-            Case TriggerType.AutoPass
-                If initAction Then
-                    While CoreDataLib.InputMonSvc.DetectTrigger(DetectOpts.MonitorMouseR)
-                        Await Task.Delay(10)
-                    End While
-                    chkInput = True
-                Else
-                    While CoreDataLib.InputMonSvc.DetectTrigger(DetectOpts.MonitorShift)
-                        If isAutoPassCancelled() Then chkInput = False
-                        Await Task.Delay(10)
-                    End While
-                    chkInput = True
-                End If
-        End Select
+        Dim chkInput As Func(Of Task(Of Boolean)) =
+            Async Function() As Task(Of Boolean)
+                Select Case inputType
+                    Case TriggerType.AutoCast
+                        While CoreDataLib.InputMonSvc.DetectTrigger(SelAction(initAction))
+                            Await Task.Delay(10)
+                        End While
+                        Return True
 
-        Return chkInput
+                    Case TriggerType.AutoPass
+                        If initAction Then
+                            While CoreDataLib.InputMonSvc.DetectTrigger(DetectOpts.MonitorMouseR)
+                                Await Task.Delay(10)
+                            End While
+                            Return True
+                        Else
+                            While CoreDataLib.InputMonSvc.DetectTrigger(DetectOpts.MonitorShift)
+                                If isAutoPassCancelled() Then Return False
+                                Await Task.Delay(10)
+                            End While
+                            Return True
+                        End If
+
+                    Case Else
+                        Return False
+                End Select
+            End Function
+
+        Return Await chkInput()
+
+
+        'Dim chkInput As Boolean
+
+        'Select Case inputType
+        '    Case TriggerType.AutoCast
+        '        While CoreDataLib.InputMonSvc.DetectTrigger(SelAction(initAction))
+        '            Await Task.Delay(10)
+        '        End While
+        '        chkInput = True
+        '    Case TriggerType.AutoPass
+        '        If initAction Then
+        '            While CoreDataLib.InputMonSvc.DetectTrigger(DetectOpts.MonitorMouseR)
+        '                Await Task.Delay(10)
+        '            End While
+        '            chkInput = True
+        '        Else
+        '            While CoreDataLib.InputMonSvc.DetectTrigger(DetectOpts.MonitorShift)
+        '                If isAutoPassCancelled() Then chkInput = False
+        '                Await Task.Delay(10)
+        '            End While
+        '            chkInput = True
+        '        End If
+        'End Select
+
+        'Return chkInput
     End Function
 
     Private Shared Sub ActivateTriggerMonitor()

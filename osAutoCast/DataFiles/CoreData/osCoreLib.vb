@@ -25,6 +25,7 @@ Imports osColors = System.Windows.Media
 Imports osThreads = System.Threading
 Imports osControls = System.Windows.Controls
 Imports osUtilities = SharpDX.Utilities
+Imports osProgColor = SharpDX.Mathematics.Interop.RawColor4
 
 #Disable Warning IDE0060 ' Remove unused parameter
 #Disable Warning IDE1006 ' Remove unused parameter
@@ -310,6 +311,19 @@ Public NotInheritable Class osFuncLib_Progress
         Return If(pType = TriggerType.AutoCast, ProgColorIdx_AutoCast(pStatus), ProgColorIdx_AutoPass(pStatus))
     End Function
 
+    Public Shared Function RetProgColor(pStatus As ProgStatus, pType As TriggerType) As osProgColor
+        With FetchProgColor(pStatus, pType)
+            Return New osProgColor(CalcRGB(.R),
+                                   CalcRGB(.G),
+                                   CalcRGB(.B),
+                                   1.0F)
+        End With
+    End Function
+
+    Private Shared Function CalcRGB(cVal As Byte) As Single
+        Return cVal / 255.0F
+    End Function
+
     Public Shared Function CalcPosData(ptPos As Point) As Point
         Return New Point(ptPos.X - CInt(Math.Round(GetProgSize(TriggerType.AutoCast) / 2.0)),
                          ptPos.Y - GetProgSize(TriggerType.AutoCast, True) - 22)
@@ -439,21 +453,20 @@ Public NotInheritable Class osFuncLib_AutoCast
                 procTask = Application.Current.Dispatcher.InvokeAsync(
                     Async Function()
                         If isRTC() Then
-                            ProcessProgressEvent(ProgMode.AutoCast, DispMsg, "Release To Cast")
+                            ProcessProgressEvent(ProgMode.AutoCast, ShowFullMsg, "Release To Cast")
                             Await InputMonSvc.AnticipateInput(InputAction.AC_RTC)
 
                             Await Task.Delay(100)
                         End If
 
-                        ProcessProgressEvent(ProgMode.AutoCast, DispMsg, "Casting")
+                        ProcessProgressEvent(ProgMode.AutoCast, ShowFullMsg, "Casting")
 
                         EngageAutoCast()
                     End Function)
             Case ProgResult.Cancelled
                 procTask = PrepDispatcher().InvokeAsync(
                     Async Function()
-                        ProcessProgressEvent(ProgMode.AutoCast, MaxFill)
-                        ProcessProgressEvent(ProgMode.AutoCast, DispMsg, "Cancelled")
+                        ProcessProgressEvent(ProgMode.AutoCast, ShowFullMsg, "Cancelled")
 
                         Await Task.Delay(10)
                     End Function)
@@ -1106,6 +1119,8 @@ End Module
 
 Module osFuncLib_UI
 
+    Private Const progEaseThreshold As Double = 0.25
+
     Public Function PrepDispatcher(Optional IsAutoPass As Boolean = False) As Dispatcher
         Return If(IsAutoPass, osHandler_GUI.osGui_AutoPass.Dispatcher,
             Application.Current.Dispatcher)
@@ -1163,185 +1178,29 @@ Module osFuncLib_UI
         ctrlPanel.Invalidate()
     End Sub
 
-    Public Function EaseCubicBezier(x As Double) As Double
-        If x <= 0.0 Then Return 0.0
-        If x >= 1.0 Then Return 1.0
+    Public Function EaseProgress(progVal As Double) As Single
+        Dim pVal = Math.Max(0.0, Math.Min(1.0, progVal))
 
-        ' Bezier basis (p0=(0,0), p3=(1,1))
-        Dim ax As Double = 3 * eVal_x1
-        Dim bx As Double = 3 * (eVal_x2 - eVal_x1) - ax
-        Dim cx As Double = 1 - ax - bx
+        If pVal < progEaseThreshold Then
+            Return pVal
+        End If
 
-        Dim ay As Double = 3 * eVal_y1
-        Dim by_ As Double = 3 * (eVal_y2 - eVal_y1) - ay
-        Dim cy As Double = 1 - ay - by_
+        Dim pThreshold As Double = (pVal - progEaseThreshold) / (1.0 - progEaseThreshold)
+        Dim a = 1.0 - Math.Pow(1.0 - pThreshold, 3)
 
-        ' Evaluate x(t), y(t), x'(t)
-        Dim xOfT As Func(Of Double, Double) =
-        Function(t)
-            Return ((cx * t + bx) * t + ax) * t
-        End Function
-        Dim dxOfT As Func(Of Double, Double) =
-        Function(t) (3 * cx * t + 2 * bx) * t + ax
-        Dim yOfT As Func(Of Double, Double) =
-        Function(t) ((cy * t + by_) * t + ay) * t
-
-        ' 2) Invert x(t)=x → find t via Newton, fallback to bisection
-        Dim tt As Double = x ' good initial guess
-        For i = 0 To 5
-            Dim xt = xOfT(tt) - x
-            Dim dxt = dxOfT(tt)
-            If Math.Abs(dxt) < 0.000001 Then Exit For
-            tt -= xt / dxt
-            If tt < 0 Then tt = 0
-            If tt > 1 Then tt = 1
-        Next
-
-        ' If Newton didn’t converge well, refine with bisection
-        Dim lo As Double = 0.0, hi As Double = 1.0
-        For i = 0 To 12
-            Dim xt = xOfT(tt)
-            If Math.Abs(xt - x) < 0.000001 Then Exit For
-            If xt < x Then
-                lo = tt
-            Else
-                hi = tt
-            End If
-            tt = 0.5 * (lo + hi)
-        Next
-
-        ' 3) Return y(t)
-        Return yOfT(tt)
+        Return progEaseThreshold + a * (1.0 - progEaseThreshold)
     End Function
 
-
-    Public Function EaseInExpo(t As Double) As Double
-        If t <= 0.0 Then Return 0.0
-        If t >= 1.0 Then Return 1.0
-        Return Math.Pow(2.0, 10.0 * (t - 1.0))
+    Public Function CalcEase(eVal As Double) As Double
+        Dim pThreshold As Double = (eVal - progEaseThreshold) / (1.0 - progEaseThreshold)
+        Return 1.0 - Math.Pow(1.0 - pThreshold, 3)
     End Function
-
     Public Function EaseInOutExpo(pDuration As Double) As Double
         If pDuration = 0.0 Then Return 0.0
         If pDuration = 1.0 Then Return 1.0
         Return If(pDuration < 0.5, Math.Pow(2, 20 * pDuration - 10) / 2,
             (2 - Math.Pow(2, -20 * pDuration + 10)) / 2)
     End Function
-
-    Public Function EaseProgress(pDuration As Double) As Double
-        If pDuration <= 0 Then Return 0
-        If pDuration >= 1 Then Return 1
-
-        Dim valDuration As Double = pDuration
-
-        For i As Integer = 0 To 4
-            Dim x As Double = CalcEase(valDuration, 0.0, eVal_x1, eVal_x2, 1.0)
-            Dim dx As Double = CalcEaseSupport(valDuration, 0.0, eVal_x1, eVal_x2, 1.0)
-
-            If dx = 0 Then Exit For
-
-            valDuration -= (x - pDuration) / dx
-            valDuration = Math.Max(0, Math.Min(1, valDuration))
-        Next
-
-        Return CalcEase(valDuration, 0.0, eVal_y1, eVal_y2, 1.0)
-    End Function
-
-    Public Function EaseInOutCirc(x As Double) As Double
-        If x < 0.5 Then
-            Return (1.0 - Math.Sqrt(1.0 - Math.Pow(2.0 * x, 2))) / 2.0
-        Else
-            Return (Math.Sqrt(1.0 - Math.Pow(-2.0 * x + 2.0, 2)) + 1.0) / 2.0
-        End If
-    End Function
-
-    Public Function EaseCustom(t As Double) As Double
-        ' 1) Clamp input
-        t = Math.Max(0.0, Math.Min(1.0, t))
-
-        ' 2) First 10% linear
-        Const threshold As Double = 0.15
-        If t < threshold Then
-            Return t
-        End If
-
-        ' 3) Map the rest [0.1…1] → [0…1]
-        Dim u As Double = (t - threshold) / (1.0 - threshold)
-
-        ' 4) Sine ease-in/out: slow start & slow end
-        '    y_sine = -(cos(π·u) - 1) / 2
-        Dim ySine As Double = -(Math.Cos(Math.PI * u) - 1) / 2
-
-        ' 5) Scale back into [0.1…1]
-        Return threshold + ySine * (1.0 - threshold)
-    End Function
-
-    Public Function EaseLinearThenExpoIn(valProg As Double) As Double
-
-        Dim threshold As Double = 0.15
-        Dim k As Double = 9
-
-        valProg = Math.Max(0.0, Math.Min(1.0, valProg))
-
-        If valProg < threshold Then
-            Return valProg
-        End If
-
-        Dim u As Double = (valProg - threshold) / (1.0 - threshold)
-        Dim yExp As Double
-
-        If u <= 0.0 Then
-            yExp = 0.0
-        ElseIf u >= 1.0 Then
-            yExp = 1.0
-        Else
-            yExp = Math.Pow(2, k * (u - 1.0))
-        End If
-
-        Return threshold + yExp * (1.0 - threshold)
-    End Function
-
-    Public Function EaseLinearThenOutQuad(t As Double) As Double
-        t = Math.Max(0.0, Math.Min(1.0, t))
-
-        ' 2) Threshold for switching from linear to cubic
-        Const threshold As Double = 0.15
-
-        ' 3) If we're in the first 15%, just return t (linear)
-        If t < threshold Then
-            Return t
-        End If
-
-        ' 4) Remap the remaining [threshold…1] to [0…1]
-        Dim u As Double = (t - threshold) / (1.0 - threshold)
-
-        ' 5) Ease-Out-Cubic: y = 1 − (1−u)³
-        Dim yCubic As Double = 1.0 - Math.Pow(1.0 - u, 3)
-
-        ' 6) Scale that back into the [threshold…1] portion of the output
-        Return threshold + yCubic * (1.0 - threshold)
-    End Function
-
-    Private Function ConvDur(pDuration As Double, cntEval As Integer) As Double
-        Return (1 - pDuration) * cntEval
-    End Function
-
-    Private Function CalcEase(t As Double, p0 As Double, p1 As Double, p2 As Double, p3 As Double) As Double
-        Dim mt As Double = 1 - t
-        Return mt * mt * mt * p0 +
-               3 * mt * mt * t * p1 +
-               3 * mt * t * t * p2 +
-               t * t * t * p3
-    End Function
-
-    Private Function CalcEaseSupport(t As Double, p0 As Double, p1 As Double, p2 As Double, p3 As Double) As Double
-        Dim mt As Double = 1 - t
-        Return 3 * mt * mt * (p1 - p0) +
-               6 * mt * t * (p2 - p1) +
-               3 * t * t * (p3 - p2)
-    End Function
-
-
 End Module
 
 Public Class isEnabledConverter

@@ -391,8 +391,6 @@ Public Class OddLib_ProgressBar
                 DisplayMaxVal()
             Case ProgEvent.DispMsg
                 DisplayMsg(doEvent.evDispMsg, doEvent.evTrigger)
-            Case ProgEvent.DispMsg_AC
-                DisplayMsg(doEvent.evDispMsg, doEvent.evTrigger)
             Case ProgEvent.ClrMsg
                 ClearMsg(doEvent.evTrigger)
         End Select
