@@ -35,6 +35,8 @@ Public NotInheritable Class CoreDataLib
     Public Shared chkActionAbort As CancellationTokenSource
     Public Shared objCancelState As CancellationToken
 
+    Private Shared objCancelTask As Task
+
     Public Shared InputMonSvc As InputMonitorService = Nothing
 
     Private Shared ReadOnly TriggerHandlers As (HandleAction As TriggerAction, HandleEvent As Func(Of Task))() = {
@@ -113,24 +115,10 @@ Public NotInheritable Class CoreDataLib
         End If
     End Function
 
-
-    Public Shared Function ChkExecPermission(tType As TriggerAction) As Boolean
-
-        If Not IsDebugBuild() Then
-            Return DetectGameUI.FocusMTGA()
-        Else
-            Return Not DetectGameUI.FocusMTGA()
-        End If
-    End Function
-
     Public Shared Function IsDebugBuild() As Boolean
         Dim customAttribute As DebuggableAttribute =
                 CType(Attribute.GetCustomAttribute(Assembly.GetExecutingAssembly(), GetType(DebuggableAttribute)), DebuggableAttribute)
         Return customAttribute IsNot Nothing AndAlso customAttribute.IsJITTrackingEnabled
-    End Function
-
-    Public Shared Function IsDebugBuild(isDebug As Boolean) As Boolean
-        Return True
     End Function
 
     Public Shared Function SetGameFocus() As Boolean
@@ -138,12 +126,9 @@ Public NotInheritable Class CoreDataLib
     End Function
 
     Private Shared Sub ResolveAction()
+        objCancelTask = Nothing
         If Not osFuncLib_InputScan.isActionComplete Then Return
         osFuncLib_InputScan.isActionComplete = False
-    End Sub
-
-    Private Shared Sub ResetStatus()
-        InputMonSvc.SelectState(MonitorStatus.Watching)
     End Sub
 
     Public Shared Sub PrepUtilityTrigger(pType As TriggerType)
@@ -187,10 +172,6 @@ Public NotInheritable Class CoreDataLib
         Return Not valType = TriggerValidation.InvalidTrigger
     End Function
 
-    Private Shared Function TriggerInvalidated(valType As TriggerValidation) As Boolean
-        Return valType = TriggerValidation.InvalidTrigger
-    End Function
-
     Public Shared Function ValidateTrigger(pType As TriggerAction) As TriggerValidation
         If isUtilityTrigger(pType) Then Return TriggerValidation.ValidUtility
 
@@ -206,12 +187,19 @@ Public NotInheritable Class CoreDataLib
 
     Private Shared Function StartCancelMonitor(cts As CancellationTokenSource,
                                                   Optional chkType As TriggerType = TriggerType.AutoCast) As Task
-        Return Task.Run(Sub() MonitorForCancel(cts, chkType))
+        Return Task.Run(Sub()
+                            MonitorForCancel(cts, chkType)
+                        End Sub)
     End Function
 
     Private Shared Sub StartCancelWatcher(Optional chkType As TriggerType = TriggerType.AutoCast)
         SetCT()
-        StartCancelMonitor(chkActionAbort, chkType)
+        objCancelTask = StartCancelMonitor(chkActionAbort, chkType)
+    End Sub
+
+    Private Shared Sub Prep(Optional chkType As TriggerType = TriggerType.AutoCast)
+        SetCT()
+        objCancelTask = StartCancelMonitor(chkActionAbort, chkType)
     End Sub
 
     Private Shared Async Sub MonitorForCancel(cts As CancellationTokenSource,
@@ -219,9 +207,7 @@ Public NotInheritable Class CoreDataLib
         While Not cts.Token.IsCancellationRequested
             If pType = TriggerType.AutoCast Then
                 If Not InputMonSvc.DetectTrigger(DetectOpts.MonitorMouse) Then
-                    Await Application.Current.Dispatcher.InvokeAsync(Sub()
-                                                                         cts.Cancel()
-                                                                     End Sub)
+                    cts.Cancel()
                     Exit While
                 End If
             ElseIf pType = TriggerType.AutoPass AndAlso
@@ -236,6 +222,13 @@ Public NotInheritable Class CoreDataLib
     End Sub
 
     Private Shared Sub SetCT()
+        chkActionAbort = New CancellationTokenSource()
+        objCancelState = chkActionAbort.Token
+    End Sub
+
+    Private Shared Sub ResetCancelWatch()
+        objCancelState.Dispose()
+
         chkActionAbort = New CancellationTokenSource()
         objCancelState = chkActionAbort.Token
     End Sub
@@ -273,36 +266,6 @@ Public NotInheritable Class CoreDataLib
                     End Sub)
             End With
         End If
-    End Sub
-
-    Public Shared Sub ProcessProgressEvent2(pMode As ProgMode, pEvent As ProgEvent, ParamArray pEventData() As Object)
-        Dim objProgEventType As TriggerType = Nothing
-
-        Select Case pMode
-            Case ProgMode.AutoCast
-                objProgEventType = TriggerType.AutoCast
-
-            Case ProgMode.AutoPass
-                objProgEventType = TriggerType.AutoPass
-
-                Dim osProgElement As OddLib_ProgressBar = osHandler_GUI.osGui_AutoPass.OddProgBar_AP
-
-                Dim strEventData As String = ""
-
-                Try
-                    strEventData = pEventData(0).ToString()
-                Catch ex As Exception
-
-                End Try
-
-                With PrepareProgEvent(osProgElement)
-                    .evDispatch.Invoke(
-                        Sub()
-                            .evAction(GenerateProgEventData(pEvent, objProgEventType,
-                                                            strEventData))
-                        End Sub)
-                End With
-        End Select
     End Sub
 
     Private Shared Function GenerateProgEventData(pEvent As ProgEvent,

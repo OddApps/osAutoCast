@@ -217,9 +217,6 @@
     </Compile>
     <Compile Include="DataFiles\ModelData\EasingModel.vb" />
     <Compile Include="DataFiles\ModelData\OddLibProgressBar.vb" />
-    <Compile Include="DataFiles\ModelData\ProgressModel.vb">
-      <SubType>Component</SubType>
-    </Compile>
     <Compile Include="DataFiles\TypeData\DataTypeLib.vb" />
   </ItemGroup>
   <ItemGroup>

@@ -249,8 +249,6 @@ Public Class InputMonitorService
                     SuspendMonitoring()
 
                     Try
-                        'TriggerInvoker.SetDispatcher()
-
                         Dim objExecTrigger = Application.Current.Dispatcher.
                             InvokeAsync(Async Function()
                                             Await CoreDataLib.ExecuteTrigger(objInputAction)

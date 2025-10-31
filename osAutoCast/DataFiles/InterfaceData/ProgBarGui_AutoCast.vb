@@ -9,6 +9,7 @@ Imports System.Threading
 Imports System.Windows.Forms
 Imports AlphaMode = SharpDX.Direct2D1.AlphaMode
 Imports osFormat = SharpDX.DXGI.Format
+Imports osPresentOpts = SharpDX.DXGI.PresentParameters
 Imports osViewPort = SharpDX.Mathematics.Interop.RawViewportF
 Imports osProgColor = SharpDX.Mathematics.Interop.RawColor4
 Imports D2DPixelFormat = SharpDX.Direct2D1.PixelFormat
@@ -87,7 +88,8 @@ Public Class ProgBarGui_AutoCast
 
     Private guiColor_BG As osDraw.Color = osDraw.Color.FromArgb(57, 57, 57)
 
-    Private _cts As CancellationTokenSource
+    Private _extToken As Threading.CancellationToken
+    Private _extReg As Threading.CancellationTokenRegistration
 
     Private progStartPos As osDraw.Point
 
@@ -190,8 +192,6 @@ Public Class ProgBarGui_AutoCast
         progSwapChain = Nothing
         frameLatencyEvent = IntPtr.Zero
 
-
-
         Try
             Dim osProgSC1 As SwapChain1 = Nothing
 
@@ -227,7 +227,6 @@ Public Class ProgBarGui_AutoCast
 
         CreateTargetResources()
         CreateShadersAndPipeline()
-        'DrawBG()
 
         If progSwapChain1 IsNot Nothing Then
             progSwapChain1.Present(1, PresentFlags.None)
@@ -242,15 +241,13 @@ Public Class ProgBarGui_AutoCast
     End Function
 
     Private Sub PresentDirty(Optional isDirty As Boolean = False)
-        ' progTarget.EndDraw()
-
         If progSwapChain1 IsNot Nothing Then
             If isDirty Then
-                Dim pp As New SharpDX.DXGI.PresentParameters With {
+                Dim objPresOpts As New osPresentOpts With {
                     .DirtyRectangles = GenTrackArray()
                 }
 
-                progSwapChain1.Present(1, PresentFlags.None, pp)
+                progSwapChain1.Present(1, PresentFlags.None, objPresOpts)
             Else
                 progSwapChain1.Present(1, PresentFlags.None)
             End If
@@ -300,7 +297,7 @@ Public Class ProgBarGui_AutoCast
                     .TextAntialiasMode = If(dpiX = 96.0F AndAlso dpiY = 96.0F,
                                             Direct2D1.TextAntialiasMode.Cleartype,
                                             Direct2D1.TextAntialiasMode.Grayscale)
-            }
+                }
             End Using
 
             Dim bbDesc = backBuffer.Description
@@ -313,7 +310,6 @@ Public Class ProgBarGui_AutoCast
             }
         End Using
 
-        ' --- Accumulation RT: same size/format as backbuffer, persists content across frames ---
         accumRTV.SafeDispose()
         accumTex.SafeDispose()
 
@@ -321,25 +317,25 @@ Public Class ProgBarGui_AutoCast
         Dim bbSizeH = CInt(osProgViewPort.Height)
 
         Dim accumDesc As New Texture2DDescription With {
-    .Width = bbSizeW,
-    .Height = bbSizeH,
-    .MipLevels = 1,
-    .ArraySize = 1,
-    .Format = osFormat.B8G8R8A8_UNorm,
-    .SampleDescription = New SampleDescription(1, 0),
-    .Usage = ResourceUsage.Default,
-    .BindFlags = BindFlags.RenderTarget Or BindFlags.ShaderResource,
-    .CpuAccessFlags = CpuAccessFlags.None,
-    .OptionFlags = ResourceOptionFlags.None
-}
+            .Width = bbSizeW,
+            .Height = bbSizeH,
+            .MipLevels = 1,
+            .ArraySize = 1,
+            .Format = osFormat.B8G8R8A8_UNorm,
+            .SampleDescription = New SampleDescription(1, 0),
+            .Usage = ResourceUsage.Default,
+            .BindFlags = BindFlags.RenderTarget Or BindFlags.ShaderResource,
+            .CpuAccessFlags = CpuAccessFlags.None,
+            .OptionFlags = ResourceOptionFlags.None
+        }
 
         accumTex = New Texture2D(progDevice, accumDesc)
         accumRTV = New RenderTargetView(progDevice, accumTex)
 
-        ' Initialize with your BG color so first frame is defined
         progContext.ClearRenderTargetView(accumRTV, progColor_BG)
 
         ClearAccumToBackground()
+
         progContext.OutputMerger.SetTargets(progRTV)
         progContext.Rasterizer.SetViewport(osProgViewPort)
 
@@ -374,6 +370,7 @@ Public Class ProgBarGui_AutoCast
 
         With objProgContext
             .InputAssembler.PrimitiveTopology = PrimitiveTopology.TriangleList
+
             .VertexShader.Set(pVS)
             .PixelShader.Set(pPS)
             .PixelShader.SetConstantBuffer(0, pCB)
@@ -432,7 +429,6 @@ Public Class ProgBarGui_AutoCast
         lastProgress = tCurr
     End Sub
 
-    ' Paint the whole bar area as a solid fill using the pixel shader.
     Private Sub PrepFullProg()
         Dim barH = ProgressTrack.Bottom
         Dim barW = ProgressTrack.GetWidth()
@@ -467,7 +463,6 @@ Public Class ProgBarGui_AutoCast
         progContext.Rasterizer.State = Nothing
         lastProgress = 1.0F
     End Sub
-
 
     Public Sub DisplayMsg(txtMsg As String, pType As TriggerType)
         ProgressText = New ProgressMsg(txtMsg, pType,
@@ -587,15 +582,20 @@ Public Class ProgBarGui_AutoCast
         ProgressClock_StartTime = Stopwatch.GetTimestamp()
     End Sub
 
+    ' Private ProgressTaskSrc As TaskCompletionSource(Of Boolean)
+
     Private Sub ConfigureProgress(pDuration As TimeSpan, objAbortToken As CancellationTokenSource)
         SetProgressDuration(pDuration)
+        _extReg.Dispose()
 
-        _cts = CancellationTokenSource.CreateLinkedTokenSource(objAbortToken.Token)
+        ' Use the external token directly
+        _extToken = objAbortToken.Token
+        _extReg = _extToken.Register(Sub() ProgressStatus = ProgStatus.Fail)
 
-        _cts.Token.Register(
-            Sub()
-                ProgressStatus = ProgStatus.Fail
-            End Sub)
+        ' Honor “already cancelled” immediately
+        If _extToken.IsCancellationRequested Then
+            ProgressStatus = ProgStatus.Fail
+        End If
     End Sub
 
     Private Sub SetProgressDuration(pDuration As TimeSpan)
@@ -721,16 +721,10 @@ Public Class ProgBarGui_AutoCast
         ClearAccumToBackground()
 
         Do
-            If StopProgress() Then Exit Do
+            Dim objTask_ProgStatus = ProgStatusCheck()
+            Dim objProgStatus = Await objTask_ProgStatus
 
-            If frameLatencyEvent <> IntPtr.Zero Then
-                If WaitForSingleObjectEx(frameLatencyEvent, INFINITE, False) <> WAIT_OBJECT_0 Then
-                    Await Task.Yield()
-                End If
-            Else
-                Await Task.Yield()
-            End If
-
+            If Not objProgStatus Then Exit Do
 
             RenderProgress()
             PresentDirty(True)
@@ -744,8 +738,34 @@ Public Class ProgBarGui_AutoCast
         Return ProgressStatus
     End Function
 
+    Private Async Function ProgStatusCheck() As Task(Of Boolean)
+        If StopProgress() Then Return False
+
+        If frameLatencyEvent <> IntPtr.Zero Then
+            Dim signaled = (WaitForSingleObjectEx(frameLatencyEvent, 0, False) = WAIT_OBJECT_0)
+            If Not signaled Then
+                Await Task.Delay(1).ConfigureAwait(True)
+            End If
+        Else
+            Await Task.Yield()
+        End If
+
+        If StopProgress() Then Return False
+
+        Return True
+    End Function
+
     Private Function StopProgress() As Boolean
-        If Not ProgressStatus = ProgStatus.Running OrElse _cts.IsCancellationRequested Then
+        If StatusCheck() Then
+            ProgressStatus = ProgStatus.Fail
+            Return True
+        Else
+            Return False
+        End If
+    End Function
+
+    Private Function StatusCheck() As Boolean
+        If ProgressStatus <> ProgStatus.Running OrElse _extToken.IsCancellationRequested Then
             Return True
         Else
             Return False
@@ -909,6 +929,11 @@ Public Class ProgBarGui_AutoCast
             .DrawBG()
         End With
     End Sub
+
+    ' optional: keep to dispose later if you want
+    Private _cancelReg As Threading.CancellationTokenRegistration
+    Private _cancelRegSrc As Threading.CancellationTokenRegistration
+
 
     Private Sub SetProgLocation(acComplete As Boolean)
         AutoCastComplete = acComplete

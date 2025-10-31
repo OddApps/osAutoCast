@@ -199,8 +199,6 @@ Public NotInheritable Class osFuncLib_Progress
     Public Shared progFont_AC As New Font("Segoe UI", 9, FontStyle.Bold)
     Public Shared progFont_AP As New Font("Segoe UI", 10, FontStyle.Bold)
 
-    Public Shared objAutoPassProg As SmoothProgressBarr = Nothing
-
     Public Shared ReadOnly ProgBG As New SolidColorBrush(osColors.Color.FromRgb(57, 57, 57))
 
     Public Shared TextColorARGB As osRect.RawColor4 = New osRect.RawColor4(1.0F, 1.0F, 1.0F, 1.0F)
