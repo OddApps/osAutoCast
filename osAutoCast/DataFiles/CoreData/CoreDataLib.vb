@@ -158,6 +158,7 @@ Public NotInheritable Class CoreDataLib
 
         If objHandlerEvent IsNot Nothing Then
             If objTriggerVal = TriggerValidation.ValidTrigger Then
+                osFuncLib_Progress.SetProgBlockData(TriggerType.AutoCast)
                 Await osHandler_GUI.LaunchGui(tType)
                 osFuncLib_Progress.UpdateProgStatus(tType, ProgAction.Activate)
             End If
@@ -177,7 +178,7 @@ Public NotInheritable Class CoreDataLib
 
         If VerifyRunStatus() Then
 
-            StartCancelWatcher(pType)
+            InitAbortMonitor(pType)
 
             Return TriggerValidation.ValidTrigger
         Else
@@ -192,14 +193,18 @@ Public NotInheritable Class CoreDataLib
                         End Sub)
     End Function
 
-    Private Shared Sub StartCancelWatcher(Optional chkType As TriggerType = TriggerType.AutoCast)
-        SetCT()
-        objCancelTask = StartCancelMonitor(chkActionAbort, chkType)
+    Private Shared Sub InitAbortMonitor(Optional chkType As TriggerType = TriggerType.AutoCast)
+        PrepAbortMonitor()
+        CreateAbortMonitor(chkActionAbort, chkType)
     End Sub
 
-    Private Shared Sub Prep(Optional chkType As TriggerType = TriggerType.AutoCast)
-        SetCT()
-        objCancelTask = StartCancelMonitor(chkActionAbort, chkType)
+    Private Shared Sub PrepAbortMonitor()
+        If chkActionAbort IsNot Nothing Then
+            chkActionAbort.Dispose()
+            chkActionAbort = Nothing
+        End If
+
+        objCancelState = Nothing
     End Sub
 
     Private Shared Async Sub MonitorForCancel(cts As CancellationTokenSource,
@@ -221,14 +226,15 @@ Public NotInheritable Class CoreDataLib
         End While
     End Sub
 
-    Private Shared Sub SetCT()
-        chkActionAbort = New CancellationTokenSource()
-        objCancelState = chkActionAbort.Token
+    Private Shared Sub CreateAbortMonitor(ByRef cts As CancellationTokenSource,
+                                                  Optional chkType As TriggerType = TriggerType.AutoCast)
+        cts = New CancellationTokenSource()
+        objCancelState = cts.Token
+
+        objCancelTask = StartCancelMonitor(cts, chkType)
     End Sub
 
     Private Shared Sub ResetCancelWatch()
-        objCancelState.Dispose()
-
         chkActionAbort = New CancellationTokenSource()
         objCancelState = chkActionAbort.Token
     End Sub

@@ -102,6 +102,7 @@ Public Module DataTypeLib
         Active
         Msg
         Abort
+        Clear
     End Enum
 
     Public Enum MsgRenderType
@@ -215,89 +216,121 @@ Public Module ProgShaderData
 
     Public Const objShader_Vertex As String =
 "struct VSOut {
-	float4 pos:SV_Position;
-	float2 uv:TEXCOORD0;
+    float4 pos:SV_Position;
+    float2 uv:TEXCOORD0;
 };
 
 VSOut VSMain(uint vid:SV_VertexID) {
     float2 p[3] = { float2(-1,-1), float2(-1,3), float2(3,-1) };
     VSOut o;
-	o.pos=float4(p[vid],0,1);
-	o.uv=0.5*(p[vid]+1);
-	return o;
+    o.pos = float4(p[vid],0,1);
+    o.uv  = 0.5 * (p[vid] + 1);
+    return o;
 }"
+
 
     Public Const objShader_Pixel As String =
 "cbuffer Bar : register(b0) {
     float prevValue;
     float currValue;
-    float invSize;
-    float flags;          // bit0 = vertical
+    float invSize;       // 1/pixels-per-unit along X of the bar
+    float flags;         // bit 2 (4) == fullCompose; vertical path not used
     float4 pcoloractive;
     float4 pcolorbg;
-    float barOffset;      // in pixels: left for horizontal, top for vertical
+    float barOffset;     // screen-space origin on X that maps to u=0
     float pad0;
     float pad1;
     float pad2;
 };
 
 struct PSIn {
-	float4 pos:SV_Position;   // pixel coords after viewport transform
-	float2 uv:TEXCOORD0;      // not used for placement anymore
+    float4 pos:SV_Position;
+    float2 uv:TEXCOORD0;
 };
 
+// Snap a normalized [0..1] coordinate to pixel grid (using invSize)
 float snap_to_pixel(float t, float invSize) {
-    // invSize = delta in 't' per 1 pixel, so rounding is in pixel units
+    // invSize = 1/widthInPixels for the bar area along X
     float px = 1.0 / invSize;
     float p  = round(t * px);
     return p * invSize;
 }
 
-float aa_step(float edge, float x, float invSize) {
-    float half = 0.5 * invSize;
-    return smoothstep(edge - half, edge + half, x);
+// Hardware AA using analytical derivative; floors to ~1px via invSize
+float aa_cover_edge(float edge, float x, float invSize)
+{
+    // Signed distance: negative = inside (x < edge if filling to the right)
+    float d = x - edge;
+    // Width of transition: use fwidth for stability, floor by invSize
+    float w = max(0.5 * invSize, 0.5 * fwidth(x));
+    // Convert to coverage (1 inside, 0 outside), AA around the edge
+    return saturate(0.5 - d / (2.0 * w));
 }
 
-float aa_band(float a, float b, float x, float invSize) {
-    float lo = min(a,b);
-    float hi = max(a,b);
-    // Ensure at least 1 pixel thickness to avoid disappearing when a~b
+// Velocity-aware band mask between two edges (a..b), AA via fwidth and dv
+float aa_band_vel(float a, float b, float x, float invSize, float dv)
+{
+    float lo = min(a, b);
+    float hi = max(a, b);
+
+    // Ensure at least 1px thickness to avoid missing very small deltas
     hi = max(hi, lo + invSize);
-    float left  = aa_step(lo, x, invSize);
-    float right = 1.0 - aa_step(hi, x, invSize);
+
+    // Base half-width ~0.5px, add a tiny velocity feather up to ~0.5px extra
+    const float FEATHER_PER_UNIT_DV_PX = 0.75;
+    const float FEATHER_EXTRA_MAX_PX   = 0.5;
+
+    float addHalfPx = min(dv * FEATHER_PER_UNIT_DV_PX, FEATHER_EXTRA_MAX_PX);
+    float halfAA    = max(0.5 * invSize, 0.5 * fwidth(x)) + addHalfPx * invSize;
+
+    // Two AA steps multiplied form a band
+    float left  = smoothstep(lo - halfAA, lo + halfAA, x);
+    float right = 1.0 - smoothstep(hi - halfAA, hi + halfAA, x);
     return saturate(left * right);
 }
 
-float4 PSMain(PSIn pin) : SV_Target {
-    bool vertical = ((uint)flags & 1u) != 0u;
+float4 PSMain(PSIn pin) : SV_Target
+{
+    // Bar is always horizontal. Map SV_Position.x into the bar's local [0..1] u.
+    float u = (pin.pos.x - barOffset) * invSize;
 
-    // Map pixel position inside the bar to normalized [0..1] along the fill axis.
-    float u;
-    if (vertical) {
-        // pos.y grows downward; make 0 at top, 1 at bottom then flip (top fills first)
-        float yLocal = (pin.pos.y - barOffset) * invSize;  // 0..1 downwards
-        u = 1.0 - yLocal;                                  // 0 at bottom, 1 at top (matches old logic)
-    } else {
-        float xLocal = (pin.pos.x - barOffset) * invSize;  // 0..1 across the bar width
-        u = xLocal;
-    }
-
-    // Clamp early—outside the bar we discard.
+    // Clip work outside the bar span to reduce overdraw
     if (u < 0.0 || u > 1.0) discard;
 
+    // Snap values to pixel to avoid subpixel crawl
     float a = snap_to_pixel(prevValue, invSize);
     float b = snap_to_pixel(currValue, invSize);
-    if (a == b) discard;
 
-    float m = aa_band(a, b, u, invSize);
-    if (m <= 0.0) discard;
+    bool fullCompose = (((uint)flags & 4u) != 0u);
 
-    bool inc = (currValue >= prevValue);
-    float4 col = inc ? pcoloractive : pcolorbg;
+    if (fullCompose)
+    {
+        // Full compose: background + filled portion with AA edge at b
+        float filled = aa_cover_edge(b, u, invSize); // 1 inside fill (u <= b)
+        float4 col = lerp(pcolorbg, pcoloractive, filled);
+        col.a = 1.0;
+        return col;
+    }
+    else
+    {
+        // Delta mode: draw only the changed band between a..b
+        if (a == b) discard;
 
-    return col;
+        float dv = abs(b - a);
+        float m  = aa_band_vel(a, b, u, invSize, dv);
+        if (m <= 0.0) discard;
+
+        // Pick color by direction: growing uses active, shrinking uses bg
+        float4 baseCol = (b >= a) ? pcoloractive : pcolorbg;
+
+        // Since we only draw the band, output solid color; AA handled in 'm'
+        // If you use blending, you could modulate alpha by 'm'. You currently copy the RT,
+        // so keep opaque here for consistent composition.
+        return baseCol;
+    }
 }
 "
+
 
 End Module
 

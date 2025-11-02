@@ -58,13 +58,12 @@ Public Class osPrefStore
     Public Sub UpdatePrefStore()
         Try
             For Each pBind As Binding In osPrefStoreBindings.Values
-                Dim prefStoreData As PrefStoreData = GenPrefObj(pBind)
-                CoreDataLib.osPrefIndex.SavePref(prefStoreData.pType, prefStoreData.pName, Convert.ToString(prefStoreData.pVal))
+                With GenPrefObj(pBind)
+                    CoreDataLib.osPrefIndex.SavePref(.pType, .pName, Convert.ToString(.pVal))
+                End With
             Next
         Catch ex As Exception
-            Dim a = 1
-        Finally
-            ' No explicit enumerator disposal needed in VB.NET For Each
+
         End Try
     End Sub
 
@@ -81,7 +80,6 @@ Public Class osPrefStore
         Return New PrefStoreData(strArray(0), strArray(1), GetBindingValue(pBind))
     End Function
 
-    ' Properties
     Public Property AutoPass_SafetyTimer As Integer
         Get
             Return _AutoPass_SafetyTimer
@@ -192,14 +190,6 @@ Public Class osPrefStore
         End Set
     End Property
 
-    Public Shared Function GetPrefBinds() As Dictionary(Of String, Binding)
-        Return New Dictionary(Of String, Binding) From {
-            {"acFuse", New Binding("Value", CoreDataLib.osPrefStoreData, "AutoCast_Fuse", False, DataSourceUpdateMode.OnPropertyChanged)},
-            {"acRTC", New Binding("Checked", CoreDataLib.osPrefStoreData, "AutoCast_RTC", False, DataSourceUpdateMode.OnPropertyChanged)}
-        }
-    End Function
-
-    ' Nested Classes
     Public Class PrefBindingDef
         Public Property ControlProp As String
         Public Property DataProp As String

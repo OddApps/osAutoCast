@@ -373,8 +373,6 @@ Public NotInheritable Class osFuncLib_Progress
         Return 1.0 - Math.Pow(1.0 - t, 3)
     End Function
 
-
-
 End Class
 
 Public NotInheritable Class osFuncLib_AutoCast
@@ -1117,7 +1115,7 @@ End Module
 
 Module osFuncLib_UI
 
-    Private Const progEaseThreshold As Double = 0.25
+    Private Const progEaseThreshold As Double = 0.32
 
     Public Function PrepDispatcher(Optional IsAutoPass As Boolean = False) As Dispatcher
         Return If(IsAutoPass, osHandler_GUI.osGui_AutoPass.Dispatcher,
@@ -1176,7 +1174,7 @@ Module osFuncLib_UI
         ctrlPanel.Invalidate()
     End Sub
 
-    Public Function EaseProgress(progVal As Double) As Single
+    Public Function EaseProgress2(progVal As Double) As Single
         Dim pVal = Math.Max(0.0, Math.Min(1.0, progVal))
 
         If pVal < progEaseThreshold Then
@@ -1188,6 +1186,26 @@ Module osFuncLib_UI
 
         Return progEaseThreshold + a * (1.0 - progEaseThreshold)
     End Function
+
+    Public Function EaseProgress(pVal As Double) As Single
+        Dim progVal = Math.Max(0.0, Math.Min(1.0, pVal))
+
+        If progEaseThreshold <= 0.0 Then
+            Return 1.0 - Math.Pow(1.0 - progVal, 4.0)
+        End If
+        If progEaseThreshold >= 1.0 Then
+            Return progVal
+        End If
+
+        If progVal <= progEaseThreshold Then
+            Return progVal
+        Else
+            Dim pThreshold = (progVal - progEaseThreshold) / (1.0 - progEaseThreshold)
+            Dim pEased = 1.0 - Math.Pow(1.0 - pThreshold, 4.0)
+            Return progEaseThreshold + (1.0 - progEaseThreshold) * pEased
+        End If
+    End Function
+
 
     Public Function CalcEase(eVal As Double) As Double
         Dim pThreshold As Double = (eVal - progEaseThreshold) / (1.0 - progEaseThreshold)
@@ -1434,6 +1452,11 @@ Module ControlExtensions
             End Try
         End If
     End Sub
+
+    <Runtime.CompilerServices.Extension>
+    Public Function PrefVal(ByVal objPref As Object) As String
+        Return Convert.ToString(objPref)
+    End Function
 
 End Module
 

@@ -43,7 +43,7 @@ Public NotInheritable Class osHandler_GUI
             Case TriggerAction.AutoCast
                 With CoreDataLib.GetProgSizeReport(TriggerType.AutoCast)
                     _autoCastProgress = New ProgBarGui_AutoCast(.pWidth, .pHeight,
-                                                                AddressOf EaseProgress)
+                                                                osFuncLib_Progress.ProgTimeSpan, AddressOf EaseProgress)
                 End With
 
                 Dim guiLoad = _autoCastProgress.Handle
@@ -65,8 +65,6 @@ Public NotInheritable Class osHandler_GUI
         Select Case progGui
             Case TriggerAction.AutoCast
                 GenerateGUI(progGui)
-                Await Task.Delay(5)
-                CoreDataLib.ProcessProgressEvent(ProgMode.AutoCast, ProgEvent.PrepMsg, "Release Shift")
             Case TriggerAction.AutoPass
                 Dim guiTask = Task.Run(
                     Sub()

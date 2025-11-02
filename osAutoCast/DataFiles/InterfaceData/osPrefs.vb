@@ -11,21 +11,24 @@ Public Class osPrefs
     Private Const WS_EX_NOACTIVATE As Integer = &H8000000
     Private Const WM_MOUSEACTIVATE As Integer = &H21
     Private Const MA_NOACTIVATE As Integer = 3
+    Private Const WS_EX_TOOLWINDOW As Integer = &H80
 
     Protected Overrides ReadOnly Property CreateParams As CreateParams
         Get
             Dim cp As CreateParams = MyBase.CreateParams
             If Not DesignMode Then
-                cp.ExStyle = cp.ExStyle Or &H8000000 Or &H80 ' WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW
+                cp.ExStyle = cp.ExStyle Or WS_EX_NOACTIVATE Or WS_EX_TOOLWINDOW
             End If
             Return cp
         End Get
     End Property
 
     Protected Overrides Sub WndProc(ByRef m As Message)
-        If Not DesignMode AndAlso m.Msg = WM_MOUSEACTIVATE Then
-            m.Result = CType(MA_NOACTIVATE, IntPtr)
-            Return
+        If DetectGameUI.FocusMTGA() Then
+            If Not DesignMode AndAlso m.Msg = WM_MOUSEACTIVATE Then
+                m.Result = CType(MA_NOACTIVATE, IntPtr)
+                Return
+            End If
         End If
 
         MyBase.WndProc(m)
