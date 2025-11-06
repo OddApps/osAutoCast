@@ -254,7 +254,6 @@ Public Class ObserveMenuCloseClick
 
     Private ReadOnly _menu As Forms.ContextMenuStrip
 
-    ' Mouse down + non-client mouse down messages
     Private Const WM_LBUTTONDOWN As Integer = &H201
     Private Const WM_RBUTTONDOWN As Integer = &H204
     Private Const WM_MBUTTONDOWN As Integer = &H207
@@ -275,11 +274,10 @@ Public Class ObserveMenuCloseClick
             Case WM_LBUTTONDOWN, WM_RBUTTONDOWN, WM_MBUTTONDOWN,
                  WM_NCLBUTTONDOWN, WM_NCRBUTTONDOWN, WM_NCMBUTTONDOWN
 
-                Dim pos As System.Drawing.Point = Forms.Control.MousePosition ' screen coords
-                ' If click is outside the menu bounds, close it
+                Dim pos As System.Drawing.Point = Forms.Control.MousePosition
+
                 If Not _menu.Bounds.Contains(pos) Then
                     _menu.Close(Forms.ToolStripDropDownCloseReason.AppClicked)
-                    ' Return False so the click continues to its target
                     Return False
                 End If
         End Select

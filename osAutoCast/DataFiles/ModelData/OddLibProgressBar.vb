@@ -1014,7 +1014,7 @@ Public Class OddLib_ProgressBar
 
     Private Function AllocDispatcher() As Dispatcher
         Return If(Not IsAutoPass, Application.Current.Dispatcher,
-            osHandler_GUI.osGui_AutoPass.Dispatcher)
+            osHandler_UI.osGui_AutoPass.Dispatcher)
     End Function
 
     Private Function ValidateProgress(pVal As Double) As Boolean

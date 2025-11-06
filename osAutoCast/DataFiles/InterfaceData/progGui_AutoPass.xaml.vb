@@ -7,9 +7,6 @@ Public Class progGui_AutoPass
     Private chkAutoPassResult As TaskCompletionSource(Of Boolean)
     Private apProgressHandler As EventHandler = Nothing
 
-    ' Private valSafetyTimer As Integer ' = GetSafetyTimer()
-    ' Private invST As Double '= 1.0 / valSafetyTimer
-
     Private pHeight As Integer
     Private pWidth As Integer
 
@@ -74,9 +71,6 @@ Public Class progGui_AutoPass
             SetProgResult(apComplete, retProgResult)
         End If
 
-        ' CoreDataLib.ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.MaxFill)
-        ' CoreDataLib.ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.DispMsg, "Release Shift To AutoPass | Press C To Cancel")
-
         Return retProgResult
 
     End Function
@@ -102,11 +96,6 @@ Public Class progGui_AutoPass
 
     Private Sub TerminateAutoPass(apComplete As Boolean)
         chkAutoPassResult.TrySetResult(apComplete)
-    End Sub
-
-    Private Sub progGui_AutoPass_Closing(sender As Object, e As CancelEventArgs) Handles Me.Closing
-        'e.Cancel = True
-        'Me.Hide()
     End Sub
 
 End Class

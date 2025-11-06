@@ -168,9 +168,13 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
-    <Compile Include="DataFiles\HandlerData\GraphicsHandler.vb" />
+    <Compile Include="DataFiles\HandlerData\osHandler_Graphics.vb" />
+    <Compile Include="DataFiles\HandlerData\osHandler_UI.vb" />
     <Compile Include="DataFiles\InterfaceData\osInMon.xaml.vb">
       <DependentUpon>osInMon.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="DataFiles\InterfaceData\osPopupMenu_GUI.xaml.vb">
+      <DependentUpon>osPopupMenu_GUI.xaml</DependentUpon>
     </Compile>
     <Compile Include="DataFiles\InterfaceData\ProgBarGui_AutoCast.Designer.vb">
       <DependentUpon>ProgBarGui_AutoCast.vb</DependentUpon>
@@ -179,19 +183,23 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="GlobalSuppressions.vb" />
-    <Compile Include="osInputMonitor.Designer.vb">
+    <Compile Include="DataFiles\InputMonData\osInputMonitor.Designer.vb">
       <DependentUpon>osInputMonitor.vb</DependentUpon>
     </Compile>
-    <Compile Include="osInputMonitor.vb">
+    <Compile Include="DataFiles\InputMonData\osInputMonitor.vb">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="osPrefLoader.vb" />
+    <Compile Include="DataFiles\HandlerData\osHandler_Prefs.vb" />
     <Compile Include="DataFiles\InterfaceData\osPrefs.Designer.vb">
       <DependentUpon>osPrefs.vb</DependentUpon>
     </Compile>
     <Compile Include="DataFiles\InterfaceData\osPrefs.vb">
       <SubType>Form</SubType>
     </Compile>
+    <Page Include="DataFiles\InterfaceData\osPopupMenu_GUI.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="DataFiles\InterfaceData\progGui_AutoPass.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -209,7 +217,7 @@
     <Compile Include="DataFiles\HandlerData\osHandler_GameFinder.vb" />
     <Compile Include="DataFiles\HandlerData\osHandler_Input.vb" />
     <Compile Include="DataFiles\InputMonData\InputMonService.vb" />
-    <Compile Include="DataFiles\InterfaceData\osHandler_GUI.vb">
+    <Compile Include="DataFiles\HandlerData\osHandler_GUI.vb">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="DataFiles\InterfaceData\progGui_AutoPass.xaml.vb">
@@ -252,7 +260,7 @@
       <DependentUpon>Settings.settings</DependentUpon>
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
     </Compile>
-    <EmbeddedResource Include="DataFiles\InterfaceData\osHandler_GUI.resx">
+    <EmbeddedResource Include="DataFiles\HandlerData\osHandler_GUI.resx">
       <DependentUpon>osHandler_GUI.vb</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="My Project\Resources.resx">
@@ -263,7 +271,11 @@
     <EmbeddedResource Include="DataFiles\InterfaceData\osPrefs.resx">
       <DependentUpon>osPrefs.vb</DependentUpon>
     </EmbeddedResource>
+    <None Include="..\.editorconfig">
+      <Link>.editorconfig</Link>
+    </None>
     <None Include="My Project\app.manifest" />
+    <None Include="My Project\DataSources\osPrefStore.ProgVisualQualityData.datasource" />
     <None Include="My Project\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.vb</LastGenOutput>

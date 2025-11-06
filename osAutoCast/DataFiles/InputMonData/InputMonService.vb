@@ -197,31 +197,6 @@ Public Class InputMonitorService
 
         Return Await chkInput()
 
-
-        'Dim chkInput As Boolean
-
-        'Select Case inputType
-        '    Case TriggerType.AutoCast
-        '        While CoreDataLib.InputMonSvc.DetectTrigger(SelAction(initAction))
-        '            Await Task.Delay(10)
-        '        End While
-        '        chkInput = True
-        '    Case TriggerType.AutoPass
-        '        If initAction Then
-        '            While CoreDataLib.InputMonSvc.DetectTrigger(DetectOpts.MonitorMouseR)
-        '                Await Task.Delay(10)
-        '            End While
-        '            chkInput = True
-        '        Else
-        '            While CoreDataLib.InputMonSvc.DetectTrigger(DetectOpts.MonitorShift)
-        '                If isAutoPassCancelled() Then chkInput = False
-        '                Await Task.Delay(10)
-        '            End While
-        '            chkInput = True
-        '        End If
-        'End Select
-
-        'Return chkInput
     End Function
 
     Private Shared Sub ActivateTriggerMonitor()

@@ -12,7 +12,7 @@ Imports osProgDxgiDevice = SharpDX.DXGI.Device1
 Imports osProgDxgiFactory = SharpDX.DXGI.Factory
 Imports osProgFactoryD2D = SharpDX.Direct2D1.Factory
 
-Public NotInheritable Class GraphicsHandler
+Public NotInheritable Class osHandler_Graphics
 
     Private Shared _initLock As New Object()
 

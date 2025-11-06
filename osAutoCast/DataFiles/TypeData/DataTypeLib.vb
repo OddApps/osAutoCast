@@ -12,6 +12,7 @@ Imports osForms = System.Windows.Forms
 Imports osIcons = System.Drawing.SystemIcons
 Imports osTarget = SharpDX.Direct2D1
 Imports osProgColor = SharpDX.Mathematics.Interop.RawColor4
+Imports osProgBlendState = SharpDX.Direct3D11.BlendState
 
 Public Module DataTypeLib
 
@@ -105,6 +106,11 @@ Public Module DataTypeLib
         Clear
     End Enum
 
+    Public Enum ProgVisOpts
+        Performance
+        Quality
+    End Enum
+
     Public Enum MsgRenderType
         msgClear
         msgDisplay
@@ -119,20 +125,17 @@ Public Module DataTypeLib
 
     <Runtime.InteropServices.StructLayout(Runtime.InteropServices.LayoutKind.Sequential)>
     Public Structure ProgBarCB
-        Public prevValue As Single          ' previous normalized progress [0..1]
-        Public currValue As Single          ' current  normalized progress [0..1]
-        Public invSize As Single          ' 1.0f / bar pixel length (W for horizontal, H for vertical)
-        Public flags As Single          ' bit0 = vertical
-
-        Public pcoloractive As osProgColor  ' fill color
-        Public pcolorbg As osProgColor  ' bg color (used on decrease)
-
-        Public barOffset As Single          ' LEFT (px) for horizontal, TOP (px) for vertical
+        Public prevValue As Single
+        Public currValue As Single
+        Public invSize As Single
+        Public flags As Single
+        Public pcoloractive As osProgColor
+        Public pcolorbg As osProgColor
+        Public barOffset As Single
         Public pad0 As Single
         Public pad1 As Single
         Public pad2 As Single
     End Structure
-
 
 #End Region
 
@@ -194,37 +197,50 @@ Public Module DataTypeLib
         Prefs_Close
         GameMenu_Leave
         CloseApp
+        DisableService
     End Enum
 
     Public Enum PrefBinder
         AC_Fuse
         AC_RTC
         AP_SafetyTimer
+        GO_VisualQuality
     End Enum
 
     Public Enum BarLayoutMode
-        StretchToWindow        ' Track width stretches to window, fixed height
-        FixedSizeCentered      ' Use BarTrackWidth/Height, centered
-        FixedAt                ' Use BarRect (X,Y,W,H) exactly
+        StretchToWindow
+        FixedSizeCentered
+        FixedAt
     End Enum
 
 #End Region
 
 End Module
 
-Public Module ProgShaderData
+Namespace GameMenuOpts
+
+    Public Enum GameMenuItem
+        ShowStart
+        ShowClose
+    End Enum
+
+End Namespace
+
+Public Module ProgBarLib
 
     Public Const objShader_Vertex As String =
 "struct VSOut {
-    float4 pos:SV_Position;
-    float2 uv:TEXCOORD0;
+    float4 pos : SV_Position;
 };
 
-VSOut VSMain(uint vid:SV_VertexID) {
-    float2 p[3] = { float2(-1,-1), float2(-1,3), float2(3,-1) };
+VSOut VSMain(uint vid : SV_VertexID) {
+	float2 p = (vid == 0) ? float2(-1,-1)
+               : (vid == 1) ? float2(-1, 3)
+                             : float2( 3,-1);
+
     VSOut o;
-    o.pos = float4(p[vid],0,1);
-    o.uv  = 0.5 * (p[vid] + 1);
+	
+    o.pos = float4(p, 0.0, 1.0);
     return o;
 }"
 
@@ -233,11 +249,11 @@ VSOut VSMain(uint vid:SV_VertexID) {
 "cbuffer Bar : register(b0) {
     float prevValue;
     float currValue;
-    float invSize;       // 1/pixels-per-unit along X of the bar
-    float flags;         // bit 2 (4) == fullCompose; vertical path not used
+    float invSize;
+    float flags;
     float4 pcoloractive;
     float4 pcolorbg;
-    float barOffset;     // screen-space origin on X that maps to u=0
+    float barOffset;
     float pad0;
     float pad1;
     float pad2;
@@ -245,94 +261,142 @@ VSOut VSMain(uint vid:SV_VertexID) {
 
 struct PSIn {
     float4 pos:SV_Position;
-    float2 uv:TEXCOORD0;
 };
 
-// Snap a normalized [0..1] coordinate to pixel grid (using invSize)
 float snap_to_pixel(float t, float invSize) {
-    // invSize = 1/widthInPixels for the bar area along X
     float px = 1.0 / invSize;
     float p  = round(t * px);
+	
     return p * invSize;
 }
 
-// Hardware AA using analytical derivative; floors to ~1px via invSize
-float aa_cover_edge(float edge, float x, float invSize)
-{
-    // Signed distance: negative = inside (x < edge if filling to the right)
-    float d = x - edge;
-    // Width of transition: use fwidth for stability, floor by invSize
-    float w = max(0.5 * invSize, 0.5 * fwidth(x));
-    // Convert to coverage (1 inside, 0 outside), AA around the edge
-    return saturate(0.5 - d / (2.0 * w));
+float aa_cover_edge(float edge, float x, float invSize) {
+	float d = x - edge;
+	float w = max(0.5 * invSize, 0.5 * fwidth(x));
+	
+	return saturate(0.5 - d / (2.0 * w));
 }
 
-// Velocity-aware band mask between two edges (a..b), AA via fwidth and dv
-float aa_band_vel(float a, float b, float x, float invSize, float dv)
-{
+float aa_band_vel(float a, float b, float x, float invSize, float dv) {
     float lo = min(a, b);
     float hi = max(a, b);
 
-    // Ensure at least 1px thickness to avoid missing very small deltas
-    hi = max(hi, lo + invSize);
+	hi = max(hi, lo + invSize);
 
-    // Base half-width ~0.5px, add a tiny velocity feather up to ~0.5px extra
-    const float FEATHER_PER_UNIT_DV_PX = 0.75;
+	const float FEATHER_PER_UNIT_DV_PX = 0.75;
     const float FEATHER_EXTRA_MAX_PX   = 0.5;
 
     float addHalfPx = min(dv * FEATHER_PER_UNIT_DV_PX, FEATHER_EXTRA_MAX_PX);
     float halfAA    = max(0.5 * invSize, 0.5 * fwidth(x)) + addHalfPx * invSize;
 
-    // Two AA steps multiplied form a band
-    float left  = smoothstep(lo - halfAA, lo + halfAA, x);
+	float left  = smoothstep(lo - halfAA, lo + halfAA, x);
     float right = 1.0 - smoothstep(hi - halfAA, hi + halfAA, x);
+	
     return saturate(left * right);
 }
 
-float4 PSMain(PSIn pin) : SV_Target
-{
-    // Bar is always horizontal. Map SV_Position.x into the bar's local [0..1] u.
-    float u = (pin.pos.x - barOffset) * invSize;
+float4 PSMain(PSIn pin) : SV_Target {
+	float u = (pin.pos.x - barOffset) * invSize;
 
-    // Clip work outside the bar span to reduce overdraw
-    if (u < 0.0 || u > 1.0) discard;
+	if (u < 0.0 || u > 1.0) discard;
 
-    // Snap values to pixel to avoid subpixel crawl
-    float a = snap_to_pixel(prevValue, invSize);
+	float a = snap_to_pixel(prevValue, invSize);
     float b = snap_to_pixel(currValue, invSize);
 
     bool fullCompose = (((uint)flags & 4u) != 0u);
 
-    if (fullCompose)
-    {
-        // Full compose: background + filled portion with AA edge at b
-        float filled = aa_cover_edge(b, u, invSize); // 1 inside fill (u <= b)
-        float4 col = lerp(pcolorbg, pcoloractive, filled);
+    if (fullCompose) {
+		float filled = aa_cover_edge(b, u, invSize);
+		float4 col = lerp(pcolorbg, pcoloractive, filled);
+		
         col.a = 1.0;
+		
         return col;
-    }
-    else
-    {
-        // Delta mode: draw only the changed band between a..b
-        if (a == b) discard;
+    } else {
+		if (a == b) discard;
 
         float dv = abs(b - a);
         float m  = aa_band_vel(a, b, u, invSize, dv);
+		
         if (m <= 0.0) discard;
 
-        // Pick color by direction: growing uses active, shrinking uses bg
-        float4 baseCol = (b >= a) ? pcoloractive : pcolorbg;
+		float4 baseCol = (b >= a) ? pcoloractive : pcolorbg;
 
-        // Since we only draw the band, output solid color; AA handled in 'm'
-        // If you use blending, you could modulate alpha by 'm'. You currently copy the RT,
-        // so keep opaque here for consistent composition.
-        return baseCol;
+		return baseCol;
     }
-}
-"
+}"
 
 
 End Module
+
+Public Class osPref_DataTable
+
+    Private _osPrefVQ_DT As DataTable
+    Public Property osPrefVQ_DT As DataTable
+        Get
+            Return _osPrefVQ_DT
+        End Get
+        Set(ByVal value As DataTable)
+            _osPrefVQ_DT = value
+        End Set
+    End Property
+
+    Public Sub New()
+        _osPrefVQ_DT = New DataTable()
+
+        PopulateVQ_Cols()
+        PopulateDataVQ()
+    End Sub
+
+    Public Sub PopulateVQ_Cols()
+        _osPrefVQ_DT.Columns.Add("vqIdx", GetType(Integer))
+        _osPrefVQ_DT.Columns.Add("vqName", GetType(String))
+    End Sub
+
+    Private Sub PopulateDataVQ()
+        _osPrefVQ_DT.Rows.Add(0, "Performance")
+        _osPrefVQ_DT.Rows.Add(1, "Quality")
+    End Sub
+
+End Class
+
+Public Class ProgVisualQuality
+
+    Public Property Flag As Single
+    Public Property BlendState As osProgBlendState
+
+    Public Sub New()
+
+    End Sub
+
+    Public Sub New(vQualitySetting As ProgVisOpts, ByRef objBlendState As osProgBlendState)
+        Select Case vQualitySetting
+            Case ProgVisOpts.Performance
+                Flag = 0.0F
+                BlendState = objBlendState
+            Case ProgVisOpts.Quality
+                Flag = 4.0F
+                BlendState = objBlendState
+        End Select
+    End Sub
+
+End Class
+
+Public Class ProgVisualQualityData
+
+    Public Property vqIdx As Integer
+    Public Property vqName As String
+
+    Public Sub New()
+
+    End Sub
+
+    Public Sub New(vIdx As Integer, vName As String)
+        Me.vqIdx = vIdx
+        Me.vqName = vName
+    End Sub
+
+End Class
 
 Public Class InjectInputData
     Implements IDisposable
@@ -601,13 +665,40 @@ Public Class GUI_PrepData
     Public Property guiDispatch As Dispatcher
     Public Property guiIsLoaded As Boolean
 
-
     Private Sub guiAction_AutoPass(objGui As progGui_AutoPass)
         With objGui
             Try
                 If .IsLoaded Then
                     .IsHitTestVisible = False
                     .Opacity = 0
+                    .Close()
+                End If
+            Catch
+
+            End Try
+        End With
+    End Sub
+
+    Private Sub guiAction_PopupMenu(objGui_PopupMenu As osPopupMenu_GUI)
+        With objGui_PopupMenu
+            Try
+                If .IsLoaded Then
+                    .IsHitTestVisible = False
+                    .Opacity = 0
+                    .Close()
+                End If
+            Catch
+
+            End Try
+        End With
+    End Sub
+
+    Private Sub guiAction_PopupMenuOverlay(objGui_PopupMenuOverlay As MenuOverlayWindow)
+        With objGui_PopupMenuOverlay
+            Try
+                If .IsLoaded Then
+                    .Opacity = 0
+                    .ShowInTaskbar = False
                     .Close()
                 End If
             Catch
@@ -637,7 +728,7 @@ Public Class GUI_PrepData
         guiIsLoaded = guiDispatch IsNot Nothing AndAlso Not guiDispatch.HasShutdownStarted
     End Sub
 
-    Public Sub New(guiTrigger As TriggerAction, objWin As Window)
+    Public Sub New(guiTrigger As TriggerAction, objWin As Window, Optional isMenuOverlay As Boolean = False)
 
         Select Case guiTrigger
             Case TriggerAction.AutoCast
@@ -645,6 +736,14 @@ Public Class GUI_PrepData
             Case TriggerAction.AutoPass
                 guiAction = AddressOf guiAction_AutoPass
                 guiDispatch = objWin.Dispatcher
+            Case TriggerAction.ShowMenu
+                If isMenuOverlay Then
+                    guiAction = AddressOf guiAction_PopupMenuOverlay
+                    guiDispatch = objWin.Dispatcher
+                Else
+                    guiAction = AddressOf guiAction_PopupMenu
+                    guiDispatch = objWin.Dispatcher
+                End If
         End Select
 
         guiIsLoaded = guiDispatch IsNot Nothing AndAlso Not guiDispatch.HasShutdownStarted
@@ -1136,6 +1235,10 @@ Public Class PromptData
             Case PromptType.CloseApp
                 Msg = "Are you sure you want to exit osAutoCast?"
                 Title = "Close osAutoCast"
+                MsgType = MsgBoxType.isAlert
+            Case PromptType.DisableService
+                Msg = "This will Disable osAutoCast... Continue?"
+                Title = "Disable"
                 MsgType = MsgBoxType.isAlert
         End Select
     End Sub

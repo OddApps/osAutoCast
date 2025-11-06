@@ -8,13 +8,26 @@ Imports SharpDX.DirectWrite
 Imports System.Threading
 Imports System.Windows.Forms
 Imports AlphaMode = SharpDX.Direct2D1.AlphaMode
+Imports D2DPixelFormat = SharpDX.Direct2D1.PixelFormat
 Imports osFormat = SharpDX.DXGI.Format
+Imports osCullMode = SharpDX.Direct3D11.CullMode
+Imports osFillMode = SharpDX.Direct3D11.FillMode
+Imports osBlendOpts = SharpDX.Direct3D11.BlendOption
+Imports osBlendOperation = SharpDX.Direct3D11.BlendOperation
+Imports osColorMaskFlags = SharpDX.Direct3D11.ColorWriteMaskFlags
+Imports osRenderBlendOpts = SharpDX.Direct3D11.RenderTargetBlendDescription
+Imports osBlendStateDesc = SharpDX.Direct3D11.BlendStateDescription
 Imports osPresentOpts = SharpDX.DXGI.PresentParameters
+Imports osDepthWriteMask = SharpDX.Direct3D11.DepthWriteMask
+Imports osDepthComparison = SharpDX.Direct3D11.Comparison
 Imports osViewPort = SharpDX.Mathematics.Interop.RawViewportF
 Imports osProgColor = SharpDX.Mathematics.Interop.RawColor4
-Imports D2DPixelFormat = SharpDX.Direct2D1.PixelFormat
+Imports osDepthStencilStateDesc = SharpDX.Direct3D11.DepthStencilStateDescription
+Imports osRasterizerState = SharpDX.Direct3D11.RasterizerState
+Imports osDepthStencilState = SharpDX.Direct3D11.DepthStencilState
 Imports osProgBuffer = SharpDX.Direct3D11.Buffer
 Imports osProgDevice = SharpDX.Direct3D11.Device
+Imports osProgBlendState = SharpDX.Direct3D11.BlendState
 Imports osProgDeviceContext = SharpDX.Direct3D11.DeviceContext
 Imports osProgFactoryD2D = SharpDX.Direct2D1.Factory
 Imports osProgFactoryDW = SharpDX.DirectWrite.Factory
@@ -52,11 +65,14 @@ Public Class ProgBarGui_AutoCast
     Private pIL As InputLayout
     Private pSampler As SamplerState
 
-    Private rsScissor As SharpDX.Direct3D11.RasterizerState
-    Private dsOff As SharpDX.Direct3D11.DepthStencilState
-    Private bsOpaque As SharpDX.Direct3D11.BlendState
-    Private bsOpaqueRGB As SharpDX.Direct3D11.BlendState  ' (optional) RGB only writes
-    Private bsPremul As SharpDX.Direct3D11.BlendState     ' (optional) premultiplied alpha
+    Private rsScissor As osRasterizerState
+    Private dsOff As osDepthStencilState
+
+    Private bsOpaque As osProgBlendState
+    Private bsOpaqueRGB As osProgBlendState
+    Private bsPremul As osProgBlendState
+
+    Private progSettingsVQ As ProgVisualQuality
 
     Private progTarget As RenderTarget
 
@@ -146,31 +162,31 @@ Public Class ProgBarGui_AutoCast
 
     Public ReadOnly Property progDevice As osProgDevice
         Get
-            Return GraphicsHandler.pDevice
+            Return osHandler_Graphics.pDevice
         End Get
     End Property
 
     Public ReadOnly Property progContext As osProgDeviceContext
         Get
-            Return GraphicsHandler.pContext
+            Return osHandler_Graphics.pContext
         End Get
     End Property
 
     Public ReadOnly Property progDxgiFactory As osProgFactoryDXGI
         Get
-            Return GraphicsHandler.pDxgiFactory
+            Return osHandler_Graphics.pDxgiFactory
         End Get
     End Property
 
     Public ReadOnly Property progD2DFactory As osProgFactoryD2D
         Get
-            Return GraphicsHandler.pD2DFactory
+            Return osHandler_Graphics.pD2DFactory
         End Get
     End Property
 
     Public ReadOnly Property progDwriteFactory As osProgFactoryDW
         Get
-            Return GraphicsHandler.pDWFactory
+            Return osHandler_Graphics.pDWFactory
         End Get
     End Property
 
@@ -193,7 +209,7 @@ Public Class ProgBarGui_AutoCast
 
         ProgressEaseFunc = If(pEase, Function(x) x)
 
-        GraphicsHandler.EnsureCreated()
+        osHandler_Graphics.EnsureCreated()
 
         InitDeviceAndSwapChain()
 
@@ -223,9 +239,24 @@ Public Class ProgBarGui_AutoCast
         CreateTargetResources()
         CreateShadersAndPipeline()
 
-        InitProgressStates(progDevice)
+        InitProgressStates()
+
+        progSettingsVQ = ApplySetingsVQ()
         RenderFrame()
     End Sub
+
+    Private Function ApplySetingsVQ() As ProgVisualQuality
+        Dim objVQ = CoreDataLib.GetVisualQuality()
+
+        Select Case objVQ
+            Case ProgVisOpts.Performance
+                Return New ProgVisualQuality(objVQ, bsOpaque)
+            Case ProgVisOpts.Quality
+                Return New ProgVisualQuality(objVQ, bsOpaqueRGB)
+            Case Else
+                Return Nothing
+        End Select
+    End Function
 
     Private Sub CreateTargetResources()
         ResetProgTarget()
@@ -281,7 +312,7 @@ Public Class ProgBarGui_AutoCast
             pPS = New PixelShader(objProgDevice, psbc)
         End Using
 
-        pCB?.Dispose()
+        pCB?.SafeDispose()
         pCB = New osProgBuffer(progDevice, New BufferDescription With {
                                    .SizeInBytes = Utilities.SizeOf(Of ProgBarCB)(),
                                    .Usage = ResourceUsage.Dynamic,
@@ -291,15 +322,6 @@ Public Class ProgBarGui_AutoCast
                                    .StructureByteStride = 0
                                })
 
-        Dim sampDesc = New SamplerStateDescription() With {
-            .Filter = Direct3D11.Filter.MinMagMipLinear,
-            .AddressU = TextureAddressMode.Clamp,
-            .AddressV = TextureAddressMode.Clamp,
-            .AddressW = TextureAddressMode.Clamp
-        }
-
-        pSampler = New SamplerState(progDevice, sampDesc)
-
         With objProgContext
             .InputAssembler.PrimitiveTopology = PrimitiveTopology.TriangleList
 
@@ -308,97 +330,59 @@ Public Class ProgBarGui_AutoCast
             .PixelShader.SetConstantBuffer(0, pCB)
 
             .OutputMerger.SetTargets(progRTV)
-
-            .Rasterizer.SetViewport(New osViewPort With {
-                                        .X = 0, .Y = 0,
-                                        .Width = Math.Max(1, CSng(Me.ClientSize.Width)),
-                                        .Height = Math.Max(1, CSng(Me.ClientSize.Height)),
-                                        .MinDepth = 0.0F, .MaxDepth = 1.0F
-                                    })
         End With
+
+        SetViewportToBar()
     End Sub
 
-    Private Sub InitProgressStates(device As SharpDX.Direct3D11.Device)
-        ' Depth/Stencil OFF
-        Dim dsDesc = New SharpDX.Direct3D11.DepthStencilStateDescription() With {
-        .IsDepthEnabled = False,
-        .DepthWriteMask = SharpDX.Direct3D11.DepthWriteMask.Zero,
-        .DepthComparison = SharpDX.Direct3D11.Comparison.Always,
-        .IsStencilEnabled = False
-    }
-        dsOff = New SharpDX.Direct3D11.DepthStencilState(device, dsDesc)
+    Private Sub InitProgressStates()
 
-        ' Opaque blend (fastest)
-        Dim bdesc = New SharpDX.Direct3D11.BlendStateDescription() With {
-        .AlphaToCoverageEnable = False,
-        .IndependentBlendEnable = False
-    }
-        bdesc.RenderTarget(0) = New SharpDX.Direct3D11.RenderTargetBlendDescription(
-        False, ' BlendEnable
-        SharpDX.Direct3D11.BlendOption.One,
-        SharpDX.Direct3D11.BlendOption.Zero,
-        SharpDX.Direct3D11.BlendOperation.Add,
-        SharpDX.Direct3D11.BlendOption.One,
-        SharpDX.Direct3D11.BlendOption.Zero,
-        SharpDX.Direct3D11.BlendOperation.Add,
-        SharpDX.Direct3D11.ColorWriteMaskFlags.All)
-        bsOpaque = New SharpDX.Direct3D11.BlendState(device, bdesc)
+        dsOff = New osDepthStencilState(progDevice, New osDepthStencilStateDesc() With {
+                                            .IsDepthEnabled = False, .IsStencilEnabled = False,
+                                            .DepthWriteMask = osDepthWriteMask.Zero,
+                                            .DepthComparison = osDepthComparison.Always
+                                        })
 
-        ' (Optional) Opaque but write only RGB (skip alpha) – nice for delta passes to shave a little ROP
-        Dim bdescRGB = New SharpDX.Direct3D11.BlendStateDescription() With {
-        .AlphaToCoverageEnable = False,
-        .IndependentBlendEnable = False
-    }
-        bdescRGB.RenderTarget(0) = New SharpDX.Direct3D11.RenderTargetBlendDescription(
-        False,
-        SharpDX.Direct3D11.BlendOption.One,
-        SharpDX.Direct3D11.BlendOption.Zero,
-        SharpDX.Direct3D11.BlendOperation.Add,
-        SharpDX.Direct3D11.BlendOption.One,
-        SharpDX.Direct3D11.BlendOption.Zero,
-        SharpDX.Direct3D11.BlendOperation.Add,
-        SharpDX.Direct3D11.ColorWriteMaskFlags.Red Or
-        SharpDX.Direct3D11.ColorWriteMaskFlags.Green Or
-        SharpDX.Direct3D11.ColorWriteMaskFlags.Blue)
-        bsOpaqueRGB = New SharpDX.Direct3D11.BlendState(device, bdescRGB)
+        Dim bdesc = New osBlendStateDesc() With {
+            .AlphaToCoverageEnable = False,
+            .IndependentBlendEnable = False
+        }
 
-        ' (Optional) Premultiplied alpha blend (only if you need to composite over existing content)
-        Dim pdesc = New SharpDX.Direct3D11.BlendStateDescription() With {
-        .AlphaToCoverageEnable = False,
-        .IndependentBlendEnable = False
-    }
-        pdesc.RenderTarget(0) = New SharpDX.Direct3D11.RenderTargetBlendDescription(
-        True,
-        SharpDX.Direct3D11.BlendOption.One,
-        SharpDX.Direct3D11.BlendOption.InverseSourceAlpha,
-        SharpDX.Direct3D11.BlendOperation.Add,
-        SharpDX.Direct3D11.BlendOption.One,
-        SharpDX.Direct3D11.BlendOption.InverseSourceAlpha,
-        SharpDX.Direct3D11.BlendOperation.Add,
-        SharpDX.Direct3D11.ColorWriteMaskFlags.All)
-        bsPremul = New SharpDX.Direct3D11.BlendState(device, pdesc)
+        bdesc.RenderTarget(0) = New osRenderBlendOpts(False, osBlendOpts.One, osBlendOpts.Zero, osBlendOperation.Add,
+                                                      osBlendOpts.One, osBlendOpts.Zero, osBlendOperation.Add,
+                                                      osColorMaskFlags.All)
+        bsOpaque = New osProgBlendState(progDevice, bdesc)
 
-        ' Rasterizer with scissor
-        Dim rsDesc = New SharpDX.Direct3D11.RasterizerStateDescription() With {
-        .CullMode = SharpDX.Direct3D11.CullMode.None,
-        .FillMode = SharpDX.Direct3D11.FillMode.Solid,
-        .IsScissorEnabled = True,
-        .IsMultisampleEnabled = False,
-        .IsAntialiasedLineEnabled = False,
-        .DepthBias = 0,
-        .SlopeScaledDepthBias = 0.0F,
-        .DepthBiasClamp = 0.0F
-    }
-        rsScissor = New SharpDX.Direct3D11.RasterizerState(device, rsDesc)
+        Dim bdescRGB = New osBlendStateDesc() With {
+            .AlphaToCoverageEnable = False,
+            .IndependentBlendEnable = False
+        }
+
+        bdescRGB.RenderTarget(0) = New osRenderBlendOpts(False, osBlendOpts.One, osBlendOpts.Zero, osBlendOperation.Add,
+                                                         osBlendOpts.One, osBlendOpts.Zero, osBlendOperation.Add,
+                                                         osColorMaskFlags.Red Or osColorMaskFlags.Green Or osColorMaskFlags.Blue)
+
+        bsOpaqueRGB = New osProgBlendState(progDevice, bdescRGB)
+
+        Dim pdesc = New osBlendStateDesc() With {
+            .AlphaToCoverageEnable = False,
+            .IndependentBlendEnable = False
+        }
+
+        pdesc.RenderTarget(0) = New osRenderBlendOpts(True, osBlendOpts.One, osBlendOpts.InverseSourceAlpha, osBlendOperation.Add,
+                                                      osBlendOpts.One, osBlendOpts.InverseSourceAlpha, osBlendOperation.Add, osColorMaskFlags.All)
+        bsPremul = New osProgBlendState(progDevice, pdesc)
+
+        CreateProgScissorState()
     End Sub
-
 
     Private Sub CreateProgScissorState()
         osProgScissorState?.Dispose()
         osProgScissorState = New RasterizerState(progDevice, New RasterizerStateDescription With {
-                                                     .CullMode = CullMode.None,
-                                                     .FillMode = Direct3D11.FillMode.Solid,
-                                                     .IsScissorEnabled = True
+                                                     .CullMode = osCullMode.None, .FillMode = osFillMode.Solid,
+                                                     .IsScissorEnabled = True, .IsMultisampleEnabled = False,
+                                                     .IsAntialiasedLineEnabled = False, .DepthBias = 0,
+                                                     .SlopeScaledDepthBias = 0.0F, .DepthBiasClamp = 0.0F
                                                  })
     End Sub
 
@@ -481,15 +465,13 @@ Public Class ProgBarGui_AutoCast
 
         If tPrev = tCurr OrElse chkProgTrack.pFail Then Return
 
-        'SetViewportToBar(chkProgTrack.pWidth)
         SetRasterizerState()
 
         With progContext
 
             .OutputMerger.SetDepthStencilState(dsOff)
-            ' Choose ONE of these depending on pass:
-            '  .OutputMerger.SetBlendState(bsOpaque)
-            .OutputMerger.SetBlendState(bsOpaqueRGB)
+
+            .OutputMerger.SetBlendState(progSettingsVQ.BlendState)
 
             .OutputMerger.SetTargets(accumRTV)
 
@@ -750,7 +732,7 @@ Public Class ProgBarGui_AutoCast
             .prevValue = valPrev,
             .currValue = valCurrent,
             .invSize = 1.0F / ProgressTrack.GetWidth(),
-            .flags = 0.0F,
+            .flags = progSettingsVQ.Flag,
             .pcoloractive = progColor_Active,
             .pcolorbg = progColor_BG,
             .barOffset = ProgressTrack.Left,
@@ -760,10 +742,6 @@ Public Class ProgBarGui_AutoCast
 
     Public Sub PerformProgressEvent(doEvent As ProgressEventData)
         Select Case doEvent.evType
-            Case ProgEvent.Reset
-                'ResetProgress(doEvent.evTrigger)
-            Case ProgEvent.MaxFill
-              '  DisplayMaxVal()
             Case ProgEvent.DispMsg
                 DisplayMsg(doEvent.evDispMsg, doEvent.evTrigger)
             Case ProgEvent.ClrMsg
@@ -1055,6 +1033,8 @@ Public Class ProgBarGui_AutoCast
         bsOpaque?.Dispose()
         dsOff?.Dispose()
         rsScissor?.Dispose()
+
+        progSettingsVQ = Nothing
 
         Try
             Using dxgiDev3 = progDevice.QueryInterface(Of SharpDX.DXGI.Device3)()

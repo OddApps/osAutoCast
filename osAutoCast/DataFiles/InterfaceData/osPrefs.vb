@@ -1,4 +1,5 @@
 ﻿Imports System.ComponentModel
+Imports System.Data
 Imports System.Windows.Forms
 
 Public Class osPrefs
@@ -12,6 +13,8 @@ Public Class osPrefs
     Private Const WM_MOUSEACTIVATE As Integer = &H21
     Private Const MA_NOACTIVATE As Integer = 3
     Private Const WS_EX_TOOLWINDOW As Integer = &H80
+
+    Private objPrefVQ_DataSet As DataSet
 
     Protected Overrides ReadOnly Property CreateParams As CreateParams
         Get
@@ -36,6 +39,14 @@ Public Class osPrefs
 
     Public Sub osPrefsPrep()
 
+        Dim lstPrefVQ As New osPref_DataTable
+
+        With lstVisualQuality
+            .DisplayMember = "vqName"
+            .ValueMember = "vqIdx"
+            .DataSource = lstPrefVQ.osPrefVQ_DT
+        End With
+
         txtAutoCastFuse.DataBindings.
             Add(New Binding(CoreDataLib.osPrefStoreData.GetPrefBindDefs("acFuse").ControlProp,
                             CoreDataLib.osPrefStoreData, CoreDataLib.osPrefStoreData.GetPrefBindDefs("acFuse").DataProp,
@@ -49,6 +60,11 @@ Public Class osPrefs
         txtAutoPassSafetyTimer.DataBindings.
             Add(New Binding(CoreDataLib.osPrefStoreData.GetPrefBindDefs("apSafetyTimer").ControlProp,
                             CoreDataLib.osPrefStoreData, CoreDataLib.osPrefStoreData.GetPrefBindDefs("apSafetyTimer").DataProp,
+                            False, DataSourceUpdateMode.OnPropertyChanged))
+
+        lstVisualQuality.DataBindings.
+            Add(New Binding(CoreDataLib.osPrefStoreData.GetPrefBindDefs("goVisualQuality").ControlProp,
+                            CoreDataLib.osPrefStoreData, CoreDataLib.osPrefStoreData.GetPrefBindDefs("goVisualQuality").DataProp,
                             False, DataSourceUpdateMode.OnPropertyChanged))
 
         objPrefTracker = New osPrefTracker(Of osPrefStore)(CoreDataLib.osPrefStoreData)

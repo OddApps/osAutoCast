@@ -69,7 +69,7 @@ Public Class DetectGameUI
 
                         If exeMTGA.ToString().ToLower() = "mtga.exe" Then
                             mtgaHwnd = hWnd
-                            Return False ' stop searching
+                            Return False
                         End If
 
                         Return True
@@ -103,7 +103,7 @@ Public Class DetectGameUI
 
                         If exeMTGA.ToString().ToLower() = "mtga.exe" Then
                             mtgaHwnd = hWnd
-                            Return False ' stop searching
+                            Return False
                         End If
 
                         Return True

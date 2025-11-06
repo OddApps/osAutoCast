@@ -1,4 +1,5 @@
 ﻿Imports System.ComponentModel
+Imports System.Data
 Imports System.IO
 Imports System.Reflection
 Imports System.Runtime.InteropServices.ComTypes
@@ -18,13 +19,16 @@ Public Class osPrefStore
     Private _MainOpts_apUiW As Integer
     Private _MainOpts_acProgH As Integer
     Private _MainOpts_acProgW As Integer
-    Private _VisualQuality As Integer
+    Private _GenOpts_VisualQuality As String
 
     Private PrefBinderIdx As New Dictionary(Of PrefBinder, PrefBindData) From {
         {AC_Fuse, New PrefBindData("Text", "AutoCast_Fuse")},
         {AC_RTC, New PrefBindData("Checked", "AutoCast_RTC")},
-        {AP_SafetyTimer, New PrefBindData("Text", "AutoPass_SafetyTimer")}
+        {AP_SafetyTimer, New PrefBindData("Text", "AutoPass_SafetyTimer")},
+        {GO_VisualQuality, New PrefBindData("SelectedValue", "GenOpts_VisualQuality")}
     }
+
+
 
     Public Event PropertyChanged As PropertyChangedEventHandler Implements INotifyPropertyChanged.PropertyChanged
 
@@ -36,7 +40,8 @@ Public Class osPrefStore
         Return New Dictionary(Of String, PrefBindingDef) From {
             {"acFuse", New PrefBindingDef With {.ControlProp = PrefBinderIdx(AC_Fuse).BindType, .DataProp = PrefBinderIdx(AC_Fuse).BindRecord}},
             {"apSafetyTimer", New PrefBindingDef With {.ControlProp = PrefBinderIdx(AP_SafetyTimer).BindType, .DataProp = PrefBinderIdx(AP_SafetyTimer).BindRecord}},
-            {"acRTC", New PrefBindingDef With {.ControlProp = PrefBinderIdx(AC_RTC).BindType, .DataProp = PrefBinderIdx(AC_RTC).BindRecord}}
+            {"acRTC", New PrefBindingDef With {.ControlProp = PrefBinderIdx(AC_RTC).BindType, .DataProp = PrefBinderIdx(AC_RTC).BindRecord}},
+            {"goVisualQuality", New PrefBindingDef With {.ControlProp = PrefBinderIdx(GO_VisualQuality).BindType, .DataProp = PrefBinderIdx(GO_VisualQuality).BindRecord}}
         }
     End Function
 
@@ -51,7 +56,8 @@ Public Class osPrefStore
         osPrefStoreBindings = New Dictionary(Of String, Binding) From {
             {"acFuse", PopulateBinding(AC_Fuse)},
             {"apSafetyTimer", PopulateBinding(AP_SafetyTimer)},
-            {"acRTC", PopulateBinding(AC_RTC)}
+            {"acRTC", PopulateBinding(AC_RTC)},
+            {"goVisualQuality", PopulateBinding(GO_VisualQuality)}
         }
     End Sub
 
@@ -179,20 +185,36 @@ Public Class osPrefStore
         End Set
     End Property
 
-    Public Property VisualQuality As Integer
+    Public Property GenOpts_VisualQuality As String
         Get
-            Return _VisualQuality
+            Return _GenOpts_VisualQuality
         End Get
-        Set(value As Integer)
-            If _VisualQuality = value Then Return
-            _VisualQuality = value
-            OnPropertyChanged(NameOf(VisualQuality))
+        Set(value As String)
+            If _GenOpts_VisualQuality = value Then Return
+            _GenOpts_VisualQuality = value
+            OnPropertyChanged(NameOf(GenOpts_VisualQuality))
         End Set
     End Property
 
     Public Class PrefBindingDef
         Public Property ControlProp As String
         Public Property DataProp As String
+    End Class
+
+    Public Class ProgVisualQualityData
+
+        Public Property vqIdx As Integer
+        Public Property vqName As String
+
+        Public Sub New()
+
+        End Sub
+
+        Public Sub New(vIdx As Integer, vName As String)
+            vqIdx = vIdx
+            vqName = vName
+        End Sub
+
     End Class
 
     Public Class PrefStoreData
@@ -273,7 +295,7 @@ Public Class osPrefTracker(Of T As {Class, INotifyPropertyChanged})
 
 End Class
 
-Class osPrefLoader
+Class osHandler_Prefs
     Implements IDisposable
 
     Public Property objPrefIndex As PrefRecordIndex
@@ -300,11 +322,12 @@ Class osPrefLoader
             "PrefCatalog_",
             "|AutoCast-", "RTC:True", "Fuse:450", "-AutoCast|",
             "|AutoPass-", "SafetyTimer:750", "-AutoPass|",
-            "|MainOpts-", "acProgW:105", "acProgH:22",
+            "|MainOpts-",
+            "acProgW:105", "acProgH:22",
             "apUiW:320", "apUiH:105",
             "apProgW:320", "apProgH:28",
-            "VisualQuality:1",
             "-MainOpts|",
+            "|GenOpts-", "VisualQuality:0", "-GenOpts|",
             "_PrefCatalog"
         }
 
@@ -377,7 +400,7 @@ Class osPrefLoader
             Dim pipeIdx = strPrefLine.IndexOf("|"c)
 
             If dashIdx = -1 OrElse pipeIdx = -1 OrElse pipeIdx <= dashIdx Then
-                Return "" ' or throw error or handle gracefully
+                Return ""
             End If
 
             Return strPrefLine.Substring(dashIdx + 1, pipeIdx - dashIdx - 1)
@@ -442,9 +465,8 @@ Class osPrefLoader
     End Function
 
 #Region "IDisposable Support"
-    Private disposedValue As Boolean ' To detect redundant calls
+    Private disposedValue As Boolean
 
-    ' IDisposable
     Protected Overridable Sub Dispose(ByVal disposing As Boolean)
         If Not Me.disposedValue Then
             If disposing Then

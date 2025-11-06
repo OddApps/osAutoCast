@@ -99,6 +99,11 @@ Public NotInheritable Class CoreDataLib
         Return osPrefStoreData.AutoPass_SafetyTimer
     End Function
 
+    Public Shared Function GetVisualQuality() As ProgVisOpts
+        Dim objVQ = osPrefStoreData.GenOpts_VisualQuality
+        Return If(objVQ = 0, ProgVisOpts.Performance, ProgVisOpts.Quality)
+    End Function
+
     Public Shared Function ChkExecPermission() As Boolean
         If Not IsDebugBuild() Then
             Return DetectGameUI.FocusMTGA()
@@ -123,6 +128,10 @@ Public NotInheritable Class CoreDataLib
 
     Public Shared Function SetGameFocus() As Boolean
         Return DetectGameUI.FocusMTGA(True)
+    End Function
+
+    Public Shared Function IsGameRunning() As Boolean
+        Return Process.GetProcessesByName("MTGA").Length > 0
     End Function
 
     Private Shared Sub ResolveAction()
@@ -159,7 +168,7 @@ Public NotInheritable Class CoreDataLib
         If objHandlerEvent IsNot Nothing Then
             If objTriggerVal = TriggerValidation.ValidTrigger Then
                 osFuncLib_Progress.SetProgBlockData(TriggerType.AutoCast)
-                Await osHandler_GUI.LaunchGui(tType)
+                Await osHandler_UI.LaunchGui(tType)
                 osFuncLib_Progress.UpdateProgStatus(tType, ProgAction.Activate)
             End If
 
@@ -250,7 +259,7 @@ Public NotInheritable Class CoreDataLib
                 strEventData = pEventData(0).ToString()
             End If
 
-            With PrepareProgEvent(osHandler_GUI.osGui_AutoCastProgress)
+            With PrepareProgEvent(osHandler_UI.osGui_AutoCastProgress)
                 .evDispatch.Invoke(
                     Sub()
                         .evAction(GenerateProgEventData(pEvent, objProgEventType,
@@ -258,7 +267,7 @@ Public NotInheritable Class CoreDataLib
                     End Sub)
             End With
         Else
-            Dim osProgElement = osHandler_GUI.osGui_AutoPass.OddProgBar_AP
+            Dim osProgElement = osHandler_UI.osGui_AutoPass.OddProgBar_AP
 
             If pEventData.Length > 0 Then
                 strEventData = pEventData(0).ToString()

@@ -14,7 +14,7 @@ Public Class osInMon
     Private Sub DoAppPrep()
         PrepPrefs()
 
-        osHandler_GUI.PreloadForms(Me)
+        osHandler_UI.PreloadForms(Me)
         osMenu_Init(Me)
     End Sub
 
@@ -89,7 +89,7 @@ Public Class osInMon
     End Sub
 
     Private Sub PrepPrefs()
-        Using osPrefManager As New osPrefLoader(CoreDataLib.osPrefIndex)
+        Using osPrefManager As New osHandler_Prefs(CoreDataLib.osPrefIndex)
             osPrefManager.ProcessPrefIndex(CoreDataLib.osPrefIndex)
         End Using
     End Sub
