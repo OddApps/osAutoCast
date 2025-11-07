@@ -1,6 +1,7 @@
 ﻿Imports System.ComponentModel
 Imports System.Data
 Imports System.Windows.Forms
+Imports osAutoCast.DataTypeLib.PromptResponse
 
 Public Class osPrefs
 
@@ -75,7 +76,7 @@ Public Class osPrefs
         If objPrefTracker.HasChanges Then
             Dim chkDoSave = GetResponse(PromptType.Prefs_Save)
 
-            If chkDoSave = DialogResult.Yes Then
+            If chkDoSave = isYes Then
                 CoreDataLib.osPrefIndex.SavePrefsFile()
                 objPrefTracker.HasChanges()
                 isSaved = True
@@ -91,11 +92,11 @@ Public Class osPrefs
         If objPrefTracker.HasChanges Then
             If Not isSaved Then
                 Select Case GetResponse(PromptType.Prefs_Close)
-                    Case DialogResult.Yes
+                    Case isYes
                         CoreDataLib.osPrefIndex.SavePrefsFile()
-                    Case DialogResult.No
+                    Case isNo
                         objPrefTracker.Revert()
-                    Case DialogResult.Cancel
+                    Case isCancel
                         e.Cancel = True
                 End Select
             End If

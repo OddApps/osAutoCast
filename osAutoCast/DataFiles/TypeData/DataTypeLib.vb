@@ -200,6 +200,12 @@ Public Module DataTypeLib
         DisableService
     End Enum
 
+    Public Enum PromptResponse
+        isYes
+        isNo
+        isCancel
+    End Enum
+
     Public Enum PrefBinder
         AC_Fuse
         AC_RTC
@@ -698,6 +704,7 @@ Public Class GUI_PrepData
             Try
                 If .IsLoaded Then
                     .Opacity = 0
+                    .IsHitTestVisible = False
                     .ShowInTaskbar = False
                     .Close()
                 End If
@@ -1200,9 +1207,18 @@ Public Class ResponseBox
         MyBase.WndProc(m)
     End Sub
 
-    Public Shared Function DisplayPopup(msg As String, title As String, mtype As MsgBoxType) As osForms.DialogResult
+    Public Shared Function DisplayPopup(msg As String, title As String, mtype As MsgBoxType) As PromptResponse
         Using dlg As New ResponseBox(msg, title, mtype)
-            Return dlg.ShowDialog()
+            Dim objPromptResp = dlg.ShowDialog()
+
+            Select Case objPromptResp
+                Case osForms.DialogResult.Yes
+                    Return PromptResponse.isYes
+                Case osForms.DialogResult.No
+                    Return PromptResponse.isNo
+                Case Else
+                    Return PromptResponse.isCancel
+            End Select
         End Using
     End Function
 

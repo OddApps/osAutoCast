@@ -16,6 +16,7 @@ Imports osAutoCast.DataTypeLib.ProgAction
 Imports osAutoCast.DataTypeLib.ProgStatus
 Imports osAutoCast.DataTypeLib.ProgEvent
 Imports osAutoCast.DataTypeLib.ProgEaseVals
+Imports osAutoCast.DataTypeLib.PromptResponse
 Imports osAutoCast.CoreDataLib
 Imports osRect = SharpDX.Mathematics.Interop
 Imports osForms = System.Windows.Forms
@@ -724,17 +725,17 @@ Public NotInheritable Class MenuOverlayWindow
     Private Shared Function SetWindowLongPtr(hWnd As IntPtr, nIndex As Integer, dwNewLong As IntPtr) As IntPtr
     End Function
 
-    Public Sub New()
-        Me.Title = ""
-
-        Me.WindowStyle = WindowStyle.None
-
-        Me.AllowsTransparency = True
-        Me.Background = GetBackColor()
-        Me.Opacity = 0.65
-
-        Me.ShowInTaskbar = False
-        Me.ShowActivated = False
+    Public Sub New(Optional isFromTray As Boolean = False)
+        With Me
+            .Title = ""
+            .WindowStyle = WindowStyle.None
+            .AllowsTransparency = True
+            .Background = GetBackColor()
+            .ShowInTaskbar = False
+            .ShowActivated = False
+            .Topmost = True
+            .Opacity = If(isFromTray, 0.01, 0.65)
+        End With
     End Sub
 
     Private Function GetBackColor() As SolidColorBrush
@@ -745,7 +746,6 @@ Public NotInheritable Class MenuOverlayWindow
         Me.ShowInTaskbar = False
         Me.ShowActivated = False
 
-        Me.Opacity = 0.65
         Me.Topmost = True
     End Sub
 
@@ -756,6 +756,8 @@ Public NotInheritable Class MenuOverlayWindow
             Me.Width = .Width
             Me.Height = .Height
         End With
+
+        Me.Opacity = 0.65
     End Sub
 
     Protected Overrides Sub OnSourceInitialized(e As EventArgs)
@@ -786,7 +788,7 @@ Module osFuncLib_TrayMenu
 
     Private osMenuObj As osControls.ContextMenu
 
-    Private osMenuOverlay As MenuOverlayWindow
+    Private osMenuOverlay As MenuOverlayWindow = Nothing
 
     Private osMenu_EnDis As osControls.MenuItem
     Private osMenu_GameOpts As osControls.MenuItem
@@ -810,13 +812,14 @@ Module osFuncLib_TrayMenu
         PrepUtilityTrigger(TriggerType.ShowMenu)
 
         If isFromTray Then
-            Dim objGetMenu = osPopupMenu
+            Dim objGetMenu = osTrayPopupMenu
 
             Await Application.Current.Dispatcher.InvokeAsync(
                 Sub()
-                    osMenuOverlay = New MenuOverlayWindow()
+                    osMenuOverlay = New MenuOverlayWindow(True)
 
                     With osMenuOverlay
+
                         Dim vr = SystemInformation.VirtualScreen
                         .Left = vr.Left
                         .Top = vr.Top
@@ -854,12 +857,12 @@ Module osFuncLib_TrayMenu
     End Function
 
     Public Sub ClosePopupMenu()
+        osTrayPopupMenu.IsOpen = False
+
         If osMenuOverlay IsNot Nothing Then
             osMenuOverlay.Close()
             osMenuOverlay = Nothing
         End If
-
-        osHandler_UI.osPopupMenu.Hide()
 
         Dim doGameFocus = SetGameFocus()
     End Sub
@@ -902,9 +905,10 @@ Module osFuncLib_TrayMenu
 
     Private Function ConfirmStatusChange(newStatus As Boolean) As UpdateStatus
         If newStatus = False Then
-            Select Case MsgBox("Disable osAutoCast?", vbYesNo,
-                                   "Confirm...")
-                Case vbYes
+            Dim chkConfirmDisable = GetResponse(PromptType.DisableService)
+
+            Select Case chkConfirmDisable
+                Case isYes
                     osFuncLib_InputScan.SetMonitorState(MonitorStatus.Paused)
                     Return UpdateStatus.ToDisabled
                 Case Else
@@ -1016,7 +1020,7 @@ Module osFuncLib_TrayMenu
         AddHandler osMenuExit.Click,
             Sub()
                 Dim chkConfirmExit = GetResponse(PromptType.CloseApp)
-                If chkConfirmExit = DialogResult.No Then Exit Sub
+                If chkConfirmExit = isNo Then Exit Sub
 
                 ClosePopupMenu()
                 osStopApp()
@@ -1038,7 +1042,7 @@ Module osFuncLib_TrayMenu
             Sub()
                 Dim chkConfirmCloseGame = GetResponse(PromptType.GameMenu_Leave)
 
-                If chkConfirmCloseGame = DialogResult.Yes Then
+                If chkConfirmCloseGame = isYes Then
                     Dim cmdCloseMTGA = CmdRunner.RunCmd("taskkill", "/f /im MTGA.exe")
                 End If
 
@@ -1075,14 +1079,14 @@ Module osFuncLib_TrayMenu
 
     Public Sub osMenu_Init(objInMon As osInMon)
 
-        PopulateMenu_Popup(osPopupMenu)
-        PrepTrayMenu(osPopupMenu)
+        PopulateMenu_Popup(osTrayPopupMenu)
+        PrepTrayMenu(osTrayPopupMenu)
 
         osIsEnabled = True
         objInputMon = objInMon
 
         With New osMenuFuncData(AddressOf GetEnabledStatus, AddressOf VerifyStatusChange)
-            osMenuFuncBinder.BindChecked_Popup(osPopupMenu.Items.Item(0),
+            osMenuFuncBinder.BindChecked_Popup(osTrayPopupMenu.Items.Item(0),
                                          .osMenuFunc_GetStatus, .osMenuFunc_ApplyStatus)
         End With
 
@@ -1160,7 +1164,7 @@ Module osFuncLib_UI
 
     End Function
 
-    Public Function GetResponse(pType As PromptType) As DialogResult
+    Public Function GetResponse(pType As PromptType) As PromptResponse
         With New PromptData(pType)
             Dim chkPromptResponse = ResponseBox.DisplayPopup(.Msg, .Title, .MsgType)
             Return chkPromptResponse

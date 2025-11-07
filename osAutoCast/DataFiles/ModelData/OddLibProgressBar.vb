@@ -643,11 +643,11 @@ Public Class OddLib_ProgressBar
 
     Private Sub ImplementEvents()
 
-        AddHandler Me.Loaded,
-           Sub()
-               InitDrawProgress()
-               ResizeSurface()
-           End Sub
+        'AddHandler Me.Loaded,
+        '   Sub()
+        '       InitDrawProgress()
+        '       ResizeSurface()
+        '   End Sub
 
         AddHandler Me.Loaded,
                   Sub()
@@ -699,33 +699,15 @@ Public Class OddLib_ProgressBar
                            _pendingPrime = False
                            PrimeFirstFrame()
                        End If
-                       If ProgD3D_Device IsNot Nothing Then
-                           ResizeSurface()
-                       End If
+                       'If ProgD3D_Device IsNot Nothing Then
+                       '    ResizeSurface()
+                       'End If
                    End Sub
 
-        AddHandler Me.Unloaded, Sub()
-                                    ProgressBarUnload()
-                                End Sub
+        'AddHandler Me.Unloaded, Sub()
+        '                            ProgressBarUnload()
+        '                        End Sub
 
-    End Sub
-
-    Private Sub InitDrawProgress()
-        ProgD3D = New Direct3DEx()
-
-        Dim creationFlags = CreateFlags.HardwareVertexProcessing Or
-                             CreateFlags.Multithreaded Or
-                             CreateFlags.FpuPreserve
-
-        Dim presentParams = New PresentParameters With {
-            .Windowed = True, .SwapEffect = SwapEffect.Discard,
-            .DeviceWindowHandle = New WindowInteropHelper(osCurrent.MainWindow).Handle
-        }
-
-        ProgD3D_Device = New DeviceEx(ProgD3D, 0, DeviceType.Hardware, presentParams.DeviceWindowHandle,
-                                      creationFlags, presentParams)
-
-        ProgD3D_Image = New D3DImage()
     End Sub
 
     Private Sub ResizeSurface()

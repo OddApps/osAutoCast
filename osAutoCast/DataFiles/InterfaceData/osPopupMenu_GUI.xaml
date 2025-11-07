@@ -34,7 +34,7 @@
                         </BeginStoryboard>
                     </DataTrigger.EnterActions>
                     <DataTrigger.ExitActions>
-                        <StopStoryboard BeginStoryboardName="GameMenuExpand" />
+                        <RemoveStoryboard BeginStoryboardName="GameMenuExpand" />
                     </DataTrigger.ExitActions>
                 </DataTrigger>
                 <DataTrigger Binding="{Binding IsChecked, ElementName=btnShowGameMenu}" Value="False">
@@ -48,13 +48,13 @@
                                 </DoubleAnimation>
                                 <DoubleAnimation Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.5" />
                                 <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility">
-                                    <DiscreteObjectKeyFrame KeyTime="0:0:0.25" Value="{x:Static Visibility.Collapsed}" />
+                                    <DiscreteObjectKeyFrame KeyTime="0:0:0.48" Value="{x:Static Visibility.Collapsed}" />
                                 </ObjectAnimationUsingKeyFrames>
                             </Storyboard>
                         </BeginStoryboard>
                     </DataTrigger.EnterActions>
                     <DataTrigger.ExitActions>
-                        <StopStoryboard BeginStoryboardName="GameMenuCollapse" />
+                        <RemoveStoryboard BeginStoryboardName="GameMenuCollapse" />
                     </DataTrigger.ExitActions>
                 </DataTrigger>
             </Style.Triggers>
@@ -92,7 +92,8 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="{x:Type Button}">
-                        <Border Background="{TemplateBinding Background}" BorderBrush="#FF2B2828" BorderThickness="0,0,0,0" Height="34">
+                        <Border Background="{TemplateBinding Background}" BorderBrush="#FF2B2828"
+                                BorderThickness="0,0,0,0" Height="34">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Height="32" />
                         </Border>
                         <ControlTemplate.Triggers>
@@ -114,7 +115,8 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="{x:Type Button}">
-                        <Border Background="{TemplateBinding Background}" BorderBrush="#FF2B2828" BorderThickness="0,0,0,0" Height="34">
+                        <Border Background="{TemplateBinding Background}" BorderBrush="#FF2B2828"
+                                BorderThickness="0,0,0,0" Height="34">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Height="32" />
                         </Border>
                         <ControlTemplate.Triggers>
@@ -132,7 +134,7 @@
             </Style.Triggers>
         </Style>
         <Style x:Key="pmBtnMainStyle" TargetType="{x:Type Button}">
-            <Setter Property="Background" Value="{x:Null}" />
+            <Setter Property="Background" Value="Transparent" />
             <Setter Property="Foreground" Value="#FF8C8A8A" />
             <Setter Property="Height" Value="34" />
             <Setter Property="HorizontalContentAlignment" Value="Center" />
@@ -147,8 +149,10 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="{x:Type Button}">
-                        <Border Background="{TemplateBinding Background}" Width="{Binding ActualWidth, ElementName=pmMenuItemContainer, Mode=OneWay}" BorderBrush="#FF2B2828" BorderThickness="0,0,0,0" Height="34" CornerRadius="0,0,8,8">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Height="32" />
+                        <Border Background="{TemplateBinding Background}" BorderBrush="#FF2B2828"
+                                Width="{Binding ActualWidth, ElementName=pmMenuItemContainer, Mode=OneWay}"
+                                BorderThickness="0,0,0,0" Height="34" CornerRadius="0,0,8,8">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Stretch" Height="32" />
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
@@ -165,7 +169,8 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="{x:Type Button}">
-                        <Border Background="{TemplateBinding Background}" BorderBrush="#FF2B2828" BorderThickness="0,0,0,2" Height="36" CornerRadius="0,0,0,0">
+                        <Border Background="{TemplateBinding Background}" BorderBrush="#FF222222"
+                                BorderThickness="0,0,0,2" Height="36" CornerRadius="0,0,0,0">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Height="32" />
                         </Border>
                         <ControlTemplate.Triggers>
@@ -193,7 +198,8 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="{x:Type ToggleButton}">
-                        <Border x:Name="enBorder" Background="{TemplateBinding Background}" BorderBrush="#FF2B2828" ClipToBounds="True" BorderThickness="0,0,0,2" CornerRadius="8,8,0,0">
+                        <Border x:Name="enBorder" Background="{TemplateBinding Background}" BorderBrush="#FF222222"
+                                ClipToBounds="True" BorderThickness="0,0,0,2" CornerRadius="8,8,0,0">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
                         <ControlTemplate.Triggers>
@@ -222,7 +228,7 @@
             </Setter>
         </Style>
         <Style x:Key="pmBtnGameMenuStyle" TargetType="{x:Type ToggleButton}">
-            <Setter Property="Background" Value="{x:Null}" />
+            <Setter Property="Background" Value="Transparent" />
             <Setter Property="Foreground" Value="#FF8C8A8A" />
             <Setter Property="Height" Value="36" />
             <Setter Property="HorizontalContentAlignment" Value="Center" />
@@ -237,7 +243,8 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="{x:Type ToggleButton}">
-                        <Border x:Name="enBorderGameMnu" Background="{TemplateBinding Background}" BorderBrush="#FF2B2828" BorderThickness="0,0,0,2">
+                        <Border x:Name="enBorderGameMnu" Background="{TemplateBinding Background}"
+                                BorderBrush="#FF222222" BorderThickness="0,0,0,2">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
                         <ControlTemplate.Triggers>
@@ -251,24 +258,28 @@
         </Style>
         <Style x:Key="pmBorderStyle" TargetType="{x:Type Border}">
             <Setter Property="BorderBrush" Value="#FF521212" />
+            <Setter Property="Background" Value="#B2393939" />
             <Setter Property="BorderThickness" Value="4,4,4,4" />
             <Setter Property="CornerRadius" Value="8,8,8,8" />
             <Setter Property="ClipToBounds" Value="True" />
         </Style>
     </Window.Resources>
     <Border Style="{StaticResource pmBorderStyle}">
-        <Grid x:Name="pmMenuItemContainer" Background="#B2393939">
+        <Grid x:Name="pmMenuItemContainer">
             <Grid.RowDefinitions>
                 <RowDefinition Height="36" MaxHeight="36" />
                 <RowDefinition Height="Auto" MinHeight="36" />
                 <RowDefinition Height="36" />
-                <RowDefinition Height="34" />
+                <RowDefinition Height="32" />
             </Grid.RowDefinitions>
-            <ToggleButton x:Name="pmChk_IsEnabled" Grid.Row="0" Grid.Column="0" IsChecked="{Binding IsAppEnabled, Mode=TwoWay}" Style="{StaticResource pmBtnEnabledStatusStyle}" />
+            <ToggleButton x:Name="pmChk_IsEnabled" Grid.Row="0" Grid.Column="0"
+                          IsChecked="{Binding IsAppEnabled, Mode=TwoWay}"
+                          Style="{StaticResource pmBtnEnabledStatusStyle}" />
             <StackPanel x:Name="stackPanel" Grid.Row="1" Grid.Column="0" Grid.RowSpan="1">
                 <ToggleButton x:Name="btnShowGameMenu" Content="Game Menu" Style="{StaticResource pmBtnGameMenuStyle}" IsChecked="False" />
-                <Border Margin="0,0,0,0" BorderThickness="0,0,0,0" BorderBrush="#FF521212" Style="{StaticResource HideShowGameMenu}">
-                    <StackPanel DataContext="{Binding RelativeSource={RelativeSource AncestorType=Window}}">
+                <Border Margin="0,0,0,0" BorderThickness="0,0,0,0"
+                        BorderBrush="#FF521212" Style="{StaticResource HideShowGameMenu}">
+                    <StackPanel>
                         <Button x:Name="pmBtn_StartGame" Content="Start MTGA" Style="{StaticResource GameMenu_ShowStart}" />
                         <Button x:Name="pmBtn_CloseGame" Content="Close MTGA" Style="{StaticResource GameMenu_ShowClose}" />
                     </StackPanel>

@@ -12,7 +12,7 @@ Public NotInheritable Class CoreDataLib
     Private Shared ReadOnly isDebug As Boolean = False
 
     Public Shared osTrayIcon As Forms.NotifyIcon
-    Public Shared osPopupMenu As System.Windows.Controls.ContextMenu
+    Public Shared osTrayPopupMenu As System.Windows.Controls.ContextMenu
 
     Public Shared dirProgFiles As String = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles)
     Public Shared dirMtga As String = Path.Combine(dirProgFiles, "Wizards of the Coast",

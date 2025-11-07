@@ -71,13 +71,9 @@ Public NotInheritable Class osHandler_UI
 
                 Dim guiLoad = _autoCastProgress.Handle
             Case TriggerAction.ShowMenu
-                '_osPopupMenuOverlay = New Lazy(Of MenuOverlayWindow)(
-                '    Function()
-                '        Return Application.Current.Dispatcher.
-                '        Invoke(Function()
-                '                   Return New MenuOverlayWindow()
-                '               End Function)
-                '    End Function, LazyThreadSafetyMode.ExecutionAndPublication)
+                If _osPopupMenuOverlay Is Nothing Then
+                    ResetPopupMenuOverlay()
+                End If
 
                 osPopupMenuOverlay.PrepPopupMenuOverlay()
 
@@ -108,13 +104,14 @@ Public NotInheritable Class osHandler_UI
             Case TriggerAction.AutoCast
                 GenerateGUI(progGui)
             Case TriggerAction.AutoPass
-                Dim guiTask = Task.Run(
+                Dim guiTask = Application.Current.Dispatcher.InvokeAsync(
                     Sub()
                         GenerateGUI(progGui)
                         Dim guiReset = _autoPass.Value
 
                         guiReset.BeginPrep()
                     End Sub)
+
 
                 Await guiTask
             Case TriggerAction.ShowMenu
@@ -245,7 +242,7 @@ Public NotInheritable Class osHandler_UI
                 _osPopupMenu = Nothing
                 _osPopupMenuOverlay = Nothing
 
-                ResetPopupMenuOverlay()
+                'ResetPopupMenuOverlay()
         End Select
 
         guiReset = Nothing
