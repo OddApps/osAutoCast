@@ -730,7 +730,7 @@ Public NotInheritable Class MenuOverlayWindow
             .Title = ""
             .WindowStyle = WindowStyle.None
             .AllowsTransparency = True
-            .Background = GetBackColor()
+            .Background = Windows.Media.Brushes.Black
             .ShowInTaskbar = False
             .ShowActivated = False
             .Topmost = True
@@ -769,6 +769,20 @@ Public NotInheritable Class MenuOverlayWindow
         ex = ex Or WS_EX_NOACTIVATE Or WS_EX_TOOLWINDOW
         SetWindowLongPtr(hwnd, GWL_EXSTYLE, New IntPtr(ex))
     End Sub
+
+End Class
+
+Public NotInheritable Class osFuncLib_PopupMenu
+
+    Public Shared Async Function ShowPopupMenu() As Task
+        Dim objTask_PopupOverlay = Application.Current.Dispatcher.InvokeAsync(
+                Async Function()
+                    Await osHandler_UI.LaunchGui(TriggerAction.ShowMenu)
+                    osHandler_UI.DisplayGUI(TriggerType.ShowMenu)
+                End Function)
+
+        Await objTask_PopupOverlay.Task.Unwrap
+    End Function
 
 End Class
 
@@ -844,13 +858,32 @@ Module osFuncLib_TrayMenu
 
                 End Sub)
         Else
-            Dim objTask_PopupOverlay = Application.Current.Dispatcher.InvokeAsync(
-                Async Function()
-                    Await osHandler_UI.LaunchGui(TriggerAction.ShowMenu)
-                    osHandler_UI.DisplayGUI(TriggerType.ShowMenu)
-                End Function)
+            Dim w As New osPopupMenu_GUI
+            w.Owner = Application.Current.MainWindow
+            w.InitPopupMenu()
+            w.ShowInTaskbar = False
+            ' w.Topmost = True
+            w.ShowActivated = False
 
-            Await objTask_PopupOverlay.Task.Unwrap
+            w.WindowStartupLocation = WindowStartupLocation.Manual
+            w.Left = 0
+            w.Top = 0
+            w.Width = 100
+            w.Height = 100
+            'w.Width = SystemParameters.PrimaryScreenWidth
+            'w.Height = SystemParameters.PrimaryScreenHeight
+
+            'RemoveHandler w.Closed, AddressOf Popup_Closed
+            'AddHandler w.Closed, AddressOf Popup_Closed
+
+            w.Show()
+            'Dim objTask_PopupOverlay = Application.Current.Dispatcher.InvokeAsync(
+            '    Async Function()
+            '        Await osHandler_UI.LaunchGui(TriggerAction.ShowMenu)
+            '        osHandler_UI.DisplayGUI(TriggerType.ShowMenu)
+            '    End Function)
+
+            'Await objTask_PopupOverlay.Task.Unwrap
         End If
 
         osFuncLib_InputScan.isActionComplete = True
@@ -930,7 +963,7 @@ Module osFuncLib_TrayMenu
     End Sub
 
     Private Sub SetNewStatus(setStatus As Boolean)
-        osIsEnabled = setStatus
+        osEnabledStatus = setStatus
     End Sub
 
     Private Sub UpdateTrayIcon(chkStatus As Boolean)
@@ -1085,7 +1118,7 @@ Module osFuncLib_TrayMenu
         osIsEnabled = True
         objInputMon = objInMon
 
-        With New osMenuFuncData(AddressOf GetEnabledStatus, AddressOf VerifyStatusChange)
+        With New osMenuFuncData(AddressOf osStatus_Fetch, AddressOf VerifyStatusChange)
             osMenuFuncBinder.BindChecked_Popup(osTrayPopupMenu.Items.Item(0),
                                          .osMenuFunc_GetStatus, .osMenuFunc_ApplyStatus)
         End With

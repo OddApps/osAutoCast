@@ -4,6 +4,10 @@
     xmlns:local="clr-namespace:osAutoCast"
     StartupUri="DataFiles\InterfaceData\osInMon.xaml">
     <Application.Resources>
-        
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/DataFiles/InterfaceData/osUI_StyleIndex.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
     </Application.Resources>
 </Application>

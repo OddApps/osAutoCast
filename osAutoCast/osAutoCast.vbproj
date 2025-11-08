@@ -227,6 +227,22 @@
     <Compile Include="DataFiles\ModelData\EasingModel.vb" />
     <Compile Include="DataFiles\ModelData\OddLibProgressBar.vb" />
     <Compile Include="DataFiles\TypeData\DataTypeLib.vb" />
+    <Page Include="DataFiles\InterfaceData\osUI_StyleIndex.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="DataFiles\StyleData\osUI_Style-Border.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="DataFiles\StyleData\osUI_Style-Button.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="DataFiles\StyleData\osUI_Style-Toggle.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
   </ItemGroup>
   <ItemGroup>
     <Import Include="System.Threading.Tasks" />
@@ -307,5 +323,6 @@
   <ItemGroup>
     <None Include="Resources\osSplashLoader.png" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.VisualBasic.targets" />
 </Project>

@@ -29,6 +29,8 @@ Public NotInheritable Class CoreDataLib
     Public Shared osPrefStoreData As osPrefStore
     Public Shared isDispPref As Boolean = False
 
+    Public Shared Property osEnabledStatus As Boolean = True
+
     Public Const mEvent_Down As Integer = 2
     Public Const mEvent_Up As Integer = 4
 
@@ -43,8 +45,16 @@ Public NotInheritable Class CoreDataLib
         (TriggerAction.AutoCast, Function() osFuncLib_AutoCast.ExecuteAutoCast()),
         (TriggerAction.AutoPass, Function() osFuncLib_AutoPass.ExecuteAutoPass()),
         (TriggerAction.ShowOpts, Function() osFuncLib_ShowOpts.ExecuteDispOpts()),
-        (TriggerAction.ShowMenu, Function() osFuncLib_TrayMenu.DisplayMenuPopup())
+        (TriggerAction.ShowMenu, Function() osFuncLib_PopupMenu.ShowPopupMenu())
     }
+
+    Public Shared Function osStatus_Fetch() As Boolean
+        Return osEnabledStatus
+    End Function
+
+    Public Shared Function osStatus_IsDisabled() As Boolean
+        Return osEnabledStatus = False
+    End Function
 
     Public Shared Function GetFuse() As Integer
         Return osPrefStoreData.AutoCast_Fuse

@@ -8,7 +8,7 @@ Imports osAutoCast.DataTypeLib.PromptResponse
 
 Public Class osPopupMenu_GUI
 
-    Private _PopupMenuData As New PopupMenuDataModel
+    Private _PopupMenuData As PopupMenuDataModel
 
     Private Sub pmCmd_ShowGameMenu(sender As Object, e As RoutedEventArgs) Handles btnShowGameMenu.Checked
         ShowGameMenuItem()
@@ -66,48 +66,50 @@ Public Class osPopupMenu_GUI
         osStopApp()
     End Sub
 
-    Private Sub InitPopupMenu()
+    Public Sub InitPopupMenu()
+        _PopupMenuData = New PopupMenuDataModel
         DataContext = _PopupMenuData
-        _PopupMenuData._isAppEnabled = True
+
+        AddHandler RootOverlay.MouseDown, AddressOf OnOverlayClick
+        AddHandler CenterCard.MouseDown, Sub(s, e) e.Handled = True
 
         ShowGameMenuItem()
     End Sub
 
     Private Sub ExitPopupMenu()
-        Application.Current.Dispatcher.Invoke(
-            Sub()
-                osHandler_UI.ResetUI(TriggerAction.ShowMenu)
-            End Sub)
+        'Application.Current.Dispatcher.Invoke(
+        '    Sub()
+        osHandler_UI.ResetUI(TriggerAction.ShowMenu)
+        '    End Sub)
     End Sub
 
-End Class
-
-Partial Public Class osPopupMenu_GUI
-
-    Public Sub New()
-        InitializeComponent()
-        InitPopupMenu()
+    Private Sub OnOverlayClick(sender As Object, e As MouseButtonEventArgs)
+        Close()
+        ExitPopupMenu()
     End Sub
 
     Protected Overrides Sub OnClosed(e As EventArgs)
         MyBase.OnClosed(e)
 
-        Me.CommandBindings.Clear()
-        Me.InputBindings.Clear()
+        CommandBindings.Clear()
+        InputBindings.Clear()
 
         ' 3) Clear visual-tree bindings (you already clear Me; also clear children)
         DetachAllBindings(Me)
-        _PopupMenuData = Nothing
+
         ' 4) Break DC & resources
-        Me.DataContext = Nothing
+        DataContext = Nothing
+        _PopupMenuData.Dispose()
+        _PopupMenuData = Nothing
         BindingOperations.ClearAllBindings(Me)
-        Me.Resources.MergedDictionaries.Clear()
-        Me.Resources.Clear()
-        Me.Style = Nothing
+        Resources.MergedDictionaries.Clear()
+        Resources.Clear()
+        Style = Nothing
 
         ' 5) Hint the GC (optional)
         GC.Collect()
         GC.WaitForPendingFinalizers()
+        GC.Collect()
     End Sub
 
     Private Sub DetachAllBindings(root As DependencyObject)

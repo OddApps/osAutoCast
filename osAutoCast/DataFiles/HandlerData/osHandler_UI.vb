@@ -15,27 +15,40 @@ Public NotInheritable Class osHandler_UI
         End Get
     End Property
 
-    Private Shared _osPopupMenu As Lazy(Of osPopupMenu_GUI)
+    'Private Shared _osPopupMenu As Lazy(Of osPopupMenu_GUI)
+    'Public Shared ReadOnly Property osPopupMenu As osPopupMenu_GUI
+    '    Get
+    '        Return _osPopupMenu.Value
+    '    End Get
+    'End Property
+
+    Private Shared _osPopupMenu As New Lazy(Of osPopupMenu_GUI)(
+                    Function()
+                        Return Application.Current.Dispatcher.
+                        Invoke(Function()
+                                   Return New osPopupMenu_GUI()
+                               End Function)
+                    End Function, LazyThreadSafetyMode.ExecutionAndPublication)
     Public Shared ReadOnly Property osPopupMenu As osPopupMenu_GUI
         Get
             Return _osPopupMenu.Value
         End Get
     End Property
 
-    Private Shared _osPopupMenuOverlay As New Lazy(Of MenuOverlayWindow)(
-    Function() New MenuOverlayWindow(), LazyThreadSafetyMode.ExecutionAndPublication)
-    Public Shared ReadOnly Property osPopupMenuOverlay As MenuOverlayWindow
-        Get
-            Return _osPopupMenuOverlay.Value
-        End Get
-    End Property
-
-    'Private Shared _osPopupMenuOverlay As Lazy(Of MenuOverlayWindow)
+    'Private Shared _osPopupMenuOverlay As New Lazy(Of MenuOverlayWindow)(
+    'Function() New MenuOverlayWindow(), LazyThreadSafetyMode.ExecutionAndPublication)
     'Public Shared ReadOnly Property osPopupMenuOverlay As MenuOverlayWindow
     '    Get
     '        Return _osPopupMenuOverlay.Value
     '    End Get
     'End Property
+
+    Private Shared _osPopupMenuOverlay As Lazy(Of MenuOverlayWindow)
+    Public Shared ReadOnly Property osPopupMenuOverlay As MenuOverlayWindow
+        Get
+            Return _osPopupMenuOverlay.Value
+        End Get
+    End Property
 
     Private Shared _autoPass As Lazy(Of progGui_AutoPass)
     Public Shared ReadOnly Property osGui_AutoPass As progGui_AutoPass
@@ -71,19 +84,25 @@ Public NotInheritable Class osHandler_UI
 
                 Dim guiLoad = _autoCastProgress.Handle
             Case TriggerAction.ShowMenu
-                If _osPopupMenuOverlay Is Nothing Then
-                    ResetPopupMenuOverlay()
-                End If
-
-                osPopupMenuOverlay.PrepPopupMenuOverlay()
-
-                _osPopupMenu = New Lazy(Of osPopupMenu_GUI)(
+                If _osPopupMenu Is Nothing Then
+                    _osPopupMenu = New Lazy(Of osPopupMenu_GUI)(
                     Function()
                         Return Application.Current.Dispatcher.
                         Invoke(Function()
                                    Return New osPopupMenu_GUI()
                                End Function)
                     End Function, LazyThreadSafetyMode.ExecutionAndPublication)
+                End If
+
+                'osPopupMenuOverlay.PrepPopupMenuOverlay()
+
+                '_osPopupMenu = New Lazy(Of osPopupMenu_GUI)(
+                '    Function()
+                '        Return Application.Current.Dispatcher.
+                '        Invoke(Function()
+                '                   Return New osPopupMenu_GUI()
+                '               End Function)
+                '    End Function, LazyThreadSafetyMode.ExecutionAndPublication)
         End Select
     End Sub
 
@@ -135,31 +154,68 @@ Public NotInheritable Class osHandler_UI
                         osGui_AutoPass.Show()
                     End Sub)
             Case TriggerType.ShowMenu
+                'Application.Current.Dispatcher.Invoke(
+                '    Sub()
+                '        With osPopupMenuOverlay
+                '            AddHandler .MouseDown, pmFunc_TerminatePopupMenu
+
+                '            .InitPopupMenuOverlay()
+                '            .Show()
+                '        End With
+                '    End Sub)
+
                 Application.Current.Dispatcher.Invoke(
                     Sub()
-                        With osPopupMenuOverlay
-                            AddHandler .MouseDown, pmFunc_TerminatePopupMenu
+                        Dim w = _osPopupMenu.Value
 
-                            .InitPopupMenuOverlay()
-                            .Show()
-                        End With
-                    End Sub)
+                        w.Owner = Application.Current.MainWindow
+                        w.InitPopupMenu()
+                        w.ShowInTaskbar = False
+                        ' w.Topmost = True
+                        w.ShowActivated = False
 
-                Application.Current.Dispatcher.Invoke(
-                    Sub()
-                        osPopupMenu.ShowInTaskbar = False
-                        osPopupMenu.Topmost = True
-                        osPopupMenu.ShowActivated = False
+                        w.WindowStartupLocation = WindowStartupLocation.Manual
+                        w.Left = 0
+                        w.Top = 0
+                        w.Width = 100
+                        w.Height = 100
+                        'w.Width = SystemParameters.PrimaryScreenWidth
+                        'w.Height = SystemParameters.PrimaryScreenHeight
 
-                        osPopupMenu.Show()
+                        RemoveHandler w.Closed, AddressOf Popup_Closed
+                        AddHandler w.Closed, AddressOf Popup_Closed
+
+                        w.Show()
                     End Sub)
         End Select
     End Sub
 
-    Private Shared Sub TerminatePopupMenu()
-        RemoveHandler osPopupMenuOverlay.MouseDown, pmFunc_TerminatePopupMenu
+    Private Shared Sub ClosePopupMenu()
+        Application.Current.Dispatcher.Invoke(
+        Sub()
+            If _osPopupMenu IsNot Nothing AndAlso _osPopupMenu.IsValueCreated Then
+                Dim w = _osPopupMenu.Value
+                Try
+                    RemoveHandler w.Closed, AddressOf Popup_Closed
+                    w.Close()                      ' <-- this actually tears it down
+                Catch
+                    ' ignore if already closed
+                End Try
+            End If
+            _osPopupMenu = Nothing                ' release our strong reference
+        End Sub)
+    End Sub
 
-        osHandler_UI.ResetUI(TriggerAction.ShowMenu)
+    Private Shared Sub Popup_Closed(sender As Object, e As EventArgs)
+        Dim w = TryCast(sender, Window)
+        If w IsNot Nothing Then RemoveHandler w.Closed, AddressOf Popup_Closed
+        _osPopupMenu = Nothing
+    End Sub
+
+    Private Shared Sub TerminatePopupMenu()
+        ' RemoveHandler osPopupMenuOverlay.MouseDown, pmFunc_TerminatePopupMenu
+        ClosePopupMenu()
+        ' osHandler_UI.ResetUI(TriggerAction.ShowMenu)
         Dim doGameFocus = CoreDataLib.SetGameFocus()
     End Sub
 
@@ -213,34 +269,35 @@ Public NotInheritable Class osHandler_UI
                     guiReset.BeginPrep()
                 End If
             Case TriggerAction.ShowMenu
-                guiReset = _osPopupMenu.Value
+                ' guiReset = _osPopupMenu.Value
 
-                Using objPrepData As New GUI_PrepData(guiType, guiReset)
-                    If objPrepData.guiIsLoaded Then
-                        If objPrepData.guiDispatch.CheckAccess() Then
-                            objPrepData.guiAction.Invoke(guiReset)
-                        Else
-                            objPrepData.guiDispatch.Invoke(objPrepData.guiAction,
-                                                            DispatcherPriority.Normal, guiReset)
-                        End If
-                    End If
-                End Using
+                ClosePopupMenu()
+                'Using objPrepData As New GUI_PrepData(guiType, guiReset)
+                '    If objPrepData.guiIsLoaded Then
+                '        If objPrepData.guiDispatch.CheckAccess() Then
+                '            objPrepData.guiAction.Invoke(guiReset)
+                '        Else
+                '            objPrepData.guiDispatch.Invoke(objPrepData.guiAction,
+                '                                            DispatcherPriority.Normal, guiReset)
+                '        End If
+                '    End If
+                'End Using
 
-                guiReset = _osPopupMenuOverlay.Value
+                'guiReset = _osPopupMenuOverlay.Value
 
-                Using objPrepData As New GUI_PrepData(guiType, guiReset, True)
-                    If objPrepData.guiIsLoaded Then
-                        If objPrepData.guiDispatch.CheckAccess() Then
-                            objPrepData.guiAction.Invoke(guiReset)
-                        Else
-                            objPrepData.guiDispatch.Invoke(objPrepData.guiAction,
-                                                            DispatcherPriority.Normal, guiReset)
-                        End If
-                    End If
-                End Using
+                'Using objPrepData As New GUI_PrepData(guiType, guiReset, True)
+                '    If objPrepData.guiIsLoaded Then
+                '        If objPrepData.guiDispatch.CheckAccess() Then
+                '            objPrepData.guiAction.Invoke(guiReset)
+                '        Else
+                '            objPrepData.guiDispatch.Invoke(objPrepData.guiAction,
+                '                                            DispatcherPriority.Normal, guiReset)
+                '        End If
+                '    End If
+                'End Using
 
-                _osPopupMenu = Nothing
-                _osPopupMenuOverlay = Nothing
+                ' _osPopupMenu = Nothing
+                ' _osPopupMenuOverlay = Nothing
 
                 'ResetPopupMenuOverlay()
         End Select
