@@ -738,10 +738,6 @@ Public NotInheritable Class MenuOverlayWindow
         End With
     End Sub
 
-    Private Function GetBackColor() As SolidColorBrush
-        Return New SolidColorBrush(osColor.Black)
-    End Function
-
     Public Sub InitPopupMenuOverlay()
         Me.ShowInTaskbar = False
         Me.ShowActivated = False

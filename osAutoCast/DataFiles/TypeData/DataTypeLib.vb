@@ -662,6 +662,77 @@ Public Class ProgEdgeData
 
 End Class
 
+Public Module osPopupMenuLib
+
+    Public DisposeUI_PopupMenu As Action(Of osPopupMenu_GUI) =
+        Sub(objGui_PopupMenu As osPopupMenu_GUI)
+            If objGui_PopupMenu IsNot Nothing Then
+                With objGui_PopupMenu
+                    Try
+                        RemoveHandler .Closed, AddressOf osHandler_UI.PrepDispatch
+
+                        If .IsLoaded Then
+                            .IsHitTestVisible = False
+                            .Opacity = 0
+                            .DataContext = Nothing
+                            .Close()
+                        End If
+                    Catch : End Try
+                End With
+            End If
+        End Sub
+
+    Public DisposeUI_PopupMenuOverlay As Action(Of MenuOverlayWindow) =
+        Sub(objGui_PopupMenuOverlay As MenuOverlayWindow)
+            If objGui_PopupMenuOverlay IsNot Nothing Then
+                With objGui_PopupMenuOverlay
+                    Try
+                        RemoveHandler .MouseDown, osHandler_UI.pmFunc_TerminatePopupMenu
+
+                        If .IsLoaded Then
+                            .Opacity = 0
+                            .IsHitTestVisible = False
+                            .ShowInTaskbar = False
+                            .Close()
+                        End If
+                    Catch : End Try
+                End With
+            End If
+        End Sub
+
+    Private Sub ExecPrepUI_PopupMenu(objGui_PopupMenu As osPopupMenu_GUI)
+        Dim objWin_PopupMenu = objGui_PopupMenu
+
+        With objWin_PopupMenu
+            .Owner = Application.Current.MainWindow
+
+            .ShowInTaskbar = False
+            .Topmost = True
+            .ShowActivated = False
+
+            .InitPopupMenu()
+            .Show()
+        End With
+    End Sub
+
+    Private Sub ExecPrepUI_PopupMenuOverlay(objGui_PopupMenuOverlay As MenuOverlayWindow)
+        Dim objWin_PopupMenuOverlay = objGui_PopupMenuOverlay
+
+        With objWin_PopupMenuOverlay
+            AddHandler .MouseDown, osHandler_UI.pmFunc_TerminatePopupMenu
+
+            .Owner = Application.Current.MainWindow
+
+            .InitPopupMenuOverlay()
+            .Show()
+        End With
+    End Sub
+
+    Public DisplayUI_PopupMenu As Action(Of osPopupMenu_GUI) = AddressOf ExecPrepUI_PopupMenu
+    Public DisplayUI_PopupMenuOverlay As Action(Of MenuOverlayWindow) = AddressOf ExecPrepUI_PopupMenuOverlay
+
+End Module
+
 Public Class GUI_PrepData
     Implements IDisposable
 
@@ -691,6 +762,7 @@ Public Class GUI_PrepData
                 If .IsLoaded Then
                     .IsHitTestVisible = False
                     .Opacity = 0
+                    .DataContext = Nothing
                     .Close()
                 End If
             Catch

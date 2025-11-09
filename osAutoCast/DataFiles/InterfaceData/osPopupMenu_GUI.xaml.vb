@@ -8,15 +8,8 @@ Imports osAutoCast.DataTypeLib.PromptResponse
 
 Public Class osPopupMenu_GUI
 
-    Private _PopupMenuData As PopupMenuDataModel
-
     Private Sub pmCmd_ShowGameMenu(sender As Object, e As RoutedEventArgs) Handles btnShowGameMenu.Checked
         ShowGameMenuItem()
-    End Sub
-
-    Private Sub ShowGameMenuItem()
-        _PopupMenuData.DisplayGameMenuItem = If(CoreDataLib.IsGameRunning(),
-            GameMenuItem.ShowClose, GameMenuItem.ShowStart)
     End Sub
 
     Private Async Sub pmCmd_ShowOpts(sender As Object, e As RoutedEventArgs) Handles pmBtn_ShowOptions.Click
@@ -37,8 +30,7 @@ Public Class osPopupMenu_GUI
 
     Private Sub pmCmd_StartGame(sender As Object, e As RoutedEventArgs) Handles pmBtn_StartGame.Click
         Process.Start(New ProcessStartInfo With {
-                          .FileName = dirMtgaExe,
-                          .WorkingDirectory = dirMtga,
+                          .FileName = dirMtgaExe, .WorkingDirectory = dirMtga,
                           .WindowStyle = ProcessWindowStyle.Maximized
                       })
 
@@ -46,20 +38,15 @@ Public Class osPopupMenu_GUI
     End Sub
 
     Private Sub pmCmd_CloseGame(sender As Object, e As RoutedEventArgs) Handles pmBtn_CloseGame.Click
-        ExitPopupMenu()
-
         Dim chkConfirmCloseGame = GetResponse(PromptType.GameMenu_Leave)
 
         If chkConfirmCloseGame = isYes Then
             Dim cmdCloseMTGA = CmdRunner.RunCmd("taskkill", "/f /im MTGA.exe")
+            ExitPopupMenu()
         End If
-
-        Me.Close()
     End Sub
 
     Private Sub pmCmd_Exit(sender As Object, e As RoutedEventArgs) Handles pmBtn_Exit.Click
-        ExitPopupMenu()
-
         Dim chkConfirmExit = GetResponse(PromptType.CloseApp)
         If chkConfirmExit = isNo Then Exit Sub
 
@@ -67,59 +54,122 @@ Public Class osPopupMenu_GUI
     End Sub
 
     Public Sub InitPopupMenu()
-        _PopupMenuData = New PopupMenuDataModel
-        DataContext = _PopupMenuData
-
-        AddHandler RootOverlay.MouseDown, AddressOf OnOverlayClick
-        AddHandler CenterCard.MouseDown, Sub(s, e) e.Handled = True
-
         ShowGameMenuItem()
     End Sub
 
     Private Sub ExitPopupMenu()
-        'Application.Current.Dispatcher.Invoke(
-        '    Sub()
-        osHandler_UI.ResetUI(TriggerAction.ShowMenu)
-        '    End Sub)
-    End Sub
-
-    Private Sub OnOverlayClick(sender As Object, e As MouseButtonEventArgs)
-        Close()
-        ExitPopupMenu()
+        osHandler_UI.DispatchUI()
     End Sub
 
     Protected Overrides Sub OnClosed(e As EventArgs)
         MyBase.OnClosed(e)
 
-        CommandBindings.Clear()
-        InputBindings.Clear()
+        ClearResources(Me)
 
-        ' 3) Clear visual-tree bindings (you already clear Me; also clear children)
-        DetachAllBindings(Me)
-
-        ' 4) Break DC & resources
-        DataContext = Nothing
-        _PopupMenuData.Dispose()
-        _PopupMenuData = Nothing
-        BindingOperations.ClearAllBindings(Me)
-        Resources.MergedDictionaries.Clear()
-        Resources.Clear()
-        Style = Nothing
-
-        ' 5) Hint the GC (optional)
         GC.Collect()
         GC.WaitForPendingFinalizers()
         GC.Collect()
     End Sub
 
-    Private Sub DetachAllBindings(root As DependencyObject)
-        If root Is Nothing Then Return
-        BindingOperations.ClearAllBindings(root)
-        Dim count = VisualTreeHelper.GetChildrenCount(root)
-        For i = 0 To count - 1
-            Dim child = VisualTreeHelper.GetChild(root, i)
-            DetachAllBindings(child)
+    Private Sub ClearResources(root As DependencyObject)
+        For Each sb In Me.Resources.Values.OfType(Of Animation.Storyboard)()
+            sb.Remove(Me)
         Next
+
+        Me.CommandBindings.Clear()
+        Me.InputBindings.Clear()
+
+        If root Is Nothing Then Return
+
+        BindingOperations.ClearAllBindings(root)
+
+        For i = 0 To VisualTreeHelper.GetChildrenCount(root) - 1
+            ClearResources(VisualTreeHelper.GetChild(root, i))
+        Next
+
+        Me.Resources.MergedDictionaries.Clear()
+        Me.Resources.Clear()
+
+        Me.Style = Nothing
+
+        Me.DataContext = Nothing
+    End Sub
+
+End Class
+
+Partial Public Class osPopupMenu_GUI
+    Implements INotifyPropertyChanged
+
+    Private _dispGameMenuItem As GameMenuItem
+    Public Property DisplayGameMenuItem As GameMenuItem
+        Get
+            Return _dispGameMenuItem
+        End Get
+        Set(value As GameMenuItem)
+            If _dispGameMenuItem <> value Then
+                _dispGameMenuItem = value
+                OnPropertyChanged()
+            End If
+        End Set
+    End Property
+
+    Public _isAppEnabled As Boolean
+    Public Property IsAppEnabled As Boolean
+        Get
+            Return osStatus_Fetch()
+        End Get
+        Set(value As Boolean)
+            If osIsEnabled <> value Then
+                Dim result = ConfirmStatusChange(value)
+
+                If result <> UpdateStatus.CancelUpdate Then
+                    SetNewStatus(value)
+                    OnPropertyChanged()
+                End If
+            End If
+        End Set
+    End Property
+
+    Private Function ConfirmStatusChange(newStatus As Boolean) As UpdateStatus
+        If newStatus = False Then
+            Dim chkConfirmDisable = GetResponse(PromptType.DisableService)
+
+            Select Case chkConfirmDisable
+                Case isYes
+                    osFuncLib_InputScan.SetMonitorState(MonitorStatus.Paused)
+                    Return UpdateStatus.ToDisabled
+                Case Else
+                    Return UpdateStatus.CancelUpdate
+            End Select
+        Else
+            osFuncLib_InputScan.SetMonitorState(MonitorStatus.Starting)
+            objInputMon.RestartMonitor()
+
+            Return UpdateStatus.ToEnabled
+        End If
+    End Function
+
+    Private Sub SetNewStatus(setStatus As Boolean)
+        osIsEnabled = setStatus
+        osEnabledStatus = setStatus
+        _isAppEnabled = setStatus
+
+        UpdateTray(setStatus)
+    End Sub
+
+    Public Sub New()
+        InitializeComponent()
+        ShowGameMenuItem()
+    End Sub
+
+    Private Sub ShowGameMenuItem()
+        DisplayGameMenuItem = If(CoreDataLib.IsGameRunning(),
+            GameMenuItem.ShowClose, GameMenuItem.ShowStart)
+    End Sub
+
+    Public Event PropertyChanged As PropertyChangedEventHandler Implements INotifyPropertyChanged.PropertyChanged
+    Private Sub OnPropertyChanged(<CallerMemberName> Optional name As String = Nothing)
+        RaiseEvent PropertyChanged(Me, New PropertyChangedEventArgs(name))
     End Sub
 
 End Class

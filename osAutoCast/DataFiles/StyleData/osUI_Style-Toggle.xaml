@@ -6,7 +6,8 @@
         <Setter Property="Height" Value="36" />
         <Setter Property="HorizontalContentAlignment" Value="Center" />
         <Setter Property="VerticalContentAlignment" Value="Center" />
-        <Setter Property="Width" Value="{Binding ActualWidth, ElementName=pmMenuItemContainer, Mode=OneWay}" />
+        <Setter Property="Width" Value="{Binding ActualWidth,
+            ElementName=pmMenuItemContainer, Mode=OneWay}" />
         <Setter Property="Padding" Value="0,0,0,0" />
         <Setter Property="FontSize" Value="20" />
         <Setter Property="FontWeight" Value="Bold" />
@@ -16,13 +17,15 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type ToggleButton}">
-                    <Border x:Name="enBorder" Background="{TemplateBinding Background}" BorderBrush="#FF222222"
-                                ClipToBounds="True" BorderThickness="0,0,0,2" CornerRadius="8,8,0,0">
+                    <Border x:Name="enBorder" Background="{TemplateBinding Background}"
+                            BorderBrush="#FF222222" ClipToBounds="True"
+                            BorderThickness="0,0,0,2" CornerRadius="8,8,0,0">
                         <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="enBorder" Property="Background" Value="#A1575757" />
+                            <Setter TargetName="enBorder" Property="Background"
+                                    Value="#A1575757" />
                         </Trigger>
                         <Trigger Property="IsChecked" Value="False">
                             <Setter Property="Content" Value="Disabled" />
@@ -51,7 +54,8 @@
         <Setter Property="Height" Value="36" />
         <Setter Property="HorizontalContentAlignment" Value="Center" />
         <Setter Property="VerticalContentAlignment" Value="Center" />
-        <Setter Property="Width" Value="{Binding ActualWidth, ElementName=pmMenuItemContainer, Mode=OneWay}" />
+        <Setter Property="Width" Value="{Binding ActualWidth,
+            ElementName=pmMenuItemContainer, Mode=OneWay}" />
         <Setter Property="Padding" Value="0,0,0,0" />
         <Setter Property="FontSize" Value="20" />
         <Setter Property="FontWeight" Value="Bold" />
@@ -67,7 +71,8 @@
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="enBorderGameMnu" Property="Background" Value="#A1575757" />
+                            <Setter TargetName="enBorderGameMnu" Property="Background"
+                                    Value="#A1575757" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
