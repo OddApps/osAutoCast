@@ -1,0 +1,11 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib"
+                    xmlns:oseffect="clr-namespace:osAutoCast.osEffectConv"
+                    xmlns:local="clr-namespace:osAutoCast">
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="StyleLib/osUI_Style-Border.xaml"/>
+        <ResourceDictionary Source="StyleLib/osUI_Style-Button.xaml"/>
+        <ResourceDictionary Source="StyleLib/osUI_Style-Toggle.xaml"/>
+    </ResourceDictionary.MergedDictionaries>
+</ResourceDictionary>

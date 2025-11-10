@@ -123,7 +123,7 @@ Public NotInheritable Class CoreDataLib
     End Function
 
     Public Shared Function VerifyRunStatus() As Boolean
-        If IsDisabled() Then
+        If osStatus_IsDisabled() Then
             Return False
         Else
             Return ChkExecPermission()

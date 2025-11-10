@@ -146,6 +146,7 @@ Public Module DataTypeLib
         AutoPass
         ShowOpts
         ShowMenu
+        ShowMenuOverlay
         InputShift
         InputClick
         None
@@ -156,6 +157,7 @@ Public Module DataTypeLib
         AutoPass
         ShowPrefs
         ShowMenu
+        ShowMenuOverlay
     End Enum
 
     Public Enum TriggerValidation
@@ -217,6 +219,16 @@ Public Module DataTypeLib
         StretchToWindow
         FixedSizeCentered
         FixedAt
+    End Enum
+
+    Public Enum MenuProperty
+        propTexel
+        propThickness
+        propStroke
+        propGlow
+        propFade
+        propSpread
+        propGlowColor
     End Enum
 
 #End Region
@@ -700,6 +712,22 @@ Public Module osPopupMenuLib
             End If
         End Sub
 
+    Public DisposeUI_TrayOverlay As Action(Of MenuOverlayWindow) =
+    Sub(objGui_PopupMenuOverlay As MenuOverlayWindow)
+        If objGui_PopupMenuOverlay IsNot Nothing Then
+            With objGui_PopupMenuOverlay
+                Try
+                    If .IsLoaded Then
+                        .Opacity = 0
+                        .IsHitTestVisible = False
+                        .ShowInTaskbar = False
+                        .Close()
+                    End If
+                Catch : End Try
+            End With
+        End If
+    End Sub
+
     Private Sub ExecPrepUI_PopupMenu(objGui_PopupMenu As osPopupMenu_GUI)
         Dim objWin_PopupMenu = objGui_PopupMenu
 
@@ -728,8 +756,39 @@ Public Module osPopupMenuLib
         End With
     End Sub
 
+    Private Sub ExecPrepUI_TrayMenuOverlay(objGui_PopupMenuOverlay As MenuOverlayWindow)
+        Dim objWin_PopupMenuOverlay = objGui_PopupMenuOverlay
+
+        With objWin_PopupMenuOverlay
+            .InitPopupMenuOverlay()
+            .Show()
+        End With
+    End Sub
+
+    Public Function GeneratePopupMenuGUI() As Func(Of osPopupMenu_GUI)
+        Return Function()
+                   Return Application.Current.Dispatcher.
+                    Invoke(Function()
+                               Dim objWin_PopupMenu = New osPopupMenu_GUI()
+                               AddHandler objWin_PopupMenu.Closed, AddressOf osHandler_UI.PrepDispatch
+
+                               Return objWin_PopupMenu
+                           End Function)
+               End Function
+    End Function
+
+    Public Function GeneratePopupMenuOverlayGUI(Optional isFromTray As Boolean = False) As Func(Of MenuOverlayWindow)
+        Return Function()
+                   Return Application.Current.Dispatcher.
+                    Invoke(Function()
+                               Return New MenuOverlayWindow(isFromTray)
+                           End Function)
+               End Function
+    End Function
+
     Public DisplayUI_PopupMenu As Action(Of osPopupMenu_GUI) = AddressOf ExecPrepUI_PopupMenu
     Public DisplayUI_PopupMenuOverlay As Action(Of MenuOverlayWindow) = AddressOf ExecPrepUI_PopupMenuOverlay
+    Public DisplayUI_TrayOverlay As Action(Of MenuOverlayWindow) = AddressOf ExecPrepUI_TrayMenuOverlay
 
 End Module
 
@@ -1044,27 +1103,6 @@ Public Class PrefRecordData
     Public Sub New(pName As String, pVal As String)
         Me.PrefName = pName
         Me.PrefVal = pVal
-    End Sub
-
-End Class
-
-Public Class osFuncData
-
-    Public Property osFunc_GetStatus As Func(Of Boolean)
-    Public Property osFunc_ConfirmStatus As Func(Of Boolean, osMenuFuncBinder.UpdateStatus)
-    Public Property osFunc_ApplyStatus As Action(Of Boolean)
-    Public Property osFunc_UpdateIcon As Action(Of Boolean)
-
-    Public Sub New(objFunc_GetStatus As Func(Of Boolean),
-                   objFunc_ConfirmStatus As Func(Of Boolean, osMenuFuncBinder.UpdateStatus),
-                   objFunc_ApplyStatus As Action(Of Boolean),
-                   objFunc_UpdateIcon As Action(Of Boolean))
-
-        Me.osFunc_GetStatus = objFunc_GetStatus
-        Me.osFunc_ConfirmStatus = objFunc_ConfirmStatus
-        Me.osFunc_ApplyStatus = objFunc_ApplyStatus
-        Me.osFunc_UpdateIcon = objFunc_UpdateIcon
-
     End Sub
 
 End Class

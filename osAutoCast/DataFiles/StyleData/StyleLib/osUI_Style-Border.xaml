@@ -54,7 +54,7 @@
     </Style>
     <Style x:Key="pmBorderStyle" TargetType="{x:Type Border}">
         <Setter Property="BorderBrush" Value="#FF521212" />
-        <Setter Property="Background" Value="#B2393939" />
+        <Setter Property="Background" Value="#F2393939" />
         <Setter Property="BorderThickness" Value="4,4,4,4" />
         <Setter Property="CornerRadius" Value="8,8,8,8" />
         <Setter Property="ClipToBounds" Value="True" />

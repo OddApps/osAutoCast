@@ -1,0 +1,11 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib"
+                    xmlns:oscolor="clr-namespace:System.Windows.Media;assembly=PresentationCore">
+    <sys:Double x:Key="osEffect_Thickness">1.2</sys:Double>
+    <sys:Double x:Key="osEffect_Spread">9</sys:Double>
+    <sys:Double x:Key="osEffect_Fade">0</sys:Double>
+    <sys:Double x:Key="osEffect_Stroke">0.5</sys:Double>
+    <sys:Double x:Key="osEffect_Glow">0.5</sys:Double>
+    <oscolor:Color x:Key="osEffect_Color">#91421110</oscolor:Color>
+</ResourceDictionary>

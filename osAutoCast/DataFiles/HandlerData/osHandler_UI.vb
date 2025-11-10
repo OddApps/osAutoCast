@@ -28,18 +28,9 @@ Public NotInheritable Class osHandler_UI
         End Get
     End Property
     Private Shared _osPopupMenu As New Lazy(Of osPopupMenu_GUI)(
-    Function()
-        Return Application.Current.Dispatcher.
-        Invoke(Function()
-                   Dim objWin_PopupMenu = New osPopupMenu_GUI()
+        GeneratePopupMenuGUI(), LazyThreadSafetyMode.ExecutionAndPublication)
 
-                   ImplementHandler(objWin_PopupMenu)
-                   Return objWin_PopupMenu
-               End Function)
-    End Function, LazyThreadSafetyMode.ExecutionAndPublication)
-
-    Private Shared _osPopupMenuOverlay As New Lazy(Of MenuOverlayWindow)(
-    Function() New MenuOverlayWindow(), LazyThreadSafetyMode.ExecutionAndPublication)
+    Private Shared _osPopupMenuOverlay As Lazy(Of MenuOverlayWindow)
     Public Shared ReadOnly Property osPopupMenuOverlay As MenuOverlayWindow
         Get
             Return _osPopupMenuOverlay.Value
@@ -69,6 +60,8 @@ Public NotInheritable Class osHandler_UI
             Case TriggerAction.ShowMenu
                 PrepUI_PopupMenuOverlay()
                 PrepUI_PopupMenu()
+            Case TriggerAction.ShowMenuOverlay
+                PrepUI_PopupMenuOverlay(True)
         End Select
     End Sub
 
@@ -85,6 +78,15 @@ Public NotInheritable Class osHandler_UI
         _osPopupMenuOverlay = Nothing
 
         ResetUI(TriggerAction.ShowMenu)
+
+        InitResourceAlloc()
+    End Sub
+
+    Public Shared Sub DispatchOverlay()
+        Dim objWin_PopupMenuOverlay = _osPopupMenuOverlay.Value
+
+        DisposeUI_TrayOverlay.Invoke(objWin_PopupMenuOverlay)
+        _osPopupMenuOverlay = Nothing
 
         InitResourceAlloc()
     End Sub
@@ -121,8 +123,14 @@ Public NotInheritable Class osHandler_UI
                 Await guiTask
             Case TriggerAction.ShowMenu
                 GenerateGUI(progGui)
+            Case TriggerAction.ShowMenuOverlay
+                GenerateGUI(progGui)
         End Select
     End Function
+
+    Public Shared Sub LaunchOverlayGui()
+        GenerateGUI(TriggerAction.ShowMenuOverlay)
+    End Sub
 
     Public Shared Sub DisplayGUI(guiType As TriggerType, Optional ptPosData As osDraw.Point = Nothing)
         Select Case guiType
@@ -141,17 +149,24 @@ Public NotInheritable Class osHandler_UI
                     End Sub)
             Case TriggerType.ShowMenu
                 ShowPopupUI()
+            Case TriggerType.ShowMenuOverlay
+                ShowPopupUI(True)
         End Select
     End Sub
 
-    Private Shared Sub ShowPopupUI()
+    Private Shared Sub ShowPopupUI(Optional isFromTray As Boolean = False)
         Application.Current.Dispatcher.Invoke(
             Sub()
                 Dim objWin_PopupMenuOverlay = _osPopupMenuOverlay.Value
-                DisplayUI_PopupMenuOverlay.Invoke(objWin_PopupMenuOverlay)
 
-                Dim objWin_PopupMenu = _osPopupMenu.Value
-                DisplayUI_PopupMenu.Invoke(objWin_PopupMenu)
+                If isFromTray Then
+                    DisplayUI_TrayOverlay.Invoke(objWin_PopupMenuOverlay)
+                Else
+                    DisplayUI_PopupMenuOverlay.Invoke(objWin_PopupMenuOverlay)
+
+                    Dim objWin_PopupMenu = _osPopupMenu.Value
+                    DisplayUI_PopupMenu.Invoke(objWin_PopupMenu)
+                End If
             End Sub)
     End Sub
 
@@ -189,15 +204,10 @@ Public NotInheritable Class osHandler_UI
                    End Function, LazyThreadSafetyMode.ExecutionAndPublication)
     End Sub
 
-    Private Shared Sub PrepUI_PopupMenuOverlay()
+    Private Shared Sub PrepUI_PopupMenuOverlay(Optional isFromTray As Boolean = False)
         If _osPopupMenuOverlay Is Nothing Then
             _osPopupMenuOverlay = New Lazy(Of MenuOverlayWindow)(
-                Function()
-                    Return Application.Current.Dispatcher.
-                    Invoke(Function()
-                               Return New MenuOverlayWindow()
-                           End Function)
-                End Function, LazyThreadSafetyMode.ExecutionAndPublication)
+                GeneratePopupMenuOverlayGUI(isFromTray), LazyThreadSafetyMode.ExecutionAndPublication)
         End If
 
         osPopupMenuOverlay.PrepPopupMenuOverlay()
@@ -206,17 +216,13 @@ Public NotInheritable Class osHandler_UI
     Private Shared Sub PrepUI_PopupMenu()
         If _osPopupMenu Is Nothing Then
             _osPopupMenu = New Lazy(Of osPopupMenu_GUI)(
-                Function()
-                    Return Application.Current.Dispatcher.
-                    Invoke(Function()
-                               Dim objWin_PopupMenu = New osPopupMenu_GUI()
-
-                               ImplementHandler(objWin_PopupMenu)
-                               Return objWin_PopupMenu
-                           End Function)
-                End Function, LazyThreadSafetyMode.ExecutionAndPublication)
+                GeneratePopupMenuGUI(), LazyThreadSafetyMode.ExecutionAndPublication)
         End If
     End Sub
+
+    Public Shared Function FetchPopupMenuOverlay() As MenuOverlayWindow
+        Return osPopupMenuOverlay
+    End Function
 
     Public Shared Sub DispatchUI()
         Dim objWin_PopupMenu = _osPopupMenu.Value
@@ -266,7 +272,6 @@ Public NotInheritable Class osHandler_UI
                     guiReset.BeginPrep()
                 End If
             Case TriggerAction.ShowMenu
-                PrepUI_PopupMenuOverlay()
                 PrepUI_PopupMenu()
         End Select
 

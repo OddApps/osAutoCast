@@ -170,19 +170,19 @@
     </ApplicationDefinition>
     <Compile Include="DataFiles\HandlerData\osHandler_Graphics.vb" />
     <Compile Include="DataFiles\HandlerData\osHandler_UI.vb" />
-    <Compile Include="DataFiles\InterfaceData\osInMon.xaml.vb">
+    <Compile Include="DataFiles\InputMonData\osInMon.xaml.vb">
       <DependentUpon>osInMon.xaml</DependentUpon>
     </Compile>
     <Compile Include="DataFiles\InterfaceData\osPopupMenu_GUI.xaml.vb">
       <DependentUpon>osPopupMenu_GUI.xaml</DependentUpon>
     </Compile>
-    <Compile Include="DataFiles\InterfaceData\ProgBarGui_AutoCast.Designer.vb">
+    <Compile Include="DataFiles\InterfaceData\ProgressLib\ProgBarGui_AutoCast.Designer.vb">
       <DependentUpon>ProgBarGui_AutoCast.vb</DependentUpon>
     </Compile>
-    <Compile Include="DataFiles\InterfaceData\ProgBarGui_AutoCast.vb">
+    <Compile Include="DataFiles\InterfaceData\ProgressLib\ProgBarGui_AutoCast.vb">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="DataFiles\ModelData\PopupMenuDataModel.vb" />
+    <Compile Include="DataFiles\StyleData\EffectLib\osEffect.vb" />
     <Compile Include="GlobalSuppressions.vb" />
     <Compile Include="DataFiles\InputMonData\osInputMonitor.Designer.vb">
       <DependentUpon>osInputMonitor.vb</DependentUpon>
@@ -201,11 +201,11 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="DataFiles\InterfaceData\progGui_AutoPass.xaml">
+    <Page Include="DataFiles\InterfaceData\ProgressLib\progGui_AutoPass.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="DataFiles\InterfaceData\osInMon.xaml">
+    <Page Include="DataFiles\InputMonData\osInMon.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -218,25 +218,33 @@
     <Compile Include="DataFiles\HandlerData\osHandler_GameFinder.vb" />
     <Compile Include="DataFiles\HandlerData\osHandler_Input.vb" />
     <Compile Include="DataFiles\InputMonData\InputMonService.vb" />
-    <Compile Include="DataFiles\InterfaceData\progGui_AutoPass.xaml.vb">
+    <Compile Include="DataFiles\InterfaceData\ProgressLib\progGui_AutoPass.xaml.vb">
       <DependentUpon>progGui_AutoPass.xaml</DependentUpon>
     </Compile>
     <Compile Include="DataFiles\ModelData\EasingModel.vb" />
     <Compile Include="DataFiles\ModelData\OddLibProgressBar.vb" />
     <Compile Include="DataFiles\TypeData\DataTypeLib.vb" />
-    <Page Include="DataFiles\InterfaceData\osUI_StyleIndex.xaml">
+    <Page Include="DataFiles\StyleData\osUI_StyleIndex.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="DataFiles\StyleData\osUI_Style-Border.xaml">
+    <Page Include="DataFiles\StyleData\osUI_StyleBase.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="DataFiles\StyleData\osUI_Style-Button.xaml">
+    <Page Include="DataFiles\StyleData\osUI_StyleSettings.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="DataFiles\StyleData\osUI_Style-Toggle.xaml">
+    <Page Include="DataFiles\StyleData\StyleLib\osUI_Style-Border.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="DataFiles\StyleData\StyleLib\osUI_Style-Button.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="DataFiles\StyleData\StyleLib\osUI_Style-Toggle.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -285,6 +293,9 @@
     <None Include="..\.editorconfig">
       <Link>.editorconfig</Link>
     </None>
+    <Resource Include="DataFiles\StyleData\EffectLib\osEffectShader.ps" />
+    <Resource Include="DataFiles\StyleData\EffectLib\osEffect.ps" />
+    <Resource Include="DataFiles\StyleData\EffectLib\osEffect2.ps" />
     <None Include="My Project\app.manifest" />
     <None Include="My Project\DataSources\osPrefStore.ProgVisualQualityData.datasource" />
     <None Include="My Project\Settings.settings">

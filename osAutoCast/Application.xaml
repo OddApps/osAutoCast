@@ -2,11 +2,13 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:local="clr-namespace:osAutoCast"
-    StartupUri="DataFiles\InterfaceData\osInMon.xaml">
+    StartupUri="DataFiles\InputMonData\osInMon.xaml">
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="/DataFiles/InterfaceData/osUI_StyleIndex.xaml"/>
+                <ResourceDictionary Source="/DataFiles/StyleData/osUI_StyleSettings.xaml"/>
+                <ResourceDictionary Source="/DataFiles/StyleData/osUI_StyleBase.xaml"/>
+                <ResourceDictionary Source="/DataFiles/StyleData/osUI_StyleIndex.xaml"/>
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Application.Resources>

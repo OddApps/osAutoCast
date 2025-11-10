@@ -1,8 +1,0 @@
-﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <ResourceDictionary.MergedDictionaries>
-        <ResourceDictionary Source="../StyleData/osUI_Style-Border.xaml"/>
-        <ResourceDictionary Source="../StyleData/osUI_Style-Button.xaml"/>
-        <ResourceDictionary Source="../StyleData/osUI_Style-Toggle.xaml"/>
-    </ResourceDictionary.MergedDictionaries>
-</ResourceDictionary>

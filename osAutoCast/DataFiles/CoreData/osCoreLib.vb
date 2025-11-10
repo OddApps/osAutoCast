@@ -734,7 +734,7 @@ Public NotInheritable Class MenuOverlayWindow
             .ShowInTaskbar = False
             .ShowActivated = False
             .Topmost = True
-            .Opacity = If(isFromTray, 0.01, 0.65)
+            .Opacity = If(isFromTray, 0.01, 0.75)
         End With
     End Sub
 
@@ -752,8 +752,6 @@ Public NotInheritable Class MenuOverlayWindow
             Me.Width = .Width
             Me.Height = .Height
         End With
-
-        Me.Opacity = 0.65
     End Sub
 
     Protected Overrides Sub OnSourceInitialized(e As EventArgs)
@@ -825,74 +823,40 @@ Module osFuncLib_TrayMenu
             Dim objGetMenu = osTrayPopupMenu
 
             Await Application.Current.Dispatcher.InvokeAsync(
-                Sub()
-                    osMenuOverlay = New MenuOverlayWindow(True)
+               Sub()
 
-                    With osMenuOverlay
+                   osHandler_UI.LaunchOverlayGui()
 
-                        Dim vr = SystemInformation.VirtualScreen
-                        .Left = vr.Left
-                        .Top = vr.Top
-                        .Width = vr.Width
-                        .Height = vr.Height
+                   osMenuOverlay = osHandler_UI.FetchPopupMenuOverlay()
+                   AddHandler osMenuOverlay.MouseDown, pmFunc_TerminateOverlay
 
-                        AddHandler .MouseDown, Sub() ClosePopupMenu()
+                   osHandler_UI.DisplayGUI(TriggerType.ShowMenuOverlay)
 
-                        .Show()
-                    End With
+                   GenMenuHost()
 
-                    GenMenuHost()
+                   With objGetMenu
+                       .PlacementTarget = objMenuHost
+                       .Placement = osControls.Primitives.PlacementMode.MousePoint
+                       .StaysOpen = False
+                       .IsOpen = True
+                   End With
 
-                    With objGetMenu
-                        .PlacementTarget = objMenuHost
-                        .Placement = osControls.Primitives.PlacementMode.MousePoint
-                        .StaysOpen = False
-                        .IsOpen = True
-                    End With
+                   SetNoActivateStyleForContextMenu(osMenuObj)
 
-                    SetNoActivateStyleForContextMenu(osMenuObj)
-
-                End Sub)
-        Else
-            Dim w As New osPopupMenu_GUI
-            w.Owner = Application.Current.MainWindow
-            w.InitPopupMenu()
-            w.ShowInTaskbar = False
-            ' w.Topmost = True
-            w.ShowActivated = False
-
-            w.WindowStartupLocation = WindowStartupLocation.Manual
-            w.Left = 0
-            w.Top = 0
-            w.Width = 100
-            w.Height = 100
-            'w.Width = SystemParameters.PrimaryScreenWidth
-            'w.Height = SystemParameters.PrimaryScreenHeight
-
-            'RemoveHandler w.Closed, AddressOf Popup_Closed
-            'AddHandler w.Closed, AddressOf Popup_Closed
-
-            w.Show()
-            'Dim objTask_PopupOverlay = Application.Current.Dispatcher.InvokeAsync(
-            '    Async Function()
-            '        Await osHandler_UI.LaunchGui(TriggerAction.ShowMenu)
-            '        osHandler_UI.DisplayGUI(TriggerType.ShowMenu)
-            '    End Function)
-
-            'Await objTask_PopupOverlay.Task.Unwrap
+               End Sub)
         End If
 
         osFuncLib_InputScan.isActionComplete = True
     End Function
 
+    Private pmFunc_TerminateOverlay As MouseButtonEventHandler = AddressOf ClosePopupMenu
+
     Public Sub ClosePopupMenu()
         osTrayPopupMenu.IsOpen = False
 
-        If osMenuOverlay IsNot Nothing Then
-            osMenuOverlay.Close()
-            osMenuOverlay = Nothing
-        End If
+        RemoveHandler osMenuOverlay.MouseDown, pmFunc_TerminateOverlay
 
+        osHandler_UI.DispatchOverlay()
         Dim doGameFocus = SetGameFocus()
     End Sub
 
@@ -923,14 +887,6 @@ Module osFuncLib_TrayMenu
             .Show()
         End With
     End Sub
-
-    Public Function GetEnabledStatus() As Boolean
-        Return osIsEnabled
-    End Function
-
-    Public Function IsDisabled() As Boolean
-        Return osIsEnabled = False
-    End Function
 
     Private Function ConfirmStatusChange(newStatus As Boolean) As UpdateStatus
         If newStatus = False Then
@@ -1107,7 +1063,6 @@ Module osFuncLib_TrayMenu
     End Sub
 
     Public Sub osMenu_Init(objInMon As osInMon)
-
         PopulateMenu_Popup(osTrayPopupMenu)
         PrepTrayMenu(osTrayPopupMenu)
 
@@ -1118,7 +1073,6 @@ Module osFuncLib_TrayMenu
             osMenuFuncBinder.BindChecked_Popup(osTrayPopupMenu.Items.Item(0),
                                          .osMenuFunc_GetStatus, .osMenuFunc_ApplyStatus)
         End With
-
     End Sub
 
     Private Sub SetNoActivateStyleForContextMenu(cm As osControls.ContextMenu)

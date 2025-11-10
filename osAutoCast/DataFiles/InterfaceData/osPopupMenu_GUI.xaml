@@ -2,32 +2,38 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:local="clr-namespace:osAutoCast" 
         mc:Ignorable="d" Title="osPopupMenu_GUI" DataContext="{Binding RelativeSource={RelativeSource Self}}" Width="265"
-        WindowStyle="None" AllowsTransparency="True" ShowInTaskbar="False" Background="#59000000"
+        WindowStyle="None" AllowsTransparency="True" ShowInTaskbar="False" Background="Transparent"
         WindowStartupLocation="CenterScreen" Focusable="False" ShowActivated="False" Topmost="True"
         IsTabStop="False" SizeToContent="Height">
-        <Border Style="{StaticResource pmBorderStyle}" x:Name="CenterCard">
-            <Grid x:Name="pmMenuItemContainer">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="36" MaxHeight="36" />
-                    <RowDefinition Height="Auto" MinHeight="36" />
-                    <RowDefinition Height="36" />
-                    <RowDefinition Height="32" />
-                </Grid.RowDefinitions>
-                <ToggleButton x:Name="pmChk_IsEnabled" Grid.Row="0" Grid.Column="0"
+    <Border Style="{StaticResource pmBorderStyle}" x:Name="CenterCard">
+        <Grid x:Name="pmMenuItemContainer">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="36" MaxHeight="36" />
+                <RowDefinition Height="Auto" MinHeight="36" />
+                <RowDefinition Height="36" MaxHeight="36" />
+                <RowDefinition Height="36" MaxHeight="36" />
+            </Grid.RowDefinitions>
+            <ToggleButton x:Name="pmChk_IsEnabled" Grid.Row="0" Grid.Column="0"
                           IsChecked="{Binding IsAppEnabled, Mode=TwoWay, ElementName=winPopupMenu}"
                           Style="{StaticResource pmBtnEnabledStatusStyle}" />
-                <StackPanel x:Name="stackPanel" Grid.Row="1" Grid.Column="0" Grid.RowSpan="1" DataContext="{Binding RelativeSource={RelativeSource AncestorType=Window}}">
-                    <ToggleButton x:Name="btnShowGameMenu" Content="Game Menu" Style="{StaticResource pmBtnGameMenuStyle}" IsChecked="False" />
-                    <Border x:Name="GameMenuPanel" Margin="0,0,0,0" BorderThickness="0,0,0,0" BorderBrush="#FF521212"
-                            Style="{StaticResource HideShowGameMenu}">
-                        <StackPanel>
-                            <Button x:Name="pmBtn_StartGame" Content="Start MTGA" Style="{StaticResource GameMenu_ShowStart}" />
-                            <Button x:Name="pmBtn_CloseGame" Content="Close MTGA" Style="{StaticResource GameMenu_ShowClose}" />
-                        </StackPanel>
-                    </Border>
-                </StackPanel>
-                <Button x:Name="pmBtn_ShowOptions" Content="Options" Grid.Row="2" Grid.Column="0" Style="{StaticResource pmBtnBrdrStyle}" />
-                <Button x:Name="pmBtn_Exit" Content="Exit" Grid.Row="3" Grid.Column="0" Style="{StaticResource pmBtnMainStyle}" />
-            </Grid>
-        </Border>
+            <StackPanel x:Name="stackPanel" Grid.Row="1" Grid.Column="0" Grid.RowSpan="1"
+                        DataContext="{Binding RelativeSource={RelativeSource AncestorType=Window}}">
+                <ToggleButton x:Name="btnShowGameMenu" Content="Game Menu"
+                              Style="{StaticResource pmBtnGameMenuStyle}" IsChecked="False" />
+                <Border x:Name="GameMenuPanel" Margin="0,0,0,0" BorderThickness="0,0,0,0"
+                        BorderBrush="#FF521212" Style="{StaticResource HideShowGameMenu}">
+                    <StackPanel>
+                        <Button x:Name="pmBtn_StartGame" Content="Start MTGA"
+                                Style="{StaticResource GameMenu_ShowStart}" />
+                        <Button x:Name="pmBtn_CloseGame" Content="Close MTGA"
+                                Style="{StaticResource GameMenu_ShowClose}" />
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+            <Button x:Name="pmBtn_ShowOptions" Content="Options" Grid.Row="2"
+                    Grid.Column="0" Style="{StaticResource pmBtnBrdrStyle}" />
+            <Button x:Name="pmBtn_Exit" Content="Exit" Grid.Row="3"
+                    Grid.Column="0" Style="{StaticResource pmBtnMainStyle}" />
+        </Grid>
+    </Border>
 </Window>
