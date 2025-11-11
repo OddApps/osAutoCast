@@ -1,0 +1,53 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib"
+                    xmlns:oseffect="clr-namespace:osAutoCast.osEffectConv"
+                    xmlns:osStyle="clr-namespace:osAutoCast.osStyle"
+                    xmlns:local="clr-namespace:osAutoCast">
+    
+    <oseffect:TexelSizeConverter x:Key="TexelSizeConverter" />
+
+    <DataTemplate x:Key="osEffect_Button" DataType="{x:Type sys:String}">
+        <AccessText x:Name="txt" Text="{Binding}" Margin="4" FontWeight="SemiBold" CacheMode="BitmapCache"
+                    TextOptions.TextFormattingMode="Display" TextOptions.TextRenderingMode="ClearType"
+                    Foreground="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
+                    FontSize="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=FontSize}"
+                    Width="150">
+            <AccessText.Effect>
+                <local:osEffect x:Name="btnGlow" Thickness="{StaticResource osEffect_Thickness}" Spread="{StaticResource osEffect_Spread}"
+                                Fade="{StaticResource osEffect_Fade}" GlowColor="{StaticResource osEffect_Color}"
+                                StrokeStrength="{StaticResource osEffect_Stroke}" GlowStrength="{StaticResource osEffect_Glow}">
+                    <local:osEffect.TexelSize>
+                        <MultiBinding Converter="{StaticResource TexelSizeConverter}">
+                            <Binding ElementName="txt" Path="ActualWidth"/>
+                            <Binding ElementName="txt" Path="ActualHeight"/>
+                        </MultiBinding>
+                    </local:osEffect.TexelSize>
+                </local:osEffect>
+            </AccessText.Effect>
+        </AccessText>
+        <DataTemplate.Triggers>
+            <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=Button}}" Value="True">
+                <DataTrigger.EnterActions>
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation Storyboard.TargetName="btnGlow"
+                                             Storyboard.TargetProperty="Fade"
+                                             To="1" Duration="0:0:0.25"/>
+                        </Storyboard>
+                    </BeginStoryboard>
+                </DataTrigger.EnterActions>
+                <DataTrigger.ExitActions>
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation Storyboard.TargetName="btnGlow"
+                                             Storyboard.TargetProperty="Fade"
+                                             To="0" Duration="0:0:0.35"/>
+                        </Storyboard>
+                    </BeginStoryboard>
+                </DataTrigger.ExitActions>
+            </DataTrigger>
+        </DataTemplate.Triggers>
+    </DataTemplate>
+
+</ResourceDictionary>

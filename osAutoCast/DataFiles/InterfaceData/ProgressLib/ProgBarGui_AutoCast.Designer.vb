@@ -22,13 +22,14 @@ Partial Class ProgBarGui_AutoCast
     'Do not modify it using the code editor.
     <System.Diagnostics.DebuggerStepThrough()> _
     Private Sub InitializeComponent()
-        components = New System.ComponentModel.Container
+        Me.SuspendLayout()
+        '
+        'ProgBarGui_AutoCast
+        '
         Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.None
+        Me.ClientSize = New System.Drawing.Size(284, 261)
+        Me.Name = "ProgBarGui_AutoCast"
+        Me.ResumeLayout(False)
 
-        With CoreDataLib.GetProgSizeReport(TriggerType.AutoCast)
-            Me.ClientSize = New System.Drawing.Size(.pWidth, .pHeight)
-        End With
-
-        Me.Text = "Form1"
     End Sub
 End Class

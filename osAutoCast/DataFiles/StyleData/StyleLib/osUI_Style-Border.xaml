@@ -1,5 +1,6 @@
 ﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    
     <Style x:Key="HideShowGameMenu" TargetType="{x:Type Border}">
         <Setter Property="MaxHeight" Value="0" />
         <Setter Property="Opacity" Value="0" />
@@ -52,14 +53,16 @@
             </DataTrigger>
         </Style.Triggers>
     </Style>
+    
     <Style x:Key="pmBorderStyle" TargetType="{x:Type Border}">
         <Setter Property="BorderBrush" Value="#FF521212" />
-        <Setter Property="Background" Value="#F2393939" />
+        <Setter Property="Background" Value="#F41F1F1F" />
         <Setter Property="BorderThickness" Value="4,4,4,4" />
         <Setter Property="CornerRadius" Value="8,8,8,8" />
         <Setter Property="ClipToBounds" Value="True" />
-        <Setter Property="MinHeight" Value="148" />
+        <Setter Property="MinHeight" Value="146" />
     </Style>
+    
 </ResourceDictionary>
 
     

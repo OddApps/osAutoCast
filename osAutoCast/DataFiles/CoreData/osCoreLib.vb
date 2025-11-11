@@ -734,7 +734,7 @@ Public NotInheritable Class MenuOverlayWindow
             .ShowInTaskbar = False
             .ShowActivated = False
             .Topmost = True
-            .Opacity = If(isFromTray, 0.01, 0.75)
+            .Opacity = If(isFromTray, 0.01, 0.7)
         End With
     End Sub
 

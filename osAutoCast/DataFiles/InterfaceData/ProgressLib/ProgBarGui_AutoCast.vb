@@ -1076,4 +1076,7 @@ Public Class ProgBarGui_AutoCast
     Private Shared Function WaitForSingleObjectEx(hHandle As IntPtr, dwMilliseconds As Integer, bAlertable As Boolean) As UInteger
     End Function
 
+    Private Sub ProgBarGui_AutoCast_Load(sender As Object, e As EventArgs) Handles MyBase.Load
+
+    End Sub
 End Class
