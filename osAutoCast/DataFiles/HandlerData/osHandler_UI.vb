@@ -12,7 +12,7 @@ Public NotInheritable Class osHandler_UI
     Public Shared pmFunc_TerminatePopupMenu As MouseButtonEventHandler = AddressOf TerminatePopupMenu
 
     Public Shared Property osGui_InputMonitor As Form
-    Public Shared Property osGui_InputMonitor2 As Window
+    ' Public Shared Property osGui_InputMonitor2 As Window
 
     Private Shared _osPrefs As New Lazy(Of osPrefs)(
     Function() New osPrefs(), LazyThreadSafetyMode.ExecutionAndPublication)
@@ -105,7 +105,6 @@ Public NotInheritable Class osHandler_UI
         Dim tmpHandle = objOsInputMon.Handle
 
         osGui_InputMonitor = objOsInputMon
-        osGui_InputMonitor2 = guiInputMon
     End Sub
 
     Public Shared Async Function LaunchGui(progGui As TriggerAction) As Task
@@ -165,12 +164,17 @@ Public NotInheritable Class osHandler_UI
                     DisplayUI_PopupMenuOverlay.Invoke(objWin_PopupMenuOverlay)
 
                     Dim objWin_PopupMenu = _osPopupMenu.Value
-                    DisplayUI_PopupMenu.Invoke(objWin_PopupMenu)
+                    DisplayUI_PopupMenu.Invoke(objWin_PopupMenu, objWin_PopupMenuOverlay)
                 End If
             End Sub)
     End Sub
 
-    Private Shared Sub TerminatePopupMenu()
+    Private Shared Async Sub TerminatePopupMenu()
+        Dim objWin_PopupMenu = _osPopupMenu.Value
+        objWin_PopupMenu.Topmost = True
+
+        Await objWin_PopupMenu.InitPopupClose
+
         DispatchUI(TriggerAction.ShowMenu)
         Dim doGameFocus = CoreDataLib.SetGameFocus()
     End Sub

@@ -1,5 +1,5 @@
 ﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     
     <Style x:Key="HideShowGameMenu" TargetType="{x:Type Border}">
         <Setter Property="MaxHeight" Value="0" />
@@ -7,21 +7,25 @@
         <Setter Property="Visibility" Value="Collapsed" />
         <Setter Property="ClipToBounds" Value="True" />
         <Style.Triggers>
-            <DataTrigger Binding="{Binding IsChecked, ElementName=btnShowGameMenu}" Value="True">
+            <DataTrigger Binding="{Binding IsChecked,
+                ElementName=btnShowGameMenu}" Value="True">
                 <DataTrigger.EnterActions>
                     <BeginStoryboard x:Name="GameMenuExpand">
                         <Storyboard>
                             <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility">
-                                <DiscreteObjectKeyFrame KeyTime="0:0:0" Value="{x:Static Visibility.Visible}" />
+                                <DiscreteObjectKeyFrame KeyTime="0:0:0" 
+                                                        Value="{x:Static Visibility.Visible}" />
                             </ObjectAnimationUsingKeyFrames>
-                            <DoubleAnimation Storyboard.TargetProperty="MaxHeight" From="0" To="1000" Duration="0:0:0.50">
+                            <DoubleAnimation Storyboard.TargetProperty="MaxHeight" From="0"
+                                             To="75" Duration="0:0:0.5">
                                 <DoubleAnimation.EasingFunction>
-                                    <CubicEase EasingMode="EaseInOut" />
+                                    <QuadraticEase EasingMode="EaseInOut" />
                                 </DoubleAnimation.EasingFunction>
                             </DoubleAnimation>
-                            <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.5">
+                            <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0"
+                                             To="1" Duration="0:0:0.5">
                                 <DoubleAnimation.EasingFunction>
-                                    <CubicEase EasingMode="EaseInOut" />
+                                    <QuadraticEase EasingMode="EaseInOut" />
                                 </DoubleAnimation.EasingFunction>
                             </DoubleAnimation>
                         </Storyboard>
@@ -31,18 +35,26 @@
                     <RemoveStoryboard BeginStoryboardName="GameMenuExpand" />
                 </DataTrigger.ExitActions>
             </DataTrigger>
-            <DataTrigger Binding="{Binding IsChecked, ElementName=btnShowGameMenu}" Value="False">
+            <DataTrigger Binding="{Binding IsChecked,
+                ElementName=btnShowGameMenu}" Value="False">
                 <DataTrigger.EnterActions>
                     <BeginStoryboard x:Name="GameMenuCollapse">
                         <Storyboard>
-                            <DoubleAnimation Storyboard.TargetProperty="MaxHeight" To="0" Duration="0:0:0.5">
+                            <DoubleAnimation Storyboard.TargetProperty="MaxHeight" From="75"
+                                             To="0" Duration="0:0:0.5">
                                 <DoubleAnimation.EasingFunction>
                                     <CubicEase EasingMode="EaseInOut" />
                                 </DoubleAnimation.EasingFunction>
                             </DoubleAnimation>
-                            <DoubleAnimation Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.5" />
+                            <DoubleAnimation Storyboard.TargetProperty="Opacity" From="1"
+                                             To="0" Duration="0:0:0.5">
+                                <DoubleAnimation.EasingFunction>
+                                    <QuadraticEase EasingMode="EaseInOut" />
+                                </DoubleAnimation.EasingFunction>
+                            </DoubleAnimation>
                             <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility">
-                                <DiscreteObjectKeyFrame KeyTime="0:0:0.48" Value="{x:Static Visibility.Collapsed}" />
+                                <DiscreteObjectKeyFrame KeyTime="0:0:0.49"
+                                                        Value="{x:Static Visibility.Collapsed}" />
                             </ObjectAnimationUsingKeyFrames>
                         </Storyboard>
                     </BeginStoryboard>
@@ -54,13 +66,18 @@
         </Style.Triggers>
     </Style>
     
-    <Style x:Key="pmBorderStyle" TargetType="{x:Type Border}">
+    <Style x:Key="MainContainerStyle" TargetType="{x:Type Border}">
         <Setter Property="BorderBrush" Value="#FF521212" />
         <Setter Property="Background" Value="#F41F1F1F" />
         <Setter Property="BorderThickness" Value="4,4,4,4" />
         <Setter Property="CornerRadius" Value="8,8,8,8" />
         <Setter Property="ClipToBounds" Value="True" />
-        <Setter Property="MinHeight" Value="146" />
+        <Setter Property="MaxWidth" Value="265" />
+        <Setter Property="MaxHeight" Value="158" />
+        <Setter Property="MinWidth" Value="265" />
+        <Setter Property="MinHeight" Value="158" />
+        <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
+        <Setter Property="Opacity" Value="0"/>
     </Style>
     
 </ResourceDictionary>

@@ -9,6 +9,7 @@
                 <ResourceDictionary Source="/DataFiles/StyleData/osUI_StyleSettings.xaml"/>
                 <ResourceDictionary Source="/DataFiles/StyleData/osUI_StyleEffects.xaml"/>
                 <ResourceDictionary Source="/DataFiles/StyleData/osUI_StyleBase.xaml"/>
+                <ResourceDictionary Source="/DataFiles/StyleData/osUI_StyleViews.xaml"/>
                 <ResourceDictionary Source="/DataFiles/StyleData/osUI_StyleIndex.xaml"/>
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>

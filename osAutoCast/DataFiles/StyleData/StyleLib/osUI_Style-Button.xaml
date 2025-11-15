@@ -1,65 +1,27 @@
 ﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:gamemenuopts="clr-namespace:osAutoCast.GameMenuOpts"
-                    xmlns:sys="clr-namespace:System;assembly=mscorlib"
                     xmlns:oseffect="clr-namespace:osAutoCast.osEffectConv"
-                    xmlns:osStyle="clr-namespace:osAutoCast.osStyle"
-                    xmlns:local="clr-namespace:osAutoCast">
+                    xmlns:osStyle="clr-namespace:osAutoCast.osStyle">
 
     <oseffect:TexelSizeConverter x:Key="TexelSizeConverter" />
 
     <Style x:Key="pmBtnGameMenuItemStyle" TargetType="{x:Type Button}"
            BasedOn="{StaticResource StyleBase_Btn}">
         <Setter Property="Background" Value="#A1101010" />
-        <Setter Property="Foreground" Value="#FF8C8A8A" />
-        <Setter Property="Height" Value="36" />
-        <Setter Property="HorizontalContentAlignment" Value="Center" />
-        <Setter Property="VerticalContentAlignment" Value="Center" />
-        <Setter Property="Width" Value="{Binding ActualWidth,
-            ElementName=pmMenuItemContainer, Mode=OneWay}" />
-        <Setter Property="Padding" Value="0" />
-        <Setter Property="FontSize" Value="20" />
-        <Setter Property="FontWeight" Value="Bold" />
-        <Setter Property="FontSize" Value="20" />
-        <Setter Property="BorderBrush" Value="{x:Null}" />
-        <Setter Property="BorderThickness" Value="0,0,0,0" />
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="{x:Type Button}">
-                    <Border Background="{TemplateBinding Background}" BorderBrush="#FF2B2828"
-                                BorderThickness="0,0,0,0" Height="34">
-                        <ContentPresenter HorizontalAlignment="Center"
-                                          VerticalAlignment="Center" Height="32" />
-                    </Border>
-                    <ControlTemplate.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter Property="Background" Value="#A1575757" />
-                        </Trigger>
-                    </ControlTemplate.Triggers>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
+        <Setter Property="osStyle:osStyles.CornerRadius" Value="0,0,0,0"/>
+        <Setter Property="osStyle:osStyles.BorderThickness" Value="0,0,0,0"/>
+        <Setter Property="osStyle:osStyles.BorderBrush" Value="#FF222222"/>
+        <Setter Property="osStyle:osStyles.Background" Value="#A1575757"/>
     </Style>
     
     <Style x:Key="GameMenu_ShowStart" TargetType="{x:Type Button}"
            BasedOn="{StaticResource pmBtnGameMenuItemStyle}">
+        <Setter Property="osStyle:osStyles.CornerRadius" Value="0,0,0,0"/>
+        <Setter Property="osStyle:osStyles.BorderThickness" Value="0,0,0,0"/>
+        <Setter Property="osStyle:osStyles.BorderBrush" Value="#FF222222"/>
+        <Setter Property="osStyle:osStyles.Background" Value="#C4363636"/>
         <Setter Property="Visibility" Value="Collapsed" />
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="{x:Type Button}">
-                    <Border x:Name="gmBorder" Background="{TemplateBinding Background}" BorderBrush="#FF2B2828"
-                                BorderThickness="0,0,0,0" Height="34">
-                        <ContentPresenter HorizontalAlignment="Center"
-                                          VerticalAlignment="Center" Height="32" />
-                    </Border>
-                    <ControlTemplate.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter Property="Background" Value="#C4363636" />
-                        </Trigger>
-                    </ControlTemplate.Triggers>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
         <Style.Triggers>
             <DataTrigger Binding="{Binding DisplayGameMenuItem}"
                          Value="{x:Static gamemenuopts:GameMenuItem.ShowStart}">
@@ -71,22 +33,10 @@
     <Style x:Key="GameMenu_ShowClose" TargetType="{x:Type Button}"
            BasedOn="{StaticResource pmBtnGameMenuItemStyle}">
         <Setter Property="Visibility" Value="Collapsed" />
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="{x:Type Button}">
-                    <Border Background="{TemplateBinding Background}" BorderBrush="#FF2B2828"
-                                BorderThickness="0,0,0,0" Height="34">
-                        <ContentPresenter HorizontalAlignment="Center"
-                                          VerticalAlignment="Center" Height="32" />
-                    </Border>
-                    <ControlTemplate.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter Property="Background" Value="#C4363636" />
-                        </Trigger>
-                    </ControlTemplate.Triggers>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
+        <Setter Property="osStyle:osStyles.CornerRadius" Value="0,0,0,0"/>
+        <Setter Property="osStyle:osStyles.BorderThickness" Value="0,0,0,0"/>
+        <Setter Property="osStyle:osStyles.BorderBrush" Value="#FF222222"/>
+        <Setter Property="osStyle:osStyles.Background" Value="#C4363636"/>
         <Style.Triggers>
             <DataTrigger Binding="{Binding DisplayGameMenuItem}"
                          Value="{x:Static gamemenuopts:GameMenuItem.ShowClose}">
@@ -94,48 +44,21 @@
             </DataTrigger>
         </Style.Triggers>
     </Style>
-    
+
     <Style x:Key="pmBtnMainStyle" TargetType="{x:Type Button}"
            BasedOn="{StaticResource StyleBase_Btn}">
-        <Setter Property="Background" Value="Transparent" />
-        <Setter Property="Foreground" Value="#FF8C8A8A" />
-        <Setter Property="Height" Value="36" />
-        <Setter Property="HorizontalContentAlignment" Value="Center" />
-        <Setter Property="VerticalContentAlignment" Value="Center" />
-        <Setter Property="Width" Value="{Binding ActualWidth,
-            ElementName=pmMenuItemContainer, Mode=OneWay}" />
-        <Setter Property="Padding" Value="0" />
-        <Setter Property="FontSize" Value="20" />
-        <Setter Property="FontWeight" Value="Bold" />
-        <Setter Property="FontSize" Value="20" />
-        <Setter Property="osStyle:osBorderStyle.CornerRadius" Value="0,0,8,8"/>
-        <Setter Property="osStyle:osBorderStyle.BorderThickness" Value="0,0,0,0"/>
-        <Setter Property="osStyle:osBorderStyle.BorderBrush" Value="#FF2B2828"/>
+        <Setter Property="osStyle:osStyles.CornerRadius" Value="0,0,0,0"/>
+        <Setter Property="osStyle:osStyles.BorderThickness" Value="0,0,0,0"/>
+        <Setter Property="osStyle:osStyles.BorderBrush" Value="#FF2B2828"/>
+        <Setter Property="osStyle:osStyles.Background" Value="#A1575757"/>
     </Style>
-    
+
     <Style x:Key="pmBtnBrdrStyle" TargetType="{x:Type Button}"
            BasedOn="{StaticResource StyleBase_Btn}">
-        <Setter Property="Height" Value="36" />
-        <Setter Property="Width" Value="{Binding ActualWidth,
-            ElementName=pmMenuItemContainer, Mode=OneWay}" />
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="{x:Type Button}">
-                    <Border Background="{TemplateBinding Background}" BorderBrush="#FF222222" Width="257"
-                                BorderThickness="0,0,0,2" Height="36" CornerRadius="0,0,0,0">
-                        <ContentPresenter  HorizontalAlignment="Center"
-                        VerticalAlignment="Center"
-                        TextBlock.TextAlignment="Center"
-                        RecognizesAccessKey="True" Width="257" Height="36" Margin="2,0,2,0" />
-                    </Border>
-                    <ControlTemplate.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter Property="Background" Value="#A1575757" />
-                        </Trigger>
-                    </ControlTemplate.Triggers>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
+        <Setter Property="osStyle:osStyles.CornerRadius" Value="0,0,8,8"/>
+        <Setter Property="osStyle:osStyles.BorderThickness" Value="0,0,0,0"/>
+        <Setter Property="osStyle:osStyles.BorderBrush" Value="#FF222222"/>
+        <Setter Property="osStyle:osStyles.Background" Value="#A1575757"/>
     </Style>
     
 </ResourceDictionary>

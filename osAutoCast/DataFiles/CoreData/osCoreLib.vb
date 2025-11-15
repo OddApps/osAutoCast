@@ -725,17 +725,64 @@ Public NotInheritable Class MenuOverlayWindow
     Private Shared Function SetWindowLongPtr(hWnd As IntPtr, nIndex As Integer, dwNewLong As IntPtr) As IntPtr
     End Function
 
-    Public Sub New(Optional isFromTray As Boolean = False)
+    Private isFromTray As Boolean
+    Private setOpacity As Double = 0.7
+
+    Public objStacker As StackPanel
+
+    Public Sub New(Optional isTray As Boolean = False)
         With Me
+            .isFromTray = isTray
+
             .Title = ""
             .WindowStyle = WindowStyle.None
             .AllowsTransparency = True
-            .Background = Windows.Media.Brushes.Black
             .ShowInTaskbar = False
             .ShowActivated = False
             .Topmost = True
-            .Opacity = If(isFromTray, 0.01, 0.7)
         End With
+
+        SetBG()
+    End Sub
+
+    Private Sub SetBG()
+        With Me
+            If Me.isFromTray Then
+                .Background = Windows.Media.Brushes.Black
+                .Opacity = 0.01
+            Else
+                objStacker = CreateStackLayout()
+
+                .Background = Windows.Media.Brushes.Transparent
+                .Opacity = 1
+                .Content = objStacker
+            End If
+        End With
+    End Sub
+
+    Function CreateStackLayout() As StackPanel
+        Return New StackPanel With {
+            .Orientation = Orientation.Vertical,
+            .HorizontalAlignment = HorizontalAlignment.Stretch,
+            .VerticalAlignment = VerticalAlignment.Stretch,
+            .Background = Windows.Media.Brushes.Black,
+            .Opacity = 0.0
+        }
+    End Function
+
+    Public Sub ActivateOverlay()
+        Dim objA As New Animation.DoubleAnimation() With {
+            .From = 0.0, .To = setOpacity,
+            .FillBehavior = Animation.FillBehavior.HoldEnd,
+            .BeginTime = TimeSpan.FromMilliseconds(50),
+            .Duration = New Duration(TimeSpan.FromMilliseconds(300)),
+            .EasingFunction = New Animation.QuinticEase With {
+              .EasingMode = Animation.EasingMode.EaseOut
+            }
+        }
+
+        Me.Show()
+        Me.objStacker.BeginAnimation(StackPanel.OpacityProperty, objA)
     End Sub
 
     Public Sub InitPopupMenuOverlay()
@@ -743,6 +790,13 @@ Public NotInheritable Class MenuOverlayWindow
         Me.ShowActivated = False
 
         Me.Topmost = True
+
+        With SystemInformation.VirtualScreen
+            objStacker.HorizontalAlignment = Windows.HorizontalAlignment.Left
+            objStacker.VerticalAlignment = Windows.VerticalAlignment.Top
+            objStacker.Width = .Width
+            objStacker.Height = .Height
+        End With
     End Sub
 
     Public Sub PrepPopupMenuOverlay()

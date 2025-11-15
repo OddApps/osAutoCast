@@ -5,8 +5,85 @@ Imports osAutoCast.CoreDataLib
 Imports System.Runtime.InteropServices
 Imports System.Windows.Interop
 Imports osAutoCast.DataTypeLib.PromptResponse
+Imports System.Windows.Media.Animation
+Imports System.Threading
 
 Public Class osPopupMenu_GUI
+
+    Private _hasAnimated As Boolean = False
+
+    Private objTask_Closing As TaskCompletionSource(Of Boolean)
+
+    Private objAnimation_Open As osPopupAnimation = Nothing
+    Private objAnimation_Close As osPopupAnimation = Nothing
+
+    Private OpenCompleteEvent As EventHandler = AddressOf OpenComplete
+
+    Public Async Function InitPopupClose() As Task
+        BeginClosingTask(objTask_Closing)
+
+        objAnimation_Close = New osPopupAnimation(AnimationType.aniClose)
+
+        AddHandler objAnimation_Close.aniY.Completed,
+            Sub()
+                PopupCloseComplete(objTask_Closing)
+            End Sub
+
+        Me.popScale.BeginAnimation(ScaleTransform.ScaleXProperty, objAnimation_Close.aniX)
+        Me.popScale.BeginAnimation(ScaleTransform.ScaleYProperty, objAnimation_Close.aniY)
+
+        Me.popupMainContainer.BeginAnimation(Border.OpacityProperty, objAnimation_Close.aniFade)
+
+        Dim resPopupClose = Await objTask_Closing.Task
+
+    End Function
+
+    Public Sub InitPopupOpen()
+        If Not _hasAnimated Then
+            _hasAnimated = True
+            ActivateWindowDisplay()
+        End If
+    End Sub
+
+    Private Sub SetAniDuration(ByRef objDur As Duration, valDur As TimeSpan)
+        objDur = New Duration(valDur)
+    End Sub
+
+    Private Sub BeginClosingTask(ByRef objCloseResult As TaskCompletionSource(Of Boolean))
+        If objCloseResult IsNot Nothing Then objCloseResult = Nothing
+
+        objCloseResult = New TaskCompletionSource(Of Boolean)(TaskCreationOptions.
+                                                    RunContinuationsAsynchronously)
+    End Sub
+
+    Private Sub PopupCloseComplete(ByRef objTask As TaskCompletionSource(Of Boolean))
+        objTask.TrySetResult(True)
+
+        objAnimation_Close.DisposeAni()
+        objAnimation_Close = Nothing
+
+        Me.Owner = Nothing
+    End Sub
+
+    Private Sub ActivateWindowDisplay()
+
+        objAnimation_Open = New osPopupAnimation(AnimationType.aniOpen)
+
+        AddHandler objAnimation_Open.aniY.Completed, OpenCompleteEvent
+
+        Me.popScale.BeginAnimation(ScaleTransform.ScaleXProperty, objAnimation_Open.aniX)
+        Me.popScale.BeginAnimation(ScaleTransform.ScaleYProperty, objAnimation_Open.aniY)
+
+        Me.popupMainContainer.BeginAnimation(Border.OpacityProperty, objAnimation_Open.aniFade)
+    End Sub
+
+    Private Sub OpenComplete()
+        Try
+            RemoveHandler objAnimation_Open.aniY.Completed, OpenCompleteEvent
+        Catch : End Try
+
+        objAnimation_Open = Nothing
+    End Sub
 
     Private Sub pmCmd_ShowGameMenu(sender As Object, e As RoutedEventArgs) Handles btnShowGameMenu.Checked
         ShowGameMenuItem()

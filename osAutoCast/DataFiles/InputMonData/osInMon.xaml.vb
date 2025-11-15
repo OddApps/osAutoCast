@@ -49,6 +49,8 @@ Public Class osInMon
 
         Visibility = Visibility.Hidden
         Hide()
+
+        ShowInTaskbar = False
     End Sub
 
     Private Sub InitTriggerMonitor()

@@ -5,6 +5,7 @@ Imports System.Reflection
 Imports System.Windows
 Imports System.Windows.Media
 Imports System.Windows.Threading
+Imports System.Windows.Media.Animation
 Imports osDraw = System.Drawing
 Imports osRect = SharpDX.Mathematics.Interop
 Imports osText = SharpDX.DirectWrite
@@ -229,6 +230,11 @@ Public Module DataTypeLib
         propFade
         propSpread
         propGlowColor
+    End Enum
+
+    Public Enum AnimationType
+        aniOpen
+        aniClose
     End Enum
 
 #End Region
@@ -674,12 +680,145 @@ Public Class ProgEdgeData
 
 End Class
 
+Public Class osPopupAnimation
+
+    Public Property aniX As DoubleAnimation
+    Public Property aniY As DoubleAnimation
+
+    Public Property aniFade As DoubleAnimation
+
+    Private aniDuration As Duration
+    Private aniDuration_Fade As Duration
+
+    Private aniDuration_AutoStart As TimeSpan = TimeSpan.FromMilliseconds(1)
+    Private aniDuration_StartDelay As TimeSpan = TimeSpan.FromMilliseconds(100)
+
+    Private aniDuration_Open As TimeSpan = TimeSpan.FromMilliseconds(380)
+    Private aniDuration_Close As TimeSpan = TimeSpan.FromMilliseconds(380)
+
+    Private aniDuration_ExecFade As TimeSpan = TimeSpan.FromMilliseconds(380)
+    Private aniDuration_OverlayFade As TimeSpan = TimeSpan.FromMilliseconds(300)
+
+    Public Sub New()
+    End Sub
+
+    Public Sub New(aniType As AnimationType)
+        Select Case aniType
+            Case AnimationType.aniOpen
+                SetAniDuration(aniDuration, aniDuration_Open)
+                SetAniDuration(aniDuration_Fade, aniDuration_ExecFade)
+
+                SetAnimation(AnimationType.aniOpen, aniDuration_Fade, True, Me.aniFade)
+
+                SetAnimation(AnimationType.aniOpen, aniDuration, False, Me.aniX)
+                SetAnimation(AnimationType.aniOpen, aniDuration, False, Me.aniY)
+            Case AnimationType.aniClose
+                SetAniDuration(aniDuration, aniDuration_Close)
+                SetAniDuration(aniDuration_Fade, aniDuration_ExecFade)
+
+                SetAnimation(AnimationType.aniClose, aniDuration_Fade, True, Me.aniFade)
+
+                SetAnimation(AnimationType.aniClose, aniDuration, False, Me.aniX)
+                SetAnimation(AnimationType.aniClose, aniDuration, False, Me.aniY)
+        End Select
+    End Sub
+
+    Public Sub New(aniType As AnimationType, isOverlay As Boolean)
+        Select Case aniType
+            Case AnimationType.aniOpen
+                SetAniDuration(aniDuration, aniDuration_Open)
+                SetAniDuration(aniDuration_Fade, aniDuration_ExecFade)
+
+                SetAnimation(AnimationType.aniOpen, aniDuration_Fade, True, Me.aniFade)
+
+                SetAnimation(AnimationType.aniOpen, aniDuration, False, Me.aniX)
+                SetAnimation(AnimationType.aniOpen, aniDuration, False, Me.aniY)
+            Case AnimationType.aniClose
+                SetAniDuration(aniDuration_Fade, aniDuration_OverlayFade)
+
+                SetAnimation(AnimationType.aniClose, aniDuration_Fade, True, Me.aniFade)
+        End Select
+    End Sub
+
+    Private Sub SetAnimation(aniType As AnimationType, aniDur As Duration, isFadeAni As Boolean, ByRef aniObj As DoubleAnimation)
+        Dim objAniVal = SetAniValues(aniType, isFadeAni)
+
+        aniObj = New DoubleAnimation() With {
+            .From = objAniVal.vStart, .To = objAniVal.vStop,
+            .FillBehavior = FillBehavior.HoldEnd,
+            .EasingFunction = ApplyEase(),
+            .Duration = aniDur
+        }
+
+        If objAniVal.vOpen Then
+            aniObj.BeginTime = aniDuration_StartDelay
+        End If
+    End Sub
+
+    Private Function SetAniValues(aniType As AnimationType, Optional isFadeAni As Boolean = False) As (vStart As Double, vStop As Double, vOpen As Boolean)
+        Dim aStart As Double
+        Dim aStop As Double
+        Dim aOpen As Boolean
+
+        Select Case aniType
+            Case AnimationType.aniOpen
+                aStart = CalcStopVal(isFadeAni)
+                aStop = 1.0
+                aOpen = True
+            Case AnimationType.aniClose
+                aStart = 1.0
+                aStop = CalcStopVal(isFadeAni)
+                aOpen = False
+        End Select
+
+        Return (vStart:=aStart, vStop:=aStop, vOpen:=aOpen)
+    End Function
+
+    Private Function CalcStopVal(isFade As Boolean) As Double
+        Return If(isFade, 0.0, 0.01)
+    End Function
+
+    Public Sub DisposeAni()
+        aniX = Nothing
+        aniY = Nothing
+        aniFade = Nothing
+
+        aniDuration = Nothing
+        aniDuration_Open = Nothing
+        aniDuration_Close = Nothing
+    End Sub
+
+    Private Sub SetAniDuration(ByRef objDur As Duration, valDur As TimeSpan)
+        objDur = New Duration(valDur)
+    End Sub
+
+    Private Function ApplyEase() As QuinticEase
+        Return New QuinticEase With {
+            .EasingMode = EasingMode.EaseIn
+        }
+    End Function
+
+    'Private Function ApplyEase(isOpen As Boolean) As EasingFunctionBase
+    '    If isOpen Then
+    '        Return New QuinticEase With {
+    '            .EasingMode = EasingMode.EaseIn
+    '        }
+    '    Else
+    '        Return New QuinticEase With {
+    '            .EasingMode = EasingMode.EaseIn
+    '        }
+    '    End If
+    'End Function
+
+End Class
+
 Public Module osPopupMenuLib
 
     Public DisposeUI_PopupMenu As Action(Of osPopupMenu_GUI) =
         Sub(objGui_PopupMenu As osPopupMenu_GUI)
             If objGui_PopupMenu IsNot Nothing Then
                 With objGui_PopupMenu
+
                     Try
                         RemoveHandler .Closed, AddressOf osHandler_UI.PrepDispatch
 
@@ -713,26 +852,27 @@ Public Module osPopupMenuLib
         End Sub
 
     Public DisposeUI_TrayOverlay As Action(Of MenuOverlayWindow) =
-    Sub(objGui_PopupMenuOverlay As MenuOverlayWindow)
-        If objGui_PopupMenuOverlay IsNot Nothing Then
-            With objGui_PopupMenuOverlay
-                Try
-                    If .IsLoaded Then
-                        .Opacity = 0
-                        .IsHitTestVisible = False
-                        .ShowInTaskbar = False
-                        .Close()
-                    End If
-                Catch : End Try
-            End With
-        End If
-    End Sub
+        Sub(objGui_PopupMenuOverlay As MenuOverlayWindow)
+            If objGui_PopupMenuOverlay IsNot Nothing Then
+                With objGui_PopupMenuOverlay
+                    Try
+                        If .IsLoaded Then
+                            .Opacity = 0
+                            .IsHitTestVisible = False
+                            .ShowInTaskbar = False
+                            .Close()
+                        End If
+                    Catch : End Try
+                End With
+            End If
+        End Sub
 
-    Private Sub ExecPrepUI_PopupMenu(objGui_PopupMenu As osPopupMenu_GUI)
+    Private Sub ExecPrepUI_PopupMenu(objGui_PopupMenu As osPopupMenu_GUI, objGui_PopupMenuOverlay As MenuOverlayWindow)
         Dim objWin_PopupMenu = objGui_PopupMenu
 
         With objWin_PopupMenu
-            .Owner = Application.Current.MainWindow
+            .Owner = objGui_PopupMenuOverlay
+            .Owner.ShowInTaskbar = False
 
             .ShowInTaskbar = False
             .Topmost = True
@@ -740,6 +880,7 @@ Public Module osPopupMenuLib
 
             .InitPopupMenu()
             .Show()
+            .InitPopupOpen()
         End With
     End Sub
 
@@ -747,14 +888,44 @@ Public Module osPopupMenuLib
         Dim objWin_PopupMenuOverlay = objGui_PopupMenuOverlay
 
         With objWin_PopupMenuOverlay
-            AddHandler .MouseDown, osHandler_UI.pmFunc_TerminatePopupMenu
-
-            .Owner = Application.Current.MainWindow
+            AddHandler .objStacker.MouseDown,
+                osHandler_UI.pmFunc_TerminatePopupMenu
 
             .InitPopupMenuOverlay()
-            .Show()
+            .ActivateOverlay()
         End With
     End Sub
+
+    'Private Sub ExecPrepUI_DisplayPopupMenu(objGui_PopupMenu As osPopupMenu_GUI, objGui_PopupMenuOverlay As MenuOverlayWindow)
+    '    Dim objWin_PopupMenuOverlay = objGui_PopupMenuOverlay
+
+    '    With objWin_PopupMenuOverlay
+    '        AddHandler .MouseDown, osHandler_UI.pmFunc_TerminatePopupMenu
+
+    '        '  .Owner = Application.Current.MainWindow
+
+    '        .InitPopupMenuOverlay()
+
+    '        .Show()
+    '        .ActivateOverlay()
+    '        .ShowInTaskbar = False
+    '    End With
+
+    '    Dim objWin_PopupMenu = objGui_PopupMenu
+
+    '    With objWin_PopupMenu
+    '        .Owner = objGui_PopupMenuOverlay
+    '        .Owner.ShowInTaskbar = False
+
+    '        .ShowInTaskbar = False
+    '        .Topmost = True
+    '        .ShowActivated = False
+
+    '        .InitPopupMenu()
+    '        .Show()
+    '        .InitPopupOpen()
+    '    End With
+    'End Sub
 
     Private Sub ExecPrepUI_TrayMenuOverlay(objGui_PopupMenuOverlay As MenuOverlayWindow)
         Dim objWin_PopupMenuOverlay = objGui_PopupMenuOverlay
@@ -786,7 +957,7 @@ Public Module osPopupMenuLib
                End Function
     End Function
 
-    Public DisplayUI_PopupMenu As Action(Of osPopupMenu_GUI) = AddressOf ExecPrepUI_PopupMenu
+    Public DisplayUI_PopupMenu As Action(Of osPopupMenu_GUI, MenuOverlayWindow) = AddressOf ExecPrepUI_PopupMenu
     Public DisplayUI_PopupMenuOverlay As Action(Of MenuOverlayWindow) = AddressOf ExecPrepUI_PopupMenuOverlay
     Public DisplayUI_TrayOverlay As Action(Of MenuOverlayWindow) = AddressOf ExecPrepUI_TrayMenuOverlay
 

@@ -1,40 +1,34 @@
 ﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-                    xmlns:sys="clr-namespace:System;assembly=mscorlib"
                     xmlns:oseffect="clr-namespace:osAutoCast.osEffectConv"
-                    xmlns:osStyle="clr-namespace:osAutoCast.osStyle"
-                    xmlns:local="clr-namespace:osAutoCast">
-    
+                    xmlns:osStyle="clr-namespace:osAutoCast.osStyle">
+
     <oseffect:TexelSizeConverter x:Key="TexelSizeConverter" />
 
     <Style x:Key="StyleBase_Btn" TargetType="{x:Type Button}">
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="Foreground" Value="#FF8C8A8A" />
-        <Setter Property="Height" Value="36" />
-        <Setter Property="HorizontalContentAlignment" Value="Center" />
-        <Setter Property="VerticalContentAlignment" Value="Center" />
-        <Setter Property="Width" Value="{Binding ActualWidth,
-            ElementName=pmMenuItemContainer, Mode=OneWay}" />
-        <Setter Property="Padding" Value="0" />
+        <Setter Property="Width" Value="257" />
         <Setter Property="FontSize" Value="20" />
         <Setter Property="FontWeight" Value="Bold" />
-        <Setter Property="FontSize" Value="20" />
-        <Setter Property="ContentTemplate" Value="{StaticResource osEffect_Button}" />
+        <Setter Property="BorderThickness" Value="0,0,0,0"/>
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+        <Setter Property="ContentTemplate" Value="{StaticResource osEffectText}" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type Button}">
-                    <Border x:Name="btnBorder" Height="36" Background="{TemplateBinding Background}"
-                            Width="{Binding ActualWidth, ElementName=pmMenuItemContainer, Mode=OneWay}"
-                            CornerRadius="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=(osStyle:osBorderStyle.CornerRadius)}"
-                            BorderThickness="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=(osStyle:osBorderStyle.BorderThickness)}"
-                            BorderBrush="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=(osStyle:osBorderStyle.BorderBrush)}">
-                        <ContentPresenter HorizontalAlignment="Center" x:Name="btnContent"
-                                          ContentTemplate="{TemplateBinding ContentTemplate}"
-                                          VerticalAlignment="Stretch" Height="{TemplateBinding Height}" />
+                    <Border x:Name="btnBorder" Background="{TemplateBinding Background}" VerticalAlignment="Center"
+                            Width="{TemplateBinding Width}"
+                            CornerRadius="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=(osStyle:osStyles.CornerRadius)}"
+                            BorderThickness="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=(osStyle:osStyles.BorderThickness)}"
+                            BorderBrush="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=(osStyle:osStyles.BorderBrush)}">
+                            <ContentPresenter HorizontalAlignment="Center" x:Name="btnContent" ClipToBounds="False" 
+                                          ContentTemplate="{TemplateBinding ContentTemplate}" />                        
                     </Border>
-                    <ControlTemplate.Triggers>
+                    <ControlTemplate.Triggers>                        
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter Property="Background" Value="#A1575757" />
+                            <Setter Property="Background" TargetName="btnBorder"
+                                    Value="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=(osStyle:osStyles.Background)}" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -45,74 +39,13 @@
     <Style x:Key="StyleBase_Toggle" TargetType="{x:Type ToggleButton}">
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="Foreground" Value="#FF8C8A8A" />
-        <Setter Property="Height" Value="36" />
-        <Setter Property="HorizontalContentAlignment" Value="Center" />
-        <Setter Property="VerticalContentAlignment" Value="Center" />
-        <Setter Property="Width" Value="{Binding ActualWidth,
-            ElementName=pmMenuItemContainer, Mode=OneWay}" />
-        <Setter Property="Padding" Value="0" />
+        <Setter Property="Width" Value="257" />
         <Setter Property="FontSize" Value="20" />
         <Setter Property="FontWeight" Value="Bold" />
-        <Setter Property="FontSize" Value="20" />
-        <Setter Property="BorderBrush" Value="{x:Null}" />
-        <Setter Property="BorderThickness" Value="0,0,0,0" />
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="{x:Type ToggleButton}">
-                    <Border x:Name="enBorder" Background="{TemplateBinding Background}"
-                            BorderBrush="#FF222222">
-                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
-                    </Border>
-                    <ControlTemplate.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="enBorder" Property="Background"
-                                    Value="#A1575757" />
-                        </Trigger>
-                    </ControlTemplate.Triggers>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
-        <Setter Property="ContentTemplate">
-            <Setter.Value>
-                <DataTemplate>
-                    <TextBlock x:Name="toggleText" Text="{Binding}" TextOptions.TextFormattingMode="Display"
-                               Margin="3" Padding="3" TextOptions.TextRenderingMode="ClearType" FontWeight="SemiBold">
-                        <TextBlock.Effect>
-                            <local:osEffect x:Name="toggleGlow" Thickness="{StaticResource osEffect_Thickness}" Spread="{StaticResource osEffect_Spread}"
-                                            Fade="{StaticResource osEffect_Fade}" GlowColor="{StaticResource osEffect_Color}"
-                                            StrokeStrength="{StaticResource osEffect_Stroke}" GlowStrength="{StaticResource osEffect_Glow}">
-                                <local:osEffect.TexelSize>
-                                    <MultiBinding Converter="{StaticResource TexelSizeConverter}">
-                                        <Binding RelativeSource="{RelativeSource Self}" Path="ActualWidth"/>
-                                        <Binding RelativeSource="{RelativeSource Self}" Path="ActualHeight"/>
-                                    </MultiBinding>
-                                </local:osEffect.TexelSize>
-                            </local:osEffect>
-                        </TextBlock.Effect>
-                    </TextBlock>
-                    <DataTemplate.Triggers>
-                        <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=ToggleButton}}" Value="True">
-                            <DataTrigger.EnterActions>
-                                <BeginStoryboard>
-                                    <Storyboard>
-                                        <DoubleAnimation Storyboard.TargetName="toggleGlow" Storyboard.TargetProperty="Fade"
-                                                         To="1" Duration="0:0:0.25"/>
-                                    </Storyboard>
-                                </BeginStoryboard>
-                            </DataTrigger.EnterActions>
-                            <DataTrigger.ExitActions>
-                                <BeginStoryboard>
-                                    <Storyboard>
-                                        <DoubleAnimation Storyboard.TargetName="toggleGlow" Storyboard.TargetProperty="Fade"
-                                                         To="0" Duration="0:0:0.35"/>
-                                    </Storyboard>
-                                </BeginStoryboard>
-                            </DataTrigger.ExitActions>
-                        </DataTrigger>
-                    </DataTemplate.Triggers>
-                </DataTemplate>
-            </Setter.Value>
-        </Setter>
+        <Setter Property="BorderThickness" Value="0,0,0,0"/>
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+        <Setter Property="Template" Value="{Binding RelativeSource={RelativeSource TemplatedParent},
+            Path=(osStyle:osStyles.Template)}" />
     </Style>
-    
+
 </ResourceDictionary>

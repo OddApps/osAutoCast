@@ -11,11 +11,19 @@ Public Class osEffect
     Inherits ShaderEffect
 
     Private Shared ReadOnly _shader As New PixelShader() With {
-        .UriSource = New Uri("/osAutoCast;component/DataFiles/StyleData/EffectLib/osEffect2.ps", UriKind.Relative)
+        .UriSource = New Uri("/osAutoCast;component/DataFiles/StyleData/EffectLib/osEffectShader.ps", UriKind.Relative)
     }
 
     Public Sub New()
-        PixelShader = _shader
+        With Me
+            .PixelShader = _shader
+
+            .PaddingLeft = 6
+            .PaddingRight = 6
+
+            .PaddingTop = 2
+            .PaddingBottom = 2
+        End With
 
         UpdateShaderValue(InputProperty)
         UpdateShaderValue(TexelSizeProperty)
@@ -142,46 +150,322 @@ End Class
 
 Namespace osStyle
 
-    Public Class osBorderStyle
+    Public Class osStyles
         Inherits DependencyObject
 
         Public Shared ReadOnly CornerRadiusProperty As DependencyProperty = DependencyProperty.
-            RegisterAttached("CornerRadius", GetType(CornerRadius), GetType(osBorderStyle),
+            RegisterAttached("CornerRadius", GetType(CornerRadius), GetType(osStyles),
                              New PropertyMetadata(New CornerRadius(0)))
 
-        Public Shared Sub SetCornerRadius(ByVal element As UIElement, ByVal value As CornerRadius)
-            element.SetValue(CornerRadiusProperty, value)
-        End Sub
-
-        Public Shared Function GetCornerRadius(ByVal element As UIElement) As CornerRadius
-            Return CType(element.GetValue(CornerRadiusProperty), CornerRadius)
-        End Function
-
         Public Shared ReadOnly BorderThicknessProperty As DependencyProperty = DependencyProperty.
-            RegisterAttached("BorderThickness", GetType(Thickness), GetType(osBorderStyle),
+            RegisterAttached("BorderThickness", GetType(Thickness), GetType(osStyles),
                              New PropertyMetadata(New Thickness(1)))
 
-        Public Shared Sub SetBorderThickness(element As UIElement, value As Thickness)
-            element.SetValue(BorderThicknessProperty, value)
-        End Sub
-
-        Public Shared Function GetBorderThickness(element As UIElement) As Thickness
-            Return CType(element.GetValue(BorderThicknessProperty), Thickness)
-        End Function
-
         Public Shared ReadOnly BorderBrushProperty As DependencyProperty = DependencyProperty.
-            RegisterAttached("BorderBrush", GetType(Brush), GetType(osBorderStyle),
+            RegisterAttached("BorderBrush", GetType(Brush), GetType(osStyles),
                              New PropertyMetadata(Brushes.Transparent))
 
-        Public Shared Sub SetBorderBrush(element As UIElement, value As Brush)
-            element.SetValue(BorderBrushProperty, value)
+        Public Shared ReadOnly BackgroundProperty As DependencyProperty = DependencyProperty.
+            RegisterAttached("Background", GetType(Brush), GetType(osStyles),
+                             New PropertyMetadata(Brushes.Transparent))
+
+        Public Shared ReadOnly TemplateProperty As DependencyProperty = DependencyProperty.
+            RegisterAttached("Template", GetType(ControlTemplate), GetType(osStyles),
+                             New PropertyMetadata(Nothing, AddressOf UpdateView))
+
+        Public Shared Sub SetCornerRadius(ByVal objBorder As UIElement, ByVal valRadius As CornerRadius)
+            objBorder.SetValue(CornerRadiusProperty, valRadius)
         End Sub
 
-        Public Shared Function GetBorderBrush(element As UIElement) As Brush
-            Return CType(element.GetValue(BorderBrushProperty), Brush)
+        Public Shared Function GetCornerRadius(ByVal objBorder As UIElement) As CornerRadius
+            Return CType(objBorder.GetValue(CornerRadiusProperty), CornerRadius)
+        End Function
+
+        Public Shared Sub SetBorderThickness(ByVal objBorder As UIElement, ByVal valThickness As Thickness)
+            objBorder.SetValue(BorderThicknessProperty, valThickness)
+        End Sub
+
+        Public Shared Function GetBorderThickness(ByVal objBorder As UIElement) As Thickness
+            Return CType(objBorder.GetValue(BorderThicknessProperty), Thickness)
+        End Function
+
+        Public Shared Sub SetBorderBrush(ByVal objBorder As UIElement, ByVal valBorderColor As Brush)
+            objBorder.SetValue(BorderBrushProperty, valBorderColor)
+        End Sub
+
+        Public Shared Function GetBorderBrush(ByVal objBorder As UIElement) As Brush
+            Return CType(objBorder.GetValue(BorderBrushProperty), Brush)
+        End Function
+
+        Public Shared Sub SetBackground(ByVal objButton As UIElement, ByVal valBackground As Brush)
+            objButton.SetValue(BackgroundProperty, valBackground)
+        End Sub
+
+        Public Shared Function GetBackground(ByVal objButton As UIElement) As Brush
+            Return CType(objButton.GetValue(BackgroundProperty), Brush)
+        End Function
+
+        Public Shared Sub SetTemplate(ByVal objTemplate As DependencyObject, ByVal valTemplate As ControlTemplate)
+            objTemplate.SetValue(TemplateProperty, valTemplate)
+        End Sub
+
+        Public Shared Function GetTemplate(ByVal objTemplate As DependencyObject) As ControlTemplate
+            Return CType(objTemplate.GetValue(TemplateProperty), ControlTemplate)
+        End Function
+
+        Private Shared Sub UpdateView(depObj As DependencyObject, e As DependencyPropertyChangedEventArgs)
+            Dim objTemplate = FindTemplate(depObj)
+            If objTemplate Is Nothing Then Return
+
+            Dim objView = InitView(e.NewValue)
+            objTemplate.Template = objView
+        End Sub
+
+        Private Shared Function FindTemplate(depObj As DependencyObject) As Control
+            Return TryCast(depObj, Control)
+        End Function
+
+        Private Shared Function InitView(objV As Object) As ControlTemplate
+            Return TryCast(objV, ControlTemplate)
         End Function
 
     End Class
+
+    Public Class osContainerLayout
+
+        Public Shared ReadOnly RowsProperty As DependencyProperty = DependencyProperty.
+            RegisterAttached("Rows", GetType(String), GetType(osContainerLayout),
+                             New PropertyMetadata("", AddressOf UpdateContainerRows))
+
+        Public Shared ReadOnly SeparatorBrushProperty As DependencyProperty = DependencyProperty.
+            RegisterAttached("SeparatorBrush", GetType(Brush), GetType(osContainerLayout),
+                             New PropertyMetadata(Brushes.LightGray, AddressOf UpdateContentSeperator))
+
+        Public Shared Sub SetSeparatorBrush(objSeparator As DependencyObject, value As Brush)
+            objSeparator.SetValue(SeparatorBrushProperty, value)
+        End Sub
+
+        Public Shared Function GetSeparatorBrush(objSeparator As DependencyObject) As Brush
+            Return CType(objSeparator.GetValue(SeparatorBrushProperty), Brush)
+        End Function
+
+        Public Shared ReadOnly SeparatorThicknessProperty As DependencyProperty = DependencyProperty.
+            RegisterAttached("SeparatorThickness", GetType(Double), GetType(osContainerLayout),
+                             New PropertyMetadata(1.0, AddressOf UpdateContentSeperator))
+
+        Public Shared Sub SetSeparatorThickness(objSeparator As DependencyObject, value As Double)
+            objSeparator.SetValue(SeparatorThicknessProperty, value)
+        End Sub
+
+        Public Shared Function GetSeparatorThickness(objSeparator As DependencyObject) As Double
+            Return CType(objSeparator.GetValue(SeparatorThicknessProperty), Double)
+        End Function
+
+        Private Const SeparatorTag As String = "Content_Separator"
+
+        Private Shared Sub UpdateContentSeperator(objCont As DependencyObject, e As DependencyPropertyChangedEventArgs)
+            Dim objContainer = FindContainer(objCont)
+            If objContainer Is Nothing Then Return
+
+            If objContainer.IsLoaded Then
+                GenerateContainer(objContainer)
+            Else
+                RemoveHandler objContainer.Loaded, AddressOf Grid_Loaded
+                AddHandler objContainer.Loaded, AddressOf Grid_Loaded
+            End If
+        End Sub
+
+        Private Shared Sub UpdateContainerRows(objCont As DependencyObject, e As DependencyPropertyChangedEventArgs)
+            Dim objContainer = FindContainer(objCont)
+            If objContainer Is Nothing Then Return
+
+            If objContainer.IsLoaded Then
+                GenerateContainer(objContainer)
+            Else
+                RemoveHandler objContainer.Loaded, AddressOf Grid_Loaded
+                AddHandler objContainer.Loaded, AddressOf Grid_Loaded
+            End If
+        End Sub
+
+        Private Shared Sub Grid_Loaded(sender As Object, e As RoutedEventArgs)
+            Dim objContainer = FindContainer(sender)
+            If objContainer Is Nothing Then Return
+
+            RemoveHandler objContainer.Loaded, AddressOf Grid_Loaded
+            GenerateContainer(objContainer)
+        End Sub
+
+        Private Shared Function FindContainer(depObj As DependencyObject) As Grid
+            Return TryCast(depObj, Grid)
+        End Function
+
+        Private Shared Function FindContainer(sObj As Object) As Grid
+            Return TryCast(sObj, Grid)
+        End Function
+
+        Public Shared Sub SetRows(objRows As DependencyObject, value As String)
+            objRows.SetValue(RowsProperty, value)
+        End Sub
+
+        Public Shared Function GetRows(objRows As DependencyObject) As String
+            Return CType(objRows.GetValue(RowsProperty), String)
+        End Function
+
+        Private Shared Sub GenerateContainer(grid As Grid)
+            Dim rowsSpec = GetRows(grid)
+            If rowsSpec Is Nothing Then rowsSpec = ""
+            Dim parts = rowsSpec.Split(New Char() {","c}, StringSplitOptions.RemoveEmptyEntries)
+            Dim contentCount = parts.Length
+            If contentCount = 0 Then
+                ' nothing to do
+                Return
+            End If
+
+            ' 1) remove old separator children FIRST
+            For i As Integer = grid.Children.Count - 1 To 0 Step -1
+                Dim fe = TryCast(grid.Children(i), FrameworkElement)
+                If fe IsNot Nothing AndAlso fe.Tag IsNot Nothing AndAlso fe.Tag.ToString() = SeparatorTag Then
+                    grid.Children.RemoveAt(i)
+                End If
+            Next
+
+            ' 2) gather metadata for non-separator children
+            Dim childMeta As New List(Of Tuple(Of UIElement, Integer, Integer))()
+            For Each chObj As UIElement In grid.Children
+                Dim fe = TryCast(chObj, FrameworkElement)
+                If fe Is Nothing Then Continue For
+                If fe.Tag IsNot Nothing AndAlso fe.Tag.ToString() = SeparatorTag Then Continue For
+
+                Dim origRow As Integer = Grid.GetRow(chObj)
+                Dim origRowSpan As Integer = Grid.GetRowSpan(chObj)
+                If origRowSpan < 1 Then origRowSpan = 1
+
+                ' normalize origRow into valid content index range [0 .. contentCount-1]
+                If origRow < 0 Then origRow = 0
+                If origRow >= contentCount Then origRow = contentCount - 1
+
+                ' make sure the row span doesn't exceed remaining rows from origRow
+                If origRow + origRowSpan > contentCount Then
+                    origRowSpan = Math.Max(1, contentCount - origRow)
+                End If
+
+                childMeta.Add(Tuple.Create(chObj, origRow, origRowSpan))
+            Next
+
+            ' sort by original row to remap in order (reduces collision chances)
+            childMeta = childMeta.OrderBy(Function(t) t.Item2).ThenBy(Function(t) t.Item1.GetHashCode()).ToList()
+
+            ' 3) rebuild RowDefinitions (content & interleaved separator rows)
+            grid.RowDefinitions.Clear()
+            For i As Integer = 0 To contentCount - 1
+                ' content row
+                Dim token = parts(i).Trim()
+                Dim defContent As New RowDefinition()
+                If String.Equals(token, "auto", StringComparison.OrdinalIgnoreCase) Then
+                    defContent.Height = GridLength.Auto
+                ElseIf token.EndsWith("*"c) Then
+                    Dim starPart = token.TrimEnd("*"c)
+                    Dim value As Double = 1.0
+                    If Not String.IsNullOrEmpty(starPart) Then
+                        Double.TryParse(starPart, value)
+                    End If
+                    defContent.Height = New GridLength(value, GridUnitType.Star)
+                Else
+                    Dim px As Double = 0
+                    If Double.TryParse(token, px) Then
+                        defContent.Height = New GridLength(px, GridUnitType.Pixel)
+                    Else
+                        defContent.Height = GridLength.Auto
+                    End If
+                End If
+                grid.RowDefinitions.Add(defContent)
+
+                ' separator row (not after last content row)
+                If i < contentCount - 1 Then
+                    Dim sepThickness = GetSeparatorThickness(grid)
+                    Dim defSep As New RowDefinition()
+                    If sepThickness <= 0 Then
+                        defSep.Height = New GridLength(0, GridUnitType.Pixel)
+                    Else
+                        defSep.Height = New GridLength(sepThickness, GridUnitType.Pixel)
+                    End If
+                    grid.RowDefinitions.Add(defSep)
+                End If
+            Next
+
+            ' 4) remap children to new rows (shift content rows to 2*origRow)
+            Dim totalRows = grid.RowDefinitions.Count
+            For Each tup In childMeta
+                Dim ch = tup.Item1
+                Dim origRow = tup.Item2
+                Dim origSpan = tup.Item3
+
+                ' newRow maps content rows to even indices; separators occupy odd indices
+                Dim newRow = Math.Max(0, origRow * 2)
+                Dim newSpan = Math.Max(1, origSpan * 2 - 1)
+
+                ' clamp to available rows
+                If newRow > totalRows - 1 Then
+                    newRow = Math.Max(0, totalRows - 1)
+                End If
+                If newRow + newSpan > totalRows Then
+                    newSpan = Math.Max(1, totalRows - newRow)
+                End If
+
+                Grid.SetRow(ch, newRow)
+                Grid.SetRowSpan(ch, newSpan)
+            Next
+
+            ' 5) add separators into their dedicated rows
+            Dim sepBrush = GetSeparatorBrush(grid)
+            Dim sepThicknessFinal = GetSeparatorThickness(grid)
+            If sepThicknessFinal > 0 AndAlso contentCount > 1 Then
+                Dim colSpan As Integer = If(grid.ColumnDefinitions.Count > 0, grid.ColumnDefinitions.Count, 1)
+
+                For i As Integer = 0 To contentCount - 2
+                    Dim sepRowIndex = i * 2 + 1 ' separator is between content rows
+                    Dim rect As New Rectangle() With {
+                .HorizontalAlignment = HorizontalAlignment.Stretch,
+                .VerticalAlignment = VerticalAlignment.Stretch,
+                .Fill = If(sepBrush, Brushes.LightGray),
+                .IsHitTestVisible = False,
+                .Tag = SeparatorTag,
+                .SnapsToDevicePixels = True
+            }
+                    Grid.SetRow(rect, sepRowIndex)
+                    Grid.SetColumn(rect, 0)
+                    Grid.SetColumnSpan(rect, colSpan)
+
+                    ' draw above normal content so backgrounds don't cover it
+                    Grid.SetZIndex(rect, 10000)
+
+                    grid.Children.Add(rect)
+                Next
+            End If
+
+            ' 6) force layout recalculation and optional auto-resize
+            Dim wnd = Window.GetWindow(grid)
+            If wnd IsNot Nothing Then
+                If wnd.SizeToContent = SizeToContent.Manual Then
+                    wnd.UpdateLayout()
+                    wnd.Height = Double.NaN
+                    wnd.UpdateLayout()
+                Else
+                    wnd.UpdateLayout()
+                End If
+            Else
+                grid.UpdateLayout()
+            End If
+        End Sub
+
+
+        'Private Shared Function GenRowData() As RowDefinition
+
+        'End Function
+
+
+    End Class
+
 
 End Namespace
 
@@ -200,16 +484,17 @@ Namespace osEffectConv
             End If
 
             If w <= 0 OrElse h <= 0 Then
-
                 Return New Point(0.01, 0.01)
             End If
 
             Return New Point(1.0 / w, 1.0 / h)
         End Function
 
-        Public Function ConvertBack(value As Object, targetTypes() As Type, parameter As Object, culture As CultureInfo) As Object() Implements IMultiValueConverter.ConvertBack
+        Public Function ConvertBack(value As Object, targetTypes() As Type, parameter As Object,
+                                    culture As CultureInfo) As Object() Implements IMultiValueConverter.ConvertBack
             Throw New NotSupportedException()
         End Function
+
     End Class
 
 End Namespace

@@ -240,6 +240,14 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="DataFiles\StyleData\osUI_StyleViews.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="DataFiles\StyleData\StyleLib\osUI-Style-Container.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="DataFiles\StyleData\StyleLib\osUI_Style-Border.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -301,8 +309,6 @@
       <Link>.editorconfig</Link>
     </None>
     <Resource Include="DataFiles\StyleData\EffectLib\osEffectShader.ps" />
-    <Resource Include="DataFiles\StyleData\EffectLib\osEffect.ps" />
-    <Resource Include="DataFiles\StyleData\EffectLib\osEffect2.ps" />
     <None Include="My Project\app.manifest" />
     <None Include="My Project\DataSources\osPrefStore.ProgVisualQualityData.datasource" />
     <None Include="My Project\Settings.settings">
@@ -335,6 +341,5 @@
   <ItemGroup>
     <None Include="Resources\osSplashLoader.png" />
   </ItemGroup>
-  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.VisualBasic.targets" />
 </Project>

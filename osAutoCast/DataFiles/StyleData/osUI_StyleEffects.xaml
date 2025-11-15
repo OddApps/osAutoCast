@@ -7,28 +7,29 @@
     
     <oseffect:TexelSizeConverter x:Key="TexelSizeConverter" />
 
-    <DataTemplate x:Key="osEffect_Button" DataType="{x:Type sys:String}">
-        <AccessText x:Name="txt" Text="{Binding}" Margin="4" FontWeight="SemiBold" CacheMode="BitmapCache"
-                    TextOptions.TextFormattingMode="Display" TextOptions.TextRenderingMode="ClearType"
-                    Foreground="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
-                    FontSize="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=FontSize}"
-                    Width="150">
-            <AccessText.Effect>
+    <DataTemplate x:Key="osEffectText" DataType="{x:Type sys:String}">
+        <TextBlock x:Name="btnContent" Text="{Binding}" TextAlignment="Center" VerticalAlignment="Center"
+                   TextOptions.TextFormattingMode="Display" TextOptions.TextRenderingMode="ClearType" LineStackingStrategy="MaxHeight"
+                   FontWeight="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=FontWeight}" LineHeight="34"
+                   Foreground="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
+                   FontSize="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=FontSize}"
+                   HorizontalAlignment="Center" SnapsToDevicePixels="True" Padding="0,0,0,0">
+            <TextBlock.Effect>
                 <local:osEffect x:Name="btnGlow" Thickness="{StaticResource osEffect_Thickness}" Spread="{StaticResource osEffect_Spread}"
                                 Fade="{StaticResource osEffect_Fade}" GlowColor="{StaticResource osEffect_Color}"
                                 StrokeStrength="{StaticResource osEffect_Stroke}" GlowStrength="{StaticResource osEffect_Glow}">
                     <local:osEffect.TexelSize>
                         <MultiBinding Converter="{StaticResource TexelSizeConverter}">
-                            <Binding ElementName="txt" Path="ActualWidth"/>
-                            <Binding ElementName="txt" Path="ActualHeight"/>
+                            <Binding ElementName="btnContent" Path="ActualWidth"/>
+                            <Binding ElementName="btnContent" Path="ActualHeight"/>
                         </MultiBinding>
                     </local:osEffect.TexelSize>
                 </local:osEffect>
-            </AccessText.Effect>
-        </AccessText>
+            </TextBlock.Effect>
+        </TextBlock>
         <DataTemplate.Triggers>
             <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=Button}}" Value="True">
-                <DataTrigger.EnterActions>
+                <DataTrigger.EnterActions>                    
                     <BeginStoryboard>
                         <Storyboard>
                             <DoubleAnimation Storyboard.TargetName="btnGlow"
@@ -41,6 +42,50 @@
                     <BeginStoryboard>
                         <Storyboard>
                             <DoubleAnimation Storyboard.TargetName="btnGlow"
+                                             Storyboard.TargetProperty="Fade"
+                                             To="0" Duration="0:0:0.35"/>                            
+                        </Storyboard>
+                    </BeginStoryboard>
+                </DataTrigger.ExitActions>
+            </DataTrigger>
+        </DataTemplate.Triggers>
+    </DataTemplate>
+
+    <DataTemplate x:Key="osEffectTextToggle" DataType="{x:Type sys:String}">
+        <TextBlock x:Name="toggleTxtContent" Text="{Binding}" CacheMode="BitmapCache" TextAlignment="Center"
+                   TextOptions.TextFormattingMode="Display" TextOptions.TextRenderingMode="ClearType" 
+                   FontWeight="{Binding RelativeSource={RelativeSource AncestorType=ToggleButton}, Path=FontWeight}"
+                   Foreground="{Binding RelativeSource={RelativeSource AncestorType=ToggleButton}, Path=Foreground}"
+                   FontSize="{Binding RelativeSource={RelativeSource AncestorType=ToggleButton}, Path=FontSize}"
+                   HorizontalAlignment="Center" SnapsToDevicePixels="True" VerticalAlignment="Stretch">
+            <TextBlock.Effect>
+                <local:osEffect x:Name="toggleGlow" Thickness="{StaticResource osEffect_Thickness}" Spread="{StaticResource osEffect_Spread}"
+                                Fade="{StaticResource osEffect_Fade}" GlowColor="{StaticResource osEffect_Color}"
+                                StrokeStrength="{StaticResource osEffect_Stroke}" GlowStrength="{StaticResource osEffect_Glow}">
+                    <local:osEffect.TexelSize>
+                        <MultiBinding Converter="{StaticResource TexelSizeConverter}">
+                            <Binding ElementName="toggleTxtContent" Path="ActualWidth"/>
+                            <Binding ElementName="toggleTxtContent" Path="ActualHeight"/>
+                        </MultiBinding>
+                    </local:osEffect.TexelSize>
+                </local:osEffect>
+            </TextBlock.Effect>
+        </TextBlock>
+        <DataTemplate.Triggers>
+            <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=ToggleButton}}" Value="True">
+                <DataTrigger.EnterActions>
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation Storyboard.TargetName="toggleGlow"
+                                             Storyboard.TargetProperty="Fade"
+                                             To="1" Duration="0:0:0.25"/>
+                        </Storyboard>
+                    </BeginStoryboard>
+                </DataTrigger.EnterActions>
+                <DataTrigger.ExitActions>
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation Storyboard.TargetName="toggleGlow"
                                              Storyboard.TargetProperty="Fade"
                                              To="0" Duration="0:0:0.35"/>
                         </Storyboard>
