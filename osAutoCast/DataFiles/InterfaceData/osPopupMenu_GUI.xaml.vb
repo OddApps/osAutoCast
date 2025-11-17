@@ -22,7 +22,7 @@ Public Class osPopupMenu_GUI
     Public Async Function InitPopupClose() As Task
         BeginClosingTask(objTask_Closing)
 
-        objAnimation_Close = New osPopupAnimation(AnimationType.aniClose)
+        objAnimation_Close = New osPopupAnimation(AnimationType.aniClose, AnimationObject.aniPopup)
 
         AddHandler objAnimation_Close.aniY.Completed,
             Sub()
@@ -67,7 +67,7 @@ Public Class osPopupMenu_GUI
 
     Private Sub ActivateWindowDisplay()
 
-        objAnimation_Open = New osPopupAnimation(AnimationType.aniOpen)
+        objAnimation_Open = New osPopupAnimation(AnimationType.aniOpen, AnimationObject.aniPopup)
 
         AddHandler objAnimation_Open.aniY.Completed, OpenCompleteEvent
 
@@ -220,7 +220,7 @@ Partial Public Class osPopupMenu_GUI
             End Select
         Else
             osFuncLib_InputScan.SetMonitorState(MonitorStatus.Starting)
-            objInputMon.RestartMonitor()
+            Application.RestartMonitor()
 
             Return UpdateStatus.ToEnabled
         End If
@@ -231,7 +231,8 @@ Partial Public Class osPopupMenu_GUI
         osEnabledStatus = setStatus
         _isAppEnabled = setStatus
 
-        UpdateTray(setStatus)
+
+        UpdateTray(setStatus, True)
     End Sub
 
     Public Sub New()

@@ -200,10 +200,20 @@ Public Class InputMonitorService
     End Function
 
     Private Shared Sub ActivateTriggerMonitor()
+
+        If InputMon_Observer IsNot Nothing Then
+            Try
+                InputMon_Observer.Dispose()
+            Finally
+                InputMon_Observer = Nothing
+            End Try
+        End If
+
         InputMon_Observer = Observable.Interval(InputMon_Timer).
             Select(Function(chkDuration) EvalInputActionInternal()).
             Where(Function(getTrigger) getTrigger <> TriggerAction.None).
             Subscribe(Sub(taskTrigger) TriggerCmd.OnNext(taskTrigger))
+
     End Sub
 
     Private Shared Function EvalInputActionInternal() As TriggerAction

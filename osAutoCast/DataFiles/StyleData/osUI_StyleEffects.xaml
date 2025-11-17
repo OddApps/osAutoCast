@@ -8,12 +8,11 @@
     <oseffect:TexelSizeConverter x:Key="TexelSizeConverter" />
 
     <DataTemplate x:Key="osEffectText" DataType="{x:Type sys:String}">
-        <TextBlock x:Name="btnContent" Text="{Binding}" TextAlignment="Center" VerticalAlignment="Center"
-                   TextOptions.TextFormattingMode="Display" TextOptions.TextRenderingMode="ClearType" LineStackingStrategy="MaxHeight"
-                   FontWeight="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=FontWeight}" LineHeight="34"
-                   Foreground="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
-                   FontSize="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=FontSize}"
-                   HorizontalAlignment="Center" SnapsToDevicePixels="True" Padding="0,0,0,0">
+        <TextBlock x:Name="btnContent" Text="{Binding}" TextAlignment="Center" Padding="{StaticResource osBtn_TextPadding}"                  
+                   SnapsToDevicePixels="True" HorizontalAlignment="Center" VerticalAlignment="Center"                    
+                   LineStackingStrategy="BlockLineHeight" LineHeight="{StaticResource osBtn_FontSize}"
+                   FontWeight="{StaticResource osBtn_FontWeight}" FontSize="{StaticResource osBtn_FontSize}"
+                   Foreground="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}">
             <TextBlock.Effect>
                 <local:osEffect x:Name="btnGlow" Thickness="{StaticResource osEffect_Thickness}" Spread="{StaticResource osEffect_Spread}"
                                 Fade="{StaticResource osEffect_Fade}" GlowColor="{StaticResource osEffect_Color}"
@@ -52,12 +51,11 @@
     </DataTemplate>
 
     <DataTemplate x:Key="osEffectTextToggle" DataType="{x:Type sys:String}">
-        <TextBlock x:Name="toggleTxtContent" Text="{Binding}" CacheMode="BitmapCache" TextAlignment="Center"
-                   TextOptions.TextFormattingMode="Display" TextOptions.TextRenderingMode="ClearType" 
-                   FontWeight="{Binding RelativeSource={RelativeSource AncestorType=ToggleButton}, Path=FontWeight}"
-                   Foreground="{Binding RelativeSource={RelativeSource AncestorType=ToggleButton}, Path=Foreground}"
-                   FontSize="{Binding RelativeSource={RelativeSource AncestorType=ToggleButton}, Path=FontSize}"
-                   HorizontalAlignment="Center" SnapsToDevicePixels="True" VerticalAlignment="Stretch">
+        <TextBlock x:Name="toggleTxtContent" Text="{Binding}" TextAlignment="Center" Padding="{StaticResource osBtn_TextPadding}"                  
+                   SnapsToDevicePixels="True" HorizontalAlignment="Center" VerticalAlignment="Center"                    
+                   LineStackingStrategy="BlockLineHeight" LineHeight="{StaticResource osBtn_FontSize}"
+                   FontWeight="{StaticResource osBtn_FontWeight}" FontSize="{StaticResource osBtn_FontSize}"
+                   Foreground="{Binding RelativeSource={RelativeSource AncestorType=ToggleButton}, Path=Foreground}">
             <TextBlock.Effect>
                 <local:osEffect x:Name="toggleGlow" Thickness="{StaticResource osEffect_Thickness}" Spread="{StaticResource osEffect_Spread}"
                                 Fade="{StaticResource osEffect_Fade}" GlowColor="{StaticResource osEffect_Color}"

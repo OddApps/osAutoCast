@@ -21,8 +21,8 @@ Public Class osEffect
             .PaddingLeft = 6
             .PaddingRight = 6
 
-            .PaddingTop = 2
-            .PaddingBottom = 2
+            .PaddingTop = 3
+            .PaddingBottom = 3
         End With
 
         UpdateShaderValue(InputProperty)

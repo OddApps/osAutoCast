@@ -9,23 +9,27 @@
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="Foreground" Value="#FF8C8A8A" />
         <Setter Property="Width" Value="257" />
+        <Setter Property="MinHeight" Value="34" />
         <Setter Property="FontSize" Value="20" />
         <Setter Property="FontWeight" Value="Bold" />
-        <Setter Property="BorderThickness" Value="0,0,0,0"/>
+        <Setter Property="Padding" Value="0,2"/>
         <Setter Property="HorizontalAlignment" Value="Center"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="UseLayoutRounding" Value="True"/>
         <Setter Property="ContentTemplate" Value="{StaticResource osEffectText}" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type Button}">
-                    <Border x:Name="btnBorder" Background="{TemplateBinding Background}" VerticalAlignment="Center"
+                    <Border x:Name="btnBorder" Background="{TemplateBinding Background}"
                             Width="{TemplateBinding Width}"
                             CornerRadius="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=(osStyle:osStyles.CornerRadius)}"
                             BorderThickness="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=(osStyle:osStyles.BorderThickness)}"
                             BorderBrush="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=(osStyle:osStyles.BorderBrush)}">
-                            <ContentPresenter HorizontalAlignment="Center" x:Name="btnContent" ClipToBounds="False" 
-                                          ContentTemplate="{TemplateBinding ContentTemplate}" />                        
+                        <ContentPresenter x:Name="btnContent" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"
+                                          VerticalAlignment="Center" HorizontalAlignment="Center" Margin="{StaticResource osBtn_ContentPadding}" />
                     </Border>
-                    <ControlTemplate.Triggers>                        
+                    <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter Property="Background" TargetName="btnBorder"
                                     Value="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=(osStyle:osStyles.Background)}" />
@@ -40,12 +44,23 @@
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="Foreground" Value="#FF8C8A8A" />
         <Setter Property="Width" Value="257" />
+        <Setter Property="MinHeight" Value="34" />
         <Setter Property="FontSize" Value="20" />
         <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="Padding" Value="0,2"/>
         <Setter Property="BorderThickness" Value="0,0,0,0"/>
         <Setter Property="HorizontalAlignment" Value="Center"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="UseLayoutRounding" Value="True"/>
         <Setter Property="Template" Value="{Binding RelativeSource={RelativeSource TemplatedParent},
             Path=(osStyle:osStyles.Template)}" />
+    </Style>
+
+    <Style x:Key="StyleBase_Border" TargetType="{x:Type Border}">
+        <Setter Property="BorderBrush" Value="#A1222222" />
+        <Setter Property="BorderThickness" Value="0,0,0,0" />
+        <Setter Property="Margin" Value="0"/>
     </Style>
 
 </ResourceDictionary>

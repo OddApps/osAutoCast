@@ -23,12 +23,16 @@ Imports osForms = System.Windows.Forms
 Imports osInput = System.Windows.Input
 Imports osBinder = System.Windows.Data
 Imports osColor = System.Windows.Media.Colors
+Imports osBrushColor = System.Windows.Media.Brushes
 Imports osColors = System.Windows.Media
 Imports osThreads = System.Threading
 Imports osControls = System.Windows.Controls
 Imports osUtilities = SharpDX.Utilities
 Imports osProgColor = SharpDX.Mathematics.Interop.RawColor4
 Imports System.Windows.Interop
+Imports osVert = System.Windows.VerticalAlignment
+Imports osHorz = System.Windows.HorizontalAlignment
+Imports System.ComponentModel
 
 #Disable Warning IDE0060 ' Remove unused parameter
 #Disable Warning IDE1006 ' Remove unused parameter
@@ -725,6 +729,13 @@ Public NotInheritable Class MenuOverlayWindow
     Private Shared Function SetWindowLongPtr(hWnd As IntPtr, nIndex As Integer, dwNewLong As IntPtr) As IntPtr
     End Function
 
+    Private objTask_Closing As TaskCompletionSource(Of Boolean)
+
+    Private objAnimation_Open As osPopupAnimation = Nothing
+    Private objAnimation_Close As osPopupAnimation = Nothing
+
+    Private OpenCompleteEvent As EventHandler = AddressOf OpenComplete
+
     Private isFromTray As Boolean
     Private setOpacity As Double = 0.7
 
@@ -748,41 +759,16 @@ Public NotInheritable Class MenuOverlayWindow
     Private Sub SetBG()
         With Me
             If Me.isFromTray Then
-                .Background = Windows.Media.Brushes.Black
+                .Background = osBrushColor.Black
                 .Opacity = 0.01
             Else
                 objStacker = CreateStackLayout()
 
-                .Background = Windows.Media.Brushes.Transparent
+                .Background = osBrushColor.Transparent
                 .Opacity = 1
                 .Content = objStacker
             End If
         End With
-    End Sub
-
-    Function CreateStackLayout() As StackPanel
-        Return New StackPanel With {
-            .Orientation = Orientation.Vertical,
-            .HorizontalAlignment = HorizontalAlignment.Stretch,
-            .VerticalAlignment = VerticalAlignment.Stretch,
-            .Background = Windows.Media.Brushes.Black,
-            .Opacity = 0.0
-        }
-    End Function
-
-    Public Sub ActivateOverlay()
-        Dim objA As New Animation.DoubleAnimation() With {
-            .From = 0.0, .To = setOpacity,
-            .FillBehavior = Animation.FillBehavior.HoldEnd,
-            .BeginTime = TimeSpan.FromMilliseconds(50),
-            .Duration = New Duration(TimeSpan.FromMilliseconds(300)),
-            .EasingFunction = New Animation.QuinticEase With {
-              .EasingMode = Animation.EasingMode.EaseOut
-            }
-        }
-
-        Me.Show()
-        Me.objStacker.BeginAnimation(StackPanel.OpacityProperty, objA)
     End Sub
 
     Public Sub InitPopupMenuOverlay()
@@ -792,11 +778,18 @@ Public NotInheritable Class MenuOverlayWindow
         Me.Topmost = True
 
         With SystemInformation.VirtualScreen
-            objStacker.HorizontalAlignment = Windows.HorizontalAlignment.Left
-            objStacker.VerticalAlignment = Windows.VerticalAlignment.Top
+            objStacker.HorizontalAlignment = osHorz.Left
+            objStacker.VerticalAlignment = osVert.Top
             objStacker.Width = .Width
             objStacker.Height = .Height
         End With
+    End Sub
+
+    Public Sub PrepTrayMenuOverlay()
+        Me.ShowInTaskbar = False
+        Me.ShowActivated = False
+
+        Me.Topmost = True
     End Sub
 
     Public Sub PrepPopupMenuOverlay()
@@ -807,6 +800,62 @@ Public NotInheritable Class MenuOverlayWindow
             Me.Height = .Height
         End With
     End Sub
+
+    Function CreateStackLayout() As StackPanel
+        Return New StackPanel With {
+            .Orientation = osControls.Orientation.Vertical, .HorizontalAlignment = osHorz.Stretch,
+            .VerticalAlignment = osVert.Stretch, .Opacity = 0.0, .Background = osBrushColor.Black
+        }
+    End Function
+
+    Private Sub OpenComplete()
+        Try
+            RemoveHandler objAnimation_Open.aniFade.Completed,
+                OpenCompleteEvent
+        Catch : End Try
+
+        objAnimation_Open = Nothing
+    End Sub
+
+    Public Sub ActivateOverlay()
+        objAnimation_Open = New osPopupAnimation(AnimationType.aniOpen,
+                                                 AnimationObject.aniOverlay)
+
+        AddHandler objAnimation_Open.aniFade.Completed,
+            OpenCompleteEvent
+
+        Me.Show()
+        Me.objStacker.BeginAnimation(StackPanel.OpacityProperty, objAnimation_Open.aniFade)
+    End Sub
+
+    Private Sub BeginClosingTask(ByRef objCloseResult As TaskCompletionSource(Of Boolean))
+        If objCloseResult IsNot Nothing Then objCloseResult = Nothing
+
+        objCloseResult = New TaskCompletionSource(Of Boolean)(TaskCreationOptions.
+                                                    RunContinuationsAsynchronously)
+    End Sub
+
+    Private Sub PopupCloseComplete(ByRef objTask As TaskCompletionSource(Of Boolean))
+        objTask.TrySetResult(True)
+
+        objAnimation_Close.DisposeAni()
+        objAnimation_Close = Nothing
+    End Sub
+
+    Public Async Function InitOverlayClose() As Task
+        BeginClosingTask(objTask_Closing)
+
+        objAnimation_Close = New osPopupAnimation(AnimationType.aniClose, AnimationObject.aniOverlay)
+
+        AddHandler objAnimation_Close.aniFade.Completed,
+            Sub()
+                PopupCloseComplete(objTask_Closing)
+            End Sub
+
+        Me.objStacker.BeginAnimation(StackPanel.OpacityProperty, objAnimation_Close.aniFade)
+
+        Dim resPopupClose = Await objTask_Closing.Task
+    End Function
 
     Protected Overrides Sub OnSourceInitialized(e As EventArgs)
         MyBase.OnSourceInitialized(e)
@@ -840,7 +889,7 @@ Module osFuncLib_TrayMenu
 
     Public Property osIsEnabled As Boolean
 
-    Public objInputMon As osInMon
+    ' Public objInputMon As osInMon
 
     Private chkMenuOpen As TaskCompletionSource(Of Boolean)
 
@@ -858,6 +907,8 @@ Module osFuncLib_TrayMenu
     Private osGameMenu_Leave As osControls.MenuItem
     Private osMenu_Opts As osControls.MenuItem
     Private osMenuExit As osControls.MenuItem
+
+    Private osMenuBind As osMenuFuncBinder
 
     Private Const GWL_EXSTYLE As Integer = -20
     Private Const WS_EX_NOACTIVATE As Integer = &H8000000
@@ -881,8 +932,9 @@ Module osFuncLib_TrayMenu
 
                    osHandler_UI.LaunchOverlayGui()
 
-                   osMenuOverlay = osHandler_UI.FetchPopupMenuOverlay()
-                   AddHandler osMenuOverlay.MouseDown, pmFunc_TerminateOverlay
+
+                   AddHandler osHandler_UI.osPopupMenuOverlay.MouseDown,
+                   pmFunc_TerminateOverlay
 
                    osHandler_UI.DisplayGUI(TriggerType.ShowMenuOverlay)
 
@@ -894,6 +946,8 @@ Module osFuncLib_TrayMenu
                        .StaysOpen = False
                        .IsOpen = True
                    End With
+
+                   '  AddHandler objGetMenu.pro
 
                    SetNoActivateStyleForContextMenu(osMenuObj)
 
@@ -908,7 +962,15 @@ Module osFuncLib_TrayMenu
     Public Sub ClosePopupMenu()
         osTrayPopupMenu.IsOpen = False
 
-        RemoveHandler osMenuOverlay.MouseDown, pmFunc_TerminateOverlay
+        RemoveHandler osHandler_UI.osPopupMenuOverlay.MouseDown,
+            pmFunc_TerminateOverlay
+
+        osHandler_UI.DispatchOverlay()
+        Dim doGameFocus = SetGameFocus()
+    End Sub
+
+    Public Sub ClosePopupMenu(isFromMenu As Boolean)
+        osTrayPopupMenu.IsOpen = False
 
         osHandler_UI.DispatchOverlay()
         Dim doGameFocus = SetGameFocus()
@@ -955,13 +1017,18 @@ Module osFuncLib_TrayMenu
             End Select
         Else
             osFuncLib_InputScan.SetMonitorState(MonitorStatus.Starting)
-            objInputMon.RestartMonitor()
+            Application.RestartMonitor()
 
             Return UpdateStatus.ToEnabled
         End If
     End Function
 
     Public Sub VerifyStatusChange(setStatus As Boolean)
+        If CoreDataLib.osEnStatus_Popup Then
+            CoreDataLib.osEnStatus_Popup = False
+            Exit Sub
+        End If
+
         Dim result = ConfirmStatusChange(setStatus)
         If result = UpdateStatus.CancelUpdate Then Return
 
@@ -986,9 +1053,14 @@ Module osFuncLib_TrayMenu
         osTrayIcon.Text = If(isEnabled, "osAutoCast | Enabled", "osAutoCast | Disabled")
     End Sub
 
-    Public Sub UpdateTray(isEnabled As Boolean)
+    Public Sub UpdateTray(isEnabled As Boolean, Optional isFromTray As Boolean = False)
         UpdateTrayIcon(isEnabled)
         UpdateTrayText(isEnabled)
+
+        If isFromTray Then
+            CoreDataLib.osEnStatus_Popup = True
+            osMenu_EnDis.IsChecked = isEnabled
+        End If
     End Sub
 
     Private Sub PrepTrayMenu(objOsMenu As osControls.ContextMenu)
@@ -1090,6 +1162,7 @@ Module osFuncLib_TrayMenu
 
         AddHandler osMenuObj.Closed, Sub()
                                          CloseMenuHost()
+                                         ClosePopupMenu()
                                      End Sub
 
     End Sub
@@ -1116,16 +1189,18 @@ Module osFuncLib_TrayMenu
         End
     End Sub
 
-    Public Sub osMenu_Init(objInMon As osInMon)
+    Public Sub osMenu_Init()
         PopulateMenu_Popup(osTrayPopupMenu)
         PrepTrayMenu(osTrayPopupMenu)
 
         osIsEnabled = True
-        objInputMon = objInMon
+        'objInputMon = objInMon
+
 
         With New osMenuFuncData(AddressOf osStatus_Fetch, AddressOf VerifyStatusChange)
             osMenuFuncBinder.BindChecked_Popup(osTrayPopupMenu.Items.Item(0),
                                          .osMenuFunc_GetStatus, .osMenuFunc_ApplyStatus)
+
         End With
     End Sub
 
@@ -1375,7 +1450,8 @@ Public Class TrayIconBridge
     End Sub
 End Class
 
-Public Class osMenuFuncBinder
+Public NotInheritable Class osMenuFuncBinder
+    Implements System.ComponentModel.INotifyPropertyChanged
 
     Public Enum UpdateStatus
         ToEnabled
@@ -1388,28 +1464,6 @@ Public Class osMenuFuncBinder
         isMenu
     End Enum
 
-    Public Shared Sub BindChecked(objMenuItem As ToolStripMenuItem,
-                                  DoFunc_FetchStatus As Func(Of Boolean),
-                                  DoFunc_ApplyStatus As Action(Of Boolean),
-                                  DoFunc_ConfirmStatus As Func(Of Boolean, osMenuFuncBinder.UpdateStatus),
-                                  DoFunc_UpdateIcon As Action(Of Boolean))
-        With objMenuItem
-            .Checked = DoFunc_FetchStatus()
-
-            AddHandler .Click, Sub()
-                                   Dim chkCurStatus = .Checked
-                                   Dim chkNewStatus = Not chkCurStatus
-
-                                   If DoFunc_ConfirmStatus(chkNewStatus) =
-                                   UpdateStatus.CancelUpdate Then Return
-
-                                   .Checked = chkNewStatus
-                                   DoFunc_UpdateIcon(chkNewStatus)
-                                   DoFunc_ApplyStatus(chkNewStatus)
-                               End Sub
-        End With
-    End Sub
-
     Private Shared Sub ApplyMenuBinding(MenuItemObj As DependencyObject, MenuItemBinder As osBinder.Binding, BinderType As MenuBinderType)
         Select Case BinderType
             Case MenuBinderType.isChk
@@ -1417,6 +1471,7 @@ Public Class osMenuFuncBinder
             Case MenuBinderType.isMenu
                 BindingOperations.SetBinding(MenuItemObj, HeaderedItemsControl.HeaderProperty, MenuItemBinder)
         End Select
+
     End Sub
 
     Private Shared Function GenMenuBinding(MenuBindSrc As Object, BinderType As MenuBinderType) As osBinder.Binding
@@ -1464,12 +1519,18 @@ Public Class osMenuFuncBinder
         ApplyMenuBinding(objMenuItem, osBinder_MenuText, MenuBinderType.isMenu)
 
         AddHandler osMenuAdapter.PropertyChanged, Sub(sender, e)
+
                                                       If e.PropertyName = NameOf(osMenuAdapter.Value) Then
                                                           Dim isEnabled As Boolean = osMenuAdapter.Value
+
                                                           UpdateTray(isEnabled)
                                                       End If
                                                   End Sub
+    End Sub
 
+    Public Event INotifyPropertyChanged_PropertyChanged As PropertyChangedEventHandler Implements INotifyPropertyChanged.PropertyChanged
+    Private Sub OnPropertyChanged(<CallerMemberName> Optional name As String = Nothing)
+        RaiseEvent INotifyPropertyChanged_PropertyChanged(Me, New System.ComponentModel.PropertyChangedEventArgs(name))
     End Sub
 
 End Class
@@ -1528,6 +1589,17 @@ Module ControlExtensions
         If obj IsNot Nothing Then
             Try
                 osUtilities.Dispose(obj)
+            Finally
+                obj = Nothing
+            End Try
+        End If
+    End Sub
+
+    <Runtime.CompilerServices.Extension>
+    Public Sub DisposeMonitor(Of T As {Class, IDisposable})(ByRef obj As T)
+        If obj IsNot Nothing Then
+            Try
+                obj.Dispose()
             Finally
                 obj = Nothing
             End Try

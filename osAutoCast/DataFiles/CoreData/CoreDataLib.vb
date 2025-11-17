@@ -30,6 +30,7 @@ Public NotInheritable Class CoreDataLib
     Public Shared isDispPref As Boolean = False
 
     Public Shared Property osEnabledStatus As Boolean = True
+    Public Shared osEnStatus_Popup As Boolean = False
 
     Public Const mEvent_Down As Integer = 2
     Public Const mEvent_Up As Integer = 4

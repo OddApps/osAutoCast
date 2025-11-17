@@ -34,7 +34,7 @@
            BasedOn="{StaticResource pmBtnGameMenuItemStyle}">
         <Setter Property="Visibility" Value="Collapsed" />
         <Setter Property="osStyle:osStyles.CornerRadius" Value="0,0,0,0"/>
-        <Setter Property="osStyle:osStyles.BorderThickness" Value="0,0,0,0"/>
+        <Setter Property="osStyle:osStyles.BorderThickness" Value="0,2"/>
         <Setter Property="osStyle:osStyles.BorderBrush" Value="#FF222222"/>
         <Setter Property="osStyle:osStyles.Background" Value="#C4363636"/>
         <Style.Triggers>

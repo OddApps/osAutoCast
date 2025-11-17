@@ -23,6 +23,6 @@
         <Setter Property="osStyle:osStyles.BorderThickness" Value="0,0,0,0"/>
         <Setter Property="osStyle:osStyles.BorderBrush" Value="#FF222222"/>
         <Setter Property="osStyle:osStyles.Background" Value="#A1575757"/>
-        <Setter Property="osStyle:osStyles.Template" Value="{StaticResource ToggleView_GameMenu}" />
+        <Setter Property="osStyle:osStyles.Template" Value="{StaticResource BtnView_GameMenu}" />
     </Style>
 </ResourceDictionary>

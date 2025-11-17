@@ -96,7 +96,7 @@ Public NotInheritable Class osHandler_UI
         RemoveHandler objPopupMenuOverlayWindow.MouseDown, pmFunc_TerminatePopupMenu
     End Sub
 
-    Public Shared Sub PreloadForms(guiInputMon As Window)
+    Public Shared Sub PreloadForms()
         Dim handle As IntPtr = osGui_Prefs.Handle
 
         osGui_Prefs.osPrefsPrep()
@@ -171,9 +171,12 @@ Public NotInheritable Class osHandler_UI
 
     Private Shared Async Sub TerminatePopupMenu()
         Dim objWin_PopupMenu = _osPopupMenu.Value
+        Dim objWin_PopupMenuOverlay = _osPopupMenuOverlay.Value
+
         objWin_PopupMenu.Topmost = True
 
         Await objWin_PopupMenu.InitPopupClose
+        Await objWin_PopupMenuOverlay.InitOverlayClose
 
         DispatchUI(TriggerAction.ShowMenu)
         Dim doGameFocus = CoreDataLib.SetGameFocus()
@@ -290,6 +293,14 @@ Public NotInheritable Class osHandler_UI
 
     Private Shared Sub ImplementHandler(objWinPopupMenu_GUI As osPopupMenu_GUI)
         AddHandler objWinPopupMenu_GUI.Closed, AddressOf PrepDispatch
+    End Sub
+
+    Public Shared Sub RecaptureResources()
+        InitResourceAlloc()
+
+        GC.Collect()
+        GC.WaitForPendingFinalizers()
+        GC.Collect()
     End Sub
 
     Private Shared Sub InitResourceAlloc()

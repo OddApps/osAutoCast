@@ -2,10 +2,9 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" mc:Ignorable="d" Title="osPopupMenu_GUI"
         DataContext="{Binding RelativeSource={RelativeSource Self}}" WindowStyle="None" AllowsTransparency="True"
-        ShowInTaskbar="False" Background="Transparent" Width="265" Height="158" MinWidth="265" MinHeight="158"
+        ShowInTaskbar="False" Background="Transparent" MinWidth="265" VerticalContentAlignment="Stretch"
         WindowStartupLocation="CenterScreen" Focusable="False" ShowActivated="False" Topmost="True"
-        IsTabStop="False" SizeToContent="WidthAndHeight" HorizontalContentAlignment="Center"
-         VerticalContentAlignment="Center">
+        IsTabStop="False" SizeToContent="WidthAndHeight" HorizontalContentAlignment="Center">
     
     <Border x:Name="popupMainContainer" Style="{StaticResource MainContainerStyle}">
         <Border.RenderTransform>
@@ -16,15 +15,14 @@
             <Grid.ColumnDefinitions>
                 <ColumnDefinition/>
             </Grid.ColumnDefinitions>
-            <ToggleButton x:Name="pmChk_IsEnabled" Grid.Row="0" Grid.Column="0" 
+            <ToggleButton x:Name="pmChk_IsEnabled" Grid.Row="0" Grid.Column="0"
                           IsChecked="{Binding IsAppEnabled, Mode=TwoWay, ElementName=winPopupMenu}"
-                          Style="{StaticResource pmBtnEnabledStatusStyle}" Grid.RowSpan="1" Padding="1,1,1,0" />
-            <StackPanel x:Name="stackPanel" Grid.Row="1" Grid.Column="0" Grid.RowSpan="1" MinHeight="36"
+                          Style="{StaticResource pmBtnEnabledStatusStyle}" />
+            <StackPanel x:Name="stackPanel" Grid.Row="1" Grid.Column="0" 
                         DataContext="{Binding RelativeSource={RelativeSource AncestorType=Window}}">
-                <ToggleButton x:Name="btnShowGameMenu" Content="Game Menu"
+                <ToggleButton x:Name="btnShowGameMenu" Content="Game Menu" 
                               Style="{StaticResource pmBtnGameMenuStyle}" IsChecked="False" />
-                <Border x:Name="GameMenuPanel" Margin="0,0,0,0" BorderThickness="0,0,0,0"
-                        BorderBrush="#FF521212" Style="{StaticResource HideShowGameMenu}">
+                <Border x:Name="GameMenuPanel" Style="{StaticResource HideShowGameMenu}">
                     <StackPanel>
                         <Button x:Name="pmBtn_StartGame" Content="Start MTGA"
                                 Style="{StaticResource GameMenu_ShowStart}" />
@@ -33,9 +31,9 @@
                     </StackPanel>
                 </Border>
             </StackPanel>
-            <Button x:Name="pmBtn_ShowOptions" Content="Options" Grid.Row="2" Grid.RowSpan="1"
-                    Grid.Column="0" Style="{StaticResource pmBtnMainStyle}" VerticalAlignment="Center" VerticalContentAlignment="Center" />
-            <Button x:Name="pmBtn_Exit" Content="Exit" Grid.Row="3" Grid.RowSpan="1"
+            <Button x:Name="pmBtn_ShowOptions" Content="Options" Grid.Row="2"
+                    Grid.Column="0" Style="{StaticResource pmBtnMainStyle}" />
+            <Button x:Name="pmBtn_Exit" Content="Exit" Grid.Row="3"
                     Grid.Column="0" Style="{StaticResource pmBtnBrdrStyle}" />
         </Grid>
     </Border>

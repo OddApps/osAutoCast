@@ -4,12 +4,9 @@
                     xmlns:osStyle="clr-namespace:osAutoCast.osStyle">
 
     <Style x:Key="ContentContainerStyle" TargetType="{x:Type Grid}">
-        <Setter Property="Background" Value="#F41F1F1F" />
         <Setter Property="MaxWidth" Value="257" />
-        <Setter Property="MaxHeight" Value="150" />
         <Setter Property="MinWidth" Value="257" />
-        <Setter Property="MinHeight" Value="150" />
-        <Setter Property="osStyle:osContainerLayout.Rows" Value="36,auto,36,36" />
+        <Setter Property="osStyle:osContainerLayout.Rows" Value="auto,auto,auto,auto" />
         <Setter Property="osStyle:osContainerLayout.SeparatorBrush">
                 <Setter.Value>
                 <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
