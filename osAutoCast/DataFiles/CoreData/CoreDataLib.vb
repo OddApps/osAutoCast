@@ -49,6 +49,13 @@ Public NotInheritable Class CoreDataLib
         (TriggerAction.ShowMenu, Function() osFuncLib_PopupMenu.ShowPopupMenu())
     }
 
+    'Private Shared ReadOnly TriggerHandlerIdx As New TriggerHandlerIdx({
+    '    (TriggerAction.AutoCast, Function() osFuncLib_AutoCast.ExecuteAutoCast()),
+    '    (TriggerAction.AutoPass, Function() osFuncLib_AutoPass.ExecuteAutoPass()),
+    '    (TriggerAction.ShowOpts, Function() osFuncLib_ShowOpts.ExecuteDispOpts()),
+    '    (TriggerAction.ShowMenu, Function() osFuncLib_PopupMenu.ShowPopupMenu())
+    '})
+
     Public Shared Function osStatus_Fetch() As Boolean
         Return osEnabledStatus
     End Function

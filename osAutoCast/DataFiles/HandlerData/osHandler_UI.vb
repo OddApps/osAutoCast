@@ -11,11 +11,10 @@ Public NotInheritable Class osHandler_UI
 
     Public Shared pmFunc_TerminatePopupMenu As MouseButtonEventHandler = AddressOf TerminatePopupMenu
 
-    Public Shared Property osGui_InputMonitor As Form
+    ' Public Shared Property osGui_InputMonitor As Form
     ' Public Shared Property osGui_InputMonitor2 As Window
 
-    Private Shared _osPrefs As New Lazy(Of osPrefs)(
-    Function() New osPrefs(), LazyThreadSafetyMode.ExecutionAndPublication)
+    Private Shared _osPrefs As Lazy(Of osPrefs)
     Public Shared ReadOnly Property osGui_Prefs As osPrefs
         Get
             Return _osPrefs.Value
@@ -96,15 +95,21 @@ Public NotInheritable Class osHandler_UI
         RemoveHandler objPopupMenuOverlayWindow.MouseDown, pmFunc_TerminatePopupMenu
     End Sub
 
-    Public Shared Sub PreloadForms()
+    Private Shared Sub LoadOptsUI()
+        _osPrefs = New Lazy(Of osPrefs)(
+            Function() New osPrefs(), LazyThreadSafetyMode.ExecutionAndPublication)
+
         Dim handle As IntPtr = osGui_Prefs.Handle
+    End Sub
 
+    Private Shared Sub LoadPrefData()
+        LoadOptsUI()
         osGui_Prefs.osPrefsPrep()
+    End Sub
 
-        Dim objOsInputMon As New osInputMonitor
-        Dim tmpHandle = objOsInputMon.Handle
-
-        osGui_InputMonitor = objOsInputMon
+    Public Shared Sub PreloadForms()
+        LoadPrefData()
+        PrepUI_PopupMenu()
     End Sub
 
     Public Shared Async Function LaunchGui(progGui As TriggerAction) As Task
@@ -169,16 +174,47 @@ Public NotInheritable Class osHandler_UI
             End Sub)
     End Sub
 
+    Public Shared Sub ResetPopupMenu()
+        TerminatePopupMenuByCmd()
+    End Sub
+
+    Private Shared Async Sub TerminatePopupMenuByCmd()
+        Dim objWin_PopupMenu = _osPopupMenu.Value
+        Dim objWin_PopupMenuOverlay = _osPopupMenuOverlay.Value
+
+        Dim objTerminateTask = objWin_PopupMenu.Dispatcher.
+            InvokeAsync(Async Function()
+
+                            objWin_PopupMenu.Topmost = True
+
+                            Await objWin_PopupMenu.InitPopupClose(True)
+                            Await objWin_PopupMenuOverlay.InitOverlayClose()
+
+                            DispatchUI(TriggerAction.ShowMenu)
+                        End Function)
+
+        Await objTerminateTask.Task.Unwrap()
+
+        Dim doGameFocus = CoreDataLib.SetGameFocus()
+    End Sub
+
     Private Shared Async Sub TerminatePopupMenu()
         Dim objWin_PopupMenu = _osPopupMenu.Value
         Dim objWin_PopupMenuOverlay = _osPopupMenuOverlay.Value
 
-        objWin_PopupMenu.Topmost = True
+        Dim objTerminateTask = objWin_PopupMenu.Dispatcher.
+            InvokeAsync(Async Function()
 
-        Await objWin_PopupMenu.InitPopupClose
-        Await objWin_PopupMenuOverlay.InitOverlayClose
+                            objWin_PopupMenu.Topmost = True
 
-        DispatchUI(TriggerAction.ShowMenu)
+                            Await objWin_PopupMenu.InitPopupClose()
+                            Await objWin_PopupMenuOverlay.InitOverlayClose()
+
+                            DispatchUI(TriggerAction.ShowMenu)
+                        End Function)
+
+        Await objTerminateTask.Task.Unwrap()
+
         Dim doGameFocus = CoreDataLib.SetGameFocus()
     End Sub
 
@@ -222,13 +258,19 @@ Public NotInheritable Class osHandler_UI
 
     Private Shared Sub PrepUI_PopupMenu()
         If _osPopupMenu Is Nothing Then
-            _osPopupMenu = New Lazy(Of osPopupMenu_GUI)(
-                GeneratePopupMenuGUI(), LazyThreadSafetyMode.ExecutionAndPublication)
+            PrepDispatcher().Invoke(Sub()
+                                        _osPopupMenu = New Lazy(Of osPopupMenu_GUI)(
+                                        GeneratePopupMenuGUI(), LazyThreadSafetyMode.ExecutionAndPublication)
+                                    End Sub)
         End If
     End Sub
 
     Public Shared Function FetchPopupMenuOverlay() As MenuOverlayWindow
         Return osPopupMenuOverlay
+    End Function
+
+    Public Shared Function FetchPopupMenu() As osPopupMenu_GUI
+        Return osPopupMenu
     End Function
 
     Public Shared Sub DispatchUI()

@@ -1,18 +1,22 @@
 ﻿
 Public Class osInMon
 
-    Public Sub SetLoadText(txtLoad As LoadTextContent)
+    Public Sub SetLoadText(txtLoad As LoadContentData)
         Select Case txtLoad
-            Case LoadTextContent.isLoading
-                Me.lblLoadContent.Text = "Loading"
-            Case LoadTextContent.isStarting
-                Me.lblLoadContent.Text = "Starting osAutoCast"
-            Case LoadTextContent.isInit
-                Me.lblLoadContent.Text = "Initializing"
-            Case LoadTextContent.isStartingSvc
-                Me.lblLoadContent.Text = "Starting Service"
-            Case LoadTextContent.isApplyConfig
+            Case LoadContentData.isLoading
+                Me.lblLoadContent.Text = "Launching"
+            Case LoadContentData.isInit
+                Me.lblLoadContent.Text = "Initializing Data"
+            Case LoadContentData.isPrefPrep
+                Me.lblLoadContent.Text = "Loading Preferences"
+            Case LoadContentData.isLoadingUI
+                Me.lblLoadContent.Text = "Loading Interface"
+            Case LoadContentData.isApplyConfig
                 Me.lblLoadContent.Text = "Applying Configuration"
+            Case LoadContentData.isStarting
+                Me.lblLoadContent.Text = "Starting osAutoCast"
+            Case LoadContentData.isStartingSvc
+                Me.lblLoadContent.Text = "Activating Service"
         End Select
     End Sub
 

@@ -18,8 +18,17 @@
     <Style x:Key="GameMenu_ShowStart" TargetType="{x:Type Button}"
            BasedOn="{StaticResource pmBtnGameMenuItemStyle}">
         <Setter Property="osStyle:osStyles.CornerRadius" Value="0,0,0,0"/>
-        <Setter Property="osStyle:osStyles.BorderThickness" Value="0,0,0,0"/>
-        <Setter Property="osStyle:osStyles.BorderBrush" Value="#FF222222"/>
+        <Setter Property="osStyle:osStyles.BorderThickness" Value="0,2,0,0"/>
+        <Setter Property="osStyle:osStyles.BorderBrush">
+            <Setter.Value>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                    <GradientStop Color="#00000000" Offset="0.0"/>
+                    <GradientStop Color="#F1AAAAAA" Offset="0.3"/>
+                    <GradientStop Color="#F1AAAAAA" Offset="0.7"/>
+                    <GradientStop Color="#00000000" Offset="1.0"/>
+                </LinearGradientBrush>
+            </Setter.Value>
+        </Setter>
         <Setter Property="osStyle:osStyles.Background" Value="#C4363636"/>
         <Setter Property="Visibility" Value="Collapsed" />
         <Style.Triggers>
@@ -34,8 +43,17 @@
            BasedOn="{StaticResource pmBtnGameMenuItemStyle}">
         <Setter Property="Visibility" Value="Collapsed" />
         <Setter Property="osStyle:osStyles.CornerRadius" Value="0,0,0,0"/>
-        <Setter Property="osStyle:osStyles.BorderThickness" Value="0,2"/>
-        <Setter Property="osStyle:osStyles.BorderBrush" Value="#FF222222"/>
+        <Setter Property="osStyle:osStyles.BorderThickness" Value="0,2,0,0"/>
+        <Setter Property="osStyle:osStyles.BorderBrush">
+            <Setter.Value>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                    <GradientStop Color="#00000000" Offset="0.0"/>
+                    <GradientStop Color="#F1AAAAAA" Offset="0.3"/>
+                    <GradientStop Color="#F1AAAAAA" Offset="0.7"/>
+                    <GradientStop Color="#00000000" Offset="1.0"/>
+                </LinearGradientBrush>
+            </Setter.Value>
+        </Setter>
         <Setter Property="osStyle:osStyles.Background" Value="#C4363636"/>
         <Style.Triggers>
             <DataTrigger Binding="{Binding DisplayGameMenuItem}"

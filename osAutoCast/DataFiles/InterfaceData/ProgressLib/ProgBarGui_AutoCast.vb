@@ -193,7 +193,7 @@ Public Class ProgBarGui_AutoCast
 #End Region
 
     Public Sub New(pW As Integer, pH As Integer, pDuration As TimeSpan, pEase As Func(Of Double, Double))
-        InitializeComponent()
+        InitializeComponent(pW, pH)
 
         FormBorderStyle = osForms.FormBorderStyle.None
 
@@ -207,7 +207,8 @@ Public Class ProgBarGui_AutoCast
 
         SetProgressDuration(pDuration)
 
-        ProgressEaseFunc = If(pEase, Function(x) x)
+        ProgressEaseFunc = If(pEase,
+            Function(x) x)
 
         osHandler_Graphics.EnsureCreated()
 
@@ -1076,7 +1077,7 @@ Public Class ProgBarGui_AutoCast
     Private Shared Function WaitForSingleObjectEx(hHandle As IntPtr, dwMilliseconds As Integer, bAlertable As Boolean) As UInteger
     End Function
 
-    Private Sub ProgBarGui_AutoCast_Load(sender As Object, e As EventArgs) Handles MyBase.Load
+    Private Sub ProgBarGui_AutoCast_Load(sender As Object, e As EventArgs) 
 
     End Sub
 End Class

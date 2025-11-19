@@ -12,6 +12,11 @@ Public Class osPopupMenu_GUI
 
     Private _hasAnimated As Boolean = False
 
+    Public objTask_Monitor As TaskCompletionSource(Of Boolean)
+
+    Public Event EvCloseByClick(sender As Object, e As EventArgs)
+    Public Event EvCloseByCmd(sender As Object, e As EventArgs)
+
     Private objTask_Closing As TaskCompletionSource(Of Boolean)
 
     Private objAnimation_Open As osPopupAnimation = Nothing
@@ -19,7 +24,9 @@ Public Class osPopupMenu_GUI
 
     Private OpenCompleteEvent As EventHandler = AddressOf OpenComplete
 
-    Public Async Function InitPopupClose() As Task
+    Public Async Function InitPopupClose(Optional closeFromCmd As Boolean = False) As Task
+
+        DetectCloseMethod(closeFromCmd)
         BeginClosingTask(objTask_Closing)
 
         objAnimation_Close = New osPopupAnimation(AnimationType.aniClose, AnimationObject.aniPopup)
@@ -37,6 +44,12 @@ Public Class osPopupMenu_GUI
         Dim resPopupClose = Await objTask_Closing.Task
 
     End Function
+
+    Public Sub DetectCloseMethod(Optional isCmd As Boolean = False)
+        If Not isCmd Then
+            RaiseEvent EvCloseByClick(Me, EventArgs.Empty)
+        End If
+    End Sub
 
     Public Sub InitPopupOpen()
         If Not _hasAnimated Then

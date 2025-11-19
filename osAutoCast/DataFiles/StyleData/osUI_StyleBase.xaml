@@ -39,7 +39,7 @@
             </Setter.Value>
         </Setter>
     </Style>
-
+    
     <Style x:Key="StyleBase_Toggle" TargetType="{x:Type ToggleButton}">
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="Foreground" Value="#FF8C8A8A" />
@@ -53,6 +53,7 @@
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="UseLayoutRounding" Value="True"/>
+        <Setter Property="ContentTemplate" Value="{StaticResource osEffectTextToggle}" />
         <Setter Property="Template" Value="{Binding RelativeSource={RelativeSource TemplatedParent},
             Path=(osStyle:osStyles.Template)}" />
     </Style>

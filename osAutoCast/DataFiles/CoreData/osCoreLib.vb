@@ -626,9 +626,10 @@ Public NotInheritable Class osFuncLib_AutoPass
 
     Private Shared Async Function FinalizeAutoPass() As Task
         Await Task.Delay(750)
-        osHandler_UI.osGui_AutoPass.Dispatcher.Invoke(Sub()
-                                                          osHandler_UI.ResetUI(TriggerAction.AutoPass, True)
-                                                      End Sub)
+        osHandler_UI.osGui_AutoPass.Dispatcher.
+            Invoke(Sub()
+                       osHandler_UI.ResetUI(TriggerAction.AutoPass, True)
+                   End Sub)
     End Function
 
 End Class
@@ -871,15 +872,127 @@ End Class
 
 Public NotInheritable Class osFuncLib_PopupMenu
 
+    Private Shared objGui_Popup As osPopupMenu_GUI = Nothing
+
+    Private Shared objPopupTaskMonitor As Task
+
+    Private Shared objPopupTaskPending As TaskCompletionSource(Of Boolean)
+    Private Shared objPopupTaskRunning As Boolean
+
+    Public Shared Event EvCloseByClick(sender As Object, e As EventArgs)
+    Private Shared Event EvCloseByCmd(sender As Object, e As EventArgs)
+
     Public Shared Async Function ShowPopupMenu() As Task
-        Dim objTask_PopupOverlay = Application.Current.Dispatcher.InvokeAsync(
+        InitCloseMonitor(objPopupTaskPending)
+
+        Dim objTask_PopupOverlay = PrepDispatcher().InvokeAsync(
                 Async Function()
                     Await osHandler_UI.LaunchGui(TriggerAction.ShowMenu)
                     osHandler_UI.DisplayGUI(TriggerType.ShowMenu)
-                End Function)
 
-        Await objTask_PopupOverlay.Task.Unwrap
+                    Return GetPopupWin()
+                End Function)
+        objGui_Popup = Await objTask_PopupOverlay.Task.Unwrap
+
+        Dim objPopupResult = Await PopupCloseDetect(objPopupTaskMonitor,
+                                                     objPopupTaskPending)
+
+        FinalizePopupMenu(objPopupResult,
+                          objPopupTaskMonitor,
+                          objPopupTaskPending)
     End Function
+
+    Private Shared Function GetPopupWin() As osPopupMenu_GUI
+        Return osHandler_UI.FetchPopupMenu()
+    End Function
+
+    Private Shared Sub ProcessCloseEvent(objPopRes As Boolean)
+        If objPopRes Then
+            InvokeCloseByCmd()
+        End If
+    End Sub
+
+    Private Shared Sub FinalizePopupMenu(objPopRes As Boolean, ByRef objMonTask As Task, ByRef objTaskS As TaskCompletionSource(Of Boolean))
+        ProcessCloseEvent(objPopRes)
+
+        RemoveCloseEvents()
+        StopCloseDetect(objMonTask, objTaskS)
+    End Sub
+
+    Private Shared Sub InvokeCloseByCmd()
+        osHandler_UI.ResetPopupMenu()
+    End Sub
+
+    Private Shared Sub SetMonitorResult(setRes As Boolean, ByRef objTaskS As TaskCompletionSource(Of Boolean))
+        objTaskS.TrySetResult(setRes)
+    End Sub
+
+    Private Shared Sub PopupCloseEvent_Cmd(sender As Object, e As EventArgs)
+        objPopupTaskRunning = False
+        SetMonitorResult(True, objPopupTaskPending)
+    End Sub
+
+    Private Shared Sub PopupCloseEvent_Click(sender As Object, e As EventArgs)
+        objPopupTaskRunning = False
+        SetMonitorResult(False, objPopupTaskPending)
+    End Sub
+
+    Private Shared Sub SetCloseEvents()
+        AddHandler EvCloseByCmd, AddressOf PopupCloseEvent_Cmd
+
+        PrepDispatcher().InvokeAsync(
+            Sub()
+                AddHandler objGui_Popup.EvCloseByClick,
+                AddressOf PopupCloseEvent_Click
+            End Sub)
+    End Sub
+
+    Private Shared Sub RemoveCloseEvents()
+        RemoveHandler EvCloseByCmd, AddressOf PopupCloseEvent_Cmd
+
+        PrepDispatcher().InvokeAsync(
+            Sub()
+                RemoveHandler objGui_Popup.EvCloseByClick,
+                AddressOf PopupCloseEvent_Click
+            End Sub)
+    End Sub
+
+    Private Shared Function PopupCloseDetect(ByRef objMonTask As Task,
+                                              ByRef objTaskS As TaskCompletionSource(Of Boolean)) As Task(Of Boolean)
+        InitPopupCmdMon(objMonTask, objTaskS)
+        SetCloseEvents()
+
+        Return objTaskS.Task
+    End Function
+
+    Private Shared Sub InitCloseMonitor(ByRef objTaskS As TaskCompletionSource(Of Boolean))
+        objTaskS = New TaskCompletionSource(Of Boolean)(TaskCreationOptions.
+                                                        RunContinuationsAsynchronously)
+        objPopupTaskRunning = True
+    End Sub
+
+    Private Shared Sub InitPopupCmdMon(ByRef objMonTask As Task, objTaskS As TaskCompletionSource(Of Boolean))
+        objMonTask = Task.Run(Sub()
+                                  MonitorPopupCmd(objTaskS)
+                              End Sub)
+    End Sub
+
+    Private Shared Sub StopCloseDetect(ByRef objMonTask As Task, ByRef objTaskS As TaskCompletionSource(Of Boolean))
+        objMonTask.Wait()
+        objMonTask = Nothing
+
+        objTaskS = Nothing
+    End Sub
+
+    Private Shared Async Sub MonitorPopupCmd(objTaskS As TaskCompletionSource(Of Boolean))
+        While objPopupTaskRunning
+            If InputMonSvc.DetectTrigger(DetectOpts.MonitorPopup) Then
+                RaiseEvent EvCloseByCmd(objGui_Popup, EventArgs.Empty)
+                Exit While
+            End If
+            Await Task.Delay(5)
+        End While
+    End Sub
 
 End Class
 
@@ -1194,8 +1307,6 @@ Module osFuncLib_TrayMenu
         PrepTrayMenu(osTrayPopupMenu)
 
         osIsEnabled = True
-        'objInputMon = objInMon
-
 
         With New osMenuFuncData(AddressOf osStatus_Fetch, AddressOf VerifyStatusChange)
             osMenuFuncBinder.BindChecked_Popup(osTrayPopupMenu.Items.Item(0),

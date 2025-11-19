@@ -174,8 +174,8 @@ Public Class InputMonitorService
                         While CoreDataLib.InputMonSvc.DetectTrigger(SelAction(initAction))
                             Await Task.Delay(10)
                         End While
-                        Return True
 
+                        Return True
                     Case TriggerType.AutoPass
                         If initAction Then
                             While CoreDataLib.InputMonSvc.DetectTrigger(DetectOpts.MonitorMouseR)
@@ -189,7 +189,6 @@ Public Class InputMonitorService
                             End While
                             Return True
                         End If
-
                     Case Else
                         Return False
                 End Select
@@ -240,6 +239,7 @@ Public Class InputMonitorService
                                         End Function)
 
                         Await objExecTrigger.Task.Unwrap
+                        Debug.WriteLine("a")
                     Finally
                         GC.Collect()
                         GC.WaitForPendingFinalizers()
@@ -271,6 +271,8 @@ Public Class InputMonitorService
                 Return InputMon_ShiftDown()
             Case DetectOpts.MonitorAll
                 Return CmdBind_AutoCast()
+            Case DetectOpts.MonitorPopup
+                Return CmdBind_ShowMenu()
             Case Else
                 Return InputMon_ShiftDown()
         End Select

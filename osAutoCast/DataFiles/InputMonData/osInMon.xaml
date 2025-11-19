@@ -8,20 +8,23 @@
         Title="osAutoCast v1.0 | By OddSoft"
         Topmost="True"
         WindowStartupLocation="CenterScreen"
-        ResizeMode="NoResize"
-        WindowStyle="None" Height="600"
-        BorderBrush="#BF9E1A1A" BorderThickness="4"
-		VerticalAlignment="Top" Background="{x:Null}"
+        ResizeMode="NoResize" AllowsTransparency="True"
+        WindowStyle="None" Height="600"        
+		VerticalAlignment="Top" Background="Transparent"
 		HorizontalAlignment="Center" Width="585">
+    <Border BorderBrush="#BF9E1A1A" BorderThickness="4">
     <Grid Background="#FF100D0B">
-        <Image Height="576" Width="576" Source="pack://siteoforigin:,,,/Resources/osSplashLoader.png" VerticalAlignment="Top" HorizontalAlignment="Center"/>
+            <Grid.RowDefinitions>
+                <RowDefinition />
+            </Grid.RowDefinitions>
+        <Image Grid.Column="0" Grid.Row="0" Height="576" Width="576" Source="pack://siteoforigin:,,,/Resources/osSplashLoader.png" VerticalAlignment="Top"/>
         <Border x:Name="LoadContentContainer" VerticalAlignment="Bottom"
                 Margin="30,0,30,10"
                 Padding="14,2,14,0"
                 Background="#4C323232"
                 CornerRadius="8" BorderBrush="#FF646464" BorderThickness="2">
             <StackPanel Orientation="Vertical" HorizontalAlignment="Center" Margin="0">
-                <TextBlock x:Name="lblLoadContent" Text="Loading"
+                <TextBlock x:Name="lblLoadContent"
                            Foreground="White"
                            FontSize="24"
                            FontWeight="Bold"
@@ -107,4 +110,5 @@
             </EventTrigger>
         </Grid.Triggers>
     </Grid>
+    </Border>
 </Window>

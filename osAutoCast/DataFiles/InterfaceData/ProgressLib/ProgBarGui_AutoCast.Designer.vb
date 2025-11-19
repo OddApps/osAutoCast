@@ -20,15 +20,16 @@ Partial Class ProgBarGui_AutoCast
     'NOTE: The following procedure is required by the Windows Form Designer
     'It can be modified using the Windows Form Designer.  
     'Do not modify it using the code editor.
-    <System.Diagnostics.DebuggerStepThrough()> _
-    Private Sub InitializeComponent()
+    <System.Diagnostics.DebuggerStepThrough()>
+    Private Sub InitializeComponent(pW As Integer, pH As Integer)
         Me.SuspendLayout()
         '
         'ProgBarGui_AutoCast
         '
-        Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.None
-        Me.ClientSize = New System.Drawing.Size(284, 261)
+        Me.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink
+        Me.FormBorderStyle = System.Windows.Forms.FormBorderStyle.None
         Me.Name = "ProgBarGui_AutoCast"
+        Me.SizeGripStyle = System.Windows.Forms.SizeGripStyle.Hide
         Me.ResumeLayout(False)
 
     End Sub

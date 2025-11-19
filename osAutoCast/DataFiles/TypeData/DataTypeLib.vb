@@ -33,6 +33,7 @@ Public Module DataTypeLib
         MonitorMouseR
         MonitorShift
         MonitorOpts
+        MonitorPopup
         MonitorAll
     End Enum
 
@@ -175,9 +176,11 @@ Public Module DataTypeLib
 
 #Region "UI Types"
 
-    Public Enum LoadTextContent
+    Public Enum LoadContentData
         isLoading
         isInit
+        isPrefPrep
+        isLoadingUI
         isStartingSvc
         isStarting
         isApplyConfig
@@ -687,6 +690,21 @@ Public Class ProgEdgeData
 
 End Class
 
+Public Class osLoadData
+
+    Public Property LoadProcess As Task
+    Public Property LoadDuration As Integer
+
+    Public Sub New(objLoadProcess As Task,
+                   objLoadDuration As Integer)
+
+        Me.LoadProcess = objLoadProcess
+        Me.LoadDuration = objLoadDuration
+
+    End Sub
+
+End Class
+
 Public Class osPopupAnimation
 
     Public Property aniX As DoubleAnimation
@@ -1105,6 +1123,46 @@ Public Class ProgressEvent
 
     Public Sub New()
 
+    End Sub
+
+End Class
+
+Public Class TriggerHandlerIdx
+
+    Public Property TriggerHandlerIdxData As TriggerData()
+
+    Public Sub New()
+
+    End Sub
+
+    Public Sub New(ParamArray objTriggerData() As TriggerData)
+        For Each objTriggerHandleData In objTriggerData
+            TriggerHandlerIdxData.Append(objTriggerHandleData)
+        Next
+    End Sub
+
+    Public Sub New(ParamArray objHandle As (objHandleAction As TriggerAction, objHandleEvent As Func(Of Task))())
+        For Each objTriggerHandleData In objHandle
+            With objTriggerHandleData
+                TriggerHandlerIdxData.Append(New TriggerData(.objHandleAction, .objHandleEvent))
+            End With
+        Next
+    End Sub
+
+End Class
+
+Public Class TriggerData
+
+    Public Property HandleAction As TriggerAction
+    Public Property HandleEvent As Func(Of Task)
+
+    Public Sub New()
+
+    End Sub
+
+    Public Sub New(objHandleAction As TriggerAction, objHandleEvent As Func(Of Task))
+        Me.HandleAction = objHandleAction
+        Me.HandleEvent = objHandleEvent
     End Sub
 
 End Class

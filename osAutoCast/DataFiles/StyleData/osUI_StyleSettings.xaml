@@ -11,7 +11,7 @@
     
     <oscolor:Color x:Key="osEffect_Color">#A1421110</oscolor:Color>
 
-    <sys:Double x:Key="osBtn_Height">34</sys:Double>
+    <sys:Double x:Key="osBtn_Height">36</sys:Double>
     
     <sys:Double x:Key="osBtn_FontSize">20</sys:Double>
     <FontWeight x:Key="osBtn_FontWeight">Bold</FontWeight>
