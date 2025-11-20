@@ -33,6 +33,9 @@ Imports System.Windows.Interop
 Imports osVert = System.Windows.VerticalAlignment
 Imports osHorz = System.Windows.HorizontalAlignment
 Imports System.ComponentModel
+Imports osAutoCast.osShaderDataLib
+Imports pxShader_Effect = System.Windows.Media.Effects.PixelShader
+Imports pxShader_Object = SharpDX.Direct3D11.PixelShader
 
 #Disable Warning IDE0060 ' Remove unused parameter
 #Disable Warning IDE1006 ' Remove unused parameter
@@ -1482,6 +1485,11 @@ Module osFuncLib_UI
             (2 - Math.Pow(2, -20 * pDuration + 10)) / 2)
     End Function
 
+    Public Function DetermineMouseClick(MouseArgs As MouseButtonEventArgs) As Boolean
+        Return If(MouseArgs.ClickCount > 0,
+            True, False)
+    End Function
+
 End Module
 
 Public Class isEnabledConverter
@@ -1720,6 +1728,18 @@ Module ControlExtensions
     <Runtime.CompilerServices.Extension>
     Public Function PrefVal(ByVal objPref As Object) As String
         Return Convert.ToString(objPref)
+    End Function
+
+    <Runtime.CompilerServices.Extension>
+    Public Function ToShaderObj(ByVal objPref As iPxShader) As pxShader_Object
+        Dim objPxS = DirectCast(objPref, pxShaderObject).pxShaderObj
+        Return objPxS
+    End Function
+
+    <Runtime.CompilerServices.Extension>
+    Public Function ToShaderEff(ByVal objPref As iPxShader) As pxShader_Effect
+        Dim objPxE = DirectCast(objPref, pxShaderEffect).pxShaderEff
+        Return objPxE
     End Function
 
 End Module

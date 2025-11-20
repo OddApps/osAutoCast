@@ -12,10 +12,7 @@ Public Class osPopupMenu_GUI
 
     Private _hasAnimated As Boolean = False
 
-    Public objTask_Monitor As TaskCompletionSource(Of Boolean)
-
     Public Event EvCloseByClick(sender As Object, e As EventArgs)
-    Public Event EvCloseByCmd(sender As Object, e As EventArgs)
 
     Private objTask_Closing As TaskCompletionSource(Of Boolean)
 

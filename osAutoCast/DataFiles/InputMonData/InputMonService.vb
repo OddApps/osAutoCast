@@ -239,7 +239,6 @@ Public Class InputMonitorService
                                         End Function)
 
                         Await objExecTrigger.Task.Unwrap
-                        Debug.WriteLine("a")
                     Finally
                         GC.Collect()
                         GC.WaitForPendingFinalizers()

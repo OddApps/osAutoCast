@@ -2,6 +2,9 @@
 Imports System.Reflection
 Imports System.Threading
 Imports System.Windows.Threading
+Imports osAutoCast.osShaderDataLib
+Imports SharpDX.Direct3D11
+Imports osProgDevice = SharpDX.Direct3D11.Device
 
 Public NotInheritable Class CoreDataLib
 
@@ -48,13 +51,6 @@ Public NotInheritable Class CoreDataLib
         (TriggerAction.ShowOpts, Function() osFuncLib_ShowOpts.ExecuteDispOpts()),
         (TriggerAction.ShowMenu, Function() osFuncLib_PopupMenu.ShowPopupMenu())
     }
-
-    'Private Shared ReadOnly TriggerHandlerIdx As New TriggerHandlerIdx({
-    '    (TriggerAction.AutoCast, Function() osFuncLib_AutoCast.ExecuteAutoCast()),
-    '    (TriggerAction.AutoPass, Function() osFuncLib_AutoPass.ExecuteAutoPass()),
-    '    (TriggerAction.ShowOpts, Function() osFuncLib_ShowOpts.ExecuteDispOpts()),
-    '    (TriggerAction.ShowMenu, Function() osFuncLib_PopupMenu.ShowPopupMenu())
-    '})
 
     Public Shared Function osStatus_Fetch() As Boolean
         Return osEnabledStatus
@@ -111,6 +107,17 @@ Public NotInheritable Class CoreDataLib
             Case Else
                 Return Nothing
         End Select
+    End Function
+
+    Public Shared Sub ComposeShaderIdx()
+        ShaderIdxData.Add(New osShaderDetails("osProgShader",
+                                              osShaderType.ShaderObject))
+        ShaderIdxData.Add(New osShaderDetails("osEffectShader",
+                                              osShaderType.ShaderEffect))
+    End Sub
+
+    Public Shared Function GetShaderDevice() As osProgDevice
+        Return osHandler_Graphics.pDevice
     End Function
 
     Public Shared Function GetSafetyTimer() As Integer

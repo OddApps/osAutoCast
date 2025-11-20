@@ -16,6 +16,11 @@ Imports osProgColor = SharpDX.Mathematics.Interop.RawColor4
 Imports osProgBlendState = SharpDX.Direct3D11.BlendState
 Imports osAutoCast.DataTypeLib.AnimationObject
 Imports osAutoCast.DataTypeLib.AnimationType
+Imports SharpDX
+Imports SharpDX.Direct3D11
+Imports osProgDevice = SharpDX.Direct3D11.Device
+Imports pxShader_Effect = System.Windows.Media.Effects.PixelShader
+Imports pxShader_Object = SharpDX.Direct3D11.PixelShader
 
 Public Module DataTypeLib
 
@@ -247,6 +252,11 @@ Public Module DataTypeLib
         aniOverlay
     End Enum
 
+    Public Enum osShaderType
+        ShaderObject
+        ShaderEffect
+    End Enum
+
 #End Region
 
 End Module
@@ -360,8 +370,82 @@ float4 PSMain(PSIn pin) : SV_Target {
     }
 }"
 
-
 End Module
+
+Public Class osShaderDataLib
+
+    Public Interface iPxShader
+        ReadOnly Property iShaderType As osShaderType
+    End Interface
+
+    Public Class pxShaderObject
+        Implements iPxShader
+
+        Public Property pxShaderObj As pxShader_Object
+
+        Public Sub New(ShaderObj As pxShader_Object)
+            Me.pxShaderObj = ShaderObj
+        End Sub
+
+        Public ReadOnly Property ShaderType As osShaderType Implements iPxShader.iShaderType
+            Get
+                Return osShaderType.ShaderObject
+            End Get
+        End Property
+
+    End Class
+
+    Public Class pxShaderEffect
+        Implements iPxShader
+
+        Public Property pxShaderEff As pxShader_Effect
+
+        Public Sub New(ShaderEff As pxShader_Effect)
+            Me.pxShaderEff = ShaderEff
+        End Sub
+
+        Public ReadOnly Property ShaderType As osShaderType Implements iPxShader.iShaderType
+            Get
+                Return osShaderType.ShaderEffect
+            End Get
+        End Property
+
+    End Class
+
+End Class
+
+'Public Class osShaderData
+
+'    Public Property idxKey As String
+'    Public Property ByteData As Byte()
+
+'    Public Sub New()
+
+'    End Sub
+
+'    Public Sub New(sName As String, sType As osShaderType)
+'        ShaderName = sName
+'        ShaderType = sType
+'    End Sub
+
+'End Class
+
+
+Public Class osShaderDetails
+
+    Public Property ShaderName As String
+    Public Property ShaderType As osShaderType
+
+    Public Sub New()
+
+    End Sub
+
+    Public Sub New(sName As String, sType As osShaderType)
+        ShaderName = sName
+        ShaderType = sType
+    End Sub
+
+End Class
 
 Public Class osPref_DataTable
 
@@ -930,8 +1014,12 @@ Public Module osPopupMenuLib
         Dim objWin_PopupMenuOverlay = objGui_PopupMenuOverlay
 
         With objWin_PopupMenuOverlay
-            AddHandler .objStacker.MouseDown,
-                osHandler_UI.pmFunc_TerminatePopupMenu
+            AddHandler .objStacker.MouseUp,
+                Sub(sender As Object, e As MouseButtonEventArgs)
+                    If DetermineMouseClick(e) Then
+                        osHandler_UI.pmFunc_TerminatePopupMenu(sender, e)
+                    End If
+                End Sub
 
             .InitPopupMenuOverlay()
             .ActivateOverlay()
@@ -1231,7 +1319,7 @@ Public Class PrefRecordIndex
 
         CoreDataLib.osPrefStoreData.UpdatePrefStore()
 
-        Using pWriter As New IO.StreamWriter(CoreDataLib.osPrefFile, False)
+        Using pWriter As New System.IO.StreamWriter(CoreDataLib.osPrefFile, False)
             pWriter.WriteLine("PrefCatalog_")
 
             For Each prefRec As PrefRecord In Me.RecIdx
@@ -1244,7 +1332,7 @@ Public Class PrefRecordIndex
 
 
     Private Sub SavePrefsToFile()
-        Using pWriter As New IO.StreamWriter(CoreDataLib.osPrefFile, False)
+        Using pWriter As New System.IO.StreamWriter(CoreDataLib.osPrefFile, False)
             pWriter.WriteLine("PrefCatalog_")
 
             For Each prefRec As PrefRecord In Me.RecIdx

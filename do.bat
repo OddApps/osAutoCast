@@ -11,4 +11,4 @@
 
 @echo Compiling %~nx1
 
-@"D:\Windows Kits\10\bin\10.0.20348.0\x86\fxc.exe" /T ps_3_0 /E main /Fo "C:\Users\OddAdmin\source\repos\osAutoCast\osEffectCompiles\%~n1.ps" "%~1"
+@"D:\Windows Kits\10\bin\10.0.20348.0\x86\fxc.exe" /T ps_5_0 /E osProgShader_Main /Fo "C:\Users\OddAdmin\source\repos\osAutoCast\osEffectCompiles\%~n1.ps" "%~1"

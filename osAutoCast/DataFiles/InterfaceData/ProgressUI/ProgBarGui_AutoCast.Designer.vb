@@ -22,15 +22,17 @@ Partial Class ProgBarGui_AutoCast
     'Do not modify it using the code editor.
     <System.Diagnostics.DebuggerStepThrough()>
     Private Sub InitializeComponent(pW As Integer, pH As Integer)
-        Me.SuspendLayout()
-        '
-        'ProgBarGui_AutoCast
-        '
-        Me.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink
-        Me.FormBorderStyle = System.Windows.Forms.FormBorderStyle.None
-        Me.Name = "ProgBarGui_AutoCast"
-        Me.SizeGripStyle = System.Windows.Forms.SizeGripStyle.Hide
-        Me.ResumeLayout(False)
+        With Me
+            .SuspendLayout()
+            '
+            'ProgBarGui_AutoCast
+            '
+            .FormBorderStyle = System.Windows.Forms.FormBorderStyle.None
+            .Name = "ProgBarGui_AutoCast"
+            .ClientSize = New System.Drawing.Size(pW, pH)
+
+            Me.ResumeLayout(False)
+        End With
 
     End Sub
 End Class

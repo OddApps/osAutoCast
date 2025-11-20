@@ -39,6 +39,7 @@ Imports osForms = System.Windows.Forms
 Imports osAutoCast.DataTypeLib.ProgStatus
 Imports osAutoCast.osFuncLib_Progress
 Imports System.ComponentModel
+Imports System.Reflection
 
 Public Class ProgBarGui_AutoCast
 
@@ -308,10 +309,7 @@ Public Class ProgBarGui_AutoCast
             pVS = New VertexShader(objProgDevice, vsbc)
         End Using
 
-        Using psbc = ShaderBytecode.Compile(objShader_Pixel, "PSMain", "ps_5_0", ShaderFlags.OptimizationLevel3)
-            Utilities.Dispose(pPS)
-            pPS = New PixelShader(objProgDevice, psbc)
-        End Using
+        pPS = osHandler_Shader.LoadPxShader(objProgDevice, "osProgShader")
 
         pCB?.SafeDispose()
         pCB = New osProgBuffer(progDevice, New BufferDescription With {
@@ -1002,7 +1000,6 @@ Public Class ProgBarGui_AutoCast
         progTarget.SafeDispose()
 
         pCB.SafeDispose()
-        pPS.SafeDispose()
         pVS.SafeDispose()
 
         If progContext IsNot Nothing Then
@@ -1077,7 +1074,7 @@ Public Class ProgBarGui_AutoCast
     Private Shared Function WaitForSingleObjectEx(hHandle As IntPtr, dwMilliseconds As Integer, bAlertable As Boolean) As UInteger
     End Function
 
-    Private Sub ProgBarGui_AutoCast_Load(sender As Object, e As EventArgs) 
+    Private Sub ProgBarGui_AutoCast_Load(sender As Object, e As EventArgs)
 
     End Sub
 End Class

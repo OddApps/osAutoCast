@@ -10,13 +10,9 @@ Imports System.Windows.Controls
 Public Class osEffect
     Inherits ShaderEffect
 
-    Private Shared ReadOnly _shader As New PixelShader() With {
-        .UriSource = New Uri("/osAutoCast;component/DataFiles/StyleData/EffectLib/osEffectShader.ps", UriKind.Relative)
-    }
-
     Public Sub New()
         With Me
-            .PixelShader = _shader
+            .PixelShader = osHandler_Shader.LoadPxShader("osEffectShader")
 
             .PaddingLeft = 6
             .PaddingRight = 6

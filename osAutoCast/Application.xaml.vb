@@ -11,7 +11,7 @@ Class Application
             {isStartingSvc, RunTask_BG(AddressOf InputMonitor_Start)},
             {isStarting, RunTask_UI(AddressOf LoadFinalize)},
             {isPrefPrep, RunTask_BG(AddressOf PrepPrefs)},
-            {isLoadingUI, RunTask_UI(AddressOf osHandler_UI.PreloadForms)}
+            {isLoadingUI, RunTask_UI(AddressOf osHandler_UI.PrepAndLoadUI)}
         }
 
     Private Sub osAutoCast_Exit(sender As Object, e As ExitEventArgs) Handles Me.[Exit]

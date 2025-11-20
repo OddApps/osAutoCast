@@ -107,9 +107,20 @@ Public NotInheritable Class osHandler_UI
         osGui_Prefs.osPrefsPrep()
     End Sub
 
-    Public Shared Sub PreloadForms()
+    Public Shared Sub PrepAndLoadUI()
         LoadPrefData()
         PrepUI_PopupMenu()
+
+        osHandler_Graphics.EnsureCreated()
+
+        CoreDataLib.ComposeShaderIdx()
+        LoadAllShaders()
+    End Sub
+
+    Private Shared Sub LoadAllShaders()
+        ShaderIdxData.ForEach(
+            Sub(objShader) osHandler_Shader.
+                AddShaderToIdx(osHandler_Graphics.pDevice, objShader))
     End Sub
 
     Public Shared Async Function LaunchGui(progGui As TriggerAction) As Task
