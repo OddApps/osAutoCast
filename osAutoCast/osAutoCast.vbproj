@@ -296,6 +296,7 @@
       <Generator>VbMyResourcesResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.vb</LastGenOutput>
       <CustomToolNamespace>My.Resources</CustomToolNamespace>
+      <SubType>Designer</SubType>
     </EmbeddedResource>
     <EmbeddedResource Include="DataFiles\InterfaceData\PrefsUI\osPrefs.resx">
       <DependentUpon>osPrefs.vb</DependentUpon>
@@ -303,7 +304,8 @@
     <None Include="..\.editorconfig">
       <Link>.editorconfig</Link>
     </None>
-    <Resource Include="DataFiles\StyleData\EffectLib\osEffectShader.ps" />
+    <EmbeddedResource Include="DataFiles\InterfaceData\ShaderLib\osShader_Effect.ps" />
+    <EmbeddedResource Include="DataFiles\InterfaceData\ShaderLib\osShader_Object.ps" />
     <None Include="My Project\app.manifest" />
     <None Include="My Project\DataSources\osPrefStore.ProgVisualQualityData.datasource" />
     <None Include="My Project\Settings.settings">

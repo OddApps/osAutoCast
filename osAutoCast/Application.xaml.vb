@@ -2,6 +2,10 @@
 Imports System.Threading
 Imports System.Windows.Forms
 Imports osAutoCast.DataTypeLib.LoadContentData
+Imports System.Resources
+Imports System.Globalization
+Imports osResDict = System.Collections.DictionaryEntry
+Imports System.Reflection
 
 Class Application
 

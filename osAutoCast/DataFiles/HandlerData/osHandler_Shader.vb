@@ -24,6 +24,7 @@ Public Module osHandler_Shader
     Private Function BuildIdxKey(device As Device, idxName As String) As String
         Dim devPtr As IntPtr = If(device IsNot Nothing, device.NativePointer, IntPtr.Zero)
         Return $"{devPtr.ToInt64():X16}|{idxName}"
+
     End Function
 
     Private Function FetchResource(idxName As String) As Byte()
@@ -33,19 +34,32 @@ Public Module osHandler_Shader
 
     Public Sub AddShaderToIdx(objDevice As Device, objShaderRecord As osShaderDetails)
         With objShaderRecord
-            Dim objShader = FetchResource(.ShaderName)
+            '  Dim objShader = FetchResource(.ShaderName)
             Dim idxKey = BuildIdxKey(objDevice, .ShaderName)
 
             Select Case .ShaderType
                 Case osShaderType.ShaderObject
                     osShaderIdx.TryAdd(idxKey,
-                                        GenerateShader(.ShaderType, objShader))
+                                        GenerateShader(objDevice, objShaderRecord))
                 Case osShaderType.ShaderEffect
                     osShaderIdx.TryAdd(idxKey,
-                                        GenerateShader(.ShaderType, objShader, True))
+                                        GenerateShader(objDevice, objShaderRecord, True))
             End Select
         End With
     End Sub
+
+    Public Function GenerateShader(objDevice As Device, objShaderRecord As osShaderDetails) As pxShaderObject
+        Dim pxShaderObj As pxShader_Object
+        Dim asm = System.Reflection.Assembly.GetExecutingAssembly()
+
+        Using s = asm.GetManifestResourceStream(objShaderRecord.ShaderName)
+            Using bc = ShaderBytecode.FromStream(s)
+                pxShaderObj = New PixelShader(objDevice, bc)
+            End Using
+        End Using
+
+        Return New pxShaderObject(pxShaderObj)
+    End Function
 
     Public Function GenerateShader(objShaderType As osShaderType, objShaderBytes As Byte()) As pxShaderObject
         Dim pxShaderObj As pxShader_Object
@@ -55,6 +69,18 @@ Public Module osHandler_Shader
         End Using
 
         Return New pxShaderObject(pxShaderObj)
+    End Function
+
+    Public Function GenerateShader(objDevice As Device, objShaderRecord As osShaderDetails, isEffect As Boolean) As pxShaderEffect
+        Dim pxShaderObj As New pxShader_Effect
+
+        Dim asm = System.Reflection.Assembly.GetExecutingAssembly()
+
+        Using objMemStream = asm.GetManifestResourceStream(objShaderRecord.ShaderName)
+            pxShaderObj.SetStreamSource(objMemStream)
+        End Using
+
+        Return New pxShaderEffect(pxShaderObj)
     End Function
 
     Public Function GenerateShader(objShaderType As osShaderType, objShaderBytes As Byte(), isEffect As Boolean) As pxShaderEffect

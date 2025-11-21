@@ -12,7 +12,7 @@ Public Class osEffect
 
     Public Sub New()
         With Me
-            .PixelShader = osHandler_Shader.LoadPxShader("osEffectShader")
+            .PixelShader = osHandler_Shader.LoadPxShader("osAutoCast.osShader_Effect.ps")
 
             .PaddingLeft = 6
             .PaddingRight = 6

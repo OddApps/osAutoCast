@@ -309,7 +309,7 @@ Public Class ProgBarGui_AutoCast
             pVS = New VertexShader(objProgDevice, vsbc)
         End Using
 
-        pPS = osHandler_Shader.LoadPxShader(objProgDevice, "osProgShader")
+        pPS = osHandler_Shader.LoadPxShader(objProgDevice, "osAutoCast.osShader_Object.ps")
 
         pCB?.SafeDispose()
         pCB = New osProgBuffer(progDevice, New BufferDescription With {

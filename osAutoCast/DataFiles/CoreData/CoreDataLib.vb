@@ -5,6 +5,9 @@ Imports System.Windows.Threading
 Imports osAutoCast.osShaderDataLib
 Imports SharpDX.Direct3D11
 Imports osProgDevice = SharpDX.Direct3D11.Device
+Imports System.Resources
+Imports System.Globalization
+Imports osResDict = System.Collections.DictionaryEntry
 
 Public NotInheritable Class CoreDataLib
 
@@ -109,11 +112,35 @@ Public NotInheritable Class CoreDataLib
         End Select
     End Function
 
+    Private Shared Function GetResourceList() As List(Of String)
+        Return PopulateResources().Select(
+            Function(objRes) objRes).ToList()
+    End Function
+
+    Private Shared Function PopulateResources() As String()
+        Return Assembly.GetExecutingAssembly().
+            GetManifestResourceNames()
+    End Function
+
+    Private Shared Function GetShaderType(objShaderRes As String) As osShaderType
+        Return If(objShaderRes.Contains("Effect"),
+            osShaderType.ShaderEffect, osShaderType.ShaderObject)
+    End Function
+
+    Private Shared Function ValidateShader(objShaderRes As String) As Boolean
+        Return If(objShaderRes.Contains("osShader"), True, False)
+    End Function
+
+    Private Shared Function GenerateShaderList() As List(Of osShaderDetails)
+        Return GetResourceList().Where(
+            Function(valRes) ValidateShader(valRes)).
+            Select(Function(objRes)
+                       Return New osShaderDetails(objRes, GetShaderType(objRes))
+                   End Function).ToList()
+    End Function
+
     Public Shared Sub ComposeShaderIdx()
-        ShaderIdxData.Add(New osShaderDetails("osProgShader",
-                                              osShaderType.ShaderObject))
-        ShaderIdxData.Add(New osShaderDetails("osEffectShader",
-                                              osShaderType.ShaderEffect))
+        ShaderIdxData = GenerateShaderList()
     End Sub
 
     Public Shared Function GetShaderDevice() As osProgDevice
