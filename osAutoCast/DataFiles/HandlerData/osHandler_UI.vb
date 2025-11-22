@@ -6,6 +6,7 @@ Imports System.Runtime.InteropServices
 Imports System.Diagnostics
 Imports osTrash = System.Runtime.GCSettings
 Imports osTrashCompact = System.Runtime.GCLargeObjectHeapCompactionMode
+Imports osAutoCast.osHandler_Shader
 
 Public NotInheritable Class osHandler_UI
 
@@ -118,10 +119,18 @@ Public NotInheritable Class osHandler_UI
     End Sub
 
     Private Shared Sub LoadAllShaders()
-        ShaderIdxData.ForEach(
-            Sub(objShader) osHandler_Shader.
-                AddShaderToIdx(osHandler_Graphics.pDevice, objShader))
+        Parallel.ForEach(ShaderIdxData,
+                         Async Sub(objShader)
+                             Await AppendShader(objShader)
+                         End Sub)
     End Sub
+
+    Private Shared Async Function AppendShader(objShaderDetails As osShaderDetails) As Task
+        Await PrepDispatcher.InvokeAsync(
+            Sub()
+                AddShaderToIdx(objShaderDetails)
+            End Sub)
+    End Function
 
     Public Shared Async Function LaunchGui(progGui As TriggerAction) As Task
         Select Case progGui
@@ -189,6 +198,10 @@ Public NotInheritable Class osHandler_UI
         TerminatePopupMenuByCmd()
     End Sub
 
+    Public Shared Async Function ResetPopupMenu(isBtn As Boolean) As Task
+        Await TerminatePopupMenu(True)
+    End Function
+
     Private Shared Async Sub TerminatePopupMenuByCmd()
         Dim objWin_PopupMenu = _osPopupMenu.Value
         Dim objWin_PopupMenuOverlay = _osPopupMenuOverlay.Value
@@ -199,7 +212,7 @@ Public NotInheritable Class osHandler_UI
                             objWin_PopupMenu.Topmost = True
 
                             Await objWin_PopupMenu.InitPopupClose(True)
-                            Await objWin_PopupMenuOverlay.InitOverlayClose()
+                            Await objWin_PopupMenuOverlay.InitOverlayClose(True)
 
                             DispatchUI(TriggerAction.ShowMenu)
                         End Function)
@@ -215,7 +228,6 @@ Public NotInheritable Class osHandler_UI
 
         Dim objTerminateTask = objWin_PopupMenu.Dispatcher.
             InvokeAsync(Async Function()
-
                             objWin_PopupMenu.Topmost = True
 
                             Await objWin_PopupMenu.InitPopupClose()
@@ -228,6 +240,27 @@ Public NotInheritable Class osHandler_UI
 
         Dim doGameFocus = CoreDataLib.SetGameFocus()
     End Sub
+
+    Private Shared Async Function TerminatePopupMenu(isCloseQuick As Boolean) As Task
+        Dim objWin_PopupMenu = _osPopupMenu.Value
+        Dim objWin_PopupMenuOverlay = _osPopupMenuOverlay.Value
+
+        Dim objTerminateTask = objWin_PopupMenu.Dispatcher.
+            InvokeAsync(Async Function()
+                            objWin_PopupMenu.Topmost = True
+
+                            Dim objTask_CloseMenu As New List(Of Task) From {
+                                objWin_PopupMenu.InitPopupClose(isQuickClose:=isCloseQuick),
+                                objWin_PopupMenuOverlay.InitOverlayClose(isQuickClose:=isCloseQuick)
+                            }
+
+                            Await Task.WhenAll(objTask_CloseMenu)
+
+                            DispatchUI(TriggerAction.ShowMenu)
+                        End Function)
+
+        Await objTerminateTask.Task.Unwrap()
+    End Function
 
     Public Shared Sub ResetOptsUI()
         _osPrefs = New Lazy(Of osPrefs)(

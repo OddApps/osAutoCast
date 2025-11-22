@@ -40,6 +40,7 @@ Imports osAutoCast.DataTypeLib.ProgStatus
 Imports osAutoCast.osFuncLib_Progress
 Imports System.ComponentModel
 Imports System.Reflection
+Imports osAutoCast.osHandler_Shader
 
 Public Class ProgBarGui_AutoCast
 
@@ -300,16 +301,20 @@ Public Class ProgBarGui_AutoCast
 
     End Sub
 
-    Private Sub CreateShadersAndPipeline()
+    Private Async Sub CreateShadersAndPipeline()
         Dim objProgDevice = progDevice
         Dim objProgContext = progContext
 
-        Using vsbc = ShaderBytecode.Compile(objShader_Vertex, "VSMain", "vs_5_0", ShaderFlags.OptimizationLevel3)
-            Utilities.Dispose(pVS)
-            pVS = New VertexShader(objProgDevice, vsbc)
-        End Using
+        Dim objTask_LoadShaders = Await Task.
+            WhenAll(Task.Run(Function() As Object
+                                 Return FetchShader(osShaderType.sTypeVertex).sVertex
+                             End Function),
+                    Task.Run(Function() As Object
+                                 Return FetchShader(osShaderType.sTypePixel).sPixel
+                             End Function))
 
-        pPS = osHandler_Shader.LoadPxShader(objProgDevice, "osAutoCast.osShader_Object.ps")
+        pVS = objTask_LoadShaders.ToShaderVer(0)
+        pPS = objTask_LoadShaders.ToShaderPx(1)
 
         pCB?.SafeDispose()
         pCB = New osProgBuffer(progDevice, New BufferDescription With {
@@ -999,8 +1004,8 @@ Public Class ProgBarGui_AutoCast
         progBrush_Active.SafeDispose()
         progTarget.SafeDispose()
 
-        pCB.SafeDispose()
-        pVS.SafeDispose()
+        'pCB.SafeDispose()
+        'pVS.SafeDispose()
 
         If progContext IsNot Nothing Then
             progContext.OutputMerger.SetTargets(CType(Nothing, RenderTargetView))

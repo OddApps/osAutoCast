@@ -21,17 +21,31 @@ Public Class osPopupMenu_GUI
 
     Private OpenCompleteEvent As EventHandler = AddressOf OpenComplete
 
-    Public Async Function InitPopupClose(Optional closeFromCmd As Boolean = False) As Task
+    Public Async Function InitPopupClose(Optional closeFromCmd As Boolean = False,
+                                         Optional isQuickClose As Boolean = False) As Task
 
         DetectCloseMethod(closeFromCmd)
         BeginClosingTask(objTask_Closing)
 
-        objAnimation_Close = New osPopupAnimation(AnimationType.aniClose, AnimationObject.aniPopup)
+        objAnimation_Close = New osPopupAnimation(AnimationType.aniClose,
+                                                  AnimationObject.aniPopup, isQuickClose)
 
         AddHandler objAnimation_Close.aniY.Completed,
             Sub()
                 PopupCloseComplete(objTask_Closing)
             End Sub
+
+        If isQuickClose Then
+            Me.winPopupMenu.MaxHeight = Double.PositiveInfinity
+            Me.winPopupMenu.MaxWidth = Double.PositiveInfinity
+
+            Me.popupContentContainer.MaxHeight = Double.PositiveInfinity
+            Me.popupContentContainer.MaxWidth = Double.PositiveInfinity
+
+            Me.popupMainContainer.MaxHeight = Double.PositiveInfinity
+            Me.popupMainContainer.MaxWidth = Double.PositiveInfinity
+
+        End If
 
         Me.popScale.BeginAnimation(ScaleTransform.ScaleXProperty, objAnimation_Close.aniX)
         Me.popScale.BeginAnimation(ScaleTransform.ScaleYProperty, objAnimation_Close.aniY)
@@ -41,6 +55,110 @@ Public Class osPopupMenu_GUI
         Dim resPopupClose = Await objTask_Closing.Task
 
     End Function
+
+    Private Sub OptimizeAndSetMaxSize(root As DependencyObject)
+        If root Is Nothing Then Return
+
+        ' Collapse the container so layout is not performed on each change
+        Dim wasCollapsed As Boolean = False
+        Dim feRoot = TryCast(root, FrameworkElement)
+        If feRoot IsNot Nothing Then
+            If feRoot.Visibility <> Visibility.Collapsed Then
+                feRoot.Visibility = Visibility.Collapsed
+            Else
+                wasCollapsed = True
+            End If
+        End If
+
+        ' Iterative visual-only traversal (stack) — no LogicalTreeHelper calls
+        Dim stack As New Stack(Of DependencyObject)()
+        Dim seen As New HashSet(Of DependencyObject)()
+        stack.Push(root)
+        seen.Add(root)
+
+        While stack.Count > 0
+            Dim current = stack.Pop()
+
+            Dim fe = TryCast(current, FrameworkElement)
+            If fe IsNot Nothing Then
+
+                ' Only change if different to avoid unnecessary layout invalidations
+                If fe.MaxWidth <> Double.PositiveInfinity Then fe.MaxWidth = Double.PositiveInfinity
+                If fe.MaxHeight <> Double.PositiveInfinity Then fe.MaxHeight = Double.PositiveInfinity
+
+                ' Use Auto sizing only if currently not Auto - avoids resetting same values
+                If Not Double.IsNaN(fe.Width) Then fe.Width = Double.NaN
+                If Not Double.IsNaN(fe.Height) Then fe.Height = Double.NaN
+            End If
+
+            Dim childCount As Integer = 0
+            Try
+                childCount = VisualTreeHelper.GetChildrenCount(current)
+            Catch ex As Exception
+                childCount = 0
+            End Try
+
+            For i As Integer = 0 To childCount - 1
+                Dim child = VisualTreeHelper.GetChild(current, i)
+                If child IsNot Nothing AndAlso Not seen.Contains(child) Then
+                    seen.Add(child)
+                    stack.Push(child)
+                End If
+            Next
+        End While
+
+        ' Restore visibility (unless it was already collapsed)
+        If feRoot IsNot Nothing AndAlso Not wasCollapsed Then
+            feRoot.Visibility = Visibility.Visible
+        End If
+    End Sub
+
+    Private Sub SetAllControlsMaxSize(root As DependencyObject)
+        If root Is Nothing Then Return
+
+        Dim q As New Queue(Of DependencyObject)()
+        q.Enqueue(root)
+
+        While q.Count > 0
+            Dim current = q.Dequeue()
+
+            ' If it's a FrameworkElement, set sizing properties
+            Dim fe = TryCast(current, FrameworkElement)
+            If fe IsNot Nothing Then
+                ' Don't change transforms or RenderTransforms; only layout properties
+                fe.MaxWidth = Double.PositiveInfinity
+                fe.MaxHeight = Double.PositiveInfinity
+
+                ' Let layout size automatically unless a fixed size is desired:
+                fe.Width = Double.NaN
+                fe.Height = Double.NaN
+            End If
+
+            ' Also consider FrameworkContentElement if needed (rare)
+            ' Many content elements don't expose Width/Height so we skip setting them.
+
+            ' Enqueue visual children (use VisualTreeHelper where available)
+            Try
+                Dim visualChildCount = VisualTreeHelper.GetChildrenCount(current)
+                For i As Integer = 0 To visualChildCount - 1
+                    Dim child = VisualTreeHelper.GetChild(current, i)
+                    If child IsNot Nothing Then q.Enqueue(child)
+                Next
+            Catch ex As Exception
+                ' Some nodes may throw for GetChildrenCount; ignore and continue
+            End Try
+
+            ' Enqueue logical children (to catch content presenters / items etc.)
+            Try
+                For Each obj In LogicalTreeHelper.GetChildren(current)
+                    Dim dep = TryCast(obj, DependencyObject)
+                    If dep IsNot Nothing Then q.Enqueue(dep)
+                Next
+            Catch ex As Exception
+                ' ignore
+            End Try
+        End While
+    End Sub
 
     Public Sub DetectCloseMethod(Optional isCmd As Boolean = False)
         If Not isCmd Then
@@ -100,36 +218,38 @@ Public Class osPopupMenu_GUI
     End Sub
 
     Private Async Sub pmCmd_ShowOpts(sender As Object, e As RoutedEventArgs) Handles pmBtn_ShowOptions.Click
-        ExitPopupMenu()
-
-        osFuncLib_InputScan.SetMonitorState(MonitorStatus.InCmd)
-        Await osFuncLib_ShowOpts.ExecuteDispOpts()
-
-        Dim doGameFocus = SetGameFocus()
+        Await ExitPopupMenu(Async Function()
+                                osFuncLib_InputScan.SetMonitorState(MonitorStatus.InCmd)
+                                Await osFuncLib_ShowOpts.ExecuteDispOpts()
+                            End Function)
     End Sub
 
-    Private Sub osStopApp()
-        ExitPopupMenu()
-
-        osTrayIcon.Visible = False
-        End
+    Private Async Sub osStopApp()
+        Await ExitPopupMenu(
+            Sub()
+                osTrayIcon.Visible = False
+                End
+            End Sub)
     End Sub
 
-    Private Sub pmCmd_StartGame(sender As Object, e As RoutedEventArgs) Handles pmBtn_StartGame.Click
-        Process.Start(New ProcessStartInfo With {
-                          .FileName = dirMtgaExe, .WorkingDirectory = dirMtga,
-                          .WindowStyle = ProcessWindowStyle.Maximized
-                      })
-
-        ExitPopupMenu()
+    Private Async Sub pmCmd_StartGame(sender As Object, e As RoutedEventArgs) Handles pmBtn_StartGame.Click
+        Await ExitPopupMenu(
+            Sub()
+                Process.Start(New ProcessStartInfo With {
+                                  .FileName = dirMtgaExe, .WorkingDirectory = dirMtga,
+                                  .WindowStyle = ProcessWindowStyle.Maximized
+                              })
+            End Sub)
     End Sub
 
-    Private Sub pmCmd_CloseGame(sender As Object, e As RoutedEventArgs) Handles pmBtn_CloseGame.Click
+    Private Async Sub pmCmd_CloseGame(sender As Object, e As RoutedEventArgs) Handles pmBtn_CloseGame.Click
         Dim chkConfirmCloseGame = GetResponse(PromptType.GameMenu_Leave)
 
         If chkConfirmCloseGame = isYes Then
-            Dim cmdCloseMTGA = CmdRunner.RunCmd("taskkill", "/f /im MTGA.exe")
-            ExitPopupMenu()
+            Await ExitPopupMenu(
+                Sub()
+                    Dim cmdCloseMTGA = CmdRunner.RunCmd("taskkill", "/f /im MTGA.exe")
+                End Sub)
         End If
     End Sub
 
@@ -144,9 +264,32 @@ Public Class osPopupMenu_GUI
         ShowGameMenuItem()
     End Sub
 
-    Private Sub ExitPopupMenu()
-        osHandler_UI.DispatchUI()
-    End Sub
+    Private Async Function ExitPopupMenu() As Task
+        Await osHandler_UI.ResetPopupMenu(True)
+        Await Task.Delay(200)
+    End Function
+
+    Private Async Function ExitPopupMenu(objMenuCmd As Action) As Task
+        Await osHandler_UI.ResetPopupMenu(True)
+        Await Task.Delay(200)
+
+        PrepDispatcher().
+            Invoke(Sub()
+                       objMenuCmd()
+                   End Sub)
+    End Function
+
+    Private Async Function ExitPopupMenu(objMenuCmd As Func(Of Task)) As Task
+        Await osHandler_UI.ResetPopupMenu(True)
+        Await Task.Delay(200)
+
+        Dim objTask_MenuCmd = PrepDispatcher().
+            InvokeAsync(Function()
+                            Return objMenuCmd()
+                        End Function)
+
+        Await objTask_MenuCmd.Task.Unwrap()
+    End Function
 
     Protected Overrides Sub OnClosed(e As EventArgs)
         MyBase.OnClosed(e)

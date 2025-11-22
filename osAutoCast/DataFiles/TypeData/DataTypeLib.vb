@@ -19,8 +19,11 @@ Imports osAutoCast.DataTypeLib.AnimationType
 Imports SharpDX
 Imports SharpDX.Direct3D11
 Imports osProgDevice = SharpDX.Direct3D11.Device
-Imports pxShader_Effect = System.Windows.Media.Effects.PixelShader
-Imports pxShader_Object = SharpDX.Direct3D11.PixelShader
+Imports pxShader_Text = System.Windows.Media.Effects.PixelShader
+Imports pxShader_Pixel = SharpDX.Direct3D11.PixelShader
+Imports pxShader_Vertex = SharpDX.Direct3D11.VertexShader
+Imports osAutoCast.DataTypeLib.osShaderType
+Imports osAutoCast.osShaderDataLib
 
 Public Module DataTypeLib
 
@@ -253,8 +256,9 @@ Public Module DataTypeLib
     End Enum
 
     Public Enum osShaderType
-        ShaderObject
-        ShaderEffect
+        sTypePixel
+        sTypeVertex
+        sTypeText
     End Enum
 
 #End Region
@@ -376,60 +380,114 @@ Public Class osShaderDataLib
 
     Public Interface iPxShader
         ReadOnly Property iShaderType As osShaderType
+        Function sText() As pxShader_Text
+        Function sPixel() As pxShader_Pixel
+        Function sVertex() As pxShader_Vertex
     End Interface
 
-    Public Class pxShaderObject
+    Public Class pxShaderPixel
         Implements iPxShader
 
-        Public Property pxShaderObj As pxShader_Object
+        Public Property pxShaderObj As pxShader_Pixel
 
-        Public Sub New(ShaderObj As pxShader_Object)
+        Public Sub New(ShaderObj As pxShader_Pixel)
             Me.pxShaderObj = ShaderObj
         End Sub
 
-        Public ReadOnly Property ShaderType As osShaderType Implements iPxShader.iShaderType
+        Public ReadOnly Property iShaderType As osShaderType Implements iPxShader.iShaderType
             Get
-                Return osShaderType.ShaderObject
+                Return sTypePixel
             End Get
         End Property
+
+        Public Function isShaderVertex() As pxShader_Vertex Implements iPxShader.sVertex
+            Return Nothing
+        End Function
+
+        Public Function isShaderText() As pxShader_Text Implements iPxShader.sText
+            Return Nothing
+        End Function
+
+        Public Function isShaderPixel() As pxShader_Pixel Implements iPxShader.sPixel
+            Return pxShaderObj
+        End Function
 
     End Class
 
-    Public Class pxShaderEffect
+    Public Class pxShaderText
         Implements iPxShader
 
-        Public Property pxShaderEff As pxShader_Effect
+        Public Property pxShaderEff As pxShader_Text
 
-        Public Sub New(ShaderEff As pxShader_Effect)
+        Public Sub New(ShaderEff As pxShader_Text)
             Me.pxShaderEff = ShaderEff
         End Sub
 
-        Public ReadOnly Property ShaderType As osShaderType Implements iPxShader.iShaderType
+        Public ReadOnly Property iShaderType As osShaderType Implements iPxShader.iShaderType
             Get
-                Return osShaderType.ShaderEffect
+                Return sTypeText
             End Get
         End Property
+
+        Public Function isShaderObject() As pxShader_Pixel Implements iPxShader.sPixel
+            Return Nothing
+        End Function
+
+        Public Function isShaderVertex() As pxShader_Vertex Implements iPxShader.sVertex
+            Return Nothing
+        End Function
+
+        Public Function isShaderText() As pxShader_Text Implements iPxShader.sText
+            Return pxShaderEff
+        End Function
+
+    End Class
+
+    Public Class pxShaderVertex
+        Implements iPxShader
+
+        Public Property pxShaderVer As pxShader_Vertex
+
+        Public Sub New(ShaderVer As pxShader_Vertex)
+            Me.pxShaderVer = ShaderVer
+        End Sub
+
+        Public ReadOnly Property iShaderType As osShaderType Implements iPxShader.iShaderType
+            Get
+                Return sTypeVertex
+            End Get
+        End Property
+
+        Public Function isShaderObject() As pxShader_Pixel Implements iPxShader.sPixel
+            Return Nothing
+        End Function
+
+        Public Function isShaderVertex() As pxShader_Vertex Implements iPxShader.sVertex
+            Return pxShaderVer
+        End Function
+
+        Public Function isShaderText() As pxShader_Text Implements iPxShader.sText
+            Return Nothing
+        End Function
 
     End Class
 
 End Class
 
-'Public Class osShaderData
+Public Class idxShaderRecord
 
-'    Public Property idxKey As String
-'    Public Property ByteData As Byte()
+    Public Property ID As String
+    Public Property ShaderData As iPxShader
 
-'    Public Sub New()
+    Public Sub New()
+    End Sub
 
-'    End Sub
+    Public Sub New(idxID As String, idxShader As iPxShader)
+        ID = idxID
+        ShaderData = idxShader
+    End Sub
 
-'    Public Sub New(sName As String, sType As osShaderType)
-'        ShaderName = sName
-'        ShaderType = sType
-'    End Sub
-
-'End Class
-
+End Class
 
 Public Class osShaderDetails
 
@@ -437,7 +495,6 @@ Public Class osShaderDetails
     Public Property ShaderType As osShaderType
 
     Public Sub New()
-
     End Sub
 
     Public Sub New(sName As String, sType As osShaderType)
@@ -810,10 +867,13 @@ Public Class osPopupAnimation
     Private aniDuration_ExecFade As TimeSpan = TimeSpan.FromMilliseconds(380)
     Private aniDuration_OverlayFade As TimeSpan = TimeSpan.FromMilliseconds(300)
 
+    Private aniDuration_QuickCloseOverlay As TimeSpan = TimeSpan.FromMilliseconds(225)
+    Private aniDuration_QuickClosePopup As TimeSpan = TimeSpan.FromMilliseconds(175)
+
     Public Sub New()
     End Sub
 
-    Public Sub New(aniType As AnimationType, aniObject As AnimationObject)
+    Public Sub New(aniType As AnimationType, aniObject As AnimationObject, Optional isQuickClose As Boolean = False)
         Select Case aniType
             Case aniOpen
                 If aniObject = aniPopup Then
@@ -830,23 +890,38 @@ Public Class osPopupAnimation
                 End If
             Case aniClose
                 If aniObject = aniPopup Then
-                    SetAniDuration(aniDuration, aniDuration_Close)
-                    SetAniDuration(aniDuration_Fade, aniDuration_ExecFade)
+                    SetAniDuration(aniDuration, SetCloseDuration(isQuickClose, aniObject))
+                    SetAniDuration(aniDuration_Fade, SetCloseDuration(isQuickClose, aniObject))
 
                     SetAnimation(aniClose, aniPopup, aniDuration_Fade, True, Me.aniFade)
 
-                    SetAnimation(aniClose, aniPopup, aniDuration, False, Me.aniX)
-                    SetAnimation(aniClose, aniPopup, aniDuration, False, Me.aniY)
+                    SetAnimation(aniClose, aniPopup, aniDuration, False, Me.aniX, isQuickClose)
+                    SetAnimation(aniClose, aniPopup, aniDuration, False, Me.aniY, isQuickClose)
                 Else
-                    SetAniDuration(aniDuration_Fade, aniDuration_OverlayFade)
+                    SetAniDuration(aniDuration_Fade, SetCloseDuration(isQuickClose, aniObject))
                     SetAnimation(aniClose, aniOverlay, aniDuration_Fade, True, Me.aniFade)
                 End If
         End Select
     End Sub
 
+    Private Function SetCloseDuration(isQuickClose As Boolean, aniObject As AnimationObject)
+        Select Case aniObject
+            Case aniPopup
+                Return If(isQuickClose, aniDuration_QuickClosePopup,
+                    aniDuration_Close)
+            Case aniOverlay
+                Return If(isQuickClose, aniDuration_QuickCloseOverlay,
+                    aniDuration_OverlayFade)
+            Case Else
+                Return Nothing
+        End Select
+    End Function
+
     Private Sub SetAnimation(aniType As AnimationType, aniObject As AnimationObject, aniDur As Duration,
-                             isFadeAni As Boolean, ByRef aniObj As DoubleAnimation)
-        Dim objAniVal = SetAniValues(aniType, aniObject, isFadeAni)
+                             isFadeAni As Boolean, ByRef aniObj As DoubleAnimation,
+                             Optional isQuickClose As Boolean = False)
+
+        Dim objAniVal = SetAniValues(aniType, aniObject, isFadeAni, isQuickClose)
 
         Dim objNewAni As New DoubleAnimation() With {
             .From = objAniVal.vStart, .To = objAniVal.vStop,
@@ -867,7 +942,8 @@ Public Class osPopupAnimation
     End Sub
 
     Private Function SetAniValues(aniType As AnimationType, aniObject As AnimationObject,
-                                  Optional isFadeAni As Boolean = False) As (vStart As Double, vStop As Double, vOpen As Boolean)
+                                  Optional isFadeAni As Boolean = False,
+                                  Optional isQuickClose As Boolean = False) As (vStart As Double, vStop As Double, vOpen As Boolean)
         Select Case aniType
             Case aniOpen
                 Return (vStart:=CalcStartVal(isFadeAni, aniObject),
@@ -875,12 +951,13 @@ Public Class osPopupAnimation
                     vOpen:=True)
             Case aniClose
                 Return (vStart:=CalcStartVal(isFadeAni, aniObject, True),
-                    vStop:=CalcStopVal(isFadeAni, aniObject, True),
+                    vStop:=CalcStopVal(isFadeAni, aniObject, True, isQuickClose),
                     vOpen:=False)
         End Select
     End Function
 
-    Private Function CalcStartVal(isFade As Boolean, aniObject As AnimationObject, Optional isClose As Boolean = False) As Double
+    Private Function CalcStartVal(isFade As Boolean, aniObject As AnimationObject,
+                                  Optional isClose As Boolean = False, Optional isQuickClose As Boolean = False) As Double
         Select Case aniObject
             Case aniPopup
                 Return If(isClose, 1.0,
@@ -892,11 +969,12 @@ Public Class osPopupAnimation
         End Select
     End Function
 
-    Private Function CalcStopVal(isFade As Boolean, aniObject As AnimationObject, Optional isClose As Boolean = False) As Double
+    Private Function CalcStopVal(isFade As Boolean, aniObject As AnimationObject,
+                                 Optional isClose As Boolean = False, Optional isQuickClose As Boolean = False) As Double
         Select Case aniObject
             Case aniPopup
                 Return If(isClose,
-                    If(isFade, 0.0, 0.01), 1.0)
+                    If(isFade, 0.0, If(isQuickClose, 8.0, 0.01)), 1.0)
             Case aniOverlay
                 Return If(isClose, 0.0, 0.7)
             Case Else

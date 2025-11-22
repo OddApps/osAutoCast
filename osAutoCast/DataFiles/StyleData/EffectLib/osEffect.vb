@@ -5,14 +5,20 @@ Imports System.IO
 Imports System.Globalization
 Imports System.Windows.Data
 Imports osAutoCast.DataTypeLib.MenuProperty
+Imports osAutoCast.DataTypeLib.osShaderType
+Imports osAutoCast.osHandler_Shader
 Imports System.Windows.Controls
 
 Public Class osEffect
     Inherits ShaderEffect
 
+    Private Shared ReadOnly _shader As New PixelShader() With {
+        .UriSource = New Uri("/osAutoCast;component/DataFiles/StyleData/EffectLib/osEffectShader.ps", UriKind.Relative)
+    }
+
     Public Sub New()
         With Me
-            .PixelShader = osHandler_Shader.LoadPxShader("osAutoCast.osShader_Effect.ps")
+            .PixelShader = _shader
 
             .PaddingLeft = 6
             .PaddingRight = 6
@@ -31,6 +37,26 @@ Public Class osEffect
         UpdateShaderValue(GlowStrengthProperty)
     End Sub
 
+    'Public Sub New()
+    '    With Me
+    '        .PixelShader = FetchShader(sTypeText).sText
+
+    '        .PaddingLeft = 6
+    '        .PaddingRight = 6
+
+    '        .PaddingTop = 3
+    '        .PaddingBottom = 3
+    '    End With
+
+    '    UpdateShaderValue(InputProperty)
+    '    UpdateShaderValue(TexelSizeProperty)
+    '    UpdateShaderValue(ThicknessProperty)
+    '    UpdateShaderValue(SpreadProperty)
+    '    UpdateShaderValue(FadeProperty)
+    '    UpdateShaderValue(GlowColorProperty)
+    '    UpdateShaderValue(StrokeStrengthProperty)
+    '    UpdateShaderValue(GlowStrengthProperty)
+    'End Sub
     Public Shared ReadOnly InputProperty As DependencyProperty = ShaderEffect.
         RegisterPixelShaderSamplerProperty("Input", GetType(osEffect), 0)
     Public Property Input As Brush

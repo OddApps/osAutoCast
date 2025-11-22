@@ -5,9 +5,12 @@ Imports System.Windows.Threading
 Imports osAutoCast.osShaderDataLib
 Imports SharpDX.Direct3D11
 Imports osProgDevice = SharpDX.Direct3D11.Device
+Imports osRegEx = System.Text.RegularExpressions.Regex
 Imports System.Resources
 Imports System.Globalization
 Imports osResDict = System.Collections.DictionaryEntry
+Imports System.Text.RegularExpressions
+Imports osAutoCast.DataTypeLib.osShaderType
 
 Public NotInheritable Class CoreDataLib
 
@@ -45,6 +48,12 @@ Public NotInheritable Class CoreDataLib
     Public Shared objCancelState As CancellationToken
 
     Private Shared objCancelTask As Task
+
+    Private Shared ReadOnly ShaderTypeIdx As New Dictionary(Of String, osShaderType) From {
+        {"Text", sTypeText},
+        {"ProgPixel", sTypePixel},
+        {"ProgVertex", sTypeVertex}
+    }
 
     Public Shared InputMonSvc As InputMonitorService = Nothing
 
@@ -113,8 +122,8 @@ Public NotInheritable Class CoreDataLib
     End Function
 
     Private Shared Function GetResourceList() As List(Of String)
-        Return PopulateResources().Select(
-            Function(objRes) objRes).ToList()
+        Return PopulateResources().
+            Select(Function(objRes) objRes).ToList()
     End Function
 
     Private Shared Function PopulateResources() As String()
@@ -123,20 +132,26 @@ Public NotInheritable Class CoreDataLib
     End Function
 
     Private Shared Function GetShaderType(objShaderRes As String) As osShaderType
-        Return If(objShaderRes.Contains("Effect"),
-            osShaderType.ShaderEffect, osShaderType.ShaderObject)
+        Return ShaderTypeIdx(DetermineShaderType(objShaderRes))
+    End Function
+
+    Private Shared Function DetermineShaderType(objShaderName As String) As String
+        Return osRegEx.Match(objShaderName, "_(.*?)\.ps",
+                             RegexOptions.IgnoreCase).Groups(1).Value
     End Function
 
     Private Shared Function ValidateShader(objShaderRes As String) As Boolean
-        Return If(objShaderRes.Contains("osShader"), True, False)
+        Return objShaderRes.Contains("osShader")
     End Function
 
     Private Shared Function GenerateShaderList() As List(Of osShaderDetails)
         Return GetResourceList().Where(
             Function(valRes) ValidateShader(valRes)).
-            Select(Function(objRes)
-                       Return New osShaderDetails(objRes, GetShaderType(objRes))
-                   End Function).ToList()
+            Select(Function(shaderRes) CreateShaderRecord(shaderRes)).ToList()
+    End Function
+
+    Private Shared Function CreateShaderRecord(objShaderRes As String) As osShaderDetails
+        Return New osShaderDetails(objShaderRes, GetShaderType(objShaderRes))
     End Function
 
     Public Shared Sub ComposeShaderIdx()

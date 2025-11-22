@@ -34,8 +34,9 @@ Imports osVert = System.Windows.VerticalAlignment
 Imports osHorz = System.Windows.HorizontalAlignment
 Imports System.ComponentModel
 Imports osAutoCast.osShaderDataLib
-Imports pxShader_Effect = System.Windows.Media.Effects.PixelShader
-Imports pxShader_Object = SharpDX.Direct3D11.PixelShader
+Imports pxShader_Text = System.Windows.Media.Effects.PixelShader
+Imports pxShader_Pixel = SharpDX.Direct3D11.PixelShader
+Imports pxShader_Vertex = SharpDX.Direct3D11.VertexShader
 
 #Disable Warning IDE0060 ' Remove unused parameter
 #Disable Warning IDE1006 ' Remove unused parameter
@@ -846,10 +847,11 @@ Public NotInheritable Class MenuOverlayWindow
         objAnimation_Close = Nothing
     End Sub
 
-    Public Async Function InitOverlayClose() As Task
+    Public Async Function InitOverlayClose(Optional isQuickClose As Boolean = False) As Task
         BeginClosingTask(objTask_Closing)
 
-        objAnimation_Close = New osPopupAnimation(AnimationType.aniClose, AnimationObject.aniOverlay)
+        objAnimation_Close = New osPopupAnimation(AnimationType.aniClose,
+                                                  AnimationObject.aniOverlay, isQuickClose)
 
         AddHandler objAnimation_Close.aniFade.Completed,
             Sub()
@@ -1387,7 +1389,6 @@ Module osFuncLib_UI
     Public Function PrepDispatcher(Optional IsAutoPass As Boolean = False) As Dispatcher
         Return If(IsAutoPass, osHandler_UI.osGui_AutoPass.Dispatcher,
             Application.Current.Dispatcher)
-
     End Function
 
     Public Function GetResponse(pType As PromptType) As PromptResponse
@@ -1654,7 +1655,7 @@ Public NotInheritable Class osMenuFuncBinder
 
 End Class
 
-Module ControlExtensions
+Public Module ControlExtensions
 
     <Extension()>
     Public Function InvokeAsync(ctrl As Control, action As Action) As Task
@@ -1726,19 +1727,19 @@ Module ControlExtensions
     End Sub
 
     <Runtime.CompilerServices.Extension>
-    Public Function PrefVal(ByVal objPref As Object) As String
+    Public Function PrefVal(ByRef objPref As Object) As String
         Return Convert.ToString(objPref)
     End Function
 
     <Runtime.CompilerServices.Extension>
-    Public Function ToShaderObj(ByVal objPref As iPxShader) As pxShader_Object
-        Dim objPxS = DirectCast(objPref, pxShaderObject).pxShaderObj
+    Public Function ToShaderPx(objPref As Object(), index As Integer) As pxShader_Pixel
+        Dim objPxS = CType(objPref(index), pxShader_Pixel)
         Return objPxS
     End Function
 
     <Runtime.CompilerServices.Extension>
-    Public Function ToShaderEff(ByVal objPref As iPxShader) As pxShader_Effect
-        Dim objPxE = DirectCast(objPref, pxShaderEffect).pxShaderEff
+    Public Function ToShaderVer(objPref As Object(), index As Integer) As pxShader_Vertex
+        Dim objPxE = CType(objPref(index), pxShader_Vertex)
         Return objPxE
     End Function
 

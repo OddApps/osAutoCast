@@ -1,11 +1,10 @@
 ﻿<Window x:Class="osPopupMenu_GUI" x:Name="winPopupMenu" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" 
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" mc:Ignorable="d" Title="osPopupMenu_GUI"
-        DataContext="{Binding RelativeSource={RelativeSource Self}}" WindowStyle="None" AllowsTransparency="True"
-        ShowInTaskbar="False" Background="Transparent" MinWidth="265" VerticalContentAlignment="Stretch"
-        WindowStartupLocation="CenterScreen" Focusable="False" ShowActivated="False" Topmost="True"
-        IsTabStop="False" SizeToContent="WidthAndHeight" HorizontalContentAlignment="Center">
-    
+        DataContext="{Binding RelativeSource={RelativeSource Self}}" Style="{StaticResource MainContentContainerStyle}"
+        WindowStyle="None" AllowsTransparency="True" ShowInTaskbar="False" Background="Transparent" 
+        MinWidth="265" VerticalContentAlignment="Stretch" WindowStartupLocation="CenterScreen" Focusable="False" 
+        ShowActivated="False" Topmost="True" IsTabStop="False" SizeToContent="WidthAndHeight" HorizontalContentAlignment="Center">
     <Border x:Name="popupMainContainer" Style="{StaticResource MainContainerStyle}">
         <Border.RenderTransform>
             <ScaleTransform x:Name="popScale"
