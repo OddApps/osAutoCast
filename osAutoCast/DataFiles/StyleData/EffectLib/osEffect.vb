@@ -12,13 +12,34 @@ Imports System.Windows.Controls
 Public Class osEffect
     Inherits ShaderEffect
 
-    Private Shared ReadOnly _shader As New PixelShader() With {
-        .UriSource = New Uri("/osAutoCast;component/DataFiles/StyleData/EffectLib/osEffectShader.ps", UriKind.Relative)
-    }
+    'Private Shared ReadOnly _shader As New PixelShader() With {
+    '    .UriSource = New Uri("/osAutoCast;component/DataFiles/StyleData/EffectLib/osShader_Text.ps", UriKind.Relative)
+    '}
+
+    'Public Sub New()
+    '    With Me
+    '        .PixelShader = _shader
+
+    '        .PaddingLeft = 6
+    '        .PaddingRight = 6
+
+    '        .PaddingTop = 3
+    '        .PaddingBottom = 3
+    '    End With
+
+    '    UpdateShaderValue(InputProperty)
+    '    UpdateShaderValue(TexelSizeProperty)
+    '    UpdateShaderValue(ThicknessProperty)
+    '    UpdateShaderValue(SpreadProperty)
+    '    UpdateShaderValue(FadeProperty)
+    '    UpdateShaderValue(GlowColorProperty)
+    '    UpdateShaderValue(StrokeStrengthProperty)
+    '    UpdateShaderValue(GlowStrengthProperty)
+    'End Sub
 
     Public Sub New()
         With Me
-            .PixelShader = _shader
+            .PixelShader = FetchShader(sTypeText).sText
 
             .PaddingLeft = 6
             .PaddingRight = 6
@@ -37,26 +58,6 @@ Public Class osEffect
         UpdateShaderValue(GlowStrengthProperty)
     End Sub
 
-    'Public Sub New()
-    '    With Me
-    '        .PixelShader = FetchShader(sTypeText).sText
-
-    '        .PaddingLeft = 6
-    '        .PaddingRight = 6
-
-    '        .PaddingTop = 3
-    '        .PaddingBottom = 3
-    '    End With
-
-    '    UpdateShaderValue(InputProperty)
-    '    UpdateShaderValue(TexelSizeProperty)
-    '    UpdateShaderValue(ThicknessProperty)
-    '    UpdateShaderValue(SpreadProperty)
-    '    UpdateShaderValue(FadeProperty)
-    '    UpdateShaderValue(GlowColorProperty)
-    '    UpdateShaderValue(StrokeStrengthProperty)
-    '    UpdateShaderValue(GlowStrengthProperty)
-    'End Sub
     Public Shared ReadOnly InputProperty As DependencyProperty = ShaderEffect.
         RegisterPixelShaderSamplerProperty("Input", GetType(osEffect), 0)
     Public Property Input As Brush
@@ -163,8 +164,6 @@ Public Class osEffect
             Case propGlow
                 Return DependencyProperty.Register("GlowStrength", GetType(Double), GetType(osEffect),
                                                    New UIPropertyMetadata(1.0, PixelShaderConstantCallback(6)))
-            Case Else
-                Return Nothing
         End Select
     End Function
 
@@ -339,11 +338,9 @@ Namespace osStyle
             Dim parts = rowsSpec.Split(New Char() {","c}, StringSplitOptions.RemoveEmptyEntries)
             Dim contentCount = parts.Length
             If contentCount = 0 Then
-                ' nothing to do
                 Return
             End If
 
-            ' 1) remove old separator children FIRST
             For i As Integer = grid.Children.Count - 1 To 0 Step -1
                 Dim fe = TryCast(grid.Children(i), FrameworkElement)
                 If fe IsNot Nothing AndAlso fe.Tag IsNot Nothing AndAlso fe.Tag.ToString() = SeparatorTag Then
@@ -351,7 +348,6 @@ Namespace osStyle
                 End If
             Next
 
-            ' 2) gather metadata for non-separator children
             Dim childMeta As New List(Of Tuple(Of UIElement, Integer, Integer))()
             For Each chObj As UIElement In grid.Children
                 Dim fe = TryCast(chObj, FrameworkElement)
@@ -362,11 +358,9 @@ Namespace osStyle
                 Dim origRowSpan As Integer = Grid.GetRowSpan(chObj)
                 If origRowSpan < 1 Then origRowSpan = 1
 
-                ' normalize origRow into valid content index range [0 .. contentCount-1]
                 If origRow < 0 Then origRow = 0
                 If origRow >= contentCount Then origRow = contentCount - 1
 
-                ' make sure the row span doesn't exceed remaining rows from origRow
                 If origRow + origRowSpan > contentCount Then
                     origRowSpan = Math.Max(1, contentCount - origRow)
                 End If
@@ -374,13 +368,10 @@ Namespace osStyle
                 childMeta.Add(Tuple.Create(chObj, origRow, origRowSpan))
             Next
 
-            ' sort by original row to remap in order (reduces collision chances)
             childMeta = childMeta.OrderBy(Function(t) t.Item2).ThenBy(Function(t) t.Item1.GetHashCode()).ToList()
 
-            ' 3) rebuild RowDefinitions (content & interleaved separator rows)
             grid.RowDefinitions.Clear()
             For i As Integer = 0 To contentCount - 1
-                ' content row
                 Dim token = parts(i).Trim()
                 Dim defContent As New RowDefinition()
                 If String.Equals(token, "auto", StringComparison.OrdinalIgnoreCase) Then
@@ -402,7 +393,6 @@ Namespace osStyle
                 End If
                 grid.RowDefinitions.Add(defContent)
 
-                ' separator row (not after last content row)
                 If i < contentCount - 1 Then
                     Dim sepThickness = GetSeparatorThickness(grid)
                     Dim defSep As New RowDefinition()
@@ -415,18 +405,15 @@ Namespace osStyle
                 End If
             Next
 
-            ' 4) remap children to new rows (shift content rows to 2*origRow)
             Dim totalRows = grid.RowDefinitions.Count
             For Each tup In childMeta
                 Dim ch = tup.Item1
                 Dim origRow = tup.Item2
                 Dim origSpan = tup.Item3
 
-                ' newRow maps content rows to even indices; separators occupy odd indices
                 Dim newRow = Math.Max(0, origRow * 2)
                 Dim newSpan = Math.Max(1, origSpan * 2 - 1)
 
-                ' clamp to available rows
                 If newRow > totalRows - 1 Then
                     newRow = Math.Max(0, totalRows - 1)
                 End If
@@ -438,14 +425,13 @@ Namespace osStyle
                 Grid.SetRowSpan(ch, newSpan)
             Next
 
-            ' 5) add separators into their dedicated rows
             Dim sepBrush = GetSeparatorBrush(grid)
             Dim sepThicknessFinal = GetSeparatorThickness(grid)
             If sepThicknessFinal > 0 AndAlso contentCount > 1 Then
                 Dim colSpan As Integer = If(grid.ColumnDefinitions.Count > 0, grid.ColumnDefinitions.Count, 1)
 
                 For i As Integer = 0 To contentCount - 2
-                    Dim sepRowIndex = i * 2 + 1 ' separator is between content rows
+                    Dim sepRowIndex = i * 2 + 1
                     Dim rect As New Rectangle() With {
                 .HorizontalAlignment = HorizontalAlignment.Stretch,
                 .VerticalAlignment = VerticalAlignment.Stretch,
@@ -458,14 +444,12 @@ Namespace osStyle
                     Grid.SetColumn(rect, 0)
                     Grid.SetColumnSpan(rect, colSpan)
 
-                    ' draw above normal content so backgrounds don't cover it
                     Grid.SetZIndex(rect, 10000)
 
                     grid.Children.Add(rect)
                 Next
             End If
 
-            ' 6) force layout recalculation and optional auto-resize
             Dim wnd = Window.GetWindow(grid)
             If wnd IsNot Nothing Then
                 If wnd.SizeToContent = SizeToContent.Manual Then
@@ -480,14 +464,68 @@ Namespace osStyle
             End If
         End Sub
 
-
-        'Private Shared Function GenRowData() As RowDefinition
-
-        'End Function
-
-
     End Class
 
+    Public Class osPopupScale
+
+        Public Shared ReadOnly PopupScaleProperty As DependencyProperty = DependencyProperty.
+            RegisterAttached("PopupScale", GetType(Double), GetType(osPopupScale),
+                             New PropertyMetadata(1.0, AddressOf OnPopupScaleChanged))
+
+        Public Shared Sub SetPopupScale(objPopupScale As DependencyObject, valScale As Double)
+            objPopupScale.SetValue(PopupScaleProperty, valScale)
+        End Sub
+
+        Public Shared Function GetPopupScale(objPopupScale As DependencyObject) As Double
+            Return CDbl(objPopupScale.GetValue(PopupScaleProperty))
+        End Function
+
+        Private Shared Sub OnPopupScaleChanged(d As DependencyObject, e As DependencyPropertyChangedEventArgs)
+            Dim objContainerUI = TryCast(d, UIElement)
+            If objContainerUI Is Nothing Then Return
+
+            Dim valScale As Double = CDbl(e.NewValue)
+
+            With EnsureScaleTransform(objContainerUI)
+                .ScaleX = valScale
+                .ScaleY = valScale
+            End With
+        End Sub
+
+        Private Shared Function EnsureScaleTransform(objContainer As UIElement) As ScaleTransform
+            Dim objVisualTransform = objContainer.RenderTransform
+
+            If objVisualTransform Is Nothing Then
+                Dim objVisualScale = New ScaleTransform(1.0, 1.0)
+                objContainer.RenderTransform = objVisualScale
+                Return objVisualScale
+            End If
+
+            Dim objVerifyVisual = TryCast(objVisualTransform, ScaleTransform)
+            If objVerifyVisual IsNot Nothing Then Return objVerifyVisual
+
+            Dim chkTransformGroup = TryCast(objVisualTransform, TransformGroup)
+            If chkTransformGroup IsNot Nothing Then
+                Dim chkVisualGroup = chkTransformGroup.Children.OfType(Of ScaleTransform)().FirstOrDefault()
+                If chkVisualGroup IsNot Nothing Then Return chkVisualGroup
+
+                chkVisualGroup = New ScaleTransform(1.0, 1.0)
+                chkTransformGroup.Children.Insert(0, chkVisualGroup)
+                Return chkVisualGroup
+            End If
+
+            Dim objVisualGroup As New TransformGroup()
+            Dim objVisualScaler As New ScaleTransform(1.0, 1.0)
+
+            objVisualGroup.Children.Add(objVisualScaler)
+            objVisualGroup.Children.Add(objVisualTransform)
+
+            objContainer.RenderTransform = objVisualGroup
+
+            Return objVisualScaler
+        End Function
+
+    End Class
 
 End Namespace
 

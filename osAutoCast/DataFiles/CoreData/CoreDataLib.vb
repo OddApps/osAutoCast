@@ -12,9 +12,11 @@ Imports osResDict = System.Collections.DictionaryEntry
 Imports System.Text.RegularExpressions
 Imports osAutoCast.DataTypeLib.osShaderType
 
+#Disable Warning IDE0060 ' Remove unused parameter
+#Disable Warning BC42353
+
 Public NotInheritable Class CoreDataLib
 
-#Disable Warning IDE0060 ' Remove unused parameter
     Private Sub New()
     End Sub
 
@@ -86,8 +88,6 @@ Public NotInheritable Class CoreDataLib
                 Return If(getH, osPrefStoreData.MainOpts_acProgH, osPrefStoreData.MainOpts_acProgW)
             Case TriggerType.AutoPass
                 Return If(getH, osPrefStoreData.MainOpts_apProgH, osPrefStoreData.MainOpts_apProgW)
-            Case Else
-                Return 0
         End Select
     End Function
 
@@ -103,8 +103,6 @@ Public NotInheritable Class CoreDataLib
                         {"pH", osPrefStoreData.MainOpts_apProgH},
                         {"pW", osPrefStoreData.MainOpts_apProgW}
                     }
-            Case Else
-                Return Nothing
         End Select
     End Function
 
@@ -116,8 +114,6 @@ Public NotInheritable Class CoreDataLib
             Case TriggerType.AutoPass
                 Return New ProgSizeReport(osPrefStoreData.MainOpts_apProgW,
                                           osPrefStoreData.MainOpts_apProgH)
-            Case Else
-                Return Nothing
         End Select
     End Function
 
@@ -364,5 +360,4 @@ Public NotInheritable Class CoreDataLib
         Return New ProgressEvent(pEventElement)
     End Function
 
-#Enable Warning IDE0060 ' Remove unused parameter
 End Class

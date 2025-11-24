@@ -4,9 +4,13 @@ Imports osAutoCast.GameMenuOpts
 Imports osAutoCast.CoreDataLib
 Imports System.Runtime.InteropServices
 Imports System.Windows.Interop
+Imports osAutoCast.DataTypeLib.AnimationType
+Imports osAutoCast.DataTypeLib.AnimationVisual
 Imports osAutoCast.DataTypeLib.PromptResponse
 Imports System.Windows.Media.Animation
 Imports System.Threading
+
+#Disable Warning BC42353
 
 Public Class osPopupMenu_GUI
 
@@ -21,143 +25,69 @@ Public Class osPopupMenu_GUI
 
     Private OpenCompleteEvent As EventHandler = AddressOf OpenComplete
 
+    Private ReadOnly Property objContainer As Border
+        Get
+            Return Me.popupMainContainer
+        End Get
+    End Property
+
     Public Async Function InitPopupClose(Optional closeFromCmd As Boolean = False,
                                          Optional isQuickClose As Boolean = False) As Task
 
         DetectCloseMethod(closeFromCmd)
         BeginClosingTask(objTask_Closing)
 
-        objAnimation_Close = New osPopupAnimation(AnimationType.aniClose,
-                                                  AnimationObject.aniPopup, isQuickClose)
+        InitTransitionVisuals(aniClose, isQuickClose)
 
-        AddHandler objAnimation_Close.aniY.Completed,
-            Sub()
-                PopupCloseComplete(objTask_Closing)
-            End Sub
-
-        If isQuickClose Then
-            Me.winPopupMenu.MaxHeight = Double.PositiveInfinity
-            Me.winPopupMenu.MaxWidth = Double.PositiveInfinity
-
-            Me.popupContentContainer.MaxHeight = Double.PositiveInfinity
-            Me.popupContentContainer.MaxWidth = Double.PositiveInfinity
-
-            Me.popupMainContainer.MaxHeight = Double.PositiveInfinity
-            Me.popupMainContainer.MaxWidth = Double.PositiveInfinity
-
-        End If
-
-        Me.popScale.BeginAnimation(ScaleTransform.ScaleXProperty, objAnimation_Close.aniX)
-        Me.popScale.BeginAnimation(ScaleTransform.ScaleYProperty, objAnimation_Close.aniY)
-
-        Me.popupMainContainer.BeginAnimation(Border.OpacityProperty, objAnimation_Close.aniFade)
-
-        Dim resPopupClose = Await objTask_Closing.Task
+        Await objTask_Closing.Task
 
     End Function
 
-    Private Sub OptimizeAndSetMaxSize(root As DependencyObject)
-        If root Is Nothing Then Return
+    Private Sub PrepTransitionVisuals(objAniType As AnimationType, isQuickClose As Boolean)
+        Select Case objAniType
+            Case aniOpen
+                objAnimation_Open = New osPopupAnimation(AnimationType.aniOpen,
+                                                 AnimationObject.aniPopup)
 
-        ' Collapse the container so layout is not performed on each change
-        Dim wasCollapsed As Boolean = False
-        Dim feRoot = TryCast(root, FrameworkElement)
-        If feRoot IsNot Nothing Then
-            If feRoot.Visibility <> Visibility.Collapsed Then
-                feRoot.Visibility = Visibility.Collapsed
-            Else
-                wasCollapsed = True
-            End If
-        End If
+                AddHandler objAnimation_Open.aniScale.Completed, OpenCompleteEvent
+            Case aniClose
+                objAnimation_Close = New osPopupAnimation(AnimationType.aniClose,
+                                                  AnimationObject.aniPopup, isQuickClose)
 
-        ' Iterative visual-only traversal (stack) — no LogicalTreeHelper calls
-        Dim stack As New Stack(Of DependencyObject)()
-        Dim seen As New HashSet(Of DependencyObject)()
-        stack.Push(root)
-        seen.Add(root)
-
-        While stack.Count > 0
-            Dim current = stack.Pop()
-
-            Dim fe = TryCast(current, FrameworkElement)
-            If fe IsNot Nothing Then
-
-                ' Only change if different to avoid unnecessary layout invalidations
-                If fe.MaxWidth <> Double.PositiveInfinity Then fe.MaxWidth = Double.PositiveInfinity
-                If fe.MaxHeight <> Double.PositiveInfinity Then fe.MaxHeight = Double.PositiveInfinity
-
-                ' Use Auto sizing only if currently not Auto - avoids resetting same values
-                If Not Double.IsNaN(fe.Width) Then fe.Width = Double.NaN
-                If Not Double.IsNaN(fe.Height) Then fe.Height = Double.NaN
-            End If
-
-            Dim childCount As Integer = 0
-            Try
-                childCount = VisualTreeHelper.GetChildrenCount(current)
-            Catch ex As Exception
-                childCount = 0
-            End Try
-
-            For i As Integer = 0 To childCount - 1
-                Dim child = VisualTreeHelper.GetChild(current, i)
-                If child IsNot Nothing AndAlso Not seen.Contains(child) Then
-                    seen.Add(child)
-                    stack.Push(child)
-                End If
-            Next
-        End While
-
-        ' Restore visibility (unless it was already collapsed)
-        If feRoot IsNot Nothing AndAlso Not wasCollapsed Then
-            feRoot.Visibility = Visibility.Visible
-        End If
+                AddHandler objAnimation_Close.aniScale.Completed,
+                    Sub()
+                        PopupCloseComplete(objTask_Closing)
+                    End Sub
+        End Select
     End Sub
 
-    Private Sub SetAllControlsMaxSize(root As DependencyObject)
-        If root Is Nothing Then Return
+    Private Function ConfigVisual(visType As AnimationVisual) As DependencyProperty
+        Select Case visType
+            Case isScale
+                Return osStyle.osPopupScale.PopupScaleProperty
+            Case isOpacity
+                Return Border.OpacityProperty
+        End Select
+    End Function
 
-        Dim q As New Queue(Of DependencyObject)()
-        q.Enqueue(root)
+    Private Sub InitTransitionVisuals(objAniType As AnimationType, Optional isQuickClose As Boolean = False)
+        PrepTransitionVisuals(objAniType, isQuickClose)
 
-        While q.Count > 0
-            Dim current = q.Dequeue()
+        Select Case objAniType
+            Case aniOpen
+                With objAnimation_Open
+                    objContainer.BeginAnimation(ConfigVisual(isScale), .aniScale)
+                    objContainer.BeginAnimation(ConfigVisual(isOpacity), .aniFade)
+                End With
+            Case aniClose
+                With objAnimation_Close
+                    Timeline.SetDesiredFrameRate(.aniScale, 30)
+                    Timeline.SetDesiredFrameRate(.aniFade, 30)
 
-            ' If it's a FrameworkElement, set sizing properties
-            Dim fe = TryCast(current, FrameworkElement)
-            If fe IsNot Nothing Then
-                ' Don't change transforms or RenderTransforms; only layout properties
-                fe.MaxWidth = Double.PositiveInfinity
-                fe.MaxHeight = Double.PositiveInfinity
-
-                ' Let layout size automatically unless a fixed size is desired:
-                fe.Width = Double.NaN
-                fe.Height = Double.NaN
-            End If
-
-            ' Also consider FrameworkContentElement if needed (rare)
-            ' Many content elements don't expose Width/Height so we skip setting them.
-
-            ' Enqueue visual children (use VisualTreeHelper where available)
-            Try
-                Dim visualChildCount = VisualTreeHelper.GetChildrenCount(current)
-                For i As Integer = 0 To visualChildCount - 1
-                    Dim child = VisualTreeHelper.GetChild(current, i)
-                    If child IsNot Nothing Then q.Enqueue(child)
-                Next
-            Catch ex As Exception
-                ' Some nodes may throw for GetChildrenCount; ignore and continue
-            End Try
-
-            ' Enqueue logical children (to catch content presenters / items etc.)
-            Try
-                For Each obj In LogicalTreeHelper.GetChildren(current)
-                    Dim dep = TryCast(obj, DependencyObject)
-                    If dep IsNot Nothing Then q.Enqueue(dep)
-                Next
-            Catch ex As Exception
-                ' ignore
-            End Try
-        End While
+                    objContainer.BeginAnimation(ConfigVisual(isScale), .aniScale)
+                    objContainer.BeginAnimation(ConfigVisual(isOpacity), .aniFade)
+                End With
+        End Select
     End Sub
 
     Public Sub DetectCloseMethod(Optional isCmd As Boolean = False)
@@ -169,7 +99,7 @@ Public Class osPopupMenu_GUI
     Public Sub InitPopupOpen()
         If Not _hasAnimated Then
             _hasAnimated = True
-            ActivateWindowDisplay()
+            InitTransitionVisuals(aniOpen)
         End If
     End Sub
 
@@ -193,21 +123,9 @@ Public Class osPopupMenu_GUI
         Me.Owner = Nothing
     End Sub
 
-    Private Sub ActivateWindowDisplay()
-
-        objAnimation_Open = New osPopupAnimation(AnimationType.aniOpen, AnimationObject.aniPopup)
-
-        AddHandler objAnimation_Open.aniY.Completed, OpenCompleteEvent
-
-        Me.popScale.BeginAnimation(ScaleTransform.ScaleXProperty, objAnimation_Open.aniX)
-        Me.popScale.BeginAnimation(ScaleTransform.ScaleYProperty, objAnimation_Open.aniY)
-
-        Me.popupMainContainer.BeginAnimation(Border.OpacityProperty, objAnimation_Open.aniFade)
-    End Sub
-
     Private Sub OpenComplete()
         Try
-            RemoveHandler objAnimation_Open.aniY.Completed, OpenCompleteEvent
+            RemoveHandler objAnimation_Open.aniScale.Completed, OpenCompleteEvent
         Catch : End Try
 
         objAnimation_Open = Nothing
@@ -360,6 +278,22 @@ Partial Public Class osPopupMenu_GUI
         End Set
     End Property
 
+    Public ReadOnly Property popupBoundWidth As Double
+        Get
+            With Forms.SystemInformation.VirtualScreen
+                Return .Width ' * 2
+            End With
+        End Get
+    End Property
+
+    Public ReadOnly Property popupBoundHeight As Double
+        Get
+            With Forms.SystemInformation.VirtualScreen
+                Return .Height '* 2
+            End With
+        End Get
+    End Property
+
     Private Function ConfirmStatusChange(newStatus As Boolean) As UpdateStatus
         If newStatus = False Then
             Dim chkConfirmDisable = GetResponse(PromptType.DisableService)
@@ -368,8 +302,6 @@ Partial Public Class osPopupMenu_GUI
                 Case isYes
                     osFuncLib_InputScan.SetMonitorState(MonitorStatus.Paused)
                     Return UpdateStatus.ToDisabled
-                Case Else
-                    Return UpdateStatus.CancelUpdate
             End Select
         Else
             osFuncLib_InputScan.SetMonitorState(MonitorStatus.Starting)

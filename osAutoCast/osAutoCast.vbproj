@@ -16,6 +16,7 @@
     <NuGetPackageImportStamp>
     </NuGetPackageImportStamp>
     <PublishUrl>publish\</PublishUrl>
+    <UseSharedCompilation>false</UseSharedCompilation>
     <Install>true</Install>
     <InstallFrom>Disk</InstallFrom>
     <UpdateEnabled>false</UpdateEnabled>
@@ -113,6 +114,7 @@
     <Reference Include="Microsoft.Bcl.AsyncInterfaces, Version=10.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.Bcl.AsyncInterfaces.10.0.0-rc.1.25451.107\lib\net462\Microsoft.Bcl.AsyncInterfaces.dll</HintPath>
     </Reference>
+    <Reference Include="PresentationCore" />
     <Reference Include="SharpDX, Version=4.2.0.0, Culture=neutral, PublicKeyToken=b4dcf0f35e5521f1, processorArchitecture=MSIL">
       <HintPath>..\packages\SharpDX.4.2.0\lib\net45\SharpDX.dll</HintPath>
     </Reference>
@@ -159,7 +161,6 @@
       <RequiredTargetFramework>4.0</RequiredTargetFramework>
     </Reference>
     <Reference Include="WindowsBase" />
-    <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
     <Reference Include="System.Net.Http" />
   </ItemGroup>
@@ -272,7 +273,6 @@
     <Import Include="System.Windows.Input" />
     <Import Include="System.Windows.Shapes" />
     <Import Include="System.Windows.Media" />
-    <Import Include="System.Windows.Media.Imaging" />
     <Import Include="System.Windows.Navigation" />
   </ItemGroup>
   <ItemGroup>
@@ -307,7 +307,7 @@
     <EmbeddedResource Include="DataFiles\InterfaceData\ShaderLib\osShader_ProgPixel.ps" />
     <EmbeddedResource Include="DataFiles\InterfaceData\ShaderLib\osShader_ProgVertex.ps" />
     <EmbeddedResource Include="DataFiles\InterfaceData\ShaderLib\osShader_Text.ps" />
-    <Resource Include="DataFiles\StyleData\EffectLib\osEffectShader.ps" />
+    <Resource Include="DataFiles\StyleData\EffectLib\osShader_Text.ps" />
     <None Include="My Project\app.manifest" />
     <None Include="My Project\DataSources\osPrefStore.ProgVisualQualityData.datasource" />
     <None Include="My Project\Settings.settings">

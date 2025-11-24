@@ -12,9 +12,6 @@ Public NotInheritable Class osHandler_UI
 
     Public Shared pmFunc_TerminatePopupMenu As MouseButtonEventHandler = AddressOf TerminatePopupMenu
 
-    ' Public Shared Property osGui_InputMonitor As Form
-    ' Public Shared Property osGui_InputMonitor2 As Window
-
     Private Shared _osPrefs As Lazy(Of osPrefs)
     Public Shared ReadOnly Property osGui_Prefs As osPrefs
         Get
@@ -247,6 +244,7 @@ Public NotInheritable Class osHandler_UI
 
         Dim objTerminateTask = objWin_PopupMenu.Dispatcher.
             InvokeAsync(Async Function()
+                            objWin_PopupMenu.Owner = Nothing
                             objWin_PopupMenu.Topmost = True
 
                             Dim objTask_CloseMenu As New List(Of Task) From {

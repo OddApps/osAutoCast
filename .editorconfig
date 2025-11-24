@@ -2,3 +2,6 @@
 
 # BC40005: Member shadows an overridable method in the base type
 dotnet_diagnostic.BC40005.severity = none
+
+# BC42105: Function doesn't return a value on all code paths
+dotnet_diagnostic.BC42105.severity = none

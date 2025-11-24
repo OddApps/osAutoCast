@@ -256,8 +256,6 @@ Public Class ProgBarGui_AutoCast
                 Return New ProgVisualQuality(objVQ, bsOpaque)
             Case ProgVisOpts.Quality
                 Return New ProgVisualQuality(objVQ, bsOpaqueRGB)
-            Case Else
-                Return Nothing
         End Select
     End Function
 

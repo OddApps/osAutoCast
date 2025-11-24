@@ -69,11 +69,12 @@
     
     <Style x:Key="MainContainerStyle" TargetType="{x:Type Border}">
         <Setter Property="BorderBrush" Value="#FF521212" />
-        <Setter Property="Background" Value="#F41F1F1F" />
+        <Setter Property="Background" Value="#FF1F1F1F" />
         <Setter Property="BorderThickness" Value="4,4,4,4" />
         <Setter Property="CornerRadius" Value="8,8,8,8" />
         <Setter Property="ClipToBounds" Value="True" />
-        <!--<Setter Property="MaxWidth" Value="265" />-->
+        <Setter Property="MaxWidth" Value="265" />
+        <Setter Property="MaxHeight" Value="150" />
         <Setter Property="MinWidth" Value="265" />
         <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
         <Setter Property="Opacity" Value="0"/>

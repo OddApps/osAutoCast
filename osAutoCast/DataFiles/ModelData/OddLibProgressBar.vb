@@ -1204,8 +1204,6 @@ Public Class OddLib_ProgressBar
                         isMsgDisplayed = True
                         InvalidateVisual()
                     End Sub)
-            Case Else
-                Return Nothing
         End Select
     End Function
 

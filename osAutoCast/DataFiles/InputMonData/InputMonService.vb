@@ -5,6 +5,7 @@ Imports System.Threading
 Imports System.Windows.Forms
 Imports System.Windows.Threading
 
+#Disable Warning BC42353
 Public Class InputMonitorService
     Implements IDisposable
 
@@ -189,8 +190,6 @@ Public Class InputMonitorService
                             End While
                             Return True
                         End If
-                    Case Else
-                        Return False
                 End Select
             End Function
 
@@ -272,8 +271,6 @@ Public Class InputMonitorService
                 Return CmdBind_AutoCast()
             Case DetectOpts.MonitorPopup
                 Return CmdBind_ShowMenu()
-            Case Else
-                Return InputMon_ShiftDown()
         End Select
     End Function
 

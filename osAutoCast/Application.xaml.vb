@@ -7,6 +7,7 @@ Imports System.Globalization
 Imports osResDict = System.Collections.DictionaryEntry
 Imports System.Reflection
 
+#Disable Warning BC42353
 Class Application
 
     Private ReadOnly idxLoadTasks As New Dictionary(Of LoadContentData, Func(Of osInMon, Task)) From
@@ -130,7 +131,6 @@ Class Application
             Case isStarting : Return 10
             Case isPrefPrep : Return 625
             Case isLoadingUI : Return 625
-            Case Else : Return 10
         End Select
     End Function
 

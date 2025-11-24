@@ -16,6 +16,7 @@ Imports osProgColor = SharpDX.Mathematics.Interop.RawColor4
 Imports osProgBlendState = SharpDX.Direct3D11.BlendState
 Imports osAutoCast.DataTypeLib.AnimationObject
 Imports osAutoCast.DataTypeLib.AnimationType
+Imports osAutoCast.DataTypeLib.AnimationVisual
 Imports SharpDX
 Imports SharpDX.Direct3D11
 Imports osProgDevice = SharpDX.Direct3D11.Device
@@ -24,6 +25,8 @@ Imports pxShader_Pixel = SharpDX.Direct3D11.PixelShader
 Imports pxShader_Vertex = SharpDX.Direct3D11.VertexShader
 Imports osAutoCast.DataTypeLib.osShaderType
 Imports osAutoCast.osShaderDataLib
+
+#Disable Warning BC42353
 
 Public Module DataTypeLib
 
@@ -253,6 +256,11 @@ Public Module DataTypeLib
     Public Enum AnimationObject
         aniPopup
         aniOverlay
+    End Enum
+
+    Public Enum AnimationVisual
+        isScale
+        isOpacity
     End Enum
 
     Public Enum osShaderType
@@ -727,8 +735,6 @@ Public Class ProgMsg
                 Return 15
             Case > 40
                 Return 12
-            Case Else
-                Return 13.5
         End Select
     End Function
 
@@ -848,18 +854,15 @@ End Class
 
 Public Class osPopupAnimation
 
-    Public Property aniX As DoubleAnimation
-    Public Property aniY As DoubleAnimation
-
+    Public Property aniScale As DoubleAnimation
     Public Property aniFade As DoubleAnimation
 
     Private aniDuration As Duration
     Private aniDuration_Fade As Duration
 
     Private aniDuration_AutoStart As TimeSpan = TimeSpan.FromMilliseconds(0)
-    Private aniDuration_StartDelay As TimeSpan = TimeSpan.FromMilliseconds(100)
-
-    Private aniDelay_OverlayOpen As TimeSpan = TimeSpan.FromMilliseconds(275)
+    Private aniDuration_StartDelay As TimeSpan = TimeSpan.FromMilliseconds(200)
+    Private aniDuration_QuickCloseDelay As TimeSpan = TimeSpan.FromMilliseconds(125)
 
     Private aniDuration_Open As TimeSpan = TimeSpan.FromMilliseconds(380)
     Private aniDuration_Close As TimeSpan = TimeSpan.FromMilliseconds(380)
@@ -867,8 +870,9 @@ Public Class osPopupAnimation
     Private aniDuration_ExecFade As TimeSpan = TimeSpan.FromMilliseconds(380)
     Private aniDuration_OverlayFade As TimeSpan = TimeSpan.FromMilliseconds(300)
 
-    Private aniDuration_QuickCloseOverlay As TimeSpan = TimeSpan.FromMilliseconds(225)
-    Private aniDuration_QuickClosePopup As TimeSpan = TimeSpan.FromMilliseconds(175)
+    Private aniDuration_QuickCloseOverlay As TimeSpan = TimeSpan.FromMilliseconds(1)
+    Private aniDuration_QuickClosePopup As TimeSpan = TimeSpan.FromMilliseconds(420)
+    Private aniDuration_QuickCloseFade As TimeSpan = TimeSpan.FromMilliseconds(275)
 
     Public Sub New()
     End Sub
@@ -881,30 +885,37 @@ Public Class osPopupAnimation
                     SetAniDuration(aniDuration_Fade, aniDuration_ExecFade)
 
                     SetAnimation(aniOpen, aniPopup, aniDuration_Fade, True, Me.aniFade)
-
-                    SetAnimation(aniOpen, aniPopup, aniDuration, False, Me.aniX)
-                    SetAnimation(aniOpen, aniPopup, aniDuration, False, Me.aniY)
+                    SetAnimation(aniOpen, aniPopup, aniDuration, False, Me.aniScale)
                 Else
                     SetAniDuration(aniDuration_Fade, aniDuration_OverlayFade)
                     SetAnimation(aniOpen, aniOverlay, aniDuration_Fade, True, Me.aniFade)
                 End If
             Case aniClose
                 If aniObject = aniPopup Then
-                    SetAniDuration(aniDuration, SetCloseDuration(isQuickClose, aniObject))
-                    SetAniDuration(aniDuration_Fade, SetCloseDuration(isQuickClose, aniObject))
+                    SetAniDuration(aniDuration, CloseDuration_Scale(isQuickClose, aniObject))
+                    SetAniDuration(aniDuration_Fade, CloseDuration_Fade(isQuickClose, aniObject))
 
-                    SetAnimation(aniClose, aniPopup, aniDuration_Fade, True, Me.aniFade)
-
-                    SetAnimation(aniClose, aniPopup, aniDuration, False, Me.aniX, isQuickClose)
-                    SetAnimation(aniClose, aniPopup, aniDuration, False, Me.aniY, isQuickClose)
+                    SetAnimation(aniClose, aniPopup, aniDuration_Fade, True, Me.aniFade, isQuickClose)
+                    SetAnimation(aniClose, aniPopup, aniDuration, False, Me.aniScale, isQuickClose)
                 Else
-                    SetAniDuration(aniDuration_Fade, SetCloseDuration(isQuickClose, aniObject))
+                    SetAniDuration(aniDuration_Fade, CloseDuration_Fade(isQuickClose, aniObject))
                     SetAnimation(aniClose, aniOverlay, aniDuration_Fade, True, Me.aniFade)
                 End If
         End Select
     End Sub
 
-    Private Function SetCloseDuration(isQuickClose As Boolean, aniObject As AnimationObject)
+    Private Function CloseDuration_Fade(isQuickClose As Boolean, aniObject As AnimationObject)
+        Select Case aniObject
+            Case aniPopup
+                Return If(isQuickClose, aniDuration_QuickCloseFade,
+                    aniDuration_Close)
+            Case aniOverlay
+                Return If(isQuickClose, aniDuration_QuickCloseOverlay,
+                    aniDuration_OverlayFade)
+        End Select
+    End Function
+
+    Private Function CloseDuration_Scale(isQuickClose As Boolean, aniObject As AnimationObject)
         Select Case aniObject
             Case aniPopup
                 Return If(isQuickClose, aniDuration_QuickClosePopup,
@@ -912,8 +923,6 @@ Public Class osPopupAnimation
             Case aniOverlay
                 Return If(isQuickClose, aniDuration_QuickCloseOverlay,
                     aniDuration_OverlayFade)
-            Case Else
-                Return Nothing
         End Select
     End Function
 
@@ -926,19 +935,61 @@ Public Class osPopupAnimation
         Dim objNewAni As New DoubleAnimation() With {
             .From = objAniVal.vStart, .To = objAniVal.vStop,
             .FillBehavior = FillBehavior.HoldEnd,
-            .EasingFunction = ApplyEase(),
             .Duration = aniDur
         }
 
-        If objAniVal.vOpen Then
-            If aniObject = aniPopup Then
-                objNewAni.BeginTime = aniDelay_OverlayOpen
-            Else
-                objNewAni.BeginTime = aniDuration_AutoStart
-            End If
-        End If
+        SetAniOptions(aniType, aniObject, objAniVal.vOpen,
+                    objNewAni, isFadeAni, isQuickClose)
+
+        'If objAniVal.vOpen Then
+        '    If aniObject = aniPopup Then
+        '        objNewAni.BeginTime = aniDelay_OverlayOpen
+        '    Else
+        '        objNewAni.BeginTime = aniDuration_AutoStart
+        '    End If
+        'End If
 
         aniObj = objNewAni
+    End Sub
+
+    Private Sub SetAniOptions(aniType As AnimationType, aniObject As AnimationObject, isOpen As Boolean,
+                            ByRef objAni As DoubleAnimation, isFadeAni As Boolean, Optional isQuickClose As Boolean = False)
+
+        SetAniDelay(aniType, aniObject, isOpen,
+                    objAni, isQuickClose)
+
+        If isPopupFadeClose(aniType, aniObject, isFadeAni) Then
+            If Not isQuickClose Then
+                objAni.EasingFunction = ApplyEase()
+            End If
+        Else
+            objAni.EasingFunction = If(isQuickClose,
+                ApplyEase(True), ApplyEase())
+        End If
+
+    End Sub
+
+    Private Function isPopupFadeClose(aniType As AnimationType, aniObject As AnimationObject, isFadeAni As Boolean) As Boolean
+        If aniType = aniClose AndAlso aniObject = aniPopup Then
+            Return isFadeAni
+        End If
+    End Function
+
+    Private Sub SetAniDelay(aniType As AnimationType, aniObject As AnimationObject, isOpen As Boolean,
+                            ByRef objAni As DoubleAnimation, Optional isQuickClose As Boolean = False)
+        Select Case isOpen
+            Case True
+                If aniObject = aniPopup Then
+                    objAni.BeginTime = aniDuration_StartDelay
+                Else
+                    objAni.BeginTime = aniDuration_AutoStart
+                End If
+            Case False
+                If aniObject = aniPopup Then
+                    objAni.BeginTime = If(isQuickClose,
+                        aniDuration_QuickCloseDelay, aniDuration_AutoStart)
+                End If
+        End Select
     End Sub
 
     Private Function SetAniValues(aniType As AnimationType, aniObject As AnimationObject,
@@ -964,8 +1015,6 @@ Public Class osPopupAnimation
                     If(isFade, 0.0, 0.01))
             Case aniOverlay
                 Return If(isClose, 0.7, 0.0)
-            Case Else
-                Return 0.0
         End Select
     End Function
 
@@ -974,17 +1023,14 @@ Public Class osPopupAnimation
         Select Case aniObject
             Case aniPopup
                 Return If(isClose,
-                    If(isFade, 0.0, If(isQuickClose, 8.0, 0.01)), 1.0)
+                    If(isFade, 0.0, If(isQuickClose, 20.0, 0.01)), 1.0)
             Case aniOverlay
                 Return If(isClose, 0.0, 0.7)
-            Case Else
-                Return 0.0
         End Select
     End Function
 
     Public Sub DisposeAni()
-        aniX = Nothing
-        aniY = Nothing
+        aniScale = Nothing
         aniFade = Nothing
 
         aniDuration = Nothing
@@ -999,6 +1045,12 @@ Public Class osPopupAnimation
     Private Function ApplyEase() As QuinticEase
         Return New QuinticEase With {
             .EasingMode = EasingMode.EaseIn
+        }
+    End Function
+
+    Private Function ApplyEase(isQuickClose As Boolean) As QuadraticEase
+        Return New QuadraticEase With {
+            .EasingMode = EasingMode.EaseOut
         }
     End Function
 
@@ -1100,7 +1152,7 @@ Public Module osPopupMenuLib
                 End Sub
 
             .InitPopupMenuOverlay()
-            .ActivateOverlay()
+            .InitTransitionVisuals(aniOpen)
         End With
     End Sub
 
@@ -1714,8 +1766,6 @@ Public Class ResponseBox
                     Return PromptResponse.isYes
                 Case osForms.DialogResult.No
                     Return PromptResponse.isNo
-                Case Else
-                    Return PromptResponse.isCancel
             End Select
         End Using
     End Function
