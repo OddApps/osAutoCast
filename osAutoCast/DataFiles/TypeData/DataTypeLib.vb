@@ -17,6 +17,7 @@ Imports osProgBlendState = SharpDX.Direct3D11.BlendState
 Imports osAutoCast.DataTypeLib.AnimationObject
 Imports osAutoCast.DataTypeLib.AnimationType
 Imports osAutoCast.DataTypeLib.AnimationVisual
+Imports osAutoCast.DataTypeLib.OverlayVisualType
 Imports SharpDX
 Imports SharpDX.Direct3D11
 Imports osProgDevice = SharpDX.Direct3D11.Device
@@ -263,6 +264,24 @@ Public Module DataTypeLib
         isOpacity
     End Enum
 
+    Public Enum PopupVisualType
+        PopupVisual_Open
+        PopupVisual_Close
+        PopupVisual_CloseQuick
+        PopupVisual_CloseByCmd
+    End Enum
+
+    Public Enum OverlayVisualType
+        OverlayVisual_Open
+        OverlayVisual_Close
+        OverlayVisual_CloseQuick
+    End Enum
+
+    Public Enum VisualAction
+        VisualStarted
+        VisualComplete
+    End Enum
+
     Public Enum osShaderType
         sTypePixel
         sTypeVertex
@@ -281,108 +300,6 @@ Namespace GameMenuOpts
     End Enum
 
 End Namespace
-
-Public Module ProgBarLib
-
-    Public Const objShader_Vertex As String =
-"struct VSOut {
-    float4 pos : SV_Position;
-};
-
-VSOut VSMain(uint vid : SV_VertexID) {
-	float2 p = (vid == 0) ? float2(-1,-1)
-               : (vid == 1) ? float2(-1, 3)
-                             : float2( 3,-1);
-
-    VSOut o;
-	
-    o.pos = float4(p, 0.0, 1.0);
-    return o;
-}"
-
-
-    Public Const objShader_Pixel As String =
-"cbuffer Bar : register(b0) {
-    float prevValue;
-    float currValue;
-    float invSize;
-    float flags;
-    float4 pcoloractive;
-    float4 pcolorbg;
-    float barOffset;
-    float pad0;
-    float pad1;
-    float pad2;
-};
-
-struct PSIn {
-    float4 pos:SV_Position;
-};
-
-float snap_to_pixel(float t, float invSize) {
-    float px = 1.0 / invSize;
-    float p  = round(t * px);
-	
-    return p * invSize;
-}
-
-float aa_cover_edge(float edge, float x, float invSize) {
-	float d = x - edge;
-	float w = max(0.5 * invSize, 0.5 * fwidth(x));
-	
-	return saturate(0.5 - d / (2.0 * w));
-}
-
-float aa_band_vel(float a, float b, float x, float invSize, float dv) {
-    float lo = min(a, b);
-    float hi = max(a, b);
-
-	hi = max(hi, lo + invSize);
-
-	const float FEATHER_PER_UNIT_DV_PX = 0.75;
-    const float FEATHER_EXTRA_MAX_PX   = 0.5;
-
-    float addHalfPx = min(dv * FEATHER_PER_UNIT_DV_PX, FEATHER_EXTRA_MAX_PX);
-    float halfAA    = max(0.5 * invSize, 0.5 * fwidth(x)) + addHalfPx * invSize;
-
-	float left  = smoothstep(lo - halfAA, lo + halfAA, x);
-    float right = 1.0 - smoothstep(hi - halfAA, hi + halfAA, x);
-	
-    return saturate(left * right);
-}
-
-float4 PSMain(PSIn pin) : SV_Target {
-	float u = (pin.pos.x - barOffset) * invSize;
-
-	if (u < 0.0 || u > 1.0) discard;
-
-	float a = snap_to_pixel(prevValue, invSize);
-    float b = snap_to_pixel(currValue, invSize);
-
-    bool fullCompose = (((uint)flags & 4u) != 0u);
-
-    if (fullCompose) {
-		float filled = aa_cover_edge(b, u, invSize);
-		float4 col = lerp(pcolorbg, pcoloractive, filled);
-		
-        col.a = 1.0;
-		
-        return col;
-    } else {
-		if (a == b) discard;
-
-        float dv = abs(b - a);
-        float m  = aa_band_vel(a, b, u, invSize, dv);
-		
-        if (m <= 0.0) discard;
-
-		float4 baseCol = (b >= a) ? pcoloractive : pcolorbg;
-
-		return baseCol;
-    }
-}"
-
-End Module
 
 Public Class osShaderDataLib
 
@@ -852,6 +769,24 @@ Public Class osLoadData
 
 End Class
 
+Public Class osAnimationData
+
+    Public Property StartTime As Double
+    Public Property EndTime As Double
+    Public Property isOpen As Boolean
+
+    Public Sub New()
+    End Sub
+
+    Public Sub New(vStart As Double, vEnd As Double, vOpen As Boolean)
+        Me.StartTime = vStart
+        Me.EndTime = vEnd
+        Me.isOpen = vOpen
+    End Sub
+
+End Class
+
+
 Public Class osPopupAnimation
 
     Public Property aniScale As DoubleAnimation
@@ -860,9 +795,9 @@ Public Class osPopupAnimation
     Private aniDuration As Duration
     Private aniDuration_Fade As Duration
 
-    Private aniDuration_AutoStart As TimeSpan = TimeSpan.FromMilliseconds(0)
+    Private aniDuration_AutoStart As TimeSpan = TimeSpan.FromMilliseconds(1)
     Private aniDuration_StartDelay As TimeSpan = TimeSpan.FromMilliseconds(200)
-    Private aniDuration_QuickCloseDelay As TimeSpan = TimeSpan.FromMilliseconds(125)
+    Private aniDuration_QuickCloseDelay As TimeSpan = TimeSpan.FromMilliseconds(575)
 
     Private aniDuration_Open As TimeSpan = TimeSpan.FromMilliseconds(380)
     Private aniDuration_Close As TimeSpan = TimeSpan.FromMilliseconds(380)
@@ -870,9 +805,9 @@ Public Class osPopupAnimation
     Private aniDuration_ExecFade As TimeSpan = TimeSpan.FromMilliseconds(380)
     Private aniDuration_OverlayFade As TimeSpan = TimeSpan.FromMilliseconds(300)
 
-    Private aniDuration_QuickCloseOverlay As TimeSpan = TimeSpan.FromMilliseconds(1)
-    Private aniDuration_QuickClosePopup As TimeSpan = TimeSpan.FromMilliseconds(420)
-    Private aniDuration_QuickCloseFade As TimeSpan = TimeSpan.FromMilliseconds(275)
+    Private aniDuration_QuickCloseOverlay As TimeSpan = TimeSpan.FromMilliseconds(250)
+    Private aniDuration_QuickClosePopup As TimeSpan = TimeSpan.FromMilliseconds(525)
+    Private aniDuration_QuickCloseFade As TimeSpan = TimeSpan.FromMilliseconds(450)
 
     Public Sub New()
     End Sub
@@ -892,14 +827,14 @@ Public Class osPopupAnimation
                 End If
             Case aniClose
                 If aniObject = aniPopup Then
-                    SetAniDuration(aniDuration, CloseDuration_Scale(isQuickClose, aniObject))
+                    SetAniDuration(aniDuration, CloseDuration_Scale(isQuickClose))
                     SetAniDuration(aniDuration_Fade, CloseDuration_Fade(isQuickClose, aniObject))
 
                     SetAnimation(aniClose, aniPopup, aniDuration_Fade, True, Me.aniFade, isQuickClose)
                     SetAnimation(aniClose, aniPopup, aniDuration, False, Me.aniScale, isQuickClose)
                 Else
                     SetAniDuration(aniDuration_Fade, CloseDuration_Fade(isQuickClose, aniObject))
-                    SetAnimation(aniClose, aniOverlay, aniDuration_Fade, True, Me.aniFade)
+                    SetAnimation(aniClose, aniOverlay, aniDuration_Fade, True, Me.aniFade, isQuickClose)
                 End If
         End Select
     End Sub
@@ -915,15 +850,10 @@ Public Class osPopupAnimation
         End Select
     End Function
 
-    Private Function CloseDuration_Scale(isQuickClose As Boolean, aniObject As AnimationObject)
-        Select Case aniObject
-            Case aniPopup
-                Return If(isQuickClose, aniDuration_QuickClosePopup,
-                    aniDuration_Close)
-            Case aniOverlay
-                Return If(isQuickClose, aniDuration_QuickCloseOverlay,
-                    aniDuration_OverlayFade)
-        End Select
+    Private Function CloseDuration_Scale(isQuickClose As Boolean)
+        Return If(isQuickClose, aniDuration_QuickClosePopup,
+            aniDuration_Close)
+
     End Function
 
     Private Sub SetAnimation(aniType As AnimationType, aniObject As AnimationObject, aniDur As Duration,
@@ -933,21 +863,13 @@ Public Class osPopupAnimation
         Dim objAniVal = SetAniValues(aniType, aniObject, isFadeAni, isQuickClose)
 
         Dim objNewAni As New DoubleAnimation() With {
-            .From = objAniVal.vStart, .To = objAniVal.vStop,
+            .From = objAniVal.StartTime, .To = objAniVal.EndTime,
             .FillBehavior = FillBehavior.HoldEnd,
             .Duration = aniDur
         }
 
-        SetAniOptions(aniType, aniObject, objAniVal.vOpen,
+        SetAniOptions(aniType, aniObject, objAniVal.isOpen,
                     objNewAni, isFadeAni, isQuickClose)
-
-        'If objAniVal.vOpen Then
-        '    If aniObject = aniPopup Then
-        '        objNewAni.BeginTime = aniDelay_OverlayOpen
-        '    Else
-        '        objNewAni.BeginTime = aniDuration_AutoStart
-        '    End If
-        'End If
 
         aniObj = objNewAni
     End Sub
@@ -958,14 +880,19 @@ Public Class osPopupAnimation
         SetAniDelay(aniType, aniObject, isOpen,
                     objAni, isQuickClose)
 
-        If isPopupFadeClose(aniType, aniObject, isFadeAni) Then
-            If Not isQuickClose Then
-                objAni.EasingFunction = ApplyEase()
-            End If
-        Else
+        If aniObject = AnimationObject.aniPopup Then
             objAni.EasingFunction = If(isQuickClose,
                 ApplyEase(True), ApplyEase())
         End If
+
+        'If isPopupFadeClose(aniType, aniObject, isFadeAni) Then
+        '    If Not isQuickClose Then
+        '        objAni.EasingFunction = ApplyEase()
+        '    End If
+        'Else
+        '    objAni.EasingFunction = If(isQuickClose,
+        '        ApplyEase(True), ApplyEase())
+        'End If
 
     End Sub
 
@@ -986,24 +913,27 @@ Public Class osPopupAnimation
                 End If
             Case False
                 If aniObject = aniPopup Then
-                    objAni.BeginTime = If(isQuickClose,
-                        aniDuration_QuickCloseDelay, aniDuration_AutoStart)
+                    objAni.BeginTime = aniDuration_AutoStart
+                Else
+                    If isQuickClose Then
+                        objAni.BeginTime = aniDuration_QuickCloseDelay
+                    Else
+                        objAni.BeginTime = aniDuration_AutoStart
+                    End If
                 End If
         End Select
     End Sub
 
     Private Function SetAniValues(aniType As AnimationType, aniObject As AnimationObject,
                                   Optional isFadeAni As Boolean = False,
-                                  Optional isQuickClose As Boolean = False) As (vStart As Double, vStop As Double, vOpen As Boolean)
+                                  Optional isQuickClose As Boolean = False) As osAnimationData
         Select Case aniType
             Case aniOpen
-                Return (vStart:=CalcStartVal(isFadeAni, aniObject),
-                    vStop:=CalcStopVal(isFadeAni, aniObject),
-                    vOpen:=True)
+                Return New osAnimationData(CalcStartVal(isFadeAni, aniObject),
+                                           CalcStopVal(isFadeAni, aniObject), True)
             Case aniClose
-                Return (vStart:=CalcStartVal(isFadeAni, aniObject, True),
-                    vStop:=CalcStopVal(isFadeAni, aniObject, True, isQuickClose),
-                    vOpen:=False)
+                Return New osAnimationData(CalcStartVal(isFadeAni, aniObject, True),
+                                           CalcStopVal(isFadeAni, aniObject, True, isQuickClose), False)
         End Select
     End Function
 
@@ -1023,7 +953,7 @@ Public Class osPopupAnimation
         Select Case aniObject
             Case aniPopup
                 Return If(isClose,
-                    If(isFade, 0.0, If(isQuickClose, 20.0, 0.01)), 1.0)
+                    If(isFade, 0.0, If(isQuickClose, 15.0, 0.01)), 1.0)
             Case aniOverlay
                 Return If(isClose, 0.0, 0.7)
         End Select
@@ -1048,9 +978,9 @@ Public Class osPopupAnimation
         }
     End Function
 
-    Private Function ApplyEase(isQuickClose As Boolean) As QuadraticEase
-        Return New QuadraticEase With {
-            .EasingMode = EasingMode.EaseOut
+    Private Function ApplyEase(isQuickClose As Boolean) As CircleEase
+        Return New CircleEase With {
+            .EasingMode = EasingMode.EaseInOut
         }
     End Function
 
@@ -1141,9 +1071,7 @@ Public Module osPopupMenuLib
     End Sub
 
     Private Sub ExecPrepUI_PopupMenuOverlay(objGui_PopupMenuOverlay As MenuOverlayWindow)
-        Dim objWin_PopupMenuOverlay = objGui_PopupMenuOverlay
-
-        With objWin_PopupMenuOverlay
+        With objGui_PopupMenuOverlay
             AddHandler .objStacker.MouseUp,
                 Sub(sender As Object, e As MouseButtonEventArgs)
                     If DetermineMouseClick(e) Then
@@ -1152,14 +1080,12 @@ Public Module osPopupMenuLib
                 End Sub
 
             .InitPopupMenuOverlay()
-            .InitTransitionVisuals(aniOpen)
+            .InitTransitionVisuals(aniOpen, OverlayVisual_Open)
         End With
     End Sub
 
     Private Sub ExecPrepUI_TrayMenuOverlay(objGui_PopupMenuOverlay As MenuOverlayWindow)
-        Dim objWin_PopupMenuOverlay = objGui_PopupMenuOverlay
-
-        With objWin_PopupMenuOverlay
+        With objGui_PopupMenuOverlay
             .PrepTrayMenuOverlay()
             .Show()
         End With

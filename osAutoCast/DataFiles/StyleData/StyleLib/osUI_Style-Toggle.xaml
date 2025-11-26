@@ -7,12 +7,12 @@
 
     <Style x:Key="pmBtnEnabledStatusStyle" TargetType="{x:Type ToggleButton}"
            BasedOn="{StaticResource StyleBase_Toggle}">
-        <Setter Property="Background" Value="#A1101010" />
+        <Setter Property="Background" Value="#FF101010" />
         <Setter Property="Width" Value="257" />
         <Setter Property="osStyle:osStyles.CornerRadius" Value="8,8,0,0"/>
         <Setter Property="osStyle:osStyles.BorderThickness" Value="0,0,0,0"/>
         <Setter Property="osStyle:osStyles.BorderBrush" Value="#FF222222"/>
-        <Setter Property="osStyle:osStyles.Background" Value="#A1575757"/>
+        <Setter Property="osStyle:osStyles.Background" Value="#FF575757"/>
         <Setter Property="osStyle:osStyles.Template" Value="{StaticResource ToggleView_EnabledStatus}" />
     </Style>
     
@@ -22,7 +22,7 @@
         <Setter Property="osStyle:osStyles.CornerRadius" Value="0,0,0,0"/>
         <Setter Property="osStyle:osStyles.BorderThickness" Value="0,0,0,0"/>
         <Setter Property="osStyle:osStyles.BorderBrush" Value="#FF222222"/>
-        <Setter Property="osStyle:osStyles.Background" Value="#A1575757"/>
+        <Setter Property="osStyle:osStyles.Background" Value="#FF575757"/>
         <Setter Property="osStyle:osStyles.Template" Value="{StaticResource BtnView_GameMenu}" />
     </Style>
 </ResourceDictionary>

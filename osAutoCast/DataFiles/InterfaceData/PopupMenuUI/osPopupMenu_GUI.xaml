@@ -4,9 +4,9 @@
         Topmost="True" Background="Transparent" mc:Ignorable="d" Title="osPopupMenu_GUI" WindowStartupLocation="CenterScreen"
         ShowActivated="False" IsTabStop="False" Focusable="False" WindowStyle="None" ShowInTaskbar="False" AllowsTransparency="True"
         DataContext="{Binding RelativeSource={RelativeSource Self}}" Style="{StaticResource MainContentContainerStyle}">
-
+    
     <Border x:Name="popupMainContainer" CacheMode="BitmapCache" 
-            RenderOptions.BitmapScalingMode="LowQuality"
+            RenderOptions.BitmapScalingMode="HighQuality"
             osStyle:osPopupScale.PopupScale="0.01"
             Style="{StaticResource MainContainerStyle}">
         <Grid x:Name="popupContentContainer" Style="{StaticResource ContentContainerStyle}">

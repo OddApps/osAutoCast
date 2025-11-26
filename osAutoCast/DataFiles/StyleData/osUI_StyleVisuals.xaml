@@ -1,0 +1,118 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:osStyle="clr-namespace:osAutoCast.osStyle">
+
+    <Style x:Key="PopupVisuals" TargetType="{x:Type Border}">
+        <Style.Resources>
+            <Storyboard x:Key="PopupVisual_Open">
+                <DoubleAnimation Storyboard.TargetName="popupMainContainer" x:Name="visPopupScale"
+                                 Storyboard.TargetProperty="(osStyle:osPopupScale.PopupScale)"
+                                 From="{StaticResource PopupAni_OpenScale}"
+                                 To="{StaticResource PopupAni_Loaded}"
+                                 Duration="{StaticResource PopupAni_OpenDuration}" 
+                                 FillBehavior="HoldEnd">
+                    <DoubleAnimation.EasingFunction>
+                        <ExponentialEase EasingMode="EaseInOut" 
+                                         Exponent="8"/>
+                    </DoubleAnimation.EasingFunction>
+                </DoubleAnimation>
+                <DoubleAnimation Storyboard.TargetName="popupMainContainer"
+                                 Storyboard.TargetProperty="Opacity"
+                                 From="{StaticResource PopupAni_OpenFade}"
+                                 To="{StaticResource PopupAni_Loaded}"
+                                 Duration="{StaticResource PopupAni_OpenDuration}" 
+                                 FillBehavior="HoldEnd">
+                    <DoubleAnimation.EasingFunction>
+                        <QuadraticEase EasingMode="EaseInOut" />
+                    </DoubleAnimation.EasingFunction>
+                </DoubleAnimation>
+            </Storyboard>
+            <Storyboard x:Key="PopupVisual_Close">
+                <DoubleAnimation Storyboard.TargetName="popupMainContainer"
+                                 Storyboard.TargetProperty="(osStyle:osPopupScale.PopupScale)"
+                                 From="{StaticResource PopupAni_Loaded}"
+                                 To="{StaticResource PopupAni_CloseScale}"
+                                 Duration="{StaticResource PopupAni_CloseDuration}"
+                                 FillBehavior="HoldEnd">
+                    <DoubleAnimation.EasingFunction>
+                        <ExponentialEase EasingMode="EaseInOut" 
+                                         Exponent="6"/>
+                    </DoubleAnimation.EasingFunction>
+                </DoubleAnimation>
+                <DoubleAnimation Storyboard.TargetName="popupMainContainer"
+                                 Storyboard.TargetProperty="Opacity"
+                                 From="{StaticResource PopupAni_Loaded}"
+                                 To="{StaticResource PopupAni_CloseFade}"
+                                 Duration="{StaticResource PopupAni_CloseDuration}" 
+                                 FillBehavior="HoldEnd">
+                    <DoubleAnimation.EasingFunction>
+                        <QuadraticEase EasingMode="EaseOut" />
+                    </DoubleAnimation.EasingFunction>
+                </DoubleAnimation>
+            </Storyboard>
+            <Storyboard x:Key="PopupVisual_QuickClose">
+                <DoubleAnimation Storyboard.TargetName="popupMainContainer"
+                                 Storyboard.TargetProperty="(osStyle:osPopupScale.PopupScale)"
+                                 To="{StaticResource PopupAni_QuickClose}"
+                                 Duration="{StaticResource PopupAni_CloseQuickDuration}" 
+                                 FillBehavior="HoldEnd">
+                    <DoubleAnimation.EasingFunction>
+                        <ExponentialEase EasingMode="EaseInOut" 
+                                         Exponent="8"/>
+                    </DoubleAnimation.EasingFunction>
+                </DoubleAnimation>
+                <DoubleAnimation Storyboard.TargetName="popupMainContainer"
+                                 Storyboard.TargetProperty="Opacity"
+                                 From="{StaticResource PopupAni_Loaded}"
+                                 To="{StaticResource PopupAni_CloseFade}"
+                                 Duration="{StaticResource PopupAni_CloseQuickDuration}"
+                                 FillBehavior="HoldEnd">
+                    <DoubleAnimation.EasingFunction>
+                        <ExponentialEase EasingMode="EaseInOut" 
+                                         Exponent="8"/>
+                    </DoubleAnimation.EasingFunction>
+                </DoubleAnimation>
+            </Storyboard>
+        </Style.Resources>
+    </Style>
+
+    <Style x:Key="OverlayVisuals" TargetType="{x:Type Window}">
+        <Setter Property="Opacity" Value="0"/>
+        <Style.Resources>
+            <Storyboard x:Key="OverlayVisual_Open">
+                <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                 To="{StaticResource OverlayAni_Loaded}"
+                                 Duration="{StaticResource OverlayAni_OpenDuration}" 
+                                 FillBehavior="HoldEnd">
+                    <DoubleAnimation.EasingFunction>
+                        <QuadraticEase EasingMode="EaseInOut" />
+                    </DoubleAnimation.EasingFunction>
+                </DoubleAnimation>
+            </Storyboard>
+            <Storyboard x:Key="OverlayVisual_Close">
+                <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                 From="{StaticResource OverlayAni_Loaded}"
+                                 To="{StaticResource OverlayAni_CloseFade}"
+                                 Duration="{StaticResource OverlayAni_CloseDuration}" 
+                                 FillBehavior="HoldEnd">
+                    <DoubleAnimation.EasingFunction>
+                        <QuadraticEase EasingMode="EaseInOut" />
+                    </DoubleAnimation.EasingFunction>
+                </DoubleAnimation>
+            </Storyboard>
+            <Storyboard x:Key="OverlayVisual_QuickClose">
+                <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                 From="{StaticResource OverlayAni_Loaded}"
+                                 To="{StaticResource OverlayAni_CloseFade}"
+                                 BeginTime="{StaticResource PopupAni_CloseQuickDelay}"
+                                 Duration="{StaticResource OverlayAni_CloseQuickDuration}" 
+                                 FillBehavior="HoldEnd">
+                    <DoubleAnimation.EasingFunction>
+                        <QuadraticEase EasingMode="EaseOut" />
+                    </DoubleAnimation.EasingFunction>
+                </DoubleAnimation>
+            </Storyboard>
+        </Style.Resources>
+    </Style>
+
+</ResourceDictionary>

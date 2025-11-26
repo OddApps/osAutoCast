@@ -2,21 +2,59 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:sys="clr-namespace:System;assembly=mscorlib"
                     xmlns:oscolor="clr-namespace:System.Windows.Media;assembly=PresentationCore">
+    
+    <!-- ** Effect Settings ** -->
 
     <sys:Double x:Key="osEffect_Thickness">1.2</sys:Double>
     <sys:Double x:Key="osEffect_Spread">6</sys:Double>
     <sys:Double x:Key="osEffect_Fade">0</sys:Double>
     <sys:Double x:Key="osEffect_Stroke">1</sys:Double>
-    <sys:Double x:Key="osEffect_Glow">0.5</sys:Double>
-    
+    <sys:Double x:Key="osEffect_Glow">0.5</sys:Double>    
     <oscolor:Color x:Key="osEffect_Color">#A1421110</oscolor:Color>
 
-    <sys:Double x:Key="osBtn_Height">36</sys:Double>
+    <!-- ** Button Settings ** -->
     
+    <sys:Double x:Key="osBtn_Height">36</sys:Double>    
     <sys:Double x:Key="osBtn_FontSize">20</sys:Double>
-    <FontWeight x:Key="osBtn_FontWeight">Bold</FontWeight>
-    
+    <FontWeight x:Key="osBtn_FontWeight">Bold</FontWeight>    
     <Thickness x:Key="osBtn_TextPadding">0,2,0,0</Thickness>
     <Thickness x:Key="osBtn_ContentPadding">0,2</Thickness>
+
+    <!-- ** Visual Settings ** -->
+    
+    <!-- [ Delay Timing ] -->
+
+    <sys:TimeSpan x:Key="PopupAni_AutoStart">0:0:0</sys:TimeSpan>
+    <sys:TimeSpan x:Key="PopupAni_OpenDelay">0:0:0.0</sys:TimeSpan>
+    <sys:TimeSpan x:Key="PopupAni_CloseQuickDelay">0:0:0.575</sys:TimeSpan>
+
+    <!-- [ Popup Timing ] -->
+
+    <Duration x:Key="PopupAni_OpenDuration">0:0:0.485</Duration>
+    <Duration x:Key="PopupAni_CloseDuration">0:0:0.485</Duration>
+    <Duration x:Key="PopupAni_CloseQuickDuration">0:0:0.500</Duration>
+    <Duration x:Key="PopupAni_CloseQuickFadeDuration">0:0:0.500</Duration>
+
+    <!-- [ Popup Config ] -->
+    
+    <sys:Double x:Key="PopupAni_OpenScale">0.01</sys:Double>
+    <sys:Double x:Key="PopupAni_OpenFade">0.0</sys:Double>
+    <sys:Double x:Key="PopupAni_Loaded">1.0</sys:Double>
+    <sys:Double x:Key="PopupAni_ScaleQuickClose">0.0</sys:Double>
+    <sys:Double x:Key="PopupAni_CloseFade">0.0</sys:Double>
+    <sys:Double x:Key="PopupAni_CloseScale">0.01</sys:Double>
+    <sys:Double x:Key="PopupAni_QuickClose">22.0</sys:Double>
+
+    <!-- [ Overlay Timing ] -->
+
+    <Duration x:Key="OverlayAni_OpenDuration">0:0:0.500</Duration>
+    <Duration x:Key="OverlayAni_CloseDuration">0:0:0.500</Duration>
+    <Duration x:Key="OverlayAni_CloseQuickDuration">0:0:0.250</Duration>
+
+    <!-- [ Overlay Config ] -->
+    
+    <sys:Double x:Key="OverlayAni_OpenFade">0.0</sys:Double>
+    <sys:Double x:Key="OverlayAni_Loaded">0.7</sys:Double>
+    <sys:Double x:Key="OverlayAni_CloseFade">0.0</sys:Double>
 
 </ResourceDictionary>

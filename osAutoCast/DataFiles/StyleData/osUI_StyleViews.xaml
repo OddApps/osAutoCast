@@ -27,7 +27,7 @@
             </Trigger>
             <Trigger Property="IsChecked" Value="False">
                 <Setter Property="Content" Value="Disabled" />
-                <Setter Property="Background" Value="#A10F0F0F" />
+                <Setter Property="Background" Value="#FF0F0F0F" />
                 <Setter Property="Foreground" Value="#FF373636" />
                 <Setter TargetName="toggleContent" Property="Effect">
                     <Setter.Value>

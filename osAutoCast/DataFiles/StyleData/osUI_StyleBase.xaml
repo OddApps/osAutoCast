@@ -6,7 +6,7 @@
     <oseffect:TexelSizeConverter x:Key="TexelSizeConverter" />
 
     <Style x:Key="StyleBase_Btn" TargetType="{x:Type Button}">
-        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Background" Value="#FF1F1F1F" />
         <Setter Property="Foreground" Value="#FF8C8A8A" />
         <Setter Property="Width" Value="257" />
         <Setter Property="MinHeight" Value="34" />
@@ -22,7 +22,7 @@
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type Button}">
                     <Border x:Name="btnBorder" Background="{TemplateBinding Background}"
-                            Width="{TemplateBinding Width}"
+                            Width="{TemplateBinding Width}" 
                             CornerRadius="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=(osStyle:osStyles.CornerRadius)}"
                             BorderThickness="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=(osStyle:osStyles.BorderThickness)}"
                             BorderBrush="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=(osStyle:osStyles.BorderBrush)}">
@@ -41,7 +41,7 @@
     </Style>
     
     <Style x:Key="StyleBase_Toggle" TargetType="{x:Type ToggleButton}">
-        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Background" Value="#FF1F1F1F" />
         <Setter Property="Foreground" Value="#FF8C8A8A" />
         <Setter Property="Width" Value="257" />
         <Setter Property="MinHeight" Value="34" />

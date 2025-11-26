@@ -19,6 +19,9 @@ Imports osAutoCast.DataTypeLib.ProgEaseVals
 Imports osAutoCast.DataTypeLib.PromptResponse
 Imports osAutoCast.DataTypeLib.AnimationType
 Imports osAutoCast.DataTypeLib.AnimationVisual
+Imports osAutoCast.DataTypeLib.PopupVisualType
+Imports osAutoCast.DataTypeLib.OverlayVisualType
+Imports System.Windows.Media.Animation
 Imports osAutoCast.CoreDataLib
 Imports osRect = SharpDX.Mathematics.Interop
 Imports osForms = System.Windows.Forms
@@ -43,6 +46,7 @@ Imports pxShader_Vertex = SharpDX.Direct3D11.VertexShader
 #Disable Warning IDE0060 ' Remove unused parameter
 #Disable Warning IDE1006 ' Remove unused parameter
 #Disable Warning BC42353
+
 Public NotInheritable Class osFuncLib_InputScan
 
     Public Shared curMonitorStatus As MonitorStatus
@@ -737,15 +741,29 @@ Public NotInheritable Class MenuOverlayWindow
     Private Shared Function SetWindowLongPtr(hWnd As IntPtr, nIndex As Integer, dwNewLong As IntPtr) As IntPtr
     End Function
 
-    Private objTask_Closing As TaskCompletionSource(Of Boolean)
+    Private objTask_Open As TaskCompletionSource(Of Boolean)
+    Private objTask_Close As TaskCompletionSource(Of Boolean)
 
-    Private objAnimation_Open As osPopupAnimation = Nothing
-    Private objAnimation_Close As osPopupAnimation = Nothing
+    Private objAnimation_Open As Storyboard = Nothing
+    Private objAnimation_Close As Storyboard = Nothing
 
     Private OpenCompleteEvent As EventHandler = AddressOf OpenComplete
 
     Private isFromTray As Boolean
-    Private setOpacity As Double = 0.7
+
+    Private OverlayOpacity_Tray As Double = 0.01
+    Private OverlayOpacity_Popup As Double = 0.0
+
+    Private VisualDataLocation As String = "/DataFiles/StyleData/osUI_StyleVisuals.xaml"
+    Private VisualDataURI As System.Uri = New System.Uri(VisualDataLocation, System.UriKind.Relative)
+
+    Private objScreenData As Rectangle = SystemInformation.VirtualScreen
+
+    Private idxOverlayVisuals As New Dictionary(Of OverlayVisualType, String) From {
+        {OverlayVisual_Open, "OverlayVisual_Open"},
+        {OverlayVisual_Close, "OverlayVisual_Close"},
+        {OverlayVisual_CloseQuick, "OverlayVisual_QuickClose"}
+    }
 
     Public objStacker As StackPanel
 
@@ -772,32 +790,40 @@ Public NotInheritable Class MenuOverlayWindow
 
     Private Sub SetBG()
         With Me
-            If Me.isFromTray Then
+            If .isFromTray Then
                 .Background = osBrushColor.Black
-                .Opacity = 0.01
+                .Opacity = OverlayOpacity_Tray
             Else
-                objStacker = CreateStackLayout()
+                SetOverlayVisuals()
 
-                .Background = osBrushColor.Transparent
-                .Opacity = 1
-                .Content = objStacker
+                .Background = osBrushColor.Black
+                .Opacity = OverlayOpacity_Popup
             End If
         End With
     End Sub
 
     Public Sub InitPopupMenuOverlay()
-        Me.ShowInTaskbar = False
-        Me.ShowActivated = False
+        With Me
+            .ShowInTaskbar = False
+            .ShowActivated = False
 
-        Me.Topmost = True
+            .Topmost = True
 
-        With SystemInformation.VirtualScreen
-            objStacker.HorizontalAlignment = osHorz.Left
-            objStacker.VerticalAlignment = osVert.Top
-            objStacker.Width = .Width
-            objStacker.Height = .Height
+            .HorizontalAlignment = osHorz.Left
+            .VerticalAlignment = osVert.Top
+            .Width = objScreenData.Width
+            .Height = objScreenData.Height
+
+            .Show()
         End With
     End Sub
+
+    Public Async Function InitOverlayOpen(objVisType As OverlayVisualType) As Task
+        BeginOpenTask(objTask_Open)
+        InitTransitionVisuals(aniOpen, objVisType)
+
+        Await objTask_Open.Task
+    End Function
 
     Public Sub PrepTrayMenuOverlay()
         Me.ShowInTaskbar = False
@@ -815,54 +841,108 @@ Public NotInheritable Class MenuOverlayWindow
         End With
     End Sub
 
-    Function CreateStackLayout() As StackPanel
-        Return New StackPanel With {
-            .Orientation = osControls.Orientation.Vertical, .HorizontalAlignment = osHorz.Stretch,
-            .VerticalAlignment = osVert.Stretch, .Opacity = 0.0, .Background = osBrushColor.Black
+    Private Sub SetOverlayVisuals()
+        Dim objOverlayVis As New ResourceDictionary() With {
+            .Source = VisualDataURI
         }
-    End Function
+
+        With Me
+            .Resources.
+                MergedDictionaries.Add(objOverlayVis)
+
+            .Style = CType(
+                objOverlayVis("OverlayVisuals"), Style)
+        End With
+
+    End Sub
+
+    Private Sub CreateStackLayout(ByRef objOverlayStackPanel As StackPanel)
+        Dim objOverlayContainer As New StackPanel With {
+            .Orientation = osControls.Orientation.Vertical, .HorizontalAlignment = osHorz.Stretch,
+            .VerticalAlignment = osVert.Stretch, .Opacity = 0.0, .Background = osBrushColor.Black,
+            .Name = "PopupOverlayContainer", .CacheMode = New BitmapCache
+        }
+
+        Dim objOverlayVis As New ResourceDictionary() With {
+            .Source = VisualDataURI
+        }
+
+        objOverlayContainer.Resources.
+            MergedDictionaries.Add(objOverlayVis)
+
+        objOverlayContainer.Style = CType(objOverlayVis("OverlayVisuals"), Style)
+
+        objOverlayStackPanel = objOverlayContainer
+    End Sub
 
     Private Sub OpenComplete()
         Try
-            RemoveHandler objAnimation_Open.aniFade.Completed,
+            RemoveHandler objAnimation_Open.Completed,
                 OpenCompleteEvent
         Catch : End Try
 
+        OverlayOpenComplete(objTask_Open)
         objAnimation_Open = Nothing
     End Sub
 
     Private Sub BeginClosingTask(ByRef objCloseResult As TaskCompletionSource(Of Boolean))
-        If objCloseResult IsNot Nothing Then objCloseResult = Nothing
-
-        objCloseResult = New TaskCompletionSource(Of Boolean)(TaskCreationOptions.
-                                                    RunContinuationsAsynchronously)
+        objCloseResult.ResetAndInitTask()
     End Sub
 
-    Private Sub PopupCloseComplete(ByRef objTask As TaskCompletionSource(Of Boolean))
+    Private Sub BeginOpenTask(ByRef objOpenResult As TaskCompletionSource(Of Boolean))
+        objOpenResult.ResetAndInitTask()
+    End Sub
+
+    Private Sub OverlayOpenComplete(ByRef objTask As TaskCompletionSource(Of Boolean))
         objTask.TrySetResult(True)
-
-        objAnimation_Close.DisposeAni()
-        objAnimation_Close = Nothing
     End Sub
 
-    Private Sub PrepTransitionVisuals(objAniType As AnimationType, Optional isQuickClose As Boolean = False)
+    Private Sub OverlayCloseComplete(ByRef objTask As TaskCompletionSource(Of Boolean))
+        objTask.TrySetResult(True)
+    End Sub
+
+    Private Sub PrepTransitionVisuals(objAniType As AnimationType, objVisType As OverlayVisualType)
         Select Case objAniType
             Case aniOpen
-                objAnimation_Open = New osPopupAnimation(AnimationType.aniOpen,
-                                                 AnimationObject.aniOverlay)
+                objAnimation_Open = EstablishVisual(Me, objVisType)
 
-                AddHandler objAnimation_Open.aniFade.Completed,
+                AddHandler objAnimation_Open.Completed,
                     OpenCompleteEvent
             Case aniClose
-                objAnimation_Close = New osPopupAnimation(AnimationType.aniClose,
-                                                  AnimationObject.aniOverlay, isQuickClose)
+                objAnimation_Close = EstablishVisual(Me, objVisType)
 
-                AddHandler objAnimation_Close.aniFade.Completed,
+                AddHandler objAnimation_Close.Completed,
                     Sub()
-                        PopupCloseComplete(objTask_Closing)
+                        OverlayCloseComplete(objTask_Close)
                     End Sub
         End Select
     End Sub
+
+    Private Function VisRes_Select(objContainer As FrameworkElement) As Style
+        Return objContainer.Style
+    End Function
+
+    Private Function VisRes_Set(objVisResource As Style, objVisType As PopupVisualType) As Storyboard
+        Return TryCast(objVisResource.
+            Resources(GetVisualKey(objVisType)), Storyboard)
+    End Function
+
+    Private Function EstablishVisual(objContainer As FrameworkElement, objVisType As OverlayVisualType) As Storyboard
+        Dim sbMain = VisRes_Set(VisRes_Select(objContainer), objVisType)
+
+        Dim objOverlayVis As Storyboard = sbMain.Clone()
+
+        Storyboard.SetTarget(objOverlayVis, objContainer)
+        Storyboard.SetDesiredFrameRate(objOverlayVis, 30)
+
+        Return objOverlayVis
+    End Function
+
+    Private Function GetVisualKey(objVisType As OverlayVisualType) As String
+        Return idxOverlayVisuals.First(Function(visKey)
+                                           Return visKey.Key = objVisType
+                                       End Function).Value
+    End Function
 
     Private Function ConfigVisual(visType As AnimationVisual) As DependencyProperty
         Select Case visType
@@ -871,24 +951,22 @@ Public NotInheritable Class MenuOverlayWindow
         End Select
     End Function
 
-    Public Sub InitTransitionVisuals(objAniType As AnimationType, Optional isQuickClose As Boolean = False)
-        PrepTransitionVisuals(objAniType, isQuickClose)
+    Public Sub InitTransitionVisuals(objAniType As AnimationType, objVisType As OverlayVisualType)
+        PrepTransitionVisuals(objAniType, objVisType)
 
         Select Case objAniType
             Case aniOpen
-                Me.Show()
-
-                objOverlayContainer.BeginAnimation(ConfigVisual(isOpacity), objAnimation_Open.aniFade)
+                TriggerVisuals(Me, objAnimation_Open)
             Case aniClose
-                objOverlayContainer.BeginAnimation(ConfigVisual(isOpacity), objAnimation_Close.aniFade)
+                TriggerVisuals(Me, objAnimation_Close)
         End Select
     End Sub
 
-    Public Async Function InitOverlayClose(Optional isQuickClose As Boolean = False) As Task
-        BeginClosingTask(objTask_Closing)
-        InitTransitionVisuals(aniClose, isQuickClose)
+    Public Async Function InitOverlayClose(objVisType As OverlayVisualType, Optional isQuickClose As Boolean = False) As Task
+        BeginClosingTask(objTask_Close)
+        InitTransitionVisuals(aniClose, objVisType)
 
-        Await objTask_Closing.Task
+        Await objTask_Close.Task
     End Function
 
     Protected Overrides Sub OnSourceInitialized(e As EventArgs)
@@ -899,6 +977,16 @@ Public NotInheritable Class MenuOverlayWindow
 
         ex = ex Or WS_EX_NOACTIVATE Or WS_EX_TOOLWINDOW
         SetWindowLongPtr(hwnd, GWL_EXSTYLE, New IntPtr(ex))
+    End Sub
+
+    Private Async Sub TriggerVisuals(objOverlayWindow As FrameworkElement, objVisualData As Storyboard)
+        Await objOverlayWindow.Dispatcher.BeginInvoke(Sub()
+                                                          Try
+                                                              objVisualData.Begin(objOverlayWindow)
+                                                          Catch ex As Exception
+                                                              Debug.WriteLine("Failed to begin storyboard: " & ex.Message)
+                                                          End Try
+                                                      End Sub, DispatcherPriority.Render)
     End Sub
 
 End Class
@@ -921,10 +1009,11 @@ Public NotInheritable Class osFuncLib_PopupMenu
         Dim objTask_PopupOverlay = PrepDispatcher().InvokeAsync(
                 Async Function()
                     Await osHandler_UI.LaunchGui(TriggerAction.ShowMenu)
-                    osHandler_UI.DisplayGUI(TriggerType.ShowMenu)
+                    Await osHandler_UI.A_ShowPopupUI(TriggerType.ShowMenu)
 
                     Return GetPopupWin()
                 End Function)
+
         objGui_Popup = Await objTask_PopupOverlay.Task.Unwrap
 
         Dim objPopupResult = Await PopupCloseDetect(objPopupTaskMonitor,
@@ -952,8 +1041,8 @@ Public NotInheritable Class osFuncLib_PopupMenu
         StopCloseDetect(objMonTask, objTaskS)
     End Sub
 
-    Private Shared Sub InvokeCloseByCmd()
-        osHandler_UI.ResetPopupMenu()
+    Private Shared Async Sub InvokeCloseByCmd()
+        Await osHandler_UI.ResetPopupMenu(PopupVisual_CloseByCmd)
     End Sub
 
     Private Shared Sub SetMonitorResult(setRes As Boolean, ByRef objTaskS As TaskCompletionSource(Of Boolean))
@@ -1744,6 +1833,21 @@ Public Module ControlExtensions
                 obj = Nothing
             End Try
         End If
+    End Sub
+
+    <Runtime.CompilerServices.Extension>
+    Public Sub ResetTask(ByRef objTask As TaskCompletionSource(Of Boolean))
+        If objTask IsNot Nothing Then
+            objTask = Nothing : End If
+    End Sub
+
+    <Runtime.CompilerServices.Extension>
+    Public Sub ResetAndInitTask(ByRef objTask As TaskCompletionSource(Of Boolean))
+        If objTask IsNot Nothing Then
+            objTask = Nothing : End If
+
+        objTask = New TaskCompletionSource(Of Boolean)(TaskCreationOptions.
+                                                    RunContinuationsAsynchronously)
     End Sub
 
     <Runtime.CompilerServices.Extension>
