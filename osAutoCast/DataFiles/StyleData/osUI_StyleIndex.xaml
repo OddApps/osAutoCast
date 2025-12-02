@@ -4,9 +4,10 @@
                     xmlns:oseffect="clr-namespace:osAutoCast.osEffectConv"
                     xmlns:local="clr-namespace:osAutoCast">
     <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="StyleLib/osUI_Style-LoadScreen.xaml"/>
         <ResourceDictionary Source="StyleLib/osUI_Style-Border.xaml"/>
         <ResourceDictionary Source="StyleLib/osUI_Style-Button.xaml"/>
-        <ResourceDictionary Source="StyleLib/osUI-Style-Container.xaml"/>
+        <ResourceDictionary Source="StyleLib/osUI_Style-Container.xaml"/>
         <ResourceDictionary Source="StyleLib/osUI_Style-Toggle.xaml"/>
     </ResourceDictionary.MergedDictionaries>
 </ResourceDictionary>

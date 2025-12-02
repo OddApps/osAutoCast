@@ -1,16 +1,15 @@
 ﻿Imports System.IO
 Imports System.Reflection
+Imports System.Text.RegularExpressions
 Imports System.Threading
-Imports System.Windows.Threading
-Imports osAutoCast.osShaderDataLib
-Imports SharpDX.Direct3D11
+Imports System.Runtime.InteropServices
+Imports osAutoCast.DataTypeLib.osShaderType
+Imports osAutoCast.DataTypeLib.DetectOpts
+Imports osAutoCast.DataTypeLib.TriggerType
+Imports osAutoCast.DataTypeLib.ProgressMode
+Imports osAutoCast.DataTypeLib.TriggerAction
 Imports osProgDevice = SharpDX.Direct3D11.Device
 Imports osRegEx = System.Text.RegularExpressions.Regex
-Imports System.Resources
-Imports System.Globalization
-Imports osResDict = System.Collections.DictionaryEntry
-Imports System.Text.RegularExpressions
-Imports osAutoCast.DataTypeLib.osShaderType
 
 #Disable Warning IDE0060 ' Remove unused parameter
 #Disable Warning BC42353
@@ -19,6 +18,19 @@ Public NotInheritable Class CoreDataLib
 
     Private Sub New()
     End Sub
+
+    Private Const GWL_EXSTYLE As Integer = -20
+    Private Const WS_EX_NOACTIVATE As Integer = &H8000000
+
+    Private Const MA_NOACTIVATE As Integer = 3
+
+    <DllImport("user32.dll", SetLastError:=True)>
+    Private Shared Function GetWindowLong(hWnd As IntPtr, nIndex As Integer) As Integer
+    End Function
+
+    <DllImport("user32.dll", SetLastError:=True)>
+    Private Shared Function SetWindowLong(hWnd As IntPtr, nIndex As Integer, dwNewLong As Integer) As Integer
+    End Function
 
     Private Shared ReadOnly isDebug As Boolean = False
 
@@ -60,10 +72,10 @@ Public NotInheritable Class CoreDataLib
     Public Shared InputMonSvc As InputMonitorService = Nothing
 
     Private Shared ReadOnly TriggerHandlers As (HandleAction As TriggerAction, HandleEvent As Func(Of Task))() = {
-        (TriggerAction.AutoCast, Function() osFuncLib_AutoCast.ExecuteAutoCast()),
-        (TriggerAction.AutoPass, Function() osFuncLib_AutoPass.ExecuteAutoPass()),
-        (TriggerAction.ShowOpts, Function() osFuncLib_ShowOpts.ExecuteDispOpts()),
-        (TriggerAction.ShowMenu, Function() osFuncLib_PopupMenu.ShowPopupMenu())
+        (TriggerAutoCast, Function() osFuncLib_AutoCast.ExecuteAutoCast()),
+        (TriggerAutoPass, Function() osFuncLib_AutoPass.ExecuteAutoPass()),
+        (TriggerShowOpts, Function() osFuncLib_ShowOpts.ExecuteDispOpts()),
+        (TriggerShowMenu, Function() osFuncLib_PopupMenu.ShowPopupMenu())
     }
 
     Public Shared Function osStatus_Fetch() As Boolean
@@ -82,23 +94,36 @@ Public NotInheritable Class CoreDataLib
         Return osPrefStoreData.AutoCast_RTC
     End Function
 
+    Public Shared Function GetWinHwnd(objWin As Window) As IntPtr
+        Return New Interop.WindowInteropHelper(objWin).Handle
+    End Function
+
+    Public Shared Function GetWinOpts(hwndWin As IntPtr) As IntPtr
+        Return (GetWindowLong(hwndWin, GWL_EXSTYLE) Or WS_EX_NOACTIVATE)
+    End Function
+
+    Public Shared Sub SetWinOpts(hwndWin As IntPtr)
+        SetWindowLong(hwndWin, GWL_EXSTYLE,
+                      GetWinOpts(hwndWin))
+    End Sub
+
     Public Shared Function GetProgSize(isProgType As TriggerType, Optional getH As Boolean = False) As Integer
         Select Case isProgType
-            Case TriggerType.AutoCast
+            Case AutoCast
                 Return If(getH, osPrefStoreData.MainOpts_acProgH, osPrefStoreData.MainOpts_acProgW)
-            Case TriggerType.AutoPass
+            Case AutoPass
                 Return If(getH, osPrefStoreData.MainOpts_apProgH, osPrefStoreData.MainOpts_apProgW)
         End Select
     End Function
 
     Public Shared Function FetchProgSizeReport(isProgType As TriggerType) As Dictionary(Of String, Integer)
         Select Case isProgType
-            Case TriggerType.AutoCast
+            Case AutoCast
                 Return New Dictionary(Of String, Integer) From {
                         {"pH", osPrefStoreData.MainOpts_acProgH},
                         {"pW", osPrefStoreData.MainOpts_acProgW}
                     }
-            Case TriggerType.AutoPass
+            Case AutoPass
                 Return New Dictionary(Of String, Integer) From {
                         {"pH", osPrefStoreData.MainOpts_apProgH},
                         {"pW", osPrefStoreData.MainOpts_apProgW}
@@ -108,10 +133,10 @@ Public NotInheritable Class CoreDataLib
 
     Public Shared Function GetProgSizeReport(isProgType As TriggerType) As ProgSizeReport
         Select Case isProgType
-            Case TriggerType.AutoCast
+            Case AutoCast
                 Return New ProgSizeReport(osPrefStoreData.MainOpts_acProgW,
                                           osPrefStoreData.MainOpts_acProgH)
-            Case TriggerType.AutoPass
+            Case AutoPass
                 Return New ProgSizeReport(osPrefStoreData.MainOpts_apProgW,
                                           osPrefStoreData.MainOpts_apProgH)
         End Select
@@ -209,7 +234,20 @@ Public NotInheritable Class CoreDataLib
     End Sub
 
     Private Shared Function isUtilityTrigger(pType As TriggerAction) As Boolean
-        Return pType = TriggerAction.ShowMenu OrElse pType = TriggerAction.ShowOpts
+        Return ValidateUtilityTrigger(pType)
+    End Function
+
+    Private Shared Function ValidateUtilityTrigger(pType As TriggerAction) As Boolean
+        Select Case pType
+            Case TriggerShowMenu
+                Return True
+            Case TriggerShowTrayMenu
+                Return True
+            Case TriggerShowOpts
+                Return True
+            Case Else
+                Return False
+        End Select
     End Function
 
     Public Shared Async Function ExecuteTrigger(tType As TriggerAction) As Task
@@ -222,7 +260,7 @@ Public NotInheritable Class CoreDataLib
 
             objHandlerEvent = TriggerHandlers.
                  FirstOrDefault(Function(TriggerHandle) TriggerHandle.HandleAction = tType,
-                                (TriggerAction.None, CType(Nothing, Func(Of Task)))).HandleEvent
+                                (NoTrigger, CType(Nothing, Func(Of Task)))).HandleEvent
         Else
             ResolveAction()
             Exit Function
@@ -230,7 +268,7 @@ Public NotInheritable Class CoreDataLib
 
         If objHandlerEvent IsNot Nothing Then
             If objTriggerVal = TriggerValidation.ValidTrigger Then
-                osFuncLib_Progress.SetProgBlockData(TriggerType.AutoCast)
+                osFuncLib_Progress.SetProgBlockData(AutoCast)
                 Await osHandler_UI.LaunchGui(tType)
                 osFuncLib_Progress.UpdateProgStatus(tType, ProgAction.Activate)
             End If
@@ -259,13 +297,13 @@ Public NotInheritable Class CoreDataLib
     End Function
 
     Private Shared Function StartCancelMonitor(cts As CancellationTokenSource,
-                                                  Optional chkType As TriggerType = TriggerType.AutoCast) As Task
+                                                  Optional chkType As TriggerType = AutoCast) As Task
         Return Task.Run(Sub()
                             MonitorForCancel(cts, chkType)
                         End Sub)
     End Function
 
-    Private Shared Sub InitAbortMonitor(Optional chkType As TriggerType = TriggerType.AutoCast)
+    Private Shared Sub InitAbortMonitor(Optional chkType As TriggerType = AutoCast)
         PrepAbortMonitor()
         CreateAbortMonitor(chkActionAbort, chkType)
     End Sub
@@ -280,26 +318,29 @@ Public NotInheritable Class CoreDataLib
     End Sub
 
     Private Shared Async Sub MonitorForCancel(cts As CancellationTokenSource,
-                                                 Optional pType As TriggerType = TriggerType.AutoCast)
+                                                 Optional pType As TriggerType = AutoCast)
         While Not cts.Token.IsCancellationRequested
-            If pType = TriggerType.AutoCast Then
-                If Not InputMonSvc.DetectTrigger(DetectOpts.MonitorMouse) Then
-                    cts.Cancel()
-                    Exit While
-                End If
-            ElseIf pType = TriggerType.AutoPass AndAlso
-                       Not InputMonSvc.DetectTrigger(DetectOpts.MonitorShift) Then
-                Await PrepDispatcher(True).InvokeAsync(Sub()
-                                                           cts.Cancel()
-                                                       End Sub)
-                Exit While
-            End If
+            Select Case pType
+                Case AutoCast
+                    If Not InputMonSvc.DetectTrigger(MonitorMouse) Then
+                        cts.Cancel()
+                        Exit While
+                    End If
+                Case AutoPass
+                    If InputMonSvc.DetectTrigger(MonitorAutoPassAbort) Then
+                        Await PrepDispatcher(True).InvokeAsync(Sub()
+                                                                   cts.Cancel()
+                                                               End Sub)
+                        Exit While
+                    End If
+            End Select
+
             Await Task.Delay(5)
         End While
     End Sub
 
     Private Shared Sub CreateAbortMonitor(ByRef cts As CancellationTokenSource,
-                                                  Optional chkType As TriggerType = TriggerType.AutoCast)
+                                                  Optional chkType As TriggerType = AutoCast)
         cts = New CancellationTokenSource()
         objCancelState = cts.Token
 
@@ -311,13 +352,13 @@ Public NotInheritable Class CoreDataLib
         objCancelState = chkActionAbort.Token
     End Sub
 
-    Public Shared Sub ProcessProgressEvent(pMode As ProgMode, pEvent As ProgEvent, ParamArray pEventData() As Object)
+    Public Shared Sub ProcessProgressEvent(pMode As ProgressMode, pEvent As ProgEvent, ParamArray pEventData() As Object)
         Dim strEventData As String = ""
 
-        Dim objProgEventType = If(pMode = ProgMode.AutoCast,
-            TriggerType.AutoCast, TriggerType.AutoPass)
+        Dim objProgEventType = If(pMode = ProgMode_AutoCast,
+            AutoCast, AutoPass)
 
-        If pMode = ProgMode.AutoCast Then
+        If pMode = ProgMode_AutoCast Then
             If pEventData.Length > 0 Then
                 strEventData = pEventData(0).ToString()
             End If

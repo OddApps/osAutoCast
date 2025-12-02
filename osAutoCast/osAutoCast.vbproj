@@ -184,6 +184,7 @@
     <Compile Include="DataFiles\InterfaceData\ProgressUI\ProgBarGui_AutoCast.vb">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="DataFiles\ModelData\osLoadingProgressBar.vb" />
     <Compile Include="DataFiles\StyleData\EffectLib\osEffect.vb" />
     <Compile Include="GlobalSuppressions.vb" />
     <Compile Include="DataFiles\HandlerData\osHandler_Prefs.vb" />
@@ -244,7 +245,7 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="DataFiles\StyleData\StyleLib\osUI-Style-Container.xaml">
+    <Page Include="DataFiles\StyleData\StyleLib\osUI_Style-Container.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -253,6 +254,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="DataFiles\StyleData\StyleLib\osUI_Style-Button.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="DataFiles\StyleData\StyleLib\osUI_Style-LoadScreen.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

@@ -1,46 +1,43 @@
-﻿Imports SharpDX
-Imports SharpDX.DXGI
-Imports SharpDX.D3DCompiler
+﻿Imports System.ComponentModel
+Imports System.Threading
+Imports System.Windows.Forms
+Imports SharpDX
 Imports SharpDX.Direct2D1
 Imports SharpDX.Direct3D
 Imports SharpDX.Direct3D11
 Imports SharpDX.DirectWrite
-Imports System.Threading
-Imports System.Windows.Forms
+Imports SharpDX.DXGI
+Imports osAutoCast.DataTypeLib.TriggerAction
+Imports osAutoCast.DataTypeLib.ProgressMode
 Imports AlphaMode = SharpDX.Direct2D1.AlphaMode
 Imports D2DPixelFormat = SharpDX.Direct2D1.PixelFormat
-Imports osFormat = SharpDX.DXGI.Format
-Imports osCullMode = SharpDX.Direct3D11.CullMode
-Imports osFillMode = SharpDX.Direct3D11.FillMode
-Imports osBlendOpts = SharpDX.Direct3D11.BlendOption
 Imports osBlendOperation = SharpDX.Direct3D11.BlendOperation
-Imports osColorMaskFlags = SharpDX.Direct3D11.ColorWriteMaskFlags
-Imports osRenderBlendOpts = SharpDX.Direct3D11.RenderTargetBlendDescription
+Imports osBlendOpts = SharpDX.Direct3D11.BlendOption
 Imports osBlendStateDesc = SharpDX.Direct3D11.BlendStateDescription
-Imports osPresentOpts = SharpDX.DXGI.PresentParameters
-Imports osDepthWriteMask = SharpDX.Direct3D11.DepthWriteMask
+Imports osColor = System.Windows.Media
+Imports osColorMaskFlags = SharpDX.Direct3D11.ColorWriteMaskFlags
+Imports osCullMode = SharpDX.Direct3D11.CullMode
 Imports osDepthComparison = SharpDX.Direct3D11.Comparison
-Imports osViewPort = SharpDX.Mathematics.Interop.RawViewportF
-Imports osProgColor = SharpDX.Mathematics.Interop.RawColor4
-Imports osDepthStencilStateDesc = SharpDX.Direct3D11.DepthStencilStateDescription
-Imports osRasterizerState = SharpDX.Direct3D11.RasterizerState
 Imports osDepthStencilState = SharpDX.Direct3D11.DepthStencilState
-Imports osProgBuffer = SharpDX.Direct3D11.Buffer
-Imports osProgDevice = SharpDX.Direct3D11.Device
+Imports osDepthStencilStateDesc = SharpDX.Direct3D11.DepthStencilStateDescription
+Imports osDepthWriteMask = SharpDX.Direct3D11.DepthWriteMask
+Imports osDraw = System.Drawing
+Imports osFillMode = SharpDX.Direct3D11.FillMode
+Imports osFormat = SharpDX.DXGI.Format
+Imports osForms = System.Windows.Forms
+Imports osPresentOpts = SharpDX.DXGI.PresentParameters
 Imports osProgBlendState = SharpDX.Direct3D11.BlendState
+Imports osProgBuffer = SharpDX.Direct3D11.Buffer
+Imports osProgColor = SharpDX.Mathematics.Interop.RawColor4
+Imports osProgDevice = SharpDX.Direct3D11.Device
 Imports osProgDeviceContext = SharpDX.Direct3D11.DeviceContext
 Imports osProgFactoryD2D = SharpDX.Direct2D1.Factory
 Imports osProgFactoryDW = SharpDX.DirectWrite.Factory
 Imports osProgFactoryDXGI = SharpDX.DXGI.Factory
+Imports osRasterizerState = SharpDX.Direct3D11.RasterizerState
 Imports osRect = SharpDX.Mathematics.Interop
-Imports osDraw = System.Drawing
-Imports osColor = System.Windows.Media
-Imports osForms = System.Windows.Forms
-Imports osAutoCast.DataTypeLib.ProgStatus
-Imports osAutoCast.osFuncLib_Progress
-Imports System.ComponentModel
-Imports System.Reflection
-Imports osAutoCast.osHandler_Shader
+Imports osRenderBlendOpts = SharpDX.Direct3D11.RenderTargetBlendDescription
+Imports osViewPort = SharpDX.Mathematics.Interop.RawViewportF
 
 Public Class ProgBarGui_AutoCast
 
@@ -538,7 +535,7 @@ Public Class ProgBarGui_AutoCast
     Private Async Function AutoCast_Prep() As Task
         Await CoreDataLib.InputMonSvc.AnticipateInput(InputAction.AC_Start)
 
-        CoreDataLib.ProcessProgressEvent(ProgMode.AutoCast, ProgEvent.ClrMsg)
+        CoreDataLib.ProcessProgressEvent(ProgMode_AutoCast, ProgEvent.ClrMsg)
 
         Await Task.Delay(375)
     End Function
@@ -654,11 +651,11 @@ Public Class ProgBarGui_AutoCast
 
     Private Function ProcessResult(acComplete As Boolean) As ProgResult
         If acComplete Then
-            osFuncLib_Progress.UpdateProgStatus(TriggerAction.AutoCast,
+            osFuncLib_Progress.UpdateProgStatus(TriggerAutoCast,
                              ProgAction.Complete)
             SetProgResult(acComplete, retProgResult)
         Else
-            osFuncLib_Progress.UpdateProgStatus(TriggerAction.AutoCast,
+            osFuncLib_Progress.UpdateProgStatus(TriggerAutoCast,
                              ProgAction.Abort)
             SetProgResult(acComplete, retProgResult)
         End If

@@ -1,114 +1,29 @@
-﻿<Window x:Class="osInMon" Name="osInMon"
-        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:osAutoCast"
-        mc:Ignorable="d"
-        Title="osAutoCast v1.0 | By OddSoft"
-        Topmost="True"
-        WindowStartupLocation="CenterScreen"
-        ResizeMode="NoResize" AllowsTransparency="True"
-        WindowStyle="None" Height="600"        
-		VerticalAlignment="Top" Background="Transparent"
-		HorizontalAlignment="Center" Width="585">
-    <Border BorderBrush="#BF9E1A1A" BorderThickness="4">
-    <Grid Background="#FF100D0B">
+﻿<Window x:Class="osInMon" Name="osInMon" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:osLoadProg="clr-namespace:osAutoCast.osLoadingElements"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" mc:Ignorable="d"
+        Title="osAutoCast v1.0 | By OddSoft" Topmost="True" WindowStartupLocation="CenterScreen"
+        ResizeMode="NoResize" AllowsTransparency="True" WindowStyle="None"
+        Style="{StaticResource LoadingContainerStyle}">
+   
+    <Border Style="{StaticResource LoadingContentStyle}">
+        <Grid Background="{StaticResource osLoadScreen_BgColor}">
             <Grid.RowDefinitions>
                 <RowDefinition />
             </Grid.RowDefinitions>
-        <Image Grid.Column="0" Grid.Row="0" Height="576" Width="576" Source="pack://siteoforigin:,,,/Resources/osSplashLoader.png" VerticalAlignment="Top"/>
-        <Border x:Name="LoadContentContainer" VerticalAlignment="Bottom"
-                Margin="30,0,30,10"
-                Padding="14,2,14,0"
-                Background="#4C323232"
-                CornerRadius="8" BorderBrush="#FF646464" BorderThickness="2">
-            <StackPanel Orientation="Vertical" HorizontalAlignment="Center" Margin="0">
-                <TextBlock x:Name="lblLoadContent"
-                           Foreground="White"
-                           FontSize="24"
-                           FontWeight="Bold"
-                           TextAlignment="Center"
-                           Margin="0,0,0,2" Padding="0,2,0,4"
-                           Height="34" ScrollViewer.VerticalScrollBarVisibility="Disabled" UseLayoutRounding="True"/>
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0" Height="26">
-                    <TextBlock x:Name="Dot1" FontSize="32" FontWeight="Bold" Opacity="0.25" Margin="1,0" Padding="1,2,1,0" VerticalAlignment="Bottom" Height="44">
-                        <Run BaselineAlignment="Center" FontSize="32">•</Run>
-                        <TextBlock.Foreground>
-                            <SolidColorBrush Color="White"/>
-                        </TextBlock.Foreground>
-                    </TextBlock>
-                    <TextBlock x:Name="Dot2" FontSize="32" FontWeight="Bold" Opacity="0.25" Margin="1,0" Padding="1,2,1,0" VerticalAlignment="Bottom" Height="44">
-                        <Run BaselineAlignment="Center" FontSize="32">•</Run>
-                        <TextBlock.Foreground>
-                            <SolidColorBrush Color="White"/>
-                        </TextBlock.Foreground>
-                    </TextBlock>
-                    <TextBlock x:Name="Dot3" FontSize="32" FontWeight="Bold" Opacity="0.25" Margin="1,0" Padding="1,2,1,0" VerticalAlignment="Bottom" Height="44">
-                        <Run BaselineAlignment="Center" FontSize="32">•</Run>
-                        <TextBlock.Foreground>
-                            <SolidColorBrush Color="White"/>
-                        </TextBlock.Foreground>
-                    </TextBlock>
+            <Image Grid.Column="0" Grid.Row="0" Height="576" VerticalAlignment="Top"
+                   Width="576" Source="pack://siteoforigin:,,,/Resources/osSplashLoader.png" />
+            <Border x:Name="LoadContentContainer"
+                    Style="{StaticResource LoadingContentContainerStyle}">
+                <StackPanel Orientation="Vertical" HorizontalAlignment="Stretch" Margin="0">
+                    <TextBlock x:Name="LoadingText" Style="{StaticResource LoadingTextStyle}"
+                               LineStackingStrategy="BlockLineHeight" LineHeight="30" Margin="0,4,0,2"/>
+                    <osLoadProg:osLoadingProgressBar x:Name="LoadingProgressBar" Height="26" Minimum="0" Maximum="100"
+                                                     FillBrush="#FF5F1212" TrackBrush="#FF1D1D1D" Margin="0,2,0,4" 
+                                                     CornerRadius="0" BorderBrush="#FF424242" BorderThickness="1" />
                 </StackPanel>
-            </StackPanel>
-        </Border>
-        <Grid.Triggers>
-            <EventTrigger RoutedEvent="Loaded">
-                <BeginStoryboard>
-                    <Storyboard RepeatBehavior="Forever">
-                        <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Dot1"
-                                                       Storyboard.TargetProperty="Opacity"
-                                                       Duration="0:0:1.2" RepeatBehavior="Forever">
-                            <DiscreteDoubleKeyFrame KeyTime="0:0:0.0" Value="1.0"/>
-                            <DiscreteDoubleKeyFrame KeyTime="0:0:0.4" Value="0.25"/>
-                            <DiscreteDoubleKeyFrame KeyTime="0:0:0.8" Value="0.25"/>
-                            <DiscreteDoubleKeyFrame KeyTime="0:0:1.2" Value="1.0"/>
-                        </DoubleAnimationUsingKeyFrames>
-                        <ColorAnimationUsingKeyFrames Storyboard.TargetName="Dot1"
-                                                      Storyboard.TargetProperty="(TextBlock.Foreground).(SolidColorBrush.Color)"
-                                                      Duration="0:0:1.2" RepeatBehavior="Forever">
-                            <DiscreteColorKeyFrame KeyTime="0:0:0.0" Value="#FF5F1212"/>
-                            <DiscreteColorKeyFrame KeyTime="0:0:0.4" Value="White"/>
-                            <DiscreteColorKeyFrame KeyTime="0:0:0.8" Value="White"/>
-                            <DiscreteColorKeyFrame KeyTime="0:0:1.2" Value="#FF5F1212"/>
-                        </ColorAnimationUsingKeyFrames>
-                        <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Dot2"
-                                                       Storyboard.TargetProperty="Opacity"
-                                                       Duration="0:0:1.2" RepeatBehavior="Forever">
-                            <DiscreteDoubleKeyFrame KeyTime="0:0:0.0" Value="0.25"/>
-                            <DiscreteDoubleKeyFrame KeyTime="0:0:0.4" Value="1.0"/>
-                            <DiscreteDoubleKeyFrame KeyTime="0:0:0.8" Value="0.25"/>
-                            <DiscreteDoubleKeyFrame KeyTime="0:0:1.2" Value="0.25"/>
-                        </DoubleAnimationUsingKeyFrames>
-                        <ColorAnimationUsingKeyFrames Storyboard.TargetName="Dot2"
-                                                      Storyboard.TargetProperty="(TextBlock.Foreground).(SolidColorBrush.Color)"
-                                                      Duration="0:0:1.2" RepeatBehavior="Forever">
-                            <DiscreteColorKeyFrame KeyTime="0:0:0.0" Value="White"/>
-                            <DiscreteColorKeyFrame KeyTime="0:0:0.4" Value="#FF5F1212"/>
-                            <DiscreteColorKeyFrame KeyTime="0:0:0.8" Value="White"/>
-                            <DiscreteColorKeyFrame KeyTime="0:0:1.2" Value="White"/>
-                        </ColorAnimationUsingKeyFrames>
-                        <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Dot3"
-                                                       Storyboard.TargetProperty="Opacity"
-                                                       Duration="0:0:1.2" RepeatBehavior="Forever">
-                            <DiscreteDoubleKeyFrame KeyTime="0:0:0.0" Value="0.25"/>
-                            <DiscreteDoubleKeyFrame KeyTime="0:0:0.4" Value="0.25"/>
-                            <DiscreteDoubleKeyFrame KeyTime="0:0:0.8" Value="1.0"/>
-                            <DiscreteDoubleKeyFrame KeyTime="0:0:1.2" Value="0.25"/>
-                        </DoubleAnimationUsingKeyFrames>
-                        <ColorAnimationUsingKeyFrames Storyboard.TargetName="Dot3"
-                                                      Storyboard.TargetProperty="(TextBlock.Foreground).(SolidColorBrush.Color)"
-                                                      Duration="0:0:1.2" RepeatBehavior="Forever">
-                            <DiscreteColorKeyFrame KeyTime="0:0:0.0" Value="White"/>
-                            <DiscreteColorKeyFrame KeyTime="0:0:0.4" Value="White"/>
-                            <DiscreteColorKeyFrame KeyTime="0:0:0.8" Value="#FF5F1212"/>
-                            <DiscreteColorKeyFrame KeyTime="0:0:1.2" Value="White"/>
-                        </ColorAnimationUsingKeyFrames>
-                    </Storyboard>
-                </BeginStoryboard>
-            </EventTrigger>
-        </Grid.Triggers>
-    </Grid>
+            </Border>            
+        </Grid>
     </Border>
+    
 </Window>

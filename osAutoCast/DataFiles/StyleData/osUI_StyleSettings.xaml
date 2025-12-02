@@ -1,8 +1,13 @@
 ﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:sys="clr-namespace:System;assembly=mscorlib"
+                    xmlns:VisSettings="clr-namespace:osAutoCast.osVisConfigSettings"
                     xmlns:oscolor="clr-namespace:System.Windows.Media;assembly=PresentationCore">
-    
+
+    <!-- ** Load Screen Settings ** -->
+
+    <oscolor:SolidColorBrush x:Key="osLoadScreen_BgColor" Color="#FF100D0B" />
+
     <!-- ** Effect Settings ** -->
 
     <sys:Double x:Key="osEffect_Thickness">1.2</sys:Double>
@@ -20,41 +25,64 @@
     <Thickness x:Key="osBtn_TextPadding">0,2,0,0</Thickness>
     <Thickness x:Key="osBtn_ContentPadding">0,2</Thickness>
 
-    <!-- ** Visual Settings ** -->
-    
-    <!-- [ Delay Timing ] -->
-
-    <sys:TimeSpan x:Key="PopupAni_AutoStart">0:0:0</sys:TimeSpan>
-    <sys:TimeSpan x:Key="PopupAni_OpenDelay">0:0:0.0</sys:TimeSpan>
-    <sys:TimeSpan x:Key="PopupAni_CloseQuickDelay">0:0:0.575</sys:TimeSpan>
+    <!-- ** Visual Settings ** -->    
 
     <!-- [ Popup Timing ] -->
 
-    <Duration x:Key="PopupAni_OpenDuration">0:0:0.485</Duration>
-    <Duration x:Key="PopupAni_CloseDuration">0:0:0.485</Duration>
-    <Duration x:Key="PopupAni_CloseQuickDuration">0:0:0.500</Duration>
-    <Duration x:Key="PopupAni_CloseQuickFadeDuration">0:0:0.500</Duration>
+    <VisSettings:osVisConfig x:Key="PopupAni_OpenStart" visDur="0" />
+    <VisSettings:osVisConfig x:Key="PopupAni_OpenDuration" visDur="225" />
+    <VisSettings:osVisConfig x:Key="PopupAni_OpenDurationPrimary" visDur="550" />
+    <VisSettings:osVisConfig x:Key="PopupAni_OpenDurationFade" visDur="375" />
+
+    <VisSettings:osVisConfig x:Key="PopupAni_CloseStart" visDur="0" />
+    <VisSettings:osVisConfig x:Key="PopupAni_CloseDuration" visDur="550" />
+    <VisSettings:osVisConfig x:Key="PopupAni_CloseByBtnDuration" visDur="450" />
+    <VisSettings:osVisConfig x:Key="PopupAni_CloseByBtnFadeDuration" visDur="450" />
+    
+    <!-- [ Popup Easings ] -->
+
+    <VisSettings:osVisualEasing x:Key="PopupEase_OpenScale" visEasing="PopupOpen_Scale" />
+    <VisSettings:osVisualEasing x:Key="PopupEase_OpenScalePrimary" visEasing="PopupOpen_ScalePrimary" />
+    <VisSettings:osVisualEasing x:Key="PopupEase_OpenFade" visEasing="PopupOpen_Fade" />
+
+    <VisSettings:osVisualEasing x:Key="PopupEase_Close" visEasing="PopupClose" />
+    <VisSettings:osVisualEasing x:Key="PopupEase_CloseByBtn" visEasing="PopupClose_ByBtn" />
+    <VisSettings:osVisualEasing x:Key="PopupEase_CloseByCmd" visEasing="PopupClose_ByCmd" />
 
     <!-- [ Popup Config ] -->
+
+    <sys:Double x:Key="PopupAni_StartScale">0.00</sys:Double>
+    <sys:Double x:Key="PopupAni_StartFade">0.0</sys:Double>
     
-    <sys:Double x:Key="PopupAni_OpenScale">0.01</sys:Double>
-    <sys:Double x:Key="PopupAni_OpenFade">0.0</sys:Double>
+    <sys:Double x:Key="PopupAni_OpenScale">0.7</sys:Double>
     <sys:Double x:Key="PopupAni_Loaded">1.0</sys:Double>
-    <sys:Double x:Key="PopupAni_ScaleQuickClose">0.0</sys:Double>
+    
     <sys:Double x:Key="PopupAni_CloseFade">0.0</sys:Double>
-    <sys:Double x:Key="PopupAni_CloseScale">0.01</sys:Double>
-    <sys:Double x:Key="PopupAni_QuickClose">22.0</sys:Double>
+    <sys:Double x:Key="PopupAni_CloseScale">0.00</sys:Double>
+    <sys:Double x:Key="PopupAni_CloseByBtnScale">25.0</sys:Double>
 
     <!-- [ Overlay Timing ] -->
 
-    <Duration x:Key="OverlayAni_OpenDuration">0:0:0.500</Duration>
-    <Duration x:Key="OverlayAni_CloseDuration">0:0:0.500</Duration>
-    <Duration x:Key="OverlayAni_CloseQuickDuration">0:0:0.250</Duration>
+    <VisSettings:osVisConfig x:Key="OverlayAni_OpenStart" visDur="0" />
+    <VisSettings:osVisConfig x:Key="OverlayAni_OpenDuration" visDur="500" />
+    
+    <VisSettings:osVisConfig x:Key="OverlayAni_CloseStart" visDur="0" />
+    <VisSettings:osVisConfig x:Key="OverlayAni_CloseDuration" visDur="500" />
+    <VisSettings:osVisConfig x:Key="OverlayAni_CloseByBtnDuration" visDur="300" />
+
+    <!-- [ Overlay Easings ] -->
+
+    <VisSettings:osVisualEasing x:Key="OverlayEase_Open" visEasing="OverlayOpen" />
+    
+    <VisSettings:osVisualEasing x:Key="OverlayEase_Close" visEasing="OverlayClose" />
+    <VisSettings:osVisualEasing x:Key="OverlayEase_CloseByBtn" visEasing="OverlayClose_ByBtn" />
 
     <!-- [ Overlay Config ] -->
     
     <sys:Double x:Key="OverlayAni_OpenFade">0.0</sys:Double>
+    
     <sys:Double x:Key="OverlayAni_Loaded">0.7</sys:Double>
+    
     <sys:Double x:Key="OverlayAni_CloseFade">0.0</sys:Double>
 
 </ResourceDictionary>

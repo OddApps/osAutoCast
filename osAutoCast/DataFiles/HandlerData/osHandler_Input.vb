@@ -1,8 +1,5 @@
-﻿Imports System.Diagnostics
-Imports System.Runtime.InteropServices
+﻿Imports System.Runtime.InteropServices
 Imports System.Threading
-Imports System.Threading.Tasks
-Imports System.Windows
 
 Public Class osHandler_Input
 

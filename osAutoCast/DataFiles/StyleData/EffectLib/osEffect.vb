@@ -1,13 +1,10 @@
-﻿Imports System.Windows.Media
-Imports System.Windows
-Imports System.Windows.Media.Effects
-Imports System.IO
+﻿Imports System.Windows.Markup
 Imports System.Globalization
-Imports System.Windows.Data
+Imports System.Windows.Media.Effects
 Imports osAutoCast.DataTypeLib.MenuProperty
 Imports osAutoCast.DataTypeLib.osShaderType
-Imports osAutoCast.osHandler_Shader
-Imports System.Windows.Controls
+Imports osAutoCast.DataTypeLib.VisualEasing
+Imports System.Windows.Media.Animation
 
 Public Class osEffect
     Inherits ShaderEffect
@@ -470,7 +467,7 @@ Namespace osStyle
 
         Public Shared ReadOnly PopupScaleProperty As DependencyProperty = DependencyProperty.
             RegisterAttached("PopupScale", GetType(Double), GetType(osPopupScale),
-                             New PropertyMetadata(1.0, AddressOf OnPopupScaleChanged))
+                             New PropertyMetadata(0.001, AddressOf OnPopupScaleChanged))
 
         Public Shared Sub SetPopupScale(objPopupScale As DependencyObject, valScale As Double)
             objPopupScale.SetValue(PopupScaleProperty, valScale)
@@ -496,7 +493,7 @@ Namespace osStyle
             Dim objVisualTransform = objContainer.RenderTransform
 
             If objVisualTransform Is Nothing Then
-                Dim objVisualScale = New ScaleTransform(1.0, 1.0)
+                Dim objVisualScale = New ScaleTransform(0.001, 0.001)
                 objContainer.RenderTransform = objVisualScale
                 Return objVisualScale
             End If
@@ -509,13 +506,13 @@ Namespace osStyle
                 Dim chkVisualGroup = chkTransformGroup.Children.OfType(Of ScaleTransform)().FirstOrDefault()
                 If chkVisualGroup IsNot Nothing Then Return chkVisualGroup
 
-                chkVisualGroup = New ScaleTransform(1.0, 1.0)
+                chkVisualGroup = New ScaleTransform(0.001, 0.001)
                 chkTransformGroup.Children.Insert(0, chkVisualGroup)
                 Return chkVisualGroup
             End If
 
             Dim objVisualGroup As New TransformGroup()
-            Dim objVisualScaler As New ScaleTransform(1.0, 1.0)
+            Dim objVisualScaler As New ScaleTransform(0.001, 0.001)
 
             objVisualGroup.Children.Add(objVisualScaler)
             objVisualGroup.Children.Add(objVisualTransform)
@@ -529,12 +526,51 @@ Namespace osStyle
 
 End Namespace
 
+Namespace osVisConfigSettings
+
+    Public Class osVisConfig
+        Inherits MarkupExtension
+
+        Public Property visDur As Integer
+
+        Public Overrides Function ProvideValue(serviceProvider As IServiceProvider) As Object
+            Return KeyTime.FromTimeSpan(SetDuration(visDur))
+        End Function
+
+        Private Function SetDuration(durMS As Integer) As TimeSpan
+            Return TimeSpan.FromMilliseconds(durMS)
+        End Function
+
+    End Class
+
+    Public Class osVisualEasing
+        Inherits MarkupExtension
+
+        Public Property visEasing As VisualEasing
+        Public Property visEaseMode As EasingMode? = Nothing
+
+        Public Sub New()
+        End Sub
+
+        Public Sub New(objVisEasing As VisualEasing)
+            Me.visEasing = objVisEasing
+        End Sub
+
+        Public Overrides Function ProvideValue(serviceProvider As IServiceProvider) As Object
+            Return GetVisualEase(visEasing)
+        End Function
+
+    End Class
+
+End Namespace
+
 Namespace osEffectConv
 
     Public Class TexelSizeConverter
         Implements IMultiValueConverter
 
-        Public Function Convert(values() As Object, targetType As Type, parameter As Object, culture As CultureInfo) As Object Implements IMultiValueConverter.Convert
+        Public Function Convert(values() As Object, targetType As Type,
+                                parameter As Object, culture As CultureInfo) As Object Implements IMultiValueConverter.Convert
             Dim w As Double = 0.0
             Dim h As Double = 0.0
 

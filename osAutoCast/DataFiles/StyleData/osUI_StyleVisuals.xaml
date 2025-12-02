@@ -5,112 +5,153 @@
     <Style x:Key="PopupVisuals" TargetType="{x:Type Border}">
         <Style.Resources>
             <Storyboard x:Key="PopupVisual_Open">
-                <DoubleAnimation Storyboard.TargetName="popupMainContainer" x:Name="visPopupScale"
-                                 Storyboard.TargetProperty="(osStyle:osPopupScale.PopupScale)"
-                                 From="{StaticResource PopupAni_OpenScale}"
-                                 To="{StaticResource PopupAni_Loaded}"
-                                 Duration="{StaticResource PopupAni_OpenDuration}" 
-                                 FillBehavior="HoldEnd">
-                    <DoubleAnimation.EasingFunction>
-                        <ExponentialEase EasingMode="EaseInOut" 
-                                         Exponent="8"/>
-                    </DoubleAnimation.EasingFunction>
-                </DoubleAnimation>
-                <DoubleAnimation Storyboard.TargetName="popupMainContainer"
-                                 Storyboard.TargetProperty="Opacity"
-                                 From="{StaticResource PopupAni_OpenFade}"
-                                 To="{StaticResource PopupAni_Loaded}"
-                                 Duration="{StaticResource PopupAni_OpenDuration}" 
-                                 FillBehavior="HoldEnd">
-                    <DoubleAnimation.EasingFunction>
-                        <QuadraticEase EasingMode="EaseInOut" />
-                    </DoubleAnimation.EasingFunction>
-                </DoubleAnimation>
+                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="popupMainContainer"
+                                               Storyboard.TargetProperty="(osStyle:osPopupScale.PopupScale)">
+                    <EasingDoubleKeyFrame KeyTime="{StaticResource PopupAni_OpenStart}"
+                                          Value="{StaticResource PopupAni_StartScale}" />
+                    <EasingDoubleKeyFrame KeyTime="{StaticResource PopupAni_OpenDuration}"
+                                          Value="{StaticResource PopupAni_OpenScale}"
+                                          EasingFunction="{StaticResource PopupEase_OpenScale}"/>
+                    <EasingDoubleKeyFrame KeyTime="{StaticResource PopupAni_OpenDurationPrimary}"
+                                          Value="{StaticResource PopupAni_Loaded}"
+                                          EasingFunction="{StaticResource PopupEase_OpenScalePrimary}" />
+                </DoubleAnimationUsingKeyFrames>
+                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="popupMainContainer"
+                                               Storyboard.TargetProperty="Opacity"
+                                               FillBehavior="HoldEnd">
+                    <EasingDoubleKeyFrame KeyTime="{StaticResource PopupAni_OpenStart}"
+                                          Value="{StaticResource PopupAni_StartFade}"
+                                          EasingFunction="{StaticResource PopupEase_OpenFade}" />
+                    <EasingDoubleKeyFrame KeyTime="{StaticResource PopupAni_OpenDurationFade}"
+                                          Value="{StaticResource PopupAni_Loaded}"
+                                          EasingFunction="{StaticResource PopupEase_OpenFade}" />
+                </DoubleAnimationUsingKeyFrames>
             </Storyboard>
             <Storyboard x:Key="PopupVisual_Close">
-                <DoubleAnimation Storyboard.TargetName="popupMainContainer"
-                                 Storyboard.TargetProperty="(osStyle:osPopupScale.PopupScale)"
-                                 From="{StaticResource PopupAni_Loaded}"
-                                 To="{StaticResource PopupAni_CloseScale}"
-                                 Duration="{StaticResource PopupAni_CloseDuration}"
-                                 FillBehavior="HoldEnd">
-                    <DoubleAnimation.EasingFunction>
-                        <ExponentialEase EasingMode="EaseInOut" 
-                                         Exponent="6"/>
-                    </DoubleAnimation.EasingFunction>
-                </DoubleAnimation>
-                <DoubleAnimation Storyboard.TargetName="popupMainContainer"
-                                 Storyboard.TargetProperty="Opacity"
-                                 From="{StaticResource PopupAni_Loaded}"
-                                 To="{StaticResource PopupAni_CloseFade}"
-                                 Duration="{StaticResource PopupAni_CloseDuration}" 
-                                 FillBehavior="HoldEnd">
-                    <DoubleAnimation.EasingFunction>
-                        <QuadraticEase EasingMode="EaseOut" />
-                    </DoubleAnimation.EasingFunction>
-                </DoubleAnimation>
+                <DoubleAnimationUsingKeyFrames x:Name="visClose_PopupScale"
+                                               Storyboard.TargetName="popupMainContainer"
+                                               Storyboard.TargetProperty="(osStyle:osPopupScale.PopupScale)"
+                                               FillBehavior="HoldEnd">
+                    <EasingDoubleKeyFrame KeyTime="{StaticResource PopupAni_CloseStart}"
+                                          Value="{StaticResource PopupAni_Loaded}"
+                                          EasingFunction="{StaticResource PopupEase_Close}" />
+                    <EasingDoubleKeyFrame KeyTime="{StaticResource PopupAni_CloseDuration}"
+                                          Value="{StaticResource PopupAni_CloseScale}"
+                                          EasingFunction="{StaticResource PopupEase_Close}" />
+                </DoubleAnimationUsingKeyFrames>
+                <DoubleAnimationUsingKeyFrames x:Name="visClose_PopupOpacity"
+                                               Storyboard.TargetName="popupMainContainer"
+                                               Storyboard.TargetProperty="Opacity"
+                                               FillBehavior="HoldEnd">
+                    <EasingDoubleKeyFrame KeyTime="{StaticResource PopupAni_CloseStart}"
+                                          Value="{StaticResource PopupAni_Loaded}"
+                                          EasingFunction="{StaticResource PopupEase_Close}" />
+                    <EasingDoubleKeyFrame KeyTime="{StaticResource PopupAni_CloseDuration}"
+                                          Value="{StaticResource PopupAni_CloseFade}"
+                                          EasingFunction="{StaticResource PopupEase_Close}" />
+                </DoubleAnimationUsingKeyFrames>
             </Storyboard>
-            <Storyboard x:Key="PopupVisual_QuickClose">
-                <DoubleAnimation Storyboard.TargetName="popupMainContainer"
-                                 Storyboard.TargetProperty="(osStyle:osPopupScale.PopupScale)"
-                                 To="{StaticResource PopupAni_QuickClose}"
-                                 Duration="{StaticResource PopupAni_CloseQuickDuration}" 
-                                 FillBehavior="HoldEnd">
-                    <DoubleAnimation.EasingFunction>
-                        <ExponentialEase EasingMode="EaseInOut" 
-                                         Exponent="8"/>
-                    </DoubleAnimation.EasingFunction>
-                </DoubleAnimation>
-                <DoubleAnimation Storyboard.TargetName="popupMainContainer"
-                                 Storyboard.TargetProperty="Opacity"
-                                 From="{StaticResource PopupAni_Loaded}"
-                                 To="{StaticResource PopupAni_CloseFade}"
-                                 Duration="{StaticResource PopupAni_CloseQuickDuration}"
-                                 FillBehavior="HoldEnd">
-                    <DoubleAnimation.EasingFunction>
-                        <ExponentialEase EasingMode="EaseInOut" 
-                                         Exponent="8"/>
-                    </DoubleAnimation.EasingFunction>
-                </DoubleAnimation>
+            <Storyboard x:Key="PopupVisual_CloseByCmd">
+                <DoubleAnimationUsingKeyFrames x:Name="visCloseByCmd_PopupScale"
+                                               Storyboard.TargetName="popupMainContainer"
+                                               Storyboard.TargetProperty="(osStyle:osPopupScale.PopupScale)"
+                                               FillBehavior="HoldEnd">
+                    <EasingDoubleKeyFrame KeyTime="{StaticResource PopupAni_CloseStart}"
+                                          Value="{StaticResource PopupAni_Loaded}"
+                                          EasingFunction="{StaticResource PopupEase_CloseByCmd}" />
+                    <EasingDoubleKeyFrame KeyTime="{StaticResource PopupAni_CloseDuration}"
+                                          Value="{StaticResource PopupAni_CloseScale}"
+                                          EasingFunction="{StaticResource PopupEase_CloseByCmd}" />
+                </DoubleAnimationUsingKeyFrames>
+                <DoubleAnimationUsingKeyFrames x:Name="visCloseByCmd_PopupOpacity"
+                                               Storyboard.TargetName="popupMainContainer"
+                                               Storyboard.TargetProperty="Opacity"
+                                               FillBehavior="HoldEnd">
+                    <EasingDoubleKeyFrame KeyTime="{StaticResource PopupAni_CloseStart}"
+                                          Value="{StaticResource PopupAni_Loaded}"
+                                          EasingFunction="{StaticResource PopupEase_Close}" />
+                    <EasingDoubleKeyFrame KeyTime="{StaticResource PopupAni_CloseDuration}"
+                                          Value="{StaticResource PopupAni_CloseFade}"
+                                          EasingFunction="{StaticResource PopupEase_CloseByCmd}" />
+                </DoubleAnimationUsingKeyFrames>
+            </Storyboard>
+            <Storyboard x:Key="PopupVisual_CloseByBtn">
+                <DoubleAnimationUsingKeyFrames x:Name="visCloseByBtn_PopupScale"
+                                               Storyboard.TargetName="popupMainContainer"
+                                               Storyboard.TargetProperty="(osStyle:osPopupScale.PopupScale)"
+                                               FillBehavior="HoldEnd">
+                    <EasingDoubleKeyFrame KeyTime="{StaticResource PopupAni_CloseStart}"
+                                          Value="{StaticResource PopupAni_Loaded}"
+                                          EasingFunction="{StaticResource PopupEase_CloseByCmd}" />
+                    <EasingDoubleKeyFrame KeyTime="{StaticResource PopupAni_CloseByBtnDuration}"
+                                          Value="{StaticResource PopupAni_CloseByBtnScale}"
+                                          EasingFunction="{StaticResource PopupEase_CloseByBtn}" />
+                </DoubleAnimationUsingKeyFrames>
+                <DoubleAnimationUsingKeyFrames x:Name="visCloseByBtn_PopupOpacity"
+                                               Storyboard.TargetName="popupMainContainer"
+                                               Storyboard.TargetProperty="Opacity"
+                                               FillBehavior="HoldEnd">
+                    <EasingDoubleKeyFrame KeyTime="{StaticResource PopupAni_CloseStart}"
+                                          Value="{StaticResource PopupAni_Loaded}"
+                                          EasingFunction="{StaticResource PopupEase_Close}" />
+                    <EasingDoubleKeyFrame KeyTime="{StaticResource PopupAni_CloseByBtnDuration}"
+                                          Value="{StaticResource PopupAni_CloseFade}"
+                                          EasingFunction="{StaticResource PopupEase_CloseByBtn}" />
+                </DoubleAnimationUsingKeyFrames>
             </Storyboard>
         </Style.Resources>
     </Style>
 
     <Style x:Key="OverlayVisuals" TargetType="{x:Type Window}">
-        <Setter Property="Opacity" Value="0"/>
+        <Setter Property="Opacity" Value="0" />
         <Style.Resources>
             <Storyboard x:Key="OverlayVisual_Open">
-                <DoubleAnimation Storyboard.TargetProperty="Opacity"
-                                 To="{StaticResource OverlayAni_Loaded}"
-                                 Duration="{StaticResource OverlayAni_OpenDuration}" 
-                                 FillBehavior="HoldEnd">
-                    <DoubleAnimation.EasingFunction>
-                        <QuadraticEase EasingMode="EaseInOut" />
-                    </DoubleAnimation.EasingFunction>
-                </DoubleAnimation>
+                <DoubleAnimationUsingKeyFrames x:Name="visOpen_Overlay"
+                                               Storyboard.TargetProperty="Opacity"
+                                               FillBehavior="HoldEnd">
+                    <EasingDoubleKeyFrame KeyTime="{StaticResource OverlayAni_OpenStart}"
+                                          Value="{StaticResource OverlayAni_OpenFade}"
+                                          EasingFunction="{StaticResource OverlayEase_Open}" />
+                    <EasingDoubleKeyFrame KeyTime="{StaticResource OverlayAni_OpenDuration}"
+                                          Value="{StaticResource OverlayAni_Loaded}"
+                                          EasingFunction="{StaticResource OverlayEase_Open}" />
+                </DoubleAnimationUsingKeyFrames>
             </Storyboard>
             <Storyboard x:Key="OverlayVisual_Close">
-                <DoubleAnimation Storyboard.TargetProperty="Opacity"
-                                 From="{StaticResource OverlayAni_Loaded}"
-                                 To="{StaticResource OverlayAni_CloseFade}"
-                                 Duration="{StaticResource OverlayAni_CloseDuration}" 
-                                 FillBehavior="HoldEnd">
-                    <DoubleAnimation.EasingFunction>
-                        <QuadraticEase EasingMode="EaseInOut" />
-                    </DoubleAnimation.EasingFunction>
-                </DoubleAnimation>
+                <DoubleAnimationUsingKeyFrames x:Name="visClose_Overlay"
+                                               Storyboard.TargetProperty="Opacity"
+                                               FillBehavior="HoldEnd">
+                    <EasingDoubleKeyFrame KeyTime="{StaticResource OverlayAni_CloseStart}"
+                                          Value="{StaticResource OverlayAni_Loaded}"
+                                          EasingFunction="{StaticResource OverlayEase_Close}" />
+                    <EasingDoubleKeyFrame KeyTime="{StaticResource OverlayAni_CloseDuration}"
+                                          Value="{StaticResource OverlayAni_CloseFade}"
+                                          EasingFunction="{StaticResource OverlayEase_Close}" />
+                </DoubleAnimationUsingKeyFrames>
             </Storyboard>
-            <Storyboard x:Key="OverlayVisual_QuickClose">
-                <DoubleAnimation Storyboard.TargetProperty="Opacity"
-                                 From="{StaticResource OverlayAni_Loaded}"
-                                 To="{StaticResource OverlayAni_CloseFade}"
-                                 BeginTime="{StaticResource PopupAni_CloseQuickDelay}"
-                                 Duration="{StaticResource OverlayAni_CloseQuickDuration}" 
-                                 FillBehavior="HoldEnd">
-                    <DoubleAnimation.EasingFunction>
-                        <QuadraticEase EasingMode="EaseOut" />
-                    </DoubleAnimation.EasingFunction>
-                </DoubleAnimation>
+            <Storyboard x:Key="OverlayVisual_CloseByCmd">
+                <DoubleAnimationUsingKeyFrames x:Name="visCloseByCmd_Overlay"
+                                               Storyboard.TargetProperty="Opacity"
+                                               FillBehavior="HoldEnd">
+                    <EasingDoubleKeyFrame KeyTime="{StaticResource OverlayAni_CloseStart}"
+                                          Value="{StaticResource OverlayAni_Loaded}"
+                                          EasingFunction="{StaticResource OverlayEase_Close}" />
+                    <EasingDoubleKeyFrame KeyTime="{StaticResource OverlayAni_CloseDuration}"
+                                          Value="{StaticResource OverlayAni_CloseFade}"
+                                          EasingFunction="{StaticResource OverlayEase_Close}" />
+                </DoubleAnimationUsingKeyFrames>
+            </Storyboard>
+            <Storyboard x:Key="OverlayVisual_CloseByBtn">
+                <DoubleAnimationUsingKeyFrames x:Name="visCloseByBtn_Overlay"
+                                               Storyboard.TargetProperty="Opacity"
+                                               FillBehavior="HoldEnd">
+                    <EasingDoubleKeyFrame KeyTime="{StaticResource OverlayAni_CloseStart}"
+                                          Value="{StaticResource OverlayAni_Loaded}"
+                                          EasingFunction="{StaticResource OverlayEase_CloseByBtn}" />
+                    <EasingDoubleKeyFrame KeyTime="{StaticResource OverlayAni_CloseByBtnDuration}"
+                                          Value="{StaticResource OverlayAni_CloseFade}"
+                                          EasingFunction="{StaticResource OverlayEase_CloseByBtn}" />
+                </DoubleAnimationUsingKeyFrames>
             </Storyboard>
         </Style.Resources>
     </Style>

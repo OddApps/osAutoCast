@@ -1,9 +1,8 @@
 ﻿Imports System.Reactive.Linq
 Imports System.Reactive.Subjects
 Imports System.Runtime.InteropServices
-Imports System.Threading
 Imports System.Windows.Forms
-Imports System.Windows.Threading
+Imports osAutoCast.DataTypeLib.TriggerAction
 
 #Disable Warning BC42353
 Public Class InputMonitorService
@@ -39,10 +38,10 @@ Public Class InputMonitorService
 
     Private Shared ReadOnly TriggerBindings As (TriggerCondition As Func(Of Boolean),
         TriggerHandler As TriggerAction)() = {
-            (Function() CmdBind_AutoCast(), TriggerAction.AutoCast),
-            (Function() CmdBind_AutoPass(), TriggerAction.AutoPass),
-            (Function() CmdBind_ShowOpts(), TriggerAction.ShowOpts),
-            (Function() CmdBind_ShowMenu(), TriggerAction.ShowMenu)
+            (Function() CmdBind_AutoCast(), TriggerAutoCast),
+            (Function() CmdBind_AutoPass(), TriggerAutoPass),
+            (Function() CmdBind_ShowOpts(), TriggerShowOpts),
+            (Function() CmdBind_ShowMenu(), TriggerShowMenu)
         }
 
     Public Shared Property InputTriggerActions As IObservable(Of TriggerAction)
@@ -107,6 +106,10 @@ Public Class InputMonitorService
         Return InputMon_ShiftDown() AndAlso InputMon_AltDown() AndAlso InputMon_MDown()
     End Function
 
+    Private Shared Function InputMon_AutoCastAbort() As Boolean
+        Return Not InputMon_ShiftDown() OrElse InputMon_CDown()
+    End Function
+
     Private Shared Function InputMon_ShiftDown() As Boolean
         Return (GetAsyncKeyState(VK_SHIFT) And &H8000) <> 0
     End Function
@@ -136,7 +139,7 @@ Public Class InputMonitorService
     End Function
 
     Public Shared Function isAutoPassCancelled() As Boolean
-        Return InputMon_CDown()
+        Return InputMon_CDown() OrElse InputMon_AutoCastAbort()
     End Function
 
     Public Async Function AnticipateInput(inputType As TriggerType, Optional initAction As Boolean = False) As Task(Of Boolean)
@@ -209,7 +212,7 @@ Public Class InputMonitorService
 
         InputMon_Observer = Observable.Interval(InputMon_Timer).
             Select(Function(chkDuration) EvalInputActionInternal()).
-            Where(Function(getTrigger) getTrigger <> TriggerAction.None).
+            Where(Function(getTrigger) getTrigger <> NoTrigger).
             Subscribe(Sub(taskTrigger) TriggerCmd.OnNext(taskTrigger))
 
     End Sub
@@ -218,7 +221,7 @@ Public Class InputMonitorService
         Return TriggerBindings.FirstOrDefault(
             Function(evalTrigger)
                 Return evalTrigger.TriggerCondition()
-            End Function, (Nothing, TriggerAction.None)).TriggerHandler
+            End Function, (Nothing, NoTrigger)).TriggerHandler
     End Function
 
     Public Sub LaunchTriggerMonitor()
@@ -228,14 +231,14 @@ Public Class InputMonitorService
     Private Shared Sub EstablishTriggerMonitor(ByRef objMonitor As IDisposable)
         objMonitor = InputTriggerActions.Subscribe(
             Async Sub(objInputAction)
-                If objInputAction <> TriggerAction.None Then
+                If objInputAction <> NoTrigger Then
                     SuspendMonitoring()
 
                     Try
-                        Dim objExecTrigger = Application.Current.Dispatcher.
-                            InvokeAsync(Async Function()
-                                            Await CoreDataLib.ExecuteTrigger(objInputAction)
-                                        End Function)
+                        Dim objExecTrigger = PrepDispatcher().InvokeAsync(
+                            Async Function()
+                                Await CoreDataLib.ExecuteTrigger(objInputAction)
+                            End Function)
 
                         Await objExecTrigger.Task.Unwrap
                     Finally
@@ -271,6 +274,8 @@ Public Class InputMonitorService
                 Return CmdBind_AutoCast()
             Case DetectOpts.MonitorPopup
                 Return CmdBind_ShowMenu()
+            Case DetectOpts.MonitorAutoPassAbort
+                Return InputMon_AutoCastAbort()
         End Select
     End Function
 

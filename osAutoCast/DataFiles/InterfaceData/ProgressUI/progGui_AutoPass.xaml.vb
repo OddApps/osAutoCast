@@ -1,6 +1,6 @@
-﻿Imports System.ComponentModel
-Imports System.Windows.Media
-Imports System.Threading
+﻿Imports System.Threading
+Imports osAutoCast.DataTypeLib.ProgressMode
+Imports osAutoCast.DataTypeLib.TriggerAction
 
 Public Class progGui_AutoPass
 
@@ -15,7 +15,7 @@ Public Class progGui_AutoPass
         Await CoreDataLib.InputMonSvc.AnticipateInput(InputAction.AP_Start)
         Await Task.Delay(100)
 
-        CoreDataLib.ProcessProgressEvent(ProgMode.AutoPass, ProgEvent.DispMsg, "Release Shift or Press C To Cancel")
+        CoreDataLib.ProcessProgressEvent(ProgMode_AutoPass, ProgEvent.DispMsg, "Release Shift or Press C To Cancel")
         InitiateAutoPass(chkAutoPassResult)
     End Function
 
@@ -54,20 +54,20 @@ Public Class progGui_AutoPass
             Dim apResult = Await chkAutoPassResult.Task
             Return AutoPass_HandleResult(apResult)
         End Using
-    End Function
 
+    End Function
 
     Private Function AutoPass_HandleResult(apComplete As Boolean) As ProgResult
 
         Dim retProgResult As ProgResult = Nothing
 
         If apComplete Then
-            osFuncLib_Progress.UpdateProgStatus(TriggerAction.AutoPass,
+            osFuncLib_Progress.UpdateProgStatus(TriggerAutoPass,
                                                 ProgAction.Complete)
 
             SetProgResult(apComplete, retProgResult)
         Else
-            osFuncLib_Progress.UpdateProgStatus(TriggerAction.AutoPass, ProgAction.Abort)
+            osFuncLib_Progress.UpdateProgStatus(TriggerAutoPass, ProgAction.Abort)
             SetProgResult(apComplete, retProgResult)
         End If
 

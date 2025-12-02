@@ -8,8 +8,9 @@
     <oseffect:TexelSizeConverter x:Key="TexelSizeConverter" />
 
     <DataTemplate x:Key="osEffectText" DataType="{x:Type sys:String}">
-        <TextBlock x:Name="btnContent" Text="{Binding}" TextAlignment="Center" Padding="{StaticResource osBtn_TextPadding}"                  
-                   SnapsToDevicePixels="True" HorizontalAlignment="Center" VerticalAlignment="Center"                    
+        <TextBlock x:Name="btnContent" Text="{Binding}" Padding="{StaticResource osBtn_TextPadding}"                  
+                   SnapsToDevicePixels="True" HorizontalAlignment="Center" VerticalAlignment="Center"      
+                   TextAlignment="Center"
                    LineStackingStrategy="BlockLineHeight" LineHeight="{StaticResource osBtn_FontSize}"
                    FontWeight="{StaticResource osBtn_FontWeight}" FontSize="{StaticResource osBtn_FontSize}"
                    Foreground="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}">
@@ -51,8 +52,9 @@
     </DataTemplate>
 
     <DataTemplate x:Key="osEffectTextToggle" DataType="{x:Type sys:String}">
-        <TextBlock x:Name="toggleTxtContent" Text="{Binding}" TextAlignment="Center" Padding="{StaticResource osBtn_TextPadding}"                  
-                   SnapsToDevicePixels="True" HorizontalAlignment="Center" VerticalAlignment="Center"                    
+        <TextBlock x:Name="toggleTxtContent" Text="{Binding}" Padding="{StaticResource osBtn_TextPadding}"                  
+                   SnapsToDevicePixels="True" HorizontalAlignment="Center" VerticalAlignment="Center"                   
+                   TextAlignment="Center"
                    LineStackingStrategy="BlockLineHeight" LineHeight="{StaticResource osBtn_FontSize}"
                    FontWeight="{StaticResource osBtn_FontWeight}" FontSize="{StaticResource osBtn_FontSize}"
                    Foreground="{Binding RelativeSource={RelativeSource AncestorType=ToggleButton}, Path=Foreground}">

@@ -1,18 +1,16 @@
 ﻿Imports System.ComponentModel
 Imports System.Runtime.CompilerServices
-Imports osAutoCast.GameMenuOpts
-Imports osAutoCast.CoreDataLib
 Imports System.Runtime.InteropServices
-Imports System.Windows.Interop
-Imports osAutoCast.DataTypeLib.AnimationType
-Imports osAutoCast.DataTypeLib.AnimationVisual
-Imports osAutoCast.DataTypeLib.PromptResponse
-Imports osAutoCast.DataTypeLib.PopupVisualType
-Imports osAutoCast.DataTypeLib.VisualAction
 Imports System.Windows.Media.Animation
-Imports System.Threading
-Imports osAutoCast.osStyle
 Imports System.Windows.Threading
+Imports osAutoCast.CoreDataLib
+Imports osAutoCast.DataTypeLib.AnimationType
+Imports osAutoCast.DataTypeLib.PopupVisualType
+Imports osAutoCast.DataTypeLib.PromptResponse
+Imports osAutoCast.DataTypeLib.VisualAction
+Imports osAutoCast.DataTypeLib.PopupCloseAction
+Imports osAutoCast.GameMenuOpts
+Imports osAutoCast.osStyle
 
 #Disable Warning BC42353
 
@@ -23,17 +21,16 @@ Public Class osPopupMenu_GUI
     Public Event EvCloseByClick(sender As Object, e As EventArgs)
 
     Private objTask_Closing As TaskCompletionSource(Of Boolean)
+    Private objTask_Open As TaskCompletionSource(Of Boolean)
 
-    Private objAnimation_Open As Storyboard = Nothing
+    Public objAnimation_Open As Storyboard = Nothing
     Private objAnimation_Close As Storyboard = Nothing
-
-    Private sb2 As Storyboard = Nothing
 
     Private idxPopupVisuals As New Dictionary(Of PopupVisualType, String) From {
         {PopupVisual_Open, "PopupVisual_Open"},
         {PopupVisual_Close, "PopupVisual_Close"},
-        {PopupVisual_CloseQuick, "PopupVisual_QuickClose"},
-        {PopupVisual_CloseByCmd, "PopupVisual_Close"}
+        {PopupVisual_CloseByBtn, "PopupVisual_CloseByBtn"},
+        {PopupVisual_CloseByCmd, "PopupVisual_CloseByCmd"}
     }
 
     Private OpenCompleteEvent As EventHandler = AddressOf PopupOpenComplete
@@ -41,7 +38,7 @@ Public Class osPopupMenu_GUI
 
     Private Property isVisualConfigured As Boolean
 
-    Private ReadOnly Property objContainer As Border
+    Public ReadOnly Property objContainer As Border
         Get
             Return Me.popupMainContainer
         End Get
@@ -51,8 +48,11 @@ Public Class osPopupMenu_GUI
         isVisualConfigured = False
     End Sub
 
-    Public Async Function InitPopupClose(objVisType As PopupVisualType, Optional closeFromCmd As Boolean = False,
-                                         Optional isQuickClose As Boolean = False) As Task
+    Private Sub BeginOpenTask(ByRef objOpenResult As TaskCompletionSource(Of Boolean))
+        objOpenResult.ResetAndInitTask()
+    End Sub
+
+    Public Async Function InitPopupClose(objVisType As PopupVisualType) As Task
 
         DetectCloseMethod(objVisType)
         BeginClosingTask(objTask_Closing)
@@ -69,17 +69,6 @@ Public Class osPopupMenu_GUI
                       Return visKey.Key = objVisType
                   End Function).Value
     End Function
-
-    Private Sub PrepTransitionVisuals(objAniType As AnimationType, objVisType As PopupVisualType, objVisAction As VisualAction)
-        Select Case objAniType
-            Case aniOpen
-                EstablishVisual(objContainer, objVisType, objAnimation_Open)
-            Case aniClose
-                EstablishVisual(objContainer, objVisType, objAnimation_Close)
-        End Select
-
-        ProcessVisualEvents(objAniType, objVisAction)
-    End Sub
 
     Private Sub ProcessVisualEvents(objAniType As AnimationType, objVisAction As VisualAction)
         Select Case objAniType
@@ -104,110 +93,97 @@ Public Class osPopupMenu_GUI
         End Select
     End Sub
 
-    Private Function SelectVisual(objContainer As FrameworkElement) As Style
+    Private Function ConvVisual(objVis As Object) As Storyboard
+        Return TryCast(objVis, Storyboard)
+    End Function
+
+    Private Function ConvVisualData(objVisData As Object) As Style
+        Return CType(objVisData, Style)
+    End Function
+
+    Private Function GetVisualData() As ResourceDictionary
         With objContainer.Style
-            Dim objContainer_Visual = .Resources.MergedDictionaries.First()
-            Return CType(objContainer_Visual("PopupVisuals"), Style)
+            Return .Resources.MergedDictionaries.First()
         End With
     End Function
 
-    Private Async Sub TriggerVisuals(objPopupWindow As FrameworkElement, objVisualData As Storyboard)
-        Await objPopupWindow.Dispatcher.BeginInvoke(
+    Private Function SelectVisual() As Style
+        Return ConvVisualData(GetVisualData()("PopupVisuals"))
+    End Function
+
+    Private Async Sub TriggerVisuals(objVisualData As Storyboard)
+        Await objContainer.Dispatcher.BeginInvoke(
             Sub()
                 Try
-                    objVisualData.Begin(objPopupWindow)
+                    objVisualData.Begin(objContainer)
                 Catch ex As Exception : End Try
             End Sub, DispatcherPriority.Render)
     End Sub
 
-    Private Function isOpenScaleVisual(element As FrameworkElement, ByRef objScaleObj As Double) As Boolean
-        If element.Name = "visPopupScale" Then
-            Dim openScaleObj As Double = CDbl(element.TryFindResource("PopupAni_OpenScale"))
+    Private Async Sub TriggerVisuals(objVisualData As Storyboard, isNew As Boolean)
+        Await objContainer.Dispatcher.BeginInvoke(
+            Sub()
+                Try
+                    objVisualData.Begin(objContainer, isControllable:=True)
+                    ' objVisualData.SeekAlignedToLastTick(objContainer, TimeSpan.Zero, TimeSeekOrigin.BeginTime)
+                    ' objVisualData.Pause(objContainer)
+                    '' Debug.WriteLine(objVisualData.GetCurrentTime(objContainer))
+                    ' objVisualData.Resume(objContainer)
+                Catch ex As Exception
 
-            If openScaleObj = Nothing Then
-                objScaleObj = openScaleObj
-                Return True
-            Else : Return False : End If
-        Else : Return False : End If
-    End Function
+                End Try
+            End Sub, DispatcherPriority.Render)
+    End Sub
+
+    Private _popupWarmupDone As Boolean = False
+
+    Public Sub WarmupPopupMenu()
+        ConfigureVisual()
+    End Sub
 
     Private Function GetVisual(objVisType As PopupVisualType) As Storyboard
-        With TryCast(SelectVisual(objContainer).
-                Resources(GetVisualKey(objVisType)), Storyboard)
+        With ConvVisual(SelectVisual().
+                Resources(GetVisualKey(objVisType)))
             Return .Clone()
         End With
     End Function
 
-    Private Sub EstablishVisual(element As FrameworkElement, objVisType As PopupVisualType, ByRef objSetVisual As Storyboard)
-        Dim openScaleObj As Double
-
-        If isOpenScaleVisual(element, openScaleObj) Then
-            osPopupScale.SetPopupScale(element, 0.01)
-        Else : osPopupScale.SetPopupScale(element, CDbl(openScaleObj))
-        End If
-
+    Public Sub EstablishVisual(objVisType As PopupVisualType, ByRef objSetVisual As Storyboard)
         Dim objPopupVis As Storyboard = GetVisual(objVisType)
 
-        For Each objAnimation As Timeline In objPopupVis.Children
-            Timeline.SetDesiredFrameRate(objAnimation, 30)
+        ' objContainer.
+        For Each objAnimation In objPopupVis.Children
+            Timeline.SetDesiredFrameRate(objAnimation, 60)
             Storyboard.SetTarget(objAnimation, objContainer)
-            '  ProcessVisual(objAnimation)
         Next
 
         objSetVisual = objPopupVis
     End Sub
 
-    Private Sub ProcessVisual(tl As Timeline)
-        If tl Is Nothing Then Return
-
-        Dim dpPath As PropertyPath = Storyboard.GetTargetProperty(tl)
-        If dpPath IsNot Nothing Then
-            Dim pathStr As String = If(dpPath.Path, String.Empty)
-
-            If pathStr.Contains("PopupScale") Then
-                Dim objAnimationData = TryCast(tl, DoubleAnimation)
-                If objAnimationData IsNot Nothing Then
-                    objAnimationData.From = Nothing
-                Else
-                    Dim dakf = TryCast(tl, DoubleAnimationUsingKeyFrames)
-                    If dakf IsNot Nothing AndAlso dakf.KeyFrames.Count > 0 Then
-                        Dim k0 = dakf.KeyFrames(0)
-                        If k0.KeyTime = KeyTime.FromTimeSpan(TimeSpan.Zero) Then
-                            dakf.KeyFrames.RemoveAt(0)
-                        End If
-                    End If
-                End If
-            End If
-        End If
-
-        'Dim container = TryCast(tl, ParallelTimeline)
-        'If container IsNot Nothing Then
-        '    For Each child As Timeline In container.Children
-        '        Storyboard.SetTarget(child, Storyboard.GetTarget(tl))
-        '        ProcessVisual(child)
-        '    Next
-        'End If
-
-        Dim sbAsTl = TryCast(tl, Storyboard)
-        If sbAsTl IsNot Nothing Then
-            For Each child As Timeline In sbAsTl.Children
-                Storyboard.SetTarget(child, Storyboard.GetTarget(tl))
-                ProcessVisual(child)
-            Next
-        End If
-    End Sub
-
     Private Sub ConfigureVisual()
-        PrepTransitionVisuals(aniOpen, PopupVisualType.PopupVisual_Open, VisualStarted)
+        PrepTransitionVisuals(aniOpen, PopupVisual_Open, VisualStarted)
     End Sub
 
     Private Sub InitTransitionVisuals(objAniType As AnimationType, objVisType As PopupVisualType, objVisAction As VisualAction)
         Select Case objAniType
-            Case aniOpen : TriggerVisuals(objContainer, objAnimation_Open)
+            Case aniOpen
+                PrepTransitionVisuals(aniOpen, PopupVisual_Open, VisualStarted)
+                TriggerVisuals(objAnimation_Open, True)
             Case aniClose
                 PrepTransitionVisuals(objAniType, objVisType, objVisAction)
-                TriggerVisuals(objContainer, objAnimation_Close)
+                TriggerVisuals(objAnimation_Close)
         End Select
+    End Sub
+
+    Private Sub PrepTransitionVisuals(objAniType As AnimationType, objVisType As PopupVisualType, objVisAction As VisualAction)
+        Select Case objAniType
+            Case aniOpen
+                EstablishVisual(objVisType, objAnimation_Open)
+            Case aniClose
+                EstablishVisual(objVisType, objAnimation_Close)
+        End Select
+
+        ProcessVisualEvents(objAniType, objVisAction)
     End Sub
 
     Public Sub DetectCloseMethod(closeType As PopupVisualType)
@@ -216,12 +192,15 @@ Public Class osPopupMenu_GUI
         End If
     End Sub
 
-    Public Sub InitPopupOpen()
+    Public Async Function TriggerPopupMenu() As Task
         If Not _hasAnimated Then
             _hasAnimated = True
+            BeginOpenTask(objTask_Open)
+
             InitTransitionVisuals(aniOpen, PopupVisual_Open, VisualStarted)
+            Await objTask_Open.Task
         End If
-    End Sub
+    End Function
 
     Private Sub SetAniDuration(ByRef objDur As Duration, valDur As TimeSpan)
         objDur = New Duration(valDur)
@@ -234,15 +213,16 @@ Public Class osPopupMenu_GUI
     Private Sub PopupCloseComplete()
         objTask_Closing.TrySetResult(True)
 
-        ProcessVisualEvents(AnimationType.aniClose, VisualComplete)
+        ProcessVisualEvents(aniClose, VisualComplete)
 
         objAnimation_Close = Nothing
         Me.Owner = Nothing
     End Sub
 
     Private Sub PopupOpenComplete()
-        ProcessVisualEvents(AnimationType.aniOpen, VisualComplete)
+        ProcessVisualEvents(aniOpen, VisualComplete)
 
+        objTask_Open.TrySetResult(True)
         objAnimation_Open = Nothing
     End Sub
 
@@ -251,14 +231,15 @@ Public Class osPopupMenu_GUI
     End Sub
 
     Private Async Sub pmCmd_ShowOpts(sender As Object, e As RoutedEventArgs) Handles pmBtn_ShowOptions.Click
-        Await ExitPopupMenu(Async Function()
+        Await ExitPopupMenu(ClosePopup_ByBtn,
+                            Async Function()
                                 osFuncLib_InputScan.SetMonitorState(MonitorStatus.InCmd)
                                 Await osFuncLib_ShowOpts.ExecuteDispOpts()
                             End Function)
     End Sub
 
     Private Async Sub osStopApp()
-        Await ExitPopupMenu(
+        Await ExitPopupMenu(ClosePopup_ByBtn,
             Sub()
                 osTrayIcon.Visible = False
                 End
@@ -266,45 +247,44 @@ Public Class osPopupMenu_GUI
     End Sub
 
     Private Async Sub pmCmd_StartGame(sender As Object, e As RoutedEventArgs) Handles pmBtn_StartGame.Click
-        Await ExitPopupMenu(
-            Sub()
-                Process.Start(New ProcessStartInfo With {
+        Await ExitPopupMenu(ClosePopup_ByBtn,
+                            Sub()
+                                Process.Start(New ProcessStartInfo With {
                                   .FileName = dirMtgaExe, .WorkingDirectory = dirMtga,
                                   .WindowStyle = ProcessWindowStyle.Maximized
                               })
-            End Sub)
+                            End Sub)
     End Sub
 
     Private Async Sub pmCmd_CloseGame(sender As Object, e As RoutedEventArgs) Handles pmBtn_CloseGame.Click
         Dim chkConfirmCloseGame = GetResponse(PromptType.GameMenu_Leave)
 
         If chkConfirmCloseGame = isYes Then
-            Await ExitPopupMenu(
-                Sub()
-                    Dim cmdCloseMTGA = CmdRunner.RunCmd("taskkill", "/f /im MTGA.exe")
-                End Sub)
+            Await ExitPopupMenu(ClosePopup_ByBtn,
+                                Sub()
+                                    With cmd_KillGame
+                                        osRunCmd.RunCmd(.First(),
+                                        .Last())
+                                    End With
+                                End Sub)
         End If
     End Sub
 
     Private Sub pmCmd_Exit(sender As Object, e As RoutedEventArgs) Handles pmBtn_Exit.Click
-        Dim chkConfirmExit = GetResponse(PromptType.CloseApp)
-        If chkConfirmExit = isNo Then Exit Sub
+        If GetResponse(PromptType.CloseApp) = isNo Then Exit Sub
 
         osStopApp()
     End Sub
 
-    Public Sub InitPopupMenu()
-        ConfigureVisual()
-        ShowGameMenuItem()
+    Public Sub PrepPopupMenu()
+
+
+
+        ' ShowGameMenuItem()
     End Sub
 
-    Private Async Function ExitPopupMenu() As Task
-        Await osHandler_UI.ResetPopupMenu(True)
-        Await Task.Delay(200)
-    End Function
-
-    Private Async Function ExitPopupMenu(objMenuCmd As Action) As Task
-        Await osHandler_UI.ResetPopupMenu(True)
+    Private Async Function ExitPopupMenu(popupCloseAction As PopupCloseAction, objMenuCmd As Action) As Task
+        Await osHandler_UI.ClosePopupMenu(popupCloseAction)
         Await Task.Delay(200)
 
         PrepDispatcher().
@@ -313,8 +293,8 @@ Public Class osPopupMenu_GUI
                    End Sub)
     End Function
 
-    Private Async Function ExitPopupMenu(objMenuCmd As Func(Of Task)) As Task
-        Await osHandler_UI.ResetPopupMenu(PopupVisual_CloseQuick)
+    Private Async Function ExitPopupMenu(popupCloseAction As PopupCloseAction, objMenuCmd As Func(Of Task)) As Task
+        Await osHandler_UI.ClosePopupMenu(popupCloseAction)
         Await Task.Delay(200)
 
         Dim objTask_MenuCmd = PrepDispatcher().
@@ -340,29 +320,44 @@ Public Class osPopupMenu_GUI
             sb.Remove(Me)
         Next
 
-        Me.CommandBindings.Clear()
-        Me.InputBindings.Clear()
+        With Me
+            .CommandBindings.Clear()
+            .InputBindings.Clear()
 
-        If root Is Nothing Then Return
+            If root Is Nothing Then Return
 
-        BindingOperations.ClearAllBindings(root)
+            BindingOperations.ClearAllBindings(root)
 
-        For i = 0 To VisualTreeHelper.GetChildrenCount(root) - 1
-            ClearResources(VisualTreeHelper.GetChild(root, i))
-        Next
+            For i = 0 To VisualTreeHelper.GetChildrenCount(root) - 1
+                ClearResources(VisualTreeHelper.GetChild(root, i))
+            Next
 
-        Me.Resources.MergedDictionaries.Clear()
-        Me.Resources.Clear()
+            .Resources.MergedDictionaries.Clear()
+            .Resources.Clear()
 
-        Me.Style = Nothing
+            .Style = Nothing
 
-        Me.DataContext = Nothing
+            .DataContext = Nothing
+        End With
     End Sub
 
 End Class
 
 Partial Public Class osPopupMenu_GUI
     Implements INotifyPropertyChanged
+
+    Private Const GWL_EXSTYLE As Integer = -20
+    Private Const WS_EX_NOACTIVATE As Integer = &H8000000
+
+    Private Const MA_NOACTIVATE As Integer = 3
+
+    <DllImport("user32.dll", SetLastError:=True)>
+    Private Shared Function GetWindowLong(hWnd As IntPtr, nIndex As Integer) As Integer
+    End Function
+
+    <DllImport("user32.dll", SetLastError:=True)>
+    Private Shared Function SetWindowLong(hWnd As IntPtr, nIndex As Integer, dwNewLong As Integer) As Integer
+    End Function
 
     Public ReadOnly Property popupBoundWidth As Double
         Get
@@ -399,10 +394,10 @@ Partial Public Class osPopupMenu_GUI
             Return osStatus_Fetch()
         End Get
         Set(value As Boolean)
-            If osIsEnabled <> value Then
-                Dim result = ConfirmStatusChange(value)
+            If ChkNewVal(value) Then
+                Dim chkStatusChange = ConfirmStatusChange(value)
 
-                If result <> UpdateStatus.CancelUpdate Then
+                If StatusChanged(chkStatusChange) Then
                     SetNewStatus(value)
                     OnPropertyChanged()
                 End If
@@ -410,11 +405,17 @@ Partial Public Class osPopupMenu_GUI
         End Set
     End Property
 
+    Private Function ChkNewVal(valEnable As Boolean) As Boolean
+        Return osIsEnabled <> valEnable
+    End Function
+
+    Private Function StatusChanged(chkVal As UpdateStatus) As Boolean
+        Return chkVal <> UpdateStatus.CancelUpdate
+    End Function
+
     Private Function ConfirmStatusChange(newStatus As Boolean) As UpdateStatus
         If newStatus = False Then
-            Dim chkConfirmDisable = GetResponse(PromptType.DisableService)
-
-            Select Case chkConfirmDisable
+            Select Case GetResponse(PromptType.DisableService)
                 Case isYes
                     osFuncLib_InputScan.SetMonitorState(MonitorStatus.Paused)
                     Return UpdateStatus.ToDisabled
@@ -430,8 +431,8 @@ Partial Public Class osPopupMenu_GUI
     Private Sub SetNewStatus(setStatus As Boolean)
         osIsEnabled = setStatus
         osEnabledStatus = setStatus
-        _isAppEnabled = setStatus
 
+        _isAppEnabled = setStatus
 
         UpdateTray(setStatus, True)
     End Sub
@@ -444,6 +445,11 @@ Partial Public Class osPopupMenu_GUI
     Private Sub ShowGameMenuItem()
         DisplayGameMenuItem = If(CoreDataLib.IsGameRunning(),
             GameMenuItem.ShowClose, GameMenuItem.ShowStart)
+    End Sub
+
+    Protected Overrides Sub OnSourceInitialized(e As EventArgs)
+        MyBase.OnSourceInitialized(e)
+        SetWinOpts(GetWinHwnd(Me))
     End Sub
 
     Public Event PropertyChanged As PropertyChangedEventHandler Implements INotifyPropertyChanged.PropertyChanged

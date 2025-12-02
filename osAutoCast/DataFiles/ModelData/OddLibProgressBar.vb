@@ -1,15 +1,10 @@
-﻿Imports System.Windows
-Imports System.Windows.Media
+﻿Imports System.Threading
+Imports System.Windows.Interop
 Imports System.Windows.Media.Imaging
 Imports System.Windows.Threading
-Imports System.Diagnostics
-Imports System.Threading
 Imports SharpDX.Direct3D9
-Imports System.Windows.Interop
-Imports System.Drawing
-Imports osRect = SharpDX.Mathematics.Interop
-Imports osDraw = System.Drawing
 Imports osColor = System.Windows.Media
+Imports osRect = SharpDX.Mathematics.Interop
 
 Public Class OddLib_ProgressBar
     Inherits FrameworkElement

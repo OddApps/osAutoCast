@@ -1,19 +1,13 @@
-﻿Imports System
-Imports System.IO
-Imports System.Collections.Concurrent
-Imports System.Resources
-Imports System.Globalization
+﻿Imports osAutoCast.CoreDataLib
+Imports osAutoCast.DataTypeLib.osShaderType
+Imports osAutoCast.osShaderDataLib
 Imports SharpDX.D3DCompiler
 Imports SharpDX.Direct3D11
-Imports SharpDX
-Imports osAutoCast.osShaderDataLib
 Imports osAsm = System.Reflection.Assembly
-Imports pxShader_Text = System.Windows.Media.Effects.PixelShader
-Imports pxShader_Pixel = SharpDX.Direct3D11.PixelShader
-Imports pxShader_Vertex = SharpDX.Direct3D11.VertexShader
-Imports osAutoCast.CoreDataLib
-Imports osAutoCast.DataTypeLib.osShaderType
 Imports osProgDevice = SharpDX.Direct3D11.Device
+Imports pxShader_Pixel = SharpDX.Direct3D11.PixelShader
+Imports pxShader_Text = System.Windows.Media.Effects.PixelShader
+Imports pxShader_Vertex = SharpDX.Direct3D11.VertexShader
 
 Public Module osHandler_Shader
 

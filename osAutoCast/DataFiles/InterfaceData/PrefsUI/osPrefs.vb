@@ -1,5 +1,4 @@
-﻿Imports System.ComponentModel
-Imports System.Data
+﻿Imports System.Data
 Imports System.Windows.Forms
 Imports osAutoCast.DataTypeLib.PromptResponse
 

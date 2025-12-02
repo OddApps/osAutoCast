@@ -1,31 +1,24 @@
 ﻿Imports System.Data
-Imports System.Drawing.Drawing2D
 Imports System.IO
-Imports System.Reflection
-Imports System.Windows
-Imports System.Windows.Media
-Imports System.Windows.Threading
 Imports System.Windows.Media.Animation
-Imports osDraw = System.Drawing
-Imports osRect = SharpDX.Mathematics.Interop
-Imports osText = SharpDX.DirectWrite
-Imports osForms = System.Windows.Forms
-Imports osIcons = System.Drawing.SystemIcons
-Imports osTarget = SharpDX.Direct2D1
-Imports osProgColor = SharpDX.Mathematics.Interop.RawColor4
-Imports osProgBlendState = SharpDX.Direct3D11.BlendState
+Imports System.Windows.Threading
 Imports osAutoCast.DataTypeLib.AnimationObject
 Imports osAutoCast.DataTypeLib.AnimationType
-Imports osAutoCast.DataTypeLib.AnimationVisual
-Imports osAutoCast.DataTypeLib.OverlayVisualType
-Imports SharpDX
-Imports SharpDX.Direct3D11
-Imports osProgDevice = SharpDX.Direct3D11.Device
-Imports pxShader_Text = System.Windows.Media.Effects.PixelShader
-Imports pxShader_Pixel = SharpDX.Direct3D11.PixelShader
-Imports pxShader_Vertex = SharpDX.Direct3D11.VertexShader
 Imports osAutoCast.DataTypeLib.osShaderType
+Imports osAutoCast.DataTypeLib.OverlayVisualType
+Imports osAutoCast.DataTypeLib.VisualEasing
+Imports osAutoCast.DataTypeLib.TriggerAction
 Imports osAutoCast.osShaderDataLib
+Imports osDraw = System.Drawing
+Imports osForms = System.Windows.Forms
+Imports osIcons = System.Drawing.SystemIcons
+Imports osProgBlendState = SharpDX.Direct3D11.BlendState
+Imports osProgColor = SharpDX.Mathematics.Interop.RawColor4
+Imports osRect = SharpDX.Mathematics.Interop
+Imports osText = SharpDX.DirectWrite
+Imports pxShader_Pixel = SharpDX.Direct3D11.PixelShader
+Imports pxShader_Text = System.Windows.Media.Effects.PixelShader
+Imports pxShader_Vertex = SharpDX.Direct3D11.VertexShader
 
 #Disable Warning BC42353
 
@@ -47,6 +40,7 @@ Public Module DataTypeLib
         MonitorOpts
         MonitorPopup
         MonitorAll
+        MonitorAutoPassAbort
     End Enum
 
     Public Enum UpdateStatus
@@ -109,9 +103,9 @@ Public Module DataTypeLib
         Descending
     End Enum
 
-    Public Enum ProgMode
-        AutoPass
-        AutoCast
+    Public Enum ProgressMode
+        ProgMode_AutoPass
+        ProgMode_AutoCast
     End Enum
 
     Public Enum ProgColorObj
@@ -158,14 +152,12 @@ Public Module DataTypeLib
 #Region "Trigger Types"
 
     Public Enum TriggerAction
-        AutoCast
-        AutoPass
-        ShowOpts
-        ShowMenu
-        ShowMenuOverlay
-        InputShift
-        InputClick
-        None
+        TriggerAutoCast
+        TriggerAutoPass
+        TriggerShowOpts
+        TriggerShowMenu
+        TriggerShowTrayMenu
+        NoTrigger
     End Enum
 
     Public Enum TriggerType
@@ -173,7 +165,7 @@ Public Module DataTypeLib
         AutoPass
         ShowPrefs
         ShowMenu
-        ShowMenuOverlay
+        ShowTrayMenu
     End Enum
 
     Public Enum TriggerValidation
@@ -267,19 +259,48 @@ Public Module DataTypeLib
     Public Enum PopupVisualType
         PopupVisual_Open
         PopupVisual_Close
-        PopupVisual_CloseQuick
+        PopupVisual_CloseByBtn
         PopupVisual_CloseByCmd
     End Enum
 
     Public Enum OverlayVisualType
         OverlayVisual_Open
         OverlayVisual_Close
-        OverlayVisual_CloseQuick
+        OverlayVisual_CloseByBtn
+        OverlayVisual_CloseByCmd
+    End Enum
+
+    Public Enum PopupCloseAction
+        ClosePopup_Default
+        ClosePopup_ByBtn
+        ClosePopup_ByCmd
     End Enum
 
     Public Enum VisualAction
         VisualStarted
         VisualComplete
+    End Enum
+
+    Public Enum VisualEasing
+        PopupOpen_Scale
+        PopupOpen_ScalePrimary
+        PopupOpen_Fade
+        PopupClose
+        PopupClose_ByBtn
+        PopupClose_ByCmd
+        OverlayOpen
+        OverlayClose
+        OverlayClose_ByBtn
+    End Enum
+
+    Public Enum LoadingProgStatus
+        LoadStatus_StartUp
+        LoadStatus_Init
+        LoadStatus_PrefPrep
+        LoadStatus_LoadingUI
+        LoadStatus_StartingSvc
+        LoadStatus_Starting
+        LoadStatus_ApplyConfig
     End Enum
 
     Public Enum osShaderType
@@ -289,6 +310,98 @@ Public Module DataTypeLib
     End Enum
 
 #End Region
+
+End Module
+
+Public Class osLoadProgData
+
+    Public Property SetProgVal As Double
+    Public Property NextProgVal As Double
+
+    Public Property LastTaskVal As Boolean
+
+    Public Sub New()
+    End Sub
+
+    Public Sub New(sVal As Double, nVal As Double, Optional tVal As Boolean = False)
+        SetProgVal = sVal
+        NextProgVal = nVal
+        LastTaskVal = tVal
+    End Sub
+
+End Class
+
+Public Class osVisualEaseDetails
+
+    Public Property EaseName As VisualEasing
+    Public Property EaseData As EasingFunctionBase
+
+    Public Sub New()
+    End Sub
+
+    Public Sub New(eName As VisualEasing)
+        EaseName = eName
+        EaseData = SetVisualEase(eName)
+    End Sub
+
+    Public Sub New(eName As VisualEasing, eData As EasingFunctionBase)
+        EaseName = eName
+        EaseData = eData
+    End Sub
+
+End Class
+
+Public Module osVisEaseData
+
+    Public VisualEaseIdx As New List(Of osVisualEaseDetails) From {
+        {New osVisualEaseDetails(PopupOpen_Scale)}, {New osVisualEaseDetails(PopupOpen_ScalePrimary)},
+        {New osVisualEaseDetails(PopupOpen_Fade)}, {New osVisualEaseDetails(PopupClose)},
+        {New osVisualEaseDetails(PopupClose_ByCmd)}, {New osVisualEaseDetails(PopupClose_ByBtn)},
+        {New osVisualEaseDetails(OverlayOpen)}, {New osVisualEaseDetails(OverlayClose)},
+        {New osVisualEaseDetails(OverlayClose_ByBtn)}
+    }
+
+    Public Function GetVisualEase(objVisE As VisualEasing) As EasingFunctionBase
+        Return VisualEaseIdx.First(Function(selVis)
+                                       Return selVis.EaseName = objVisE
+                                   End Function).EaseData
+    End Function
+
+    Public Function SetVisualEase(objVisE As VisualEasing) As EasingFunctionBase
+        Select Case objVisE
+            Case PopupOpen_Scale : Return New ExponentialEase() With {
+                    .EasingMode = EasingMode.EaseIn
+                }
+            Case PopupOpen_ScalePrimary : Return New BackEase() With {
+                    .EasingMode = EasingMode.EaseOut,
+                    .Amplitude = 2
+                }
+            Case PopupOpen_Fade : Return New ExponentialEase() With {
+                    .EasingMode = EasingMode.EaseIn
+                }
+            Case PopupClose : Return New ExponentialEase() With {
+                    .EasingMode = EasingMode.EaseInOut,
+                    .Exponent = 6
+                }
+            Case PopupClose_ByCmd : Return New ExponentialEase() With {
+                    .EasingMode = EasingMode.EaseInOut,
+                    .Exponent = 6
+                }
+            Case PopupClose_ByBtn : Return New ExponentialEase() With {
+                    .EasingMode = EasingMode.EaseInOut,
+                    .Exponent = 5
+                }
+            Case OverlayOpen : Return New QuadraticEase() With {
+                    .EasingMode = EasingMode.EaseInOut
+                }
+            Case OverlayClose : Return New QuadraticEase() With {
+                    .EasingMode = EasingMode.EaseInOut
+                }
+            Case OverlayClose_ByBtn : Return New QuadraticEase() With {
+                    .EasingMode = EasingMode.EaseOut
+                }
+        End Select
+    End Function
 
 End Module
 
@@ -604,15 +717,6 @@ Public Class ProgMsg
     Public Property txtComposed As FormattedText
     Public Property txtLocation As Point
 
-    Public Sub New()
-        txtComposed = GenFormattedText()
-
-        With CoreDataLib.FetchProgSizeReport(TriggerType.AutoCast)
-            txtLocation = New Point((.Item("pW") - txtComposed.Width) \ 2,
-                                    (.Item("pH") - txtComposed.Height) \ 2)
-        End With
-    End Sub
-
     Public Sub New(txtMsg As String, pType As TriggerType, Optional isAP As Boolean = False)
         txtComposed = GenFormattedText(txtMsg, isAP)
 
@@ -622,19 +726,9 @@ Public Class ProgMsg
         End With
     End Sub
 
-    Private Function GenFormattedText() As FormattedText
-        Return New FormattedText(osFuncLib_Progress.progDispMsg,
-                                 Globalization.CultureInfo.CurrentCulture,
-                                 FlowDirection.LeftToRight,
-                                 New Typeface(New FontFamily("Segoe UI"),
-                                              FontStyles.Normal,
-                                              FontWeights.Bold,
-                                              FontStretches.Normal), 14, Brushes.Black, 1.0)
-    End Function
-
     Private Function GenFormattedText(txtMsg As String, Optional isAP As Boolean = False) As FormattedText
         Return New FormattedText(txtMsg, Globalization.CultureInfo.CurrentCulture,
-                                 FlowDirection.LeftToRight, ComposeTypeFace(),
+                                 FlowDirection.LeftToRight, ComposeTypeFace(isAP),
                                  DetermineFontSize(txtMsg, isAP), Brushes.Black, 1.0)
     End Function
 
@@ -648,16 +742,19 @@ Public Class ProgMsg
 
     Private Function CalculateFontSize(txtLength As Integer) As Double
         Select Case txtLength
-            Case < 30
-                Return 15
-            Case > 40
-                Return 12
+            Case < 40 : Return 15
+            Case >= 40 : Return 12
         End Select
     End Function
 
-    Private Function ComposeTypeFace() As Typeface
-        Return New Typeface(New FontFamily("Segoe UI"), FontStyles.Normal,
+    Private Function ComposeTypeFace(Optional isAP As Boolean = False) As Typeface
+        If isAP Then
+            Return New Typeface(New FontFamily("Segoe UI"), FontStyles.Normal,
+                                FontWeights.Bold, FontStretches.Normal)
+        Else
+            Return New Typeface(New FontFamily("Segoe UI"), FontStyles.Normal,
                             FontWeights.Bold, FontStretches.Normal)
+        End If
     End Function
 
 End Class
@@ -756,245 +853,19 @@ End Class
 
 Public Class osLoadData
 
-    Public Property LoadProcess As Task
+    Public Property LoadProgStatus As LoadingProgStatus
+    Public Property LoadProcess As Func(Of Task)
     Public Property LoadDuration As Integer
 
-    Public Sub New(objLoadProcess As Task,
-                   objLoadDuration As Integer)
+    Public Sub New(objLoadProcess As Func(Of Task),
+                   objLoadDuration As Integer,
+                   objLoadProgStatus As LoadingProgStatus)
 
         Me.LoadProcess = objLoadProcess
         Me.LoadDuration = objLoadDuration
+        Me.LoadProgStatus = objLoadProgStatus
 
     End Sub
-
-End Class
-
-Public Class osAnimationData
-
-    Public Property StartTime As Double
-    Public Property EndTime As Double
-    Public Property isOpen As Boolean
-
-    Public Sub New()
-    End Sub
-
-    Public Sub New(vStart As Double, vEnd As Double, vOpen As Boolean)
-        Me.StartTime = vStart
-        Me.EndTime = vEnd
-        Me.isOpen = vOpen
-    End Sub
-
-End Class
-
-
-Public Class osPopupAnimation
-
-    Public Property aniScale As DoubleAnimation
-    Public Property aniFade As DoubleAnimation
-
-    Private aniDuration As Duration
-    Private aniDuration_Fade As Duration
-
-    Private aniDuration_AutoStart As TimeSpan = TimeSpan.FromMilliseconds(1)
-    Private aniDuration_StartDelay As TimeSpan = TimeSpan.FromMilliseconds(200)
-    Private aniDuration_QuickCloseDelay As TimeSpan = TimeSpan.FromMilliseconds(575)
-
-    Private aniDuration_Open As TimeSpan = TimeSpan.FromMilliseconds(380)
-    Private aniDuration_Close As TimeSpan = TimeSpan.FromMilliseconds(380)
-
-    Private aniDuration_ExecFade As TimeSpan = TimeSpan.FromMilliseconds(380)
-    Private aniDuration_OverlayFade As TimeSpan = TimeSpan.FromMilliseconds(300)
-
-    Private aniDuration_QuickCloseOverlay As TimeSpan = TimeSpan.FromMilliseconds(250)
-    Private aniDuration_QuickClosePopup As TimeSpan = TimeSpan.FromMilliseconds(525)
-    Private aniDuration_QuickCloseFade As TimeSpan = TimeSpan.FromMilliseconds(450)
-
-    Public Sub New()
-    End Sub
-
-    Public Sub New(aniType As AnimationType, aniObject As AnimationObject, Optional isQuickClose As Boolean = False)
-        Select Case aniType
-            Case aniOpen
-                If aniObject = aniPopup Then
-                    SetAniDuration(aniDuration, aniDuration_Open)
-                    SetAniDuration(aniDuration_Fade, aniDuration_ExecFade)
-
-                    SetAnimation(aniOpen, aniPopup, aniDuration_Fade, True, Me.aniFade)
-                    SetAnimation(aniOpen, aniPopup, aniDuration, False, Me.aniScale)
-                Else
-                    SetAniDuration(aniDuration_Fade, aniDuration_OverlayFade)
-                    SetAnimation(aniOpen, aniOverlay, aniDuration_Fade, True, Me.aniFade)
-                End If
-            Case aniClose
-                If aniObject = aniPopup Then
-                    SetAniDuration(aniDuration, CloseDuration_Scale(isQuickClose))
-                    SetAniDuration(aniDuration_Fade, CloseDuration_Fade(isQuickClose, aniObject))
-
-                    SetAnimation(aniClose, aniPopup, aniDuration_Fade, True, Me.aniFade, isQuickClose)
-                    SetAnimation(aniClose, aniPopup, aniDuration, False, Me.aniScale, isQuickClose)
-                Else
-                    SetAniDuration(aniDuration_Fade, CloseDuration_Fade(isQuickClose, aniObject))
-                    SetAnimation(aniClose, aniOverlay, aniDuration_Fade, True, Me.aniFade, isQuickClose)
-                End If
-        End Select
-    End Sub
-
-    Private Function CloseDuration_Fade(isQuickClose As Boolean, aniObject As AnimationObject)
-        Select Case aniObject
-            Case aniPopup
-                Return If(isQuickClose, aniDuration_QuickCloseFade,
-                    aniDuration_Close)
-            Case aniOverlay
-                Return If(isQuickClose, aniDuration_QuickCloseOverlay,
-                    aniDuration_OverlayFade)
-        End Select
-    End Function
-
-    Private Function CloseDuration_Scale(isQuickClose As Boolean)
-        Return If(isQuickClose, aniDuration_QuickClosePopup,
-            aniDuration_Close)
-
-    End Function
-
-    Private Sub SetAnimation(aniType As AnimationType, aniObject As AnimationObject, aniDur As Duration,
-                             isFadeAni As Boolean, ByRef aniObj As DoubleAnimation,
-                             Optional isQuickClose As Boolean = False)
-
-        Dim objAniVal = SetAniValues(aniType, aniObject, isFadeAni, isQuickClose)
-
-        Dim objNewAni As New DoubleAnimation() With {
-            .From = objAniVal.StartTime, .To = objAniVal.EndTime,
-            .FillBehavior = FillBehavior.HoldEnd,
-            .Duration = aniDur
-        }
-
-        SetAniOptions(aniType, aniObject, objAniVal.isOpen,
-                    objNewAni, isFadeAni, isQuickClose)
-
-        aniObj = objNewAni
-    End Sub
-
-    Private Sub SetAniOptions(aniType As AnimationType, aniObject As AnimationObject, isOpen As Boolean,
-                            ByRef objAni As DoubleAnimation, isFadeAni As Boolean, Optional isQuickClose As Boolean = False)
-
-        SetAniDelay(aniType, aniObject, isOpen,
-                    objAni, isQuickClose)
-
-        If aniObject = AnimationObject.aniPopup Then
-            objAni.EasingFunction = If(isQuickClose,
-                ApplyEase(True), ApplyEase())
-        End If
-
-        'If isPopupFadeClose(aniType, aniObject, isFadeAni) Then
-        '    If Not isQuickClose Then
-        '        objAni.EasingFunction = ApplyEase()
-        '    End If
-        'Else
-        '    objAni.EasingFunction = If(isQuickClose,
-        '        ApplyEase(True), ApplyEase())
-        'End If
-
-    End Sub
-
-    Private Function isPopupFadeClose(aniType As AnimationType, aniObject As AnimationObject, isFadeAni As Boolean) As Boolean
-        If aniType = aniClose AndAlso aniObject = aniPopup Then
-            Return isFadeAni
-        End If
-    End Function
-
-    Private Sub SetAniDelay(aniType As AnimationType, aniObject As AnimationObject, isOpen As Boolean,
-                            ByRef objAni As DoubleAnimation, Optional isQuickClose As Boolean = False)
-        Select Case isOpen
-            Case True
-                If aniObject = aniPopup Then
-                    objAni.BeginTime = aniDuration_StartDelay
-                Else
-                    objAni.BeginTime = aniDuration_AutoStart
-                End If
-            Case False
-                If aniObject = aniPopup Then
-                    objAni.BeginTime = aniDuration_AutoStart
-                Else
-                    If isQuickClose Then
-                        objAni.BeginTime = aniDuration_QuickCloseDelay
-                    Else
-                        objAni.BeginTime = aniDuration_AutoStart
-                    End If
-                End If
-        End Select
-    End Sub
-
-    Private Function SetAniValues(aniType As AnimationType, aniObject As AnimationObject,
-                                  Optional isFadeAni As Boolean = False,
-                                  Optional isQuickClose As Boolean = False) As osAnimationData
-        Select Case aniType
-            Case aniOpen
-                Return New osAnimationData(CalcStartVal(isFadeAni, aniObject),
-                                           CalcStopVal(isFadeAni, aniObject), True)
-            Case aniClose
-                Return New osAnimationData(CalcStartVal(isFadeAni, aniObject, True),
-                                           CalcStopVal(isFadeAni, aniObject, True, isQuickClose), False)
-        End Select
-    End Function
-
-    Private Function CalcStartVal(isFade As Boolean, aniObject As AnimationObject,
-                                  Optional isClose As Boolean = False, Optional isQuickClose As Boolean = False) As Double
-        Select Case aniObject
-            Case aniPopup
-                Return If(isClose, 1.0,
-                    If(isFade, 0.0, 0.01))
-            Case aniOverlay
-                Return If(isClose, 0.7, 0.0)
-        End Select
-    End Function
-
-    Private Function CalcStopVal(isFade As Boolean, aniObject As AnimationObject,
-                                 Optional isClose As Boolean = False, Optional isQuickClose As Boolean = False) As Double
-        Select Case aniObject
-            Case aniPopup
-                Return If(isClose,
-                    If(isFade, 0.0, If(isQuickClose, 15.0, 0.01)), 1.0)
-            Case aniOverlay
-                Return If(isClose, 0.0, 0.7)
-        End Select
-    End Function
-
-    Public Sub DisposeAni()
-        aniScale = Nothing
-        aniFade = Nothing
-
-        aniDuration = Nothing
-        aniDuration_Open = Nothing
-        aniDuration_Close = Nothing
-    End Sub
-
-    Private Sub SetAniDuration(ByRef objDur As Duration, valDur As TimeSpan)
-        objDur = New Duration(valDur)
-    End Sub
-
-    Private Function ApplyEase() As QuinticEase
-        Return New QuinticEase With {
-            .EasingMode = EasingMode.EaseIn
-        }
-    End Function
-
-    Private Function ApplyEase(isQuickClose As Boolean) As CircleEase
-        Return New CircleEase With {
-            .EasingMode = EasingMode.EaseInOut
-        }
-    End Function
-
-    'Private Function ApplyEase(isOpen As Boolean) As EasingFunctionBase
-    '    If isOpen Then
-    '        Return New QuinticEase With {
-    '            .EasingMode = EasingMode.EaseIn
-    '        }
-    '    Else
-    '        Return New QuinticEase With {
-    '            .EasingMode = EasingMode.EaseIn
-    '        }
-    '    End If
-    'End Function
 
 End Class
 
@@ -1006,7 +877,7 @@ Public Module osPopupMenuLib
                 With objGui_PopupMenu
 
                     Try
-                        RemoveHandler .Closed, AddressOf osHandler_UI.PrepDispatch
+                        ' RemoveHandler .Closed, AddressOf osHandler_UI.PrepDispatch
 
                         If .IsLoaded Then
                             .IsHitTestVisible = False
@@ -1064,24 +935,23 @@ Public Module osPopupMenuLib
             .Topmost = True
             .ShowActivated = False
 
-            .InitPopupMenu()
-            .Show()
-            .InitPopupOpen()
+            .PrepPopupMenu()
+            .TriggerPopupMenu()
         End With
     End Sub
 
     Private Sub ExecPrepUI_PopupMenuOverlay(objGui_PopupMenuOverlay As MenuOverlayWindow)
-        With objGui_PopupMenuOverlay
-            AddHandler .objStacker.MouseUp,
-                Sub(sender As Object, e As MouseButtonEventArgs)
-                    If DetermineMouseClick(e) Then
-                        osHandler_UI.pmFunc_TerminatePopupMenu(sender, e)
-                    End If
-                End Sub
+        'With objGui_PopupMenuOverlay
+        '    AddHandler .objStacker.MouseUp,
+        '        Sub(sender As Object, e As MouseButtonEventArgs)
+        '            If DetermineMouseClick(e) Then
+        '                osHandler_UI.pmFunc_TerminatePopupMenu(sender, e)
+        '            End If
+        '        End Sub
 
-            .InitPopupMenuOverlay()
-            .InitTransitionVisuals(aniOpen, OverlayVisual_Open)
-        End With
+        '    .InitPopupMenuOverlay()
+        '    .InitTransitionVisuals(aniOpen, OverlayVisual_Open)
+        'End With
     End Sub
 
     Private Sub ExecPrepUI_TrayMenuOverlay(objGui_PopupMenuOverlay As MenuOverlayWindow)
@@ -1093,22 +963,22 @@ Public Module osPopupMenuLib
 
     Public Function GeneratePopupMenuGUI() As Func(Of osPopupMenu_GUI)
         Return Function()
-                   Return Application.Current.Dispatcher.
-                    Invoke(Function()
-                               Dim objWin_PopupMenu = New osPopupMenu_GUI()
-                               AddHandler objWin_PopupMenu.Closed, AddressOf osHandler_UI.PrepDispatch
+                   Return PrepDispatcher().Invoke(
+                       Function()
+                           Dim objWin_PopupMenu = New osPopupMenu_GUI()
+                           AddHandler objWin_PopupMenu.Closed, AddressOf osHandler_UI.PrepDispatch
 
-                               Return objWin_PopupMenu
-                           End Function)
+                           Return objWin_PopupMenu
+                       End Function)
                End Function
     End Function
 
     Public Function GeneratePopupMenuOverlayGUI(Optional isFromTray As Boolean = False) As Func(Of MenuOverlayWindow)
         Return Function()
-                   Return Application.Current.Dispatcher.
-                    Invoke(Function()
-                               Return New MenuOverlayWindow(isFromTray)
-                           End Function)
+                   Return PrepDispatcher().Invoke(
+                       Function()
+                           Return New MenuOverlayWindow(isFromTray)
+                       End Function)
                End Function
     End Function
 
@@ -1126,6 +996,9 @@ Public Class GUI_PrepData
     Public Property guiAction As Action(Of Window)
     Public Property guiDispatch As Dispatcher
     Public Property guiIsLoaded As Boolean
+
+    Public Sub New()
+    End Sub
 
     Private Sub guiAction_AutoPass(objGui As progGui_AutoPass)
         With objGui
@@ -1171,10 +1044,6 @@ Public Class GUI_PrepData
         End With
     End Sub
 
-    Public Sub New()
-
-    End Sub
-
     Public Sub New(objGUI As Window)
         guiAction = Sub()
                         Try
@@ -1195,12 +1064,12 @@ Public Class GUI_PrepData
     Public Sub New(guiTrigger As TriggerAction, objWin As Window, Optional isMenuOverlay As Boolean = False)
 
         Select Case guiTrigger
-            Case TriggerAction.AutoCast
+            Case TriggerAutoCast
                 guiDispatch = objWin.Dispatcher
-            Case TriggerAction.AutoPass
+            Case TriggerAutoPass
                 guiAction = AddressOf guiAction_AutoPass
                 guiDispatch = objWin.Dispatcher
-            Case TriggerAction.ShowMenu
+            Case TriggerShowMenu
                 If isMenuOverlay Then
                     guiAction = AddressOf guiAction_PopupMenuOverlay
                     guiDispatch = objWin.Dispatcher
@@ -1225,14 +1094,11 @@ Public Class GUI_PrepData
                 End If
             End If
 
-            ' TODO: free unmanaged resources (unmanaged objects) and override finalizer
-            ' TODO: set large fields to null
             disposedValue = True
         End If
     End Sub
 
     Public Sub Dispose() Implements IDisposable.Dispose
-        ' Do not change this code. Put cleanup code in 'Dispose(disposing As Boolean)' method
         Dispose(disposing:=True)
         GC.SuppressFinalize(Me)
     End Sub
@@ -1385,7 +1251,6 @@ Public Class PrefRecordIndex
             pWriter.WriteLine("_PrefCatalog")
         End Using
     End Sub
-
 
     Private Sub SavePrefsToFile()
         Using pWriter As New System.IO.StreamWriter(CoreDataLib.osPrefFile, False)
@@ -1771,15 +1636,13 @@ Public Class ProgressValData
                 ProgressEase = Nothing
             End If
 
-            ' TODO: free unmanaged resources (unmanaged objects) and override finalizer
-            ' TODO: set large fields to null
             disposedValue = True
         End If
     End Sub
 
     Public Sub Dispose() Implements IDisposable.Dispose
-        ' Do not change this code. Put cleanup code in 'Dispose(disposing As Boolean)' method
         Dispose(disposing:=True)
         GC.SuppressFinalize(Me)
     End Sub
+
 End Class

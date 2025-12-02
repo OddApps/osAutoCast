@@ -1,5 +1,4 @@
-﻿Imports System.Windows
-Imports System.Windows.Media.Animation
+﻿Imports System.Windows.Media.Animation
 
 ''' <summary>
 ''' Custom EaseInOutExpo easing function (like your manual function).

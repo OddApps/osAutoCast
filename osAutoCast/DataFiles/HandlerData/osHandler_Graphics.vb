@@ -1,4 +1,5 @@
 ﻿Imports System.Threading
+Imports System.Windows.Threading
 Imports Microsoft.Win32.SafeHandles
 Imports SharpDX.Direct3D
 Imports SharpDX.Direct3D11
@@ -59,29 +60,58 @@ Public NotInheritable Class osHandler_Graphics
     Private Sub New()
     End Sub
 
-    Public Shared Sub EnsureCreated()
-
+    Public Shared Async Function EnsureCreated() As Task
         If _progDevice IsNot Nothing Then Return
+        Await Task.Run(
+            Async Function()
+                Await PrepDispatcher().InvokeAsync(Sub()
+                                                       SyncLock _initLock
+                                                           If _progDevice IsNot Nothing Then Return
 
-        SyncLock _initLock
-            If _progDevice IsNot Nothing Then Return
+                                                           Dim deviceFlags = DeviceCreationFlags.BgraSupport
 
-            Dim deviceFlags = DeviceCreationFlags.BgraSupport
+                                                           _progDevice = New osProgDevice(DriverType.Hardware, deviceFlags)
+                                                           _progContext = _progDevice.ImmediateContext
 
-            _progDevice = New osProgDevice(DriverType.Hardware, deviceFlags)
-            _progContext = _progDevice.ImmediateContext
+                                                           Using dxgiDev = _progDevice.QueryInterface(Of osProgDxgiDevice)()
+                                                               Using adapter = dxgiDev.Adapter
+                                                                   _progDxgiFactory = adapter.GetParent(Of osProgDxgiFactory)()
+                                                               End Using
+                                                           End Using
 
-            Using dxgiDev = _progDevice.QueryInterface(Of osProgDxgiDevice)()
-                Using adapter = dxgiDev.Adapter
-                    _progDxgiFactory = adapter.GetParent(Of osProgDxgiFactory)()
-                End Using
-            End Using
+                                                           _progD2dFactory = New osProgFactoryD2D(osFactoryType.MultiThreaded)
+                                                           _progDwFactory = New FactoryDW(osDwFactoryType.Shared)
+                                                       End SyncLock
+                                                   End Sub, DispatcherPriority.Normal).Task
 
-            _progD2dFactory = New osProgFactoryD2D(osFactoryType.MultiThreaded)
-            _progDwFactory = New FactoryDW(osDwFactoryType.Shared)
-        End SyncLock
+            End Function)
+        ' We need to create the D3D device / factories on the dispatcher.
+    End Function
 
-    End Sub
+    'Public Shared Async Function EnsureCreated() As Task
+
+    '    If _progDevice IsNot Nothing Then Return
+    '    Await PrepDispatcher().InvokeAsync(Sub()
+    '                                           SyncLock _initLock
+    '                                               If _progDevice IsNot Nothing Then Return
+
+    '                                               Dim deviceFlags = DeviceCreationFlags.BgraSupport
+
+    '                                               _progDevice = New osProgDevice(DriverType.Hardware, deviceFlags)
+    '                                               _progContext = _progDevice.ImmediateContext
+
+    '                                               Using dxgiDev = _progDevice.QueryInterface(Of osProgDxgiDevice)()
+    '                                                   Using adapter = dxgiDev.Adapter
+    '                                                       _progDxgiFactory = adapter.GetParent(Of osProgDxgiFactory)()
+    '                                                   End Using
+    '                                               End Using
+
+    '                                               _progD2dFactory = New osProgFactoryD2D(osFactoryType.MultiThreaded)
+    '                                               _progDwFactory = New FactoryDW(osDwFactoryType.Shared)
+    '                                           End SyncLock
+    '                                       End Sub)
+
+    'End Function
 
     Public Shared Sub FlushDevice()
         If _progContext Is Nothing Then Return
