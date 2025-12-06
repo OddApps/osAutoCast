@@ -15,7 +15,14 @@ Imports System.ComponentModel
 
 Public NotInheritable Class osHandler_UI
 
-    Public Shared pmFunc_TerminatePopupMenu As MouseButtonEventHandler = AddressOf TerminatePopupMenu
+    Public Shared pmFunc_TerminatePopupMenu As MouseButtonEventHandler =
+        AddressOf TerminatePopupMenu
+
+    Private Shared objTask_PreloadShaders As New List(Of Task)
+    Private Shared objTask_LoadShaders As New List(Of Task)
+
+    Public Shared objBuildShader As Task(
+        Of Dictionary(Of String, Byte())) = Nothing
 
     Private Shared _osPrefs As Lazy(Of osPrefs)
     Public Shared ReadOnly Property osGui_Prefs As osPrefs
@@ -84,9 +91,10 @@ Public NotInheritable Class osHandler_UI
     End Sub
 
     Public Shared Sub DispatchOverlay()
-        Task.Run(Sub()
-                     DismissPopupMenuOverlay()
-                 End Sub)
+        Task.Run(
+            Sub()
+                DismissPopupMenuOverlay()
+            End Sub)
 
         InitResourceAlloc()
     End Sub
@@ -112,50 +120,40 @@ Public NotInheritable Class osHandler_UI
 
     Public Shared Async Function PrepAndLoadUI() As Task
 
-        Await Task.Run(
-            Async Function()
-                Dim aa = Task.Run(
-                    Sub()
-                        PrepDispatcher().
+        PrepDispatcher().
                     Invoke(Sub()
-                               LoadPrefData()
+                               LoadOptsUI()
+                               osGui_Prefs.osPrefsPrep()
                            End Sub)
-                    End Sub)
 
-                Dim ab = Task.Run(
-                    Sub()
-                        PrepDispatcher().
-                    Invoke(Sub()
-                               GeneratePopupMenu(True)
-                           End Sub)
-                    End Sub)
+        Await Task.WhenAll(CreatePopupMenuOverlay(),
+                           CreatePopupMenu(),
+                           osHandler_Graphics.EnsureCreated())
 
-                Await Task.Run(
-                    Async Function()
-                        Await osHandler_Graphics.EnsureCreated()
-                    End Function)
+        objBuildShader = BuildShaderCatalog()
 
-                Await Task.Run(
-                    Sub()
-                        CoreDataLib.ComposeShaderIdx()
-                        LoadAllShaders()
-                    End Sub)
-            End Function)
+        Await CoreDataLib.ComposeShaderIdx().
+            ConfigureAwait(False)
+
+        Await PreloadShaderCatalog(objBuildShader)
+
+        Await LoadAllShaders().
+            ConfigureAwait(False)
 
     End Function
 
-    Private Shared Sub LoadAllShaders()
-        Parallel.ForEach(ShaderIdxData,
-                         Async Sub(objShader)
-                             Await AppendShader(objShader)
-                         End Sub)
-    End Sub
+    Public Shared Async Function LoadAllShaders() As Task
+        Await Task.Run(
+            Async Function()
+                Await Task.Run(
+                    Sub()
+                        For Each objShader In ShaderDetailsIdx
+                            objTask_LoadShaders.Add(AddShaderToIdx(objShader))
+                        Next
+                    End Sub)
 
-    Private Shared Async Function AppendShader(objShaderDetails As osShaderDetails) As Task
-        Await PrepDispatcher.InvokeAsync(
-            Sub()
-                AddShaderToIdx(objShaderDetails)
-            End Sub)
+                Await Task.WhenAll(objTask_LoadShaders)
+            End Function)
     End Function
 
     Public Shared Async Function LaunchGui(progGui As TriggerAction) As Task

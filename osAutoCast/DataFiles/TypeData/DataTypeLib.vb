@@ -4,6 +4,7 @@ Imports System.Windows.Media.Animation
 Imports System.Windows.Threading
 Imports osAutoCast.DataTypeLib.AnimationObject
 Imports osAutoCast.DataTypeLib.AnimationType
+Imports osAutoCast.DataTypeLib.LoadStep
 Imports osAutoCast.DataTypeLib.osShaderType
 Imports osAutoCast.DataTypeLib.OverlayVisualType
 Imports osAutoCast.DataTypeLib.VisualEasing
@@ -180,16 +181,6 @@ Public Module DataTypeLib
 
 #Region "UI Types"
 
-    Public Enum LoadContentData
-        isLoading
-        isInit
-        isPrefPrep
-        isLoadingUI
-        isStartingSvc
-        isStarting
-        isApplyConfig
-    End Enum
-
     Public Enum RenderBitmapObj
         Progress
         Message
@@ -303,6 +294,26 @@ Public Module DataTypeLib
         LoadStatus_ApplyConfig
     End Enum
 
+    Public Enum LoadContentData
+        isLoading
+        isInit
+        isPrefPrep
+        isLoadingUI
+        isStartingSvc
+        isStarting
+        isApplyConfig
+    End Enum
+
+    Public Enum LoadStep
+        LoadStart
+        LoadInit
+        LoadPrefs
+        LoadUI
+        LoadConfig
+        LoadService
+        LoadComplete
+    End Enum
+
     Public Enum osShaderType
         sTypePixel
         sTypeVertex
@@ -312,6 +323,12 @@ Public Module DataTypeLib
 #End Region
 
 End Module
+
+Public Class LoadDataObject
+
+    Public Property SetProgVal As Func(Of Task)
+
+End Class
 
 Public Class osLoadProgData
 
@@ -853,9 +870,19 @@ End Class
 
 Public Class osLoadData
 
+    Public Property LoadingStep As LoadStep
+    Public Property LoadContent As LoadContentData
     Public Property LoadProgStatus As LoadingProgStatus
-    Public Property LoadProcess As Func(Of Task)
+
+    Public Property LoadMsg As String
+
     Public Property LoadDuration As Integer
+    Public Property PreLoadDuration As Integer
+
+    Public Property LoadProcess As Func(Of Task)
+
+    Public Sub New()
+    End Sub
 
     Public Sub New(objLoadProcess As Func(Of Task),
                    objLoadDuration As Integer,
@@ -864,6 +891,24 @@ Public Class osLoadData
         Me.LoadProcess = objLoadProcess
         Me.LoadDuration = objLoadDuration
         Me.LoadProgStatus = objLoadProgStatus
+
+    End Sub
+
+    Public Sub New(objLoadingStep As LoadStep, objLoadContent As LoadContentData,
+                   objLoadProgStatus As LoadingProgStatus, objLoadDuration As Integer, objLoadMsg As String,
+                   Optional objLoadProcess As Func(Of Task) = Nothing, Optional objPreLoadDuration As Integer = 0)
+
+        Me.LoadingStep = objLoadingStep
+
+        Me.LoadContent = objLoadContent
+        Me.LoadProgStatus = objLoadProgStatus
+
+        Me.LoadMsg = objLoadMsg
+
+        Me.LoadProcess = objLoadProcess
+        Me.LoadDuration = objLoadDuration
+
+        Me.PreLoadDuration = objPreLoadDuration
 
     End Sub
 

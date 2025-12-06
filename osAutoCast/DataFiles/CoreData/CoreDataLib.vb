@@ -142,16 +142,6 @@ Public NotInheritable Class CoreDataLib
         End Select
     End Function
 
-    Private Shared Function GetResourceList() As List(Of String)
-        Return PopulateResources().
-            Select(Function(objRes) objRes).ToList()
-    End Function
-
-    Private Shared Function PopulateResources() As String()
-        Return Assembly.GetExecutingAssembly().
-            GetManifestResourceNames()
-    End Function
-
     Private Shared Function GetShaderType(objShaderRes As String) As osShaderType
         Return ShaderTypeIdx(DetermineShaderType(objShaderRes))
     End Function
@@ -161,23 +151,21 @@ Public NotInheritable Class CoreDataLib
                              RegexOptions.IgnoreCase).Groups(1).Value
     End Function
 
-    Private Shared Function ValidateShader(objShaderRes As String) As Boolean
-        Return objShaderRes.Contains("osShader")
-    End Function
-
-    Private Shared Function GenerateShaderList() As List(Of osShaderDetails)
-        Return GetResourceList().Where(
-            Function(valRes) ValidateShader(valRes)).
-            Select(Function(shaderRes) CreateShaderRecord(shaderRes)).ToList()
+    Private Shared Async Function GenerateShaderList() As Task(Of List(Of osShaderDetails))
+        Return Await Task.Run(
+            Function()
+                Return osShaderNameList.Select(
+                    Function(shaderRes) CreateShaderRecord(shaderRes)).ToList()
+            End Function)
     End Function
 
     Private Shared Function CreateShaderRecord(objShaderRes As String) As osShaderDetails
         Return New osShaderDetails(objShaderRes, GetShaderType(objShaderRes))
     End Function
 
-    Public Shared Sub ComposeShaderIdx()
-        ShaderIdxData = GenerateShaderList()
-    End Sub
+    Public Shared Async Function ComposeShaderIdx() As Task
+        ShaderDetailsIdx = Await GenerateShaderList()
+    End Function
 
     Public Shared Function GetShaderDevice() As osProgDevice
         Return osHandler_Graphics.pDevice

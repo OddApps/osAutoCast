@@ -1746,24 +1746,28 @@ Public NotInheritable Class osMenuFuncBinder
     Public Shared Async Function BindChecked_Popup(objMenuItem As osControls.MenuItem,
                                         DoFunc_FetchStatus As Func(Of Boolean),
                                         DoFunc_ConfirmStatus As Action(Of Boolean)) As Task
-        Await PrepDispatcher().InvokeAsync(Sub()
-                                               Dim osMenuAdapter = New MenuFuncAdapter(DoFunc_FetchStatus, DoFunc_ConfirmStatus)
+        Await Task.Run(
+            Async Function()
+                Await PrepDispatcher().InvokeAsync(
+                    Sub()
+                        Dim osMenuAdapter = New MenuFuncAdapter(DoFunc_FetchStatus, DoFunc_ConfirmStatus)
 
-                                               Dim osBinder_ChkEnabled = GenMenuBinding(osMenuAdapter, MenuBinderType.isChk)
-                                               ApplyMenuBinding(objMenuItem, osBinder_ChkEnabled, MenuBinderType.isChk)
+                        Dim osBinder_ChkEnabled = GenMenuBinding(osMenuAdapter, MenuBinderType.isChk)
+                        ApplyMenuBinding(objMenuItem, osBinder_ChkEnabled, MenuBinderType.isChk)
 
-                                               Dim osBinder_MenuText = GenMenuBinding(osMenuAdapter, MenuBinderType.isMenu)
-                                               ApplyMenuBinding(objMenuItem, osBinder_MenuText, MenuBinderType.isMenu)
+                        Dim osBinder_MenuText = GenMenuBinding(osMenuAdapter, MenuBinderType.isMenu)
+                        ApplyMenuBinding(objMenuItem, osBinder_MenuText, MenuBinderType.isMenu)
 
-                                               AddHandler osMenuAdapter.PropertyChanged,
-                                               Sub(sender, e)
-                                                   If e.PropertyName = NameOf(osMenuAdapter.Value) Then
-                                                       Dim isEnabled As Boolean = osMenuAdapter.Value
+                        AddHandler osMenuAdapter.PropertyChanged,
+                        Sub(sender, e)
+                            If e.PropertyName = NameOf(osMenuAdapter.Value) Then
+                                Dim isEnabled As Boolean = osMenuAdapter.Value
 
-                                                       UpdateTray(isEnabled)
-                                                   End If
-                                               End Sub
-                                           End Sub)
+                                UpdateTray(isEnabled)
+                            End If
+                        End Sub
+                    End Sub)
+            End Function)
     End Function
 
     Public Event Binding_NotifyPropertyChanged As PropertyChangedEventHandler Implements INotifyPropertyChanged.PropertyChanged

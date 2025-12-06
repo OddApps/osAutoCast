@@ -13,7 +13,6 @@
         <Setter Property="VerticalContentAlignment" Value="Center"/>
     </Style>
 
-
     <Style x:Key="LoadingContentStyle" TargetType="{x:Type Border}">
         <Setter Property="BorderBrush" Value="#BF9E1A1A" />
         <Setter Property="BorderThickness" Value="4" />
@@ -28,18 +27,19 @@
     </Style>
 
     <Style x:Key="LoadingContentContainerStyle" TargetType="{x:Type Border}">
-        <Setter Property="Background" Value="#57323232"/>
-        <Setter Property="BorderBrush" Value="#FF646464" />
-        <Setter Property="BorderThickness" Value="2" />
-        <Setter Property="Padding" Value="14,2,14,0" />
-        <Setter Property="Margin" Value="30,0,30,10" />
+        <Setter Property="Background" Value="#42323232"/>
+        <Setter Property="BorderBrush" Value="#66323232" />
+        <Setter Property="BorderThickness" Value="0,2,0,0" />
+        <Setter Property="Padding" Value="0,2,0,0" />
+        <Setter Property="Margin" Value="30,0,30,12" />
         <Setter Property="VerticalAlignment" Value="Bottom"/>
+        <Setter Property="CornerRadius" Value="8"/>
     </Style>
 
     <Style x:Key="LoadingTextStyle" TargetType="{x:Type TextBlock}">
         <Setter Property="Foreground" Value="#FFFFFFFF" />
         <Setter Property="Height" Value="34" />
-        <Setter Property="FontSize" Value="24" />
+        <Setter Property="FontSize" Value="26" />
         <Setter Property="FontWeight" Value="Bold" />
         <Setter Property="TextAlignment" Value="Center"/>
         <Setter Property="HorizontalAlignment" Value="Stretch"/>
@@ -48,15 +48,17 @@
         <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Disabled"/>
     </Style>
     
-    <Style x:Key="LoadDotsStyle" TargetType="{x:Type TextBlock}">
-        <Setter Property="Height" Value="44" />
-        <Setter Property="FontSize" Value="32" />
-        <Setter Property="FontWeight" Value="Bold" />
-        <Setter Property="Padding" Value="1,2,1,0"/>
-        <Setter Property="Margin" Value="1,0" />
-        <Setter Property="VerticalAlignment" Value="Bottom"/>
-        <Setter Property="Opacity" Value="0.25"/>
-        <Setter Property="Foreground" Value="#FFFFFFFF" />
+    <Style x:Key="LoadingImageStyle" TargetType="{x:Type Image}">
+        <Setter Property="Height" Value="576" />
+        <Setter Property="Width" Value="576" />
+        <Setter Property="RenderTransformOrigin" Value="0.5,0.5" />
+        <Setter Property="VerticalAlignment" Value="Top"/>
+        <Setter Property="Source" Value="/Resources/osSplashLoader.png"/>
+        <Setter Property="RenderTransform">
+            <Setter.Value>
+                <TranslateTransform Y="-18" />
+            </Setter.Value>
+        </Setter>
     </Style>
 
     <Style x:Key="LoadingProgressStyle" TargetType="{x:Type osLoadProg:osLoadingProgressBar}">

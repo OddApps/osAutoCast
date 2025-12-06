@@ -7,6 +7,7 @@ Imports System.Windows.Media.Animation
 Imports osColor = System.Windows.Media
 Imports System.Windows.Threading
 Imports osAutoCast.DataTypeLib.LoadingProgStatus
+Imports System.Diagnostics
 
 Namespace osLoadingElements
 
@@ -18,15 +19,15 @@ Namespace osLoadingElements
                 Me.FillBrush = New SolidColorBrush(Colors.Red)
                 Me.TrackBrush = New SolidColorBrush(Color.FromRgb(&HE, &HE, &HE))
 
-                Me.CornerRadius = 0.0
+                Me.CornerRadius = New CornerRadius(0) ' <-- now CornerRadius type
                 Me.AnimationDuration = TimeSpan.FromMilliseconds(400)
 
-                Me.EasingFunction = New CubicEase() With {
+                Me.EasingFunction = New ExponentialEase() With {
                 .EasingMode = EasingMode.EaseOut
             }
 
                 Me.Minimum = 0
-                Me.Maximum = 100
+                Me.Maximum = 250
             End With
         End Sub
 
@@ -38,8 +39,8 @@ Namespace osLoadingElements
         Private ReadOnly _lockObj As New Object()
         Private _currentSlowTarget As Double? = Nothing
 
-        Private ReadOnly _fastDuration As TimeSpan = TimeSpan.FromMilliseconds(350)
-        Private ReadOnly _slowDuration As TimeSpan = TimeSpan.FromSeconds(2)
+        Private ReadOnly _fastDuration As TimeSpan = TimeSpan.FromMilliseconds(400)
+        Private ReadOnly _slowDuration As TimeSpan = TimeSpan.FromSeconds(2.5)
 
         Private ProgDuration_Set As Duration = New Duration(_fastDuration)
         Private ProgDuration_Next As Duration = New Duration(_slowDuration)
@@ -51,14 +52,25 @@ Namespace osLoadingElements
 
         Private ReadOnly idxProgLoadNextValues As New Dictionary(Of LoadingProgStatus, osLoadProgData) From
             {
-                {LoadStatus_StartUp, New osLoadProgData(5, 10)},
-                {LoadStatus_Init, New osLoadProgData(45, 50)},
-                {LoadStatus_PrefPrep, New osLoadProgData(85, 95)},
-                {LoadStatus_LoadingUI, New osLoadProgData(125, 135)},
-                {LoadStatus_ApplyConfig, New osLoadProgData(175, 185)},
-                {LoadStatus_StartingSvc, New osLoadProgData(210, 215)},
-                {LoadStatus_Starting, New osLoadProgData(240, 250, True)}
+                {LoadStatus_StartUp, New osLoadProgData(5, 25)},
+                {LoadStatus_Init, New osLoadProgData(30, 65)},
+                {LoadStatus_PrefPrep, New osLoadProgData(70, 105)},
+                {LoadStatus_LoadingUI, New osLoadProgData(110, 145)},
+                {LoadStatus_ApplyConfig, New osLoadProgData(150, 185)},
+                {LoadStatus_StartingSvc, New osLoadProgData(190, 225)},
+                {LoadStatus_Starting, New osLoadProgData(230, 250, True)}
         }
+
+        Private _renderingActive As Boolean = False
+        Private _renderSw As Stopwatch = New Stopwatch()
+        Private _renderFrom As Double = 0
+        Private _renderTo As Double = 0
+        Private _renderDurationSeconds As Double = 0
+        Private _renderEasing As IEasingFunction = New ExponentialEase() With {
+            .EasingMode = EasingMode.EaseOut
+        }
+        Private _renderVersion As Integer = 0
+        Private _renderCompletion As Action = Nothing
 
 #End Region
 
@@ -168,16 +180,43 @@ Namespace osLoadingElements
             End Set
         End Property
 
+        ' Changed to CornerRadius type so it accepts corner per-corner values like "0,0,0,0"
         Public Shared ReadOnly CornerRadiusProperty As DependencyProperty = DependencyProperty.
-            Register(NameOf(CornerRadius), GetType(Double), GetType(osLoadingProgressBar),
-                     New FrameworkPropertyMetadata(4.0, FrameworkPropertyMetadataOptions.AffectsRender))
+            Register(NameOf(CornerRadius), GetType(CornerRadius), GetType(osLoadingProgressBar),
+                     New FrameworkPropertyMetadata(New CornerRadius(4.0), FrameworkPropertyMetadataOptions.AffectsRender))
 
-        Public Property CornerRadius As Double
+        Public Property CornerRadius As CornerRadius
             Get
-                Return CDbl(GetValue(CornerRadiusProperty))
+                Return CType(GetValue(CornerRadiusProperty), CornerRadius)
             End Get
-            Set(value As Double)
+            Set(value As CornerRadius)
                 SetValue(CornerRadiusProperty, value)
+            End Set
+        End Property
+
+        Public Shared ReadOnly TrackCornerRadiusProperty As DependencyProperty = DependencyProperty.
+            Register(NameOf(TrackCornerRadius), GetType(CornerRadius), GetType(osLoadingProgressBar),
+                     New FrameworkPropertyMetadata(New CornerRadius(0), FrameworkPropertyMetadataOptions.AffectsRender))
+
+        Public Property TrackCornerRadius As CornerRadius
+            Get
+                Return CType(GetValue(TrackCornerRadiusProperty), CornerRadius)
+            End Get
+            Set(value As CornerRadius)
+                SetValue(TrackCornerRadiusProperty, value)
+            End Set
+        End Property
+
+        Public Shared ReadOnly FillCornerRadiusProperty As DependencyProperty = DependencyProperty.
+            Register(NameOf(FillCornerRadius), GetType(CornerRadius), GetType(osLoadingProgressBar),
+                     New FrameworkPropertyMetadata(New CornerRadius(0), FrameworkPropertyMetadataOptions.AffectsRender))
+
+        Public Property FillCornerRadius As CornerRadius
+            Get
+                Return CType(GetValue(FillCornerRadiusProperty), CornerRadius)
+            End Get
+            Set(value As CornerRadius)
+                SetValue(FillCornerRadiusProperty, value)
             End Set
         End Property
 
@@ -221,14 +260,14 @@ Namespace osLoadingElements
         End Property
 
         Public Shared ReadOnly BorderThicknessProperty As DependencyProperty = DependencyProperty.
-            Register("BorderThickness", GetType(Double), GetType(osLoadingProgressBar),
-                     New FrameworkPropertyMetadata(0.0, FrameworkPropertyMetadataOptions.AffectsRender))
+            Register("BorderThickness", GetType(Thickness), GetType(osLoadingProgressBar),
+                     New FrameworkPropertyMetadata(New Thickness(0), FrameworkPropertyMetadataOptions.AffectsRender))
 
-        Public Property BorderThickness As Double
+        Public Property BorderThickness As Thickness
             Get
-                Return CDbl(GetValue(BorderThicknessProperty))
+                Return CType(GetValue(BorderThicknessProperty), Thickness)
             End Get
-            Set(value As Double)
+            Set(value As Thickness)
                 SetValue(BorderThicknessProperty, value)
             End Set
         End Property
@@ -257,9 +296,6 @@ Namespace osLoadingElements
 
 #Region "Fast/Slow algorithm (adapted to percent backing DP)"
 
-        Private pVal_Set As Double
-        Private pVal_Next As Double
-
         Private Function FetchLoadProgData(objLoadingProgStatus As LoadingProgStatus) As osLoadProgData
             Return idxProgLoadNextValues.First(
             Function(objLoadStatus) objLoadStatus.
@@ -268,20 +304,99 @@ Namespace osLoadingElements
 
         Public Sub UpdateLoadProgress(objLoadingProgStatus As LoadingProgStatus)
             With FetchLoadProgData(objLoadingProgStatus)
-                pVal_Set = (.SetProgVal / 250) * 100
-                pVal_Next = (.NextProgVal / 250) * 100
+                Dim vSet = (.SetProgVal / 250) * 100
+                Dim vNext = (.NextProgVal / 250) * 100
 
                 onLastTask = .LastTaskVal
-            End With
 
-            StartProgress(pVal_Set, pVal_Next)
+                StartProgress(vSet, vNext)
+            End With
+        End Sub
+
+        Private Sub StartFrameTween(fromVal As Double, toVal As Double, duration As TimeSpan, easing As IEasingFunction, myVersion As Integer, Optional completion As Action = Nothing)
+            _renderVersion = myVersion
+            _renderFrom = fromVal
+            _renderTo = toVal
+            _renderDurationSeconds = duration.TotalMilliseconds
+            _renderEasing = easing
+            _renderCompletion = completion
+
+            _renderSw.Restart()
+
+            If Not _renderingActive Then
+                AddHandler CompositionTarget.Rendering, AddressOf OnCompositionTargetRendering
+                _renderingActive = True
+            End If
+        End Sub
+
+        Private Sub OnCompositionTargetRendering(sender As Object, e As EventArgs)
+            Me.Dispatcher.Invoke(
+                Sub()
+                    Try
+                        If _renderVersion <> _animVersion Then
+                            StopRenderingLoop()
+                        End If
+
+                        Dim elapsed = _renderSw.Elapsed.TotalMilliseconds
+                        Dim valTotal = Math.Min(1.0, elapsed / _renderDurationSeconds)
+
+                        Dim easedT As Double
+
+                        If _renderEasing IsNot Nothing Then
+                            Try
+                                easedT = _renderEasing.Ease(valTotal)
+                            Catch
+                                easedT = valTotal
+                            End Try
+                        Else
+                            easedT = valTotal
+                        End If
+
+                        Dim curVal = _renderFrom + (_renderTo - _renderFrom) * easedT
+
+                        SetValue(AnimatedProgressProperty, curVal)
+                        InvalidateVisual()
+
+                        If valTotal >= 1.0 Then
+                            BeginAnimation(AnimatedProgressProperty, Nothing)
+                            SetValue(AnimatedProgressProperty, _renderTo)
+                            InvalidateVisual()
+
+                            Dim comp = _renderCompletion
+                            StopRenderingLoop()
+
+                            If _renderVersion = _animVersion AndAlso comp IsNot Nothing Then
+                                Try
+                                    comp.Invoke()
+                                Catch
+                                End Try
+                            End If
+                        End If
+
+                    Catch ex As Exception
+                        StopRenderingLoop()
+                    End Try
+                End Sub)
+
+        End Sub
+
+        Private Sub StopRenderingLoop()
+            If _renderingActive Then
+                Try
+                    RemoveHandler CompositionTarget.Rendering, AddressOf OnCompositionTargetRendering
+                Catch : End Try
+
+                _renderingActive = False
+                _renderSw.Stop()
+                _renderCompletion = Nothing
+            End If
         End Sub
 
         Private Sub StartProgress(newPct As Double, Optional nextPct As Double? = Nothing)
-            Dim nextVal As Double = If(nextPct.HasValue,
+            Dim nextVal = If(nextPct.HasValue,
                 nextPct.Value, newPct)
 
-            Dim myVersion As Integer = Interlocked.Increment(_animVersion)
+            Dim myVersion = Interlocked.Increment(_animVersion)
 
             SyncLock _lockObj
                 If _cts IsNot Nothing AndAlso _currentSlowTarget.HasValue Then
@@ -290,44 +405,48 @@ Namespace osLoadingElements
                     _cts.Cancel()
                     _cts.Dispose()
                     _cts = Nothing
+
                     _currentSlowTarget = Nothing
 
-                    Dim currAnimated As Double = CDbl(GetValue(AnimatedProgressProperty))
-                    SetValue(AnimatedProgressProperty, currAnimated)
+                    Dim currAnimated As Double = 0
 
-                    If Math.Abs(currAnimated - prevTarget) < 0.0001 Then
-                        RunFastThenSlow(newPct, nextVal, myVersion)
-                    Else
-                        Dim interimAnim As New DoubleAnimation(currAnimated, prevTarget, ProgDuration_Set) With {
-                            .EasingFunction = New QuadraticEase With {.EasingMode = EasingMode.EaseInOut},
-                            .FillBehavior = FillBehavior.HoldEnd
-                        }
+                    Me.Dispatcher.Invoke(
+                        Sub()
+                            currAnimated = CDbl(GetValue(AnimatedProgressProperty))
+                        End Sub)
 
-                        Dim interimHandler As EventHandler = Nothing
-                        interimHandler =
-                            Sub(s, e)
-                                If myVersion <> _animVersion Then
-                                    RemoveHandler interimAnim.Completed, interimHandler
-                                    Return
-                                End If
+                    Dim interimAnim As New DoubleAnimation(currAnimated, prevTarget, ProgDuration_Set) With {
+                        .EasingFunction = New QuadraticEase With {
+                            .EasingMode = EasingMode.EaseInOut
+                        }, .FillBehavior = FillBehavior.Stop
+                    }
 
-                                Me.Dispatcher.Invoke(Sub()
-                                                         Me.BeginAnimation(AnimatedProgressProperty, Nothing)
+                    Dim interimHandler As EventHandler = Nothing
 
-                                                         SetValue(AnimatedProgressProperty, prevTarget)
-                                                     End Sub)
+                    interimHandler =
+                        Sub(s, e)
+                            If myVersion <> _animVersion Then
                                 RemoveHandler interimAnim.Completed, interimHandler
+                                Return
+                            End If
 
-                                RunFastThenSlow(newPct, nextVal, myVersion)
-                            End Sub
+                            Me.Dispatcher.Invoke(
+                                Sub()
+                                    Me.BeginAnimation(AnimatedProgressProperty, Nothing)
+                                    SetValue(AnimatedProgressProperty, prevTarget)
+                                End Sub)
 
-                        AddHandler interimAnim.Completed, interimHandler
+                            RemoveHandler interimAnim.Completed, interimHandler
 
-                        Me.Dispatcher.Invoke(
-                            Sub()
-                                Me.BeginAnimation(AnimatedProgressProperty, interimAnim)
-                            End Sub, DispatcherPriority.Normal)
-                    End If
+                            RunFastThenSlow(newPct, nextVal, myVersion)
+                        End Sub
+
+                    AddHandler interimAnim.Completed, interimHandler
+
+                    Me.Dispatcher.Invoke(
+                        Sub()
+                            Me.BeginAnimation(AnimatedProgressProperty, interimAnim)
+                        End Sub, DispatcherPriority.Render)
 
                     Return
                 End If
@@ -337,42 +456,28 @@ Namespace osLoadingElements
         End Sub
 
         Private Sub RunFastThenSlow(newPct As Double, nextVal As Double, myVersion As Integer)
+            Dim currVisible As Double = 0
 
             Me.Dispatcher.Invoke(
                 Sub()
-                    Me.BeginAnimation(AnimatedProgressProperty, Nothing)
+                    currVisible = CDbl(GetValue(AnimatedProgressProperty))
                 End Sub)
 
-            Dim fastAnim As New DoubleAnimation(newPct, ProgDuration_Set) With {
-                .EasingFunction = New QuadraticEase With {.EasingMode = EasingMode.EaseOut},
-                .FillBehavior = FillBehavior.HoldEnd
+            Me.BeginAnimation(AnimatedProgressProperty, Nothing)
+
+            Dim fastDuration = ProgDuration_Set.TimeSpan
+            Dim fastEasing As IEasingFunction = New QuadraticEase() With {
+                .EasingMode = EasingMode.EaseOut
             }
 
-            Dim fastHandler As EventHandler = Nothing
-            fastHandler =
-                Sub(s, e2)
-                    If myVersion <> _animVersion Then
-                        RemoveHandler fastAnim.Completed, fastHandler
-                        Return
-                    End If
-
-                    Me.Dispatcher.Invoke(
-                        Sub()
-                            Me.BeginAnimation(AnimatedProgressProperty, Nothing)
-                            SetValue(AnimatedProgressProperty, newPct)
-                        End Sub)
-
-                    RemoveHandler fastAnim.Completed, fastHandler
-
+            Dim afterFast As Action =
+                Sub()
+                    If myVersion <> _animVersion Then Return
                     StartSlowEase(newPct, nextVal, myVersion)
                 End Sub
 
-            AddHandler fastAnim.Completed, fastHandler
-
-            Me.Dispatcher.Invoke(
-                Sub()
-                    Me.BeginAnimation(AnimatedProgressProperty, fastAnim)
-                End Sub, DispatcherPriority.Normal)
+            StartFrameTween(currVisible, newPct, fastDuration,
+                            fastEasing, myVersion, afterFast)
         End Sub
 
         Private Sub StartSlowEase(fromVal As Double, toVal As Double, myVersion As Integer)
@@ -381,74 +486,58 @@ Namespace osLoadingElements
                     _cts.Cancel()
                     _cts.Dispose()
                 End If
+
                 _cts = New CancellationTokenSource()
                 _currentSlowTarget = toVal
             End SyncLock
 
             Dim token = _cts.Token
 
-            Dim slowAnim As New DoubleAnimation(toVal, CalcNextDuration(fromVal, toVal)) With {
-                .FillBehavior = FillBehavior.HoldEnd,
-                .EasingFunction = New ExponentialEase With {.EasingMode = EasingMode.EaseInOut}
-            }
-            Dim reg As CancellationTokenRegistration
-
-            Dim cbCancel As Action =
+            Dim completion As Action =
                 Sub()
-                    If myVersion <> _animVersion Then
-                        reg.Dispose()
-                        Return
-                    End If
-
-                    Me.Dispatcher.Invoke(
-                        Sub()
-                            Dim curr As Double = CDbl(GetValue(AnimatedProgressProperty))
-                            If curr > _currentSlowTarget.Value Then
-                                SetValue(AnimatedProgressProperty, curr)
-
-                            End If
-                            Me.BeginAnimation(AnimatedProgressProperty, Nothing)
-                        End Sub)
-                End Sub
-
-            Dim completedHandler As EventHandler = Nothing
-            completedHandler =
-                Sub(s, e)
-                    If myVersion <> _animVersion Then
-                        RemoveHandler slowAnim.Completed, completedHandler
-                        reg.Dispose()
-                        Return
-                    End If
+                    If myVersion <> _animVersion Then Return
 
                     SyncLock _lockObj
                         If _cts IsNot Nothing Then
-                            Me.Dispatcher.Invoke(
-                                Sub()
-                                    Me.BeginAnimation(AnimatedProgressProperty, Nothing)
-                                    SetValue(AnimatedProgressProperty, toVal)
-                                End Sub)
-
                             _cts.Dispose()
                             _cts = Nothing
+
                             _currentSlowTarget = Nothing
                         End If
                     End SyncLock
-
-                    RemoveHandler slowAnim.Completed, completedHandler
-                    reg.Dispose()
                 End Sub
-            reg = token.Register(cbCancel)
-            AddHandler slowAnim.Completed, completedHandler
 
-            Me.Dispatcher.Invoke(
+            Dim reg = token.Register(
                 Sub()
-                    If myVersion = _animVersion Then
-                        Me.BeginAnimation(AnimatedProgressProperty, slowAnim)
-                    End If
-                End Sub, DispatcherPriority.Normal)
+                    Me.Dispatcher.Invoke(
+                        Sub()
+                            Dim aniCurVal = CDbl(GetValue(AnimatedProgressProperty))
+
+                            StopRenderingLoop()
+                            BeginAnimation(AnimatedProgressProperty, Nothing)
+                            SetValue(AnimatedProgressProperty, aniCurVal)
+                        End Sub)
+                End Sub)
+
+            Dim curVal = CDbl(GetValue(AnimatedProgressProperty))
+            Dim nextDur = CalcNextDuration(curVal, toVal)
+
+            Dim slowEasing As IEasingFunction = New ExponentialEase() With {
+                .EasingMode = EasingMode.EaseInOut
+            }
+
+            Dim wrappedCompletion As Action =
+                Sub()
+                    Try
+                        completion.Invoke()
+                    Finally : reg.Dispose() : End Try
+                End Sub
+
+            StartFrameTween(fromVal, toVal, nextDur.TimeSpan,
+                            slowEasing, myVersion, wrappedCompletion)
         End Sub
 
-        Public Sub SnapToCurrentSlowTarget()
+        Public Function SnapToCurrentSlowTarget(Optional keepTarget As Boolean = False) As Double?
             SyncLock _lockObj
                 If _currentSlowTarget.HasValue Then
                     Dim target = _currentSlowTarget.Value
@@ -469,17 +558,27 @@ Namespace osLoadingElements
                             End If
                         End Sub)
 
-                    _currentSlowTarget = Nothing
+                    If Not keepTarget Then
+                        _currentSlowTarget = Nothing
+
+                    End If
+
+                    Return target
                 End If
             End SyncLock
-        End Sub
+
+            Return Nothing
+        End Function
 
         Private Function CalcNextDuration(fromVal As Double, toVal As Double) As Duration
-            Dim dist = Math.Abs(toVal - fromVal) / 100
-            Dim minSec As Double = 0.9
-            Dim maxSec As Double = 3.0
-            Dim secs = minSec + (maxSec - minSec) * dist
-            Return New Duration(TimeSpan.FromSeconds(secs))
+            Dim diff As Double = Math.Abs(toVal - fromVal)
+            Dim diffN As Double = Math.Min(1.0, diff / 100)
+
+            Dim minSec As Double = 250
+            Dim maxSec As Double = 350
+            Dim secs = minSec + (maxSec - minSec) * diffN
+
+            Return New Duration(TimeSpan.FromMilliseconds(secs))
         End Function
 
 #End Region
@@ -497,18 +596,18 @@ Namespace osLoadingElements
 
             If isNowFull AndAlso Not _filledSignaled Then
                 _filledSignaled = True
+
                 Try
                     RaiseEvent LoadProgComplete(Me, EventArgs.Empty)
-                Catch ex As Exception
-                End Try
+                Catch ex As Exception : End Try
 
                 SyncLock idxLoadAniTasks
                     For Each tcs In idxLoadAniTasks
                         Try
                             tcs.TrySetResult(True)
-                        Catch
-                        End Try
+                        Catch : End Try
                     Next
+
                     idxLoadAniTasks.Clear()
                 End SyncLock
             ElseIf Not isNowFull AndAlso _filledSignaled Then
@@ -520,23 +619,26 @@ Namespace osLoadingElements
             If _filledSignaled Then
                 Return Task.FromResult(True) : End If
 
-            Dim tcs = New TaskCompletionSource(Of Boolean)(
-                TaskCreationOptions.RunContinuationsAsynchronously)
+            Dim tcs = New TaskCompletionSource(Of Boolean)(TaskCreationOptions.RunContinuationsAsynchronously)
+
             SyncLock idxLoadAniTasks
                 idxLoadAniTasks.Add(tcs)
             End SyncLock
 
             If Not ct = Nothing AndAlso ct.CanBeCanceled Then
-                Dim reg = ct.Register(Sub()
-                                          SyncLock idxLoadAniTasks
-                                              If idxLoadAniTasks.Remove(tcs) Then
-                                                  tcs.TrySetCanceled()
-                                              End If
-                                          End SyncLock
-                                      End Sub)
-                tcs.Task.ContinueWith(Sub()
-                                          reg.Dispose()
-                                      End Sub, TaskScheduler.Default)
+                Dim reg = ct.Register(
+                    Sub()
+                        SyncLock idxLoadAniTasks
+                            If idxLoadAniTasks.Remove(tcs) Then
+                                tcs.TrySetCanceled()
+                            End If
+                        End SyncLock
+                    End Sub)
+
+                tcs.Task.ContinueWith(
+                    Sub()
+                        reg.Dispose()
+                    End Sub, TaskScheduler.Default)
             End If
 
             Return tcs.Task
@@ -561,40 +663,132 @@ Namespace osLoadingElements
 
             Dim w = Me.RenderSize.Width
             Dim h = Me.RenderSize.Height
+
             If w <= 0 OrElse h <= 0 Then Return
 
-            Dim radius = Math.Min(CornerRadius, Math.Min(w, h) / 2)
-            Dim trackRect As New Rect(0, 0, w, h)
+            Dim progTrack_Rect As New Rect(0, 0, w, h)
+            Dim progTrack_CornerRadius = GetClampedCornerRadius(Me.TrackCornerRadius, w, h)
 
-            If TrackBrush IsNot Nothing Then
-                dc.DrawRoundedRectangle(TrackBrush, Nothing, trackRect, radius, radius)
-            Else
-                dc.DrawRoundedRectangle(Brushes.LightGray, Nothing, trackRect, radius, radius)
-            End If
+            Dim progTrack_Geometry = CreateRoundRectGeometry(progTrack_Rect, progTrack_CornerRadius)
+            dc.DrawGeometry(If(TrackBrush, Brushes.LightGray), Nothing, progTrack_Geometry)
 
             Dim fillWidth = (AnimatedProgress / 100.0) * w
+
             If fillWidth > 0.0001 Then
-                Dim fillRect As New Rect(0, 0, fillWidth, h)
+                Dim progFill_Rect As New Rect(0, 0, fillWidth, h)
 
-                Dim fillRadius = radius
-                If fillWidth < radius Then
-                    fillRadius = Math.Max(0.0, fillWidth / 2.0)
-                End If
+                Dim progFill_CornerRadius As CornerRadius
 
-                If FillBrush IsNot Nothing Then
-                    dc.DrawRoundedRectangle(FillBrush, Nothing, fillRect, fillRadius, fillRadius)
+                If AnimatedProgress >= 100.0 - 2.5 Then
+                    progFill_CornerRadius = GetClampedCornerRadius(Me.FillCornerRadius, fillWidth, h)
                 Else
-                    dc.DrawRoundedRectangle(Brushes.DodgerBlue, Nothing, fillRect, fillRadius, fillRadius)
+                    progFill_CornerRadius = New CornerRadius(Me.FillCornerRadius.TopLeft, Me.FillCornerRadius.TopRight,
+                                                             0.0, Me.FillCornerRadius.BottomLeft)
+
+                    progFill_CornerRadius = GetClampedCornerRadius(progFill_CornerRadius, fillWidth, h)
                 End If
+
+                Dim progFill_Geometry = CreateRoundRectGeometry(progFill_Rect, progFill_CornerRadius)
+                dc.DrawGeometry(If(FillBrush, Brushes.DodgerBlue), Nothing, progFill_Geometry)
             End If
 
-            If BorderThickness > 0 AndAlso BorderBrush IsNot Nothing Then
-                Dim objPen = ApplyPen(BorderBrush, BorderThickness)
-                Dim objFreeze = TryCast(objPen, Freezable)
+            'If BorderBrush IsNot Nothing AndAlso
+            '    (BorderThickness.Left > 0 OrElse BorderThickness.Top > 0 OrElse
+            '    BorderThickness.Right > 0 OrElse BorderThickness.Bottom > 0) Then
 
-                EstablishProgFreeze(objFreeze)
+            '    Dim bt = BorderThickness
 
-                dc.DrawRectangle(Nothing, objPen, New Rect(0.5, 0.5, Math.Max(0, ActualWidth - 1), Math.Max(0, ActualHeight - 1)))
+            '    Dim outerRect = New Rect(0, 0, w, h)
+            '    Dim outerCR = GetClampedCornerRadius(Me.CornerRadius, outerRect.Width, outerRect.Height)
+
+            '    ' Compute inner rect by insetting each side by the corresponding border thickness
+            '    Dim innerX = bt.Left
+            '    Dim innerY = bt.Top
+            '    Dim innerW = Math.Max(0.0, w - (bt.Left + bt.Right))
+            '    Dim innerH = Math.Max(0.0, h - (bt.Top + bt.Bottom))
+
+            '    ' Dim borderBrush = borderBrush
+
+            '    ' If inner rect has non-positive width/height, treat as full filled border (no hole)
+            '    If innerW <= 0 OrElse innerH <= 0 Then
+            '        ' Draw the full outer rounded rect filled with BorderBrush (no hollow)
+            '        Dim outerGeoOnly = CreateRoundRectGeometry(outerRect, outerCR)
+            '        EstablishProgFreeze(TryCast(outerGeoOnly, Freezable))
+            '        dc.DrawGeometry(BorderBrush, Nothing, outerGeoOnly)
+            '    Else
+            '        Dim innerRect = New Rect(innerX, innerY, innerW, innerH)
+
+            '        ' Reduce corner radii for inner rect. Use max of adjacent side thicknesses to reduce a corner.
+            '        ' This approximates the correct shrink of radii when inset by asymmetric thickness.
+            '        Dim tlReduce = Math.Max(bt.Left, bt.Top)
+            '        Dim trReduce = Math.Max(bt.Top, bt.Right)
+            '        Dim brReduce = Math.Max(bt.Right, bt.Bottom)
+            '        Dim blReduce = Math.Max(bt.Bottom, bt.Left)
+
+            '        Dim innerCRRaw As New CornerRadius(
+            '            Math.Max(0.0, outerCR.TopLeft - tlReduce),
+            '            Math.Max(0.0, outerCR.TopRight - trReduce),
+            '            Math.Max(0.0, outerCR.BottomRight - brReduce),
+            '            Math.Max(0.0, outerCR.BottomLeft - blReduce)
+            '        )
+
+            '        Dim innerCR = GetClampedCornerRadius(innerCRRaw, innerRect.Width, innerRect.Height)
+
+            '        Dim outerGeo2 = CreateRoundRectGeometry(outerRect, outerCR)
+            '        Dim innerGeo2 = CreateRoundRectGeometry(innerRect, innerCR)
+
+            '        Dim borderRing As Geometry = Nothing
+            '        Try
+            '            borderRing = Geometry.Combine(outerGeo2, innerGeo2, GeometryCombineMode.Exclude, Nothing)
+            '            If borderRing IsNot Nothing AndAlso borderRing.CanFreeze Then borderRing.Freeze()
+            '        Catch
+            '            ' If Combine fails for any reason, fall back to drawing outer geometry as a filled border.
+            '            borderRing = outerGeo2
+            '        End Try
+
+            '        EstablishProgFreeze(TryCast(borderRing, Freezable))
+            '        dc.DrawGeometry(BorderBrush, Nothing, borderRing)
+            '    End If
+            'End If
+            If BorderBrush IsNot Nothing AndAlso
+                (BorderThickness.Left > 0 OrElse BorderThickness.Top > 0 OrElse
+                BorderThickness.Right > 0 OrElse BorderThickness.Bottom > 0) Then
+
+                Dim objBorder_Thickness = BorderThickness
+                Dim objBorder_Width = ActualWidth
+                Dim objBorder_Height = ActualHeight
+
+                If objBorder_Thickness.Left > 0 Then
+                    Dim objBorder_Left = ApplyPen(BorderBrush, objBorder_Thickness.Left)
+                    EstablishProgFreeze(TryCast(objBorder_Left, Freezable))
+
+                    dc.DrawLine(objBorder_Left, New Point(objBorder_Thickness.Left / 2, 0),
+                                New Point(objBorder_Thickness.Left / 2, objBorder_Height))
+                End If
+
+                If objBorder_Thickness.Top > 0 Then
+                    Dim objBorder_Top = ApplyPen(BorderBrush, objBorder_Thickness.Top)
+                    EstablishProgFreeze(TryCast(objBorder_Top, Freezable))
+
+                    dc.DrawLine(objBorder_Top, New Point(0, objBorder_Thickness.Top / 2),
+                                New Point(objBorder_Width, objBorder_Thickness.Top / 2))
+                End If
+
+                If objBorder_Thickness.Right > 0 Then
+                    Dim objBorder_Right = ApplyPen(BorderBrush, objBorder_Thickness.Right)
+                    EstablishProgFreeze(TryCast(objBorder_Right, Freezable))
+
+                    dc.DrawLine(objBorder_Right, New Point(objBorder_Width - (objBorder_Thickness.Right / 2), 0),
+                                New Point(objBorder_Width - (objBorder_Thickness.Right / 2), objBorder_Height))
+                End If
+
+                If objBorder_Thickness.Bottom > 0 Then
+                    Dim objBorder_Bottom = ApplyPen(BorderBrush, objBorder_Thickness.Bottom)
+                    EstablishProgFreeze(TryCast(objBorder_Bottom, Freezable))
+
+                    dc.DrawLine(objBorder_Bottom, New Point(0, objBorder_Height - (objBorder_Thickness.Bottom / 2)),
+                                New Point(objBorder_Width, objBorder_Height - (objBorder_Thickness.Bottom / 2)))
+                End If
             End If
 
             If onLastTask Then
@@ -611,6 +805,144 @@ Namespace osLoadingElements
                 objPF.Freeze()
             End If
         End Sub
+
+#End Region
+
+#Region "Round rect geometry helpers"
+
+        Private Function GetClampedCornerRadius(cr As CornerRadius, w As Double, h As Double) As CornerRadius
+            Dim maxR = Math.Min(w, h) / 2.0
+
+            Return New CornerRadius(
+        Math.Max(0, Math.Min(cr.TopLeft, maxR)),
+        Math.Max(0, Math.Min(cr.TopRight, maxR)),
+        Math.Max(0, Math.Min(cr.BottomRight, maxR)),
+        Math.Max(0, Math.Min(cr.BottomLeft, maxR))
+    )
+        End Function
+
+        Private Function CreateRoundRectGeometry(r As Rect, cr As CornerRadius) As StreamGeometry
+            Dim g As New StreamGeometry()
+
+            Using ctx = g.Open()
+                ctx.BeginFigure(New Point(r.X + cr.TopLeft, r.Y), True, True)
+
+                ctx.LineTo(New Point(r.Right - cr.TopRight, r.Y), True, False)
+                If cr.TopRight > 0 Then
+                    ctx.ArcTo(New Point(r.Right, r.Y + cr.TopRight),
+                      New Size(cr.TopRight, cr.TopRight), 0, False,
+                      SweepDirection.Clockwise, True, False)
+                End If
+
+                ctx.LineTo(New Point(r.Right, r.Bottom - cr.BottomRight), True, False)
+                If cr.BottomRight > 0 Then
+                    ctx.ArcTo(New Point(r.Right - cr.BottomRight, r.Bottom),
+                      New Size(cr.BottomRight, cr.BottomRight), 0, False,
+                      SweepDirection.Clockwise, True, False)
+                End If
+
+                ctx.LineTo(New Point(r.X + cr.BottomLeft, r.Bottom), True, False)
+                If cr.BottomLeft > 0 Then
+                    ctx.ArcTo(New Point(r.X, r.Bottom - cr.BottomLeft),
+                      New Size(cr.BottomLeft, cr.BottomLeft), 0, False,
+                      SweepDirection.Clockwise, True, False)
+                End If
+
+                ctx.LineTo(New Point(r.X, r.Y + cr.TopLeft), True, False)
+                If cr.TopLeft > 0 Then
+                    ctx.ArcTo(New Point(r.X + cr.TopLeft, r.Y),
+                      New Size(cr.TopLeft, cr.TopLeft), 0, False,
+                      SweepDirection.Clockwise, True, False)
+                End If
+            End Using
+
+            g.Freeze()
+            Return g
+        End Function
+
+        ' Ensure each corner radius is non-negative and not larger than half of width/height
+        'Private Function GetClampedCornerRadius(cr As CornerRadius, width As Double, height As Double) As CornerRadius
+        '    Dim halfW = Math.Max(0.0, width / 2.0)
+        '    Dim halfH = Math.Max(0.0, height / 2.0)
+        '    Dim maxR = Math.Min(halfW, halfH)
+
+        '    Dim tl = Math.Max(0.0, Math.Min(cr.TopLeft, maxR))
+        '    Dim tr = Math.Max(0.0, Math.Min(cr.TopRight, maxR))
+        '    Dim br = Math.Max(0.0, Math.Min(cr.BottomRight, maxR))
+        '    Dim bl = Math.Max(0.0, Math.Min(cr.BottomLeft, maxR))
+
+        '    Return New CornerRadius(tl, tr, br, bl)
+        'End Function
+
+        ' Builds a StreamGeometry that represents a rectangle with potentially different corner radii
+        'Private Function CreateRoundRectGeometry(rect As Rect, cr As CornerRadius) As Geometry
+        '    Dim x = rect.X
+        '    Dim y = rect.Y
+        '    Dim w = rect.Width
+        '    Dim h = rect.Height
+
+        '    ' clamp again in case someone passes crazy values
+        '    Dim corner = GetClampedCornerRadius(cr, w, h)
+        '    Dim tl = corner.TopLeft
+        '    Dim tr = corner.TopRight
+        '    Dim br = corner.BottomRight
+        '    Dim bl = corner.BottomLeft
+
+        '    Dim geo As New StreamGeometry()
+        '    geo.FillRule = FillRule.EvenOdd
+
+        '    Using ctx = geo.Open()
+        '        ' start at top-left + tl
+        '        ctx.BeginFigure(New Point(x + tl, y), True, True) ' isFilled = True, isClosed = True
+
+        '        ' top line to top-right corner start
+        '        ctx.LineTo(New Point(x + w - tr, y), True, False)
+
+        '        ' top-right corner arc
+        '        If tr > 0 Then
+        '            ctx.ArcTo(New Point(x + w, y + tr),
+        '                      New Size(tr, tr), 0, False, SweepDirection.Clockwise, True, False)
+        '        Else
+        '            ctx.LineTo(New Point(x + w, y), True, False)
+        '        End If
+
+        '        ' right line down
+        '        ctx.LineTo(New Point(x + w, y + h - br), True, False)
+
+        '        ' bottom-right corner arc
+        '        If br > 0 Then
+        '            ctx.ArcTo(New Point(x + w - br, y + h),
+        '                      New Size(br, br), 0, False, SweepDirection.Clockwise, True, False)
+        '        Else
+        '            ctx.LineTo(New Point(x + w, y + h), True, False)
+        '        End If
+
+        '        ' bottom line to bottom-left corner start
+        '        ctx.LineTo(New Point(x + bl, y + h), True, False)
+
+        '        ' bottom-left corner arc
+        '        If bl > 0 Then
+        '            ctx.ArcTo(New Point(x, y + h - bl),
+        '                      New Size(bl, bl), 0, False, SweepDirection.Clockwise, True, False)
+        '        Else
+        '            ctx.LineTo(New Point(x, y + h), True, False)
+        '        End If
+
+        '        ' left line up
+        '        ctx.LineTo(New Point(x, y + tl), True, False)
+
+        '        ' top-left corner arc
+        '        If tl > 0 Then
+        '            ctx.ArcTo(New Point(x + tl, y),
+        '                      New Size(tl, tl), 0, False, SweepDirection.Clockwise, True, False)
+        '        Else
+        '            ctx.LineTo(New Point(x, y), True, False)
+        '        End If
+        '    End Using
+
+        '    geo.Freeze()
+        '    Return geo
+        'End Function
 
 #End Region
 

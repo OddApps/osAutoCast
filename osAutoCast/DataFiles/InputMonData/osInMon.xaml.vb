@@ -8,32 +8,28 @@ Imports System.Windows.Controls
 Imports osProgLoad = osAutoCast.osLoadingElements.osLoadingProgressBar
 Imports osAutoCast.DataTypeLib.LoadContentData
 Imports osAutoCast.DataTypeLib.LoadingProgStatus
+Imports osAutoCast.DataTypeLib.LoadStep
 
 #Disable Warning BC42353
 
 Public Class osInMon
 
     Public Event osLoadComplete(sender As Object, e As EventArgs)
+
     Private evtLoadComplete As EventHandler = AddressOf TriggerCompleteEvent
 
-    Private ReadOnly idxLoadTasks As New Dictionary(Of LoadContentData, Func(Of Task)) From
-        {
-            {isPrefPrep, Function() PrepPrefs()},
-            {isLoadingUI, Function() osHandler_UI.PrepAndLoadUI},
-            {isApplyConfig, Function() osMenu_Init()},
-            {isStartingSvc, Function() InputMonitor_Start()},
-            {isStarting, Function() LoadFinalize()}
-        }
+    Private isTaskValid As Boolean
+    Private objValidTask As Task
 
-    Private ReadOnly idxProgressTasks As New Dictionary(Of LoadContentData, LoadingProgStatus) From
+    Private ReadOnly LoadDataIdx As New List(Of osLoadData) From
         {
-            {isLoading, LoadStatus_StartUp},
-            {isInit, LoadStatus_Init},
-            {isPrefPrep, LoadStatus_PrefPrep},
-            {isLoadingUI, LoadStatus_LoadingUI},
-            {isApplyConfig, LoadStatus_ApplyConfig},
-            {isStartingSvc, LoadStatus_StartingSvc},
-            {isStarting, LoadStatus_Starting}
+            {New osLoadData(LoadStart, isLoading, LoadStatus_StartUp, 450, "Launching")},
+            {New osLoadData(LoadInit, isInit, LoadStatus_Init, 450, "Initializing Data", objPreLoadDuration:=150)},
+            {New osLoadData(LoadPrefs, isPrefPrep, LoadStatus_PrefPrep, 425, "Loading Preferences", Function() PrepPrefs(), 115)},
+            {New osLoadData(LoadUI, isLoadingUI, LoadStatus_LoadingUI, 375, "Loading Interface", Function() osHandler_UI.PrepAndLoadUI(), 125)},
+            {New osLoadData(LoadConfig, isApplyConfig, LoadStatus_ApplyConfig, 500, "Applying Configuration", Function() osMenu_Init(), 125)},
+            {New osLoadData(LoadService, isStartingSvc, LoadStatus_StartingSvc, 550, "Activating Service", Function() InputMonitor_Start(), 100)},
+            {New osLoadData(LoadComplete, isStarting, LoadStatus_Starting, 550, "Starting osAutoCast", Function() LoadFinalize(), 500)}
         }
 
     Public ReadOnly Property objLoadProg As osProgLoad
@@ -42,30 +38,21 @@ Public Class osInMon
         End Get
     End Property
 
-    Private Async Function TriggerProgress(objLoadingProgStatus As LoadingProgStatus,
-                                           Optional objTask As Task = Nothing) As Task
-        With objLoadProg
-            Dim aa = PrepDispatcher().InvokeAsync(Sub()
-                                                      .UpdateLoadProgress(objLoadingProgStatus)
-                                                  End Sub)
-        End With
-        Await Task.Run(Async Function()
-                           With objLoadProg
+    Public ReadOnly Property objLoadText As TextBlock
+        Get
+            Return Me.LoadingText
+        End Get
+    End Property
 
-                               If ChkFinalTask(objLoadingProgStatus) Then
-                                   Await .MonitorLoadProgress() : End If
-
-                               If ValidateLoadTask(objTask) Then
-                                   Await objTask
-                               End If
-                           End With
-                       End Function)
-                       End Function
-
-    Private Function ValidateLoadTask(objTask As Task) As Boolean
-        Return If(objTask Is Nothing,
-            False, True)
-    End Function
+    Private Sub ValidateTaskAndRun(objTask As Func(Of Task), ByRef objValidTask As Task, ByRef isValid As Boolean)
+        If objTask Is Nothing Then
+            isValid = False
+            objValidTask = Nothing
+        Else
+            isValid = True
+            objValidTask = objTask.Invoke()
+        End If
+    End Sub
 
     Private Function ChkFinalTask(objLoadingProgStatus As LoadingProgStatus) As Boolean
         Return objLoadingProgStatus = LoadStatus_Starting
@@ -76,52 +63,57 @@ Public Class osInMon
         RemoveHandler objLoadProg.LoadProgComplete, evtLoadComplete
     End Sub
 
-    Private Function GetLoadTaskData(objLoadContent As LoadContentData) As LoadingProgStatus
-        Return idxProgressTasks.First(
-            Function(objLoadTask) objLoadTask.
-                Key = objLoadContent).Value
-    End Function
+    Private Sub ApplyLoadText(txtLoad As String)
+        objLoadText.Text = txtLoad
+    End Sub
 
-    Public Async Function SetLoadText(txtLoad As LoadContentData) As Task
-        Await PrepDispatcher().InvokeAsync(
+    Public Function DisplayLoadMsg(txtLoad As String) As Task
+        Return PrepDispatcher().InvokeAsync(
             Sub()
-                Select Case txtLoad
-                    Case isLoading : Me.LoadingText.Text = "Launching"
-                    Case isInit : Me.LoadingText.Text = "Initializing Data"
-                    Case isPrefPrep : Me.LoadingText.Text = "Loading Preferences"
-                    Case isLoadingUI : Me.LoadingText.Text = "Loading Interface"
-                    Case isApplyConfig : Me.LoadingText.Text = "Applying Configuration"
-                    Case isStarting : Me.LoadingText.Text = "Starting osAutoCast"
-                    Case isStartingSvc : Me.LoadingText.Text = "Activating Service"
-                End Select
-            End Sub, DispatcherPriority.Background)
-    End Function
-
-    Private Function InitLoadTask(objFunc As Func(Of Task)) As Task
-        Return objFunc.Invoke()
+                ApplyLoadText(txtLoad)
+            End Sub, DispatcherPriority.Normal).Task
     End Function
 
     Private Async Function InitializeContentLoad() As Task
         AddHandler objLoadProg.LoadProgComplete, evtLoadComplete
 
-        Await DispLoadMsg(isLoading)
-        Await TriggerProgress(LoadStatus_StartUp)
-        Await Task.Delay(GetLoadDuration(isLoading))
+        Await PerformLoadStep(LoadStart)
 
-        Await DispLoadMsg(isInit)
-        Await TriggerProgress(LoadStatus_Init)
-        Await Task.Delay(GetLoadDuration(isInit))
+        Await Task.Delay(500)
+
+        Await PerformLoadStep(LoadInit)
     End Function
 
-    Private Async Function LoadDataContent(objLoadContent As LoadContentData,
-                                           Optional preDelay As Integer = 0) As Task
-        Await DispLoadMsg(objLoadContent)
-        Await EvalDelay(preDelay)
+    Private Function FetchLoadData(getLoadStep As LoadStep) As osLoadData
+        Return LoadDataIdx.First(
+            Function(objLoadStep)
+                Return objLoadStep.LoadingStep = getLoadStep
+            End Function)
+    End Function
 
-        With PrepLoadData(objLoadContent)
-            Await TriggerProgress(.LoadProgStatus,
-                                  objTask:=InitLoadTask(.LoadProcess))
+    Private Async Function PerformLoadStep(objLoadStep As LoadStep) As Task
+        With FetchLoadData(objLoadStep)
+
+            Dim objTask_DispLoadMsg = DisplayLoadMsg(.LoadMsg)
+
+            Dim objTask_UpProg = PrepDispatcher().InvokeAsync(
+                Sub() objLoadProg.UpdateLoadProgress(.LoadProgStatus),
+                    DispatcherPriority.Send)
+
+            Await EvalDelay(.PreLoadDuration)
+
+            If ChkFinalTask(.LoadProgStatus) Then
+                Await objLoadProg.MonitorLoadProgress() : End If
+
+            ValidateTaskAndRun(.LoadProcess, objValidTask,
+                               isTaskValid)
+
+            If isTaskValid Then
+                Await objValidTask : End If
+
             Await Task.Delay(.LoadDuration)
+            Await objTask_UpProg.Task
+
         End With
     End Function
 
@@ -129,13 +121,6 @@ Public Class osInMon
         If preDelay > 0 Then
             Await Task.Delay(preDelay)
         End If
-    End Function
-
-    Private Async Function DispLoadMsg(objLoadContent As LoadContentData) As Task
-        Await Task.Run(
-            Async Function()
-                Await Me.SetLoadText(objLoadContent)
-            End Function)
     End Function
 
     Private Async Function PrepPrefs() As Task
@@ -160,45 +145,15 @@ Public Class osInMon
             End Function)
     End Function
 
-    Private Function FetchTask(objLoadContent As LoadContentData) As Func(Of Task)
-        Return idxLoadTasks(objLoadContent)
-    End Function
-
-    Private Function PrepLoadData(objLoadContent As LoadContentData) As osLoadData
-        Return New osLoadData(FetchTask(objLoadContent),
-                              GetLoadDuration(objLoadContent),
-                              GetLoadTaskData(objLoadContent))
-    End Function
-
-    Private Function PrepLoadScreen() As osInMon
-        Dim objLoaderScreen As New osInMon()
-        objLoaderScreen.Show()
-
-        Return objLoaderScreen
-    End Function
-
     Public Async Function ProvisionApp() As Task
         Await InitializeContentLoad()
 
-        Await Task.Run(
-            Async Function()
-                Await LoadDataContent(isPrefPrep)
-                Await LoadDataContent(isLoadingUI)
-                Await LoadDataContent(isApplyConfig)
-                Await LoadDataContent(isStartingSvc)
-                Await LoadDataContent(isStarting, 500)
-                'Await LoadDataContent(isPrefPrep).ConfigureAwait(False)
-                'Await LoadDataContent(isLoadingUI).ConfigureAwait(False)
-                'Await LoadDataContent(isApplyConfig).ConfigureAwait(False)
-                'Await LoadDataContent(isStartingSvc).ConfigureAwait(False)
-                'Await LoadDataContent(isStarting, 500).ConfigureAwait(False)
-            End Function)
+        Await PerformLoadStep(LoadPrefs)
+        Await PerformLoadStep(LoadUI)
+        Await PerformLoadStep(LoadConfig)
+        Await PerformLoadStep(LoadService)
+        Await PerformLoadStep(LoadComplete)
     End Function
-
-    Public Shared Sub RestartMonitor()
-        DoInitTriggerMonitor()
-        CoreDataLib.InputMonSvc.LaunchTriggerMonitor()
-    End Sub
 
     Public Async Function InputMonitor_Start() As Task
         Await Task.Run(
@@ -219,17 +174,5 @@ Public Class osInMon
 
         CoreDataLib.InputMonSvc = New InputMonitorService()
     End Sub
-
-    Private Function GetLoadDuration(objLoadContent As LoadContentData) As Integer
-        Select Case objLoadContent
-            Case isInit : Return 600
-            Case isLoading : Return 600
-            Case isPrefPrep : Return 750
-            Case isLoadingUI : Return 800
-            Case isApplyConfig : Return 700
-            Case isStartingSvc : Return 700
-            Case isStarting : Return 500
-        End Select
-    End Function
 
 End Class

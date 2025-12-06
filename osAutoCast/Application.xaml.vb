@@ -15,7 +15,7 @@ Class Application
 
         AddHandler objLoadScreen.osLoadComplete,
            Async Sub()
-               Await Task.Delay(325)
+               Await Task.Delay(450)
                objLoadScreen.Close()
            End Sub
 

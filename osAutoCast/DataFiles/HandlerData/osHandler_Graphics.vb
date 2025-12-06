@@ -20,7 +20,7 @@ Public NotInheritable Class osHandler_Graphics
     Private Shared _progDevice As osProgDevice
     Public Shared ReadOnly Property pDevice As osProgDevice
         Get
-            EnsureCreated()
+            ' EnsureCreated()
             Return _progDevice
         End Get
     End Property
@@ -28,7 +28,7 @@ Public NotInheritable Class osHandler_Graphics
     Private Shared _progContext As osProgDeviceContext
     Public Shared ReadOnly Property pContext As osProgDeviceContext
         Get
-            EnsureCreated()
+            ' EnsureCreated()
             Return _progContext
         End Get
     End Property
@@ -36,7 +36,7 @@ Public NotInheritable Class osHandler_Graphics
     Private Shared _progDxgiFactory As osProgDxgiFactory
     Public Shared ReadOnly Property pDxgiFactory As osProgDxgiFactory
         Get
-            EnsureCreated()
+            '  EnsureCreated()
             Return _progDxgiFactory
         End Get
     End Property
@@ -44,7 +44,7 @@ Public NotInheritable Class osHandler_Graphics
     Private Shared _progD2dFactory As osProgFactoryD2D
     Public Shared ReadOnly Property pD2DFactory As osProgFactoryD2D
         Get
-            EnsureCreated()
+            '  EnsureCreated()
             Return _progD2dFactory
         End Get
     End Property
@@ -52,7 +52,7 @@ Public NotInheritable Class osHandler_Graphics
     Private Shared _progDwFactory As FactoryDW
     Public Shared ReadOnly Property pDWFactory As FactoryDW
         Get
-            EnsureCreated()
+            '  EnsureCreated()
             Return _progDwFactory
         End Get
     End Property
@@ -62,29 +62,27 @@ Public NotInheritable Class osHandler_Graphics
 
     Public Shared Async Function EnsureCreated() As Task
         If _progDevice IsNot Nothing Then Return
-        Await Task.Run(
-            Async Function()
-                Await PrepDispatcher().InvokeAsync(Sub()
-                                                       SyncLock _initLock
-                                                           If _progDevice IsNot Nothing Then Return
+        Await PrepDispatcher().InvokeAsync(
+            Sub()
+                SyncLock _initLock
+                    If _progDevice IsNot Nothing Then Return
 
-                                                           Dim deviceFlags = DeviceCreationFlags.BgraSupport
+                    Dim deviceFlags = DeviceCreationFlags.BgraSupport
 
-                                                           _progDevice = New osProgDevice(DriverType.Hardware, deviceFlags)
-                                                           _progContext = _progDevice.ImmediateContext
+                    _progDevice = New osProgDevice(DriverType.Hardware, deviceFlags)
+                    _progContext = _progDevice.ImmediateContext
 
-                                                           Using dxgiDev = _progDevice.QueryInterface(Of osProgDxgiDevice)()
-                                                               Using adapter = dxgiDev.Adapter
-                                                                   _progDxgiFactory = adapter.GetParent(Of osProgDxgiFactory)()
-                                                               End Using
-                                                           End Using
+                    Using dxgiDev = _progDevice.QueryInterface(Of osProgDxgiDevice)()
+                        Using adapter = dxgiDev.Adapter
+                            _progDxgiFactory = adapter.GetParent(Of osProgDxgiFactory)()
+                        End Using
+                    End Using
 
-                                                           _progD2dFactory = New osProgFactoryD2D(osFactoryType.MultiThreaded)
-                                                           _progDwFactory = New FactoryDW(osDwFactoryType.Shared)
-                                                       End SyncLock
-                                                   End Sub, DispatcherPriority.Normal).Task
+                    _progD2dFactory = New osProgFactoryD2D(osFactoryType.MultiThreaded)
+                    _progDwFactory = New FactoryDW(osDwFactoryType.Shared)
+                End SyncLock
+            End Sub, DispatcherPriority.Normal).Task
 
-            End Function)
         ' We need to create the D3D device / factories on the dispatcher.
     End Function
 

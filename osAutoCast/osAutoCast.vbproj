@@ -313,10 +313,8 @@
     <None Include="..\.editorconfig">
       <Link>.editorconfig</Link>
     </None>
-    <EmbeddedResource Include="DataFiles\InterfaceData\ShaderLib\osShader_ProgPixel.ps" />
-    <EmbeddedResource Include="DataFiles\InterfaceData\ShaderLib\osShader_ProgVertex.ps" />
-    <EmbeddedResource Include="DataFiles\InterfaceData\ShaderLib\osShader_Text.ps" />
     <Resource Include="DataFiles\StyleData\EffectLib\osShader_Text.ps" />
+    <EmbeddedResource Include="DataFiles\InterfaceData\ShaderLib\osShader_Data.csd" />
     <None Include="My Project\app.manifest" />
     <None Include="My Project\DataSources\osPrefStore.ProgVisualQualityData.datasource" />
     <None Include="My Project\Settings.settings">
@@ -348,7 +346,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\osProgShader.ps" />
-    <None Include="Resources\osSplashLoader.png" />
+    <Resource Include="Resources\osSplashLoader.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.VisualBasic.targets" />
 </Project>
