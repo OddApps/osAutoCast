@@ -9,6 +9,10 @@ Imports osProgLoad = osAutoCast.osLoadingElements.osLoadingProgressBar
 Imports osAutoCast.DataTypeLib.LoadContentData
 Imports osAutoCast.DataTypeLib.LoadingProgStatus
 Imports osAutoCast.DataTypeLib.LoadStep
+Imports osAutoCast.DataTypeLib.LoadTextVisual
+Imports System.Runtime.InteropServices
+Imports System.Windows.Interop
+Imports osColor = System.Windows.Media.Color
 
 #Disable Warning BC42353
 
@@ -32,6 +36,77 @@ Public Class osInMon
             {New osLoadData(LoadComplete, isStarting, LoadStatus_Starting, 550, "Starting osAutoCast", Function() LoadFinalize(), 500)}
         }
 
+    Public objAnimation_FadeIn As Storyboard = Nothing
+    Private objAnimation_FadeOut As Storyboard = Nothing
+
+    Private Const ContentBorder_Radius As Double = 12
+    Private Const ContentBorder_Thickness As Double = 10
+
+    Public Property osAutoCastVersion As String = "Ver 3.0"
+
+    Public Property AnimatedText As String
+        Get
+            Return GetValue(AnimatedTextProperty)
+        End Get
+        Set(value As String)
+            SetValue(AnimatedTextProperty, value)
+        End Set
+    End Property
+
+    Public ReadOnly AnimatedTextProperty As DependencyProperty = DependencyProperty.
+        Register("AnimatedText", GetType(String), GetType(osInMon),
+                 New PropertyMetadata("", AddressOf OnAnimatedTextChanged))
+
+    Private Sub OnAnimatedTextChanged(d As DependencyObject, e As DependencyPropertyChangedEventArgs)
+        EstablishVisual(LoadTxt_Out, objAnimation_FadeOut)
+
+        Dim evtLoadText_FadeOutComplete As EventHandler = Nothing
+
+        evtLoadText_FadeOutComplete =
+            Sub()
+                RemoveHandler objAnimation_FadeOut.Completed,
+                                    evtLoadText_FadeOutComplete
+
+                objLoadText.Text = e.NewValue?.ToString()
+                EstablishVisual(LoadTxt_In, objAnimation_FadeIn)
+
+                objAnimation_FadeIn.Begin(objLoadText)
+            End Sub
+
+        AddHandler objAnimation_FadeOut.Completed, evtLoadText_FadeOutComplete
+
+        objAnimation_FadeOut.Begin(objLoadText)
+    End Sub
+
+    Private Function ConvVisual(objVis As Object) As Storyboard
+        Return TryCast(objVis, Storyboard)
+    End Function
+
+    Private Function GetAnimationResources() As ResourceDictionary
+        With objLoadText.Style
+            Return .Resources
+        End With
+    End Function
+
+    Private Function GetVisual(isTextFadeIn As String) As Storyboard
+        With ConvVisual(GetAnimationResources()(isTextFadeIn))
+            Dim objVisAni = .Clone()
+            Storyboard.SetDesiredFrameRate(objVisAni, 20)
+            Return objVisAni
+        End With
+    End Function
+
+    Public Sub EstablishVisual(isTextFadeIn As String, ByRef objSetVisual As Storyboard)
+        Dim objPopupVis As Storyboard = GetVisual(isTextFadeIn)
+        objSetVisual = objPopupVis
+    End Sub
+
+    Public ReadOnly Property osAutoCastTitle As String
+        Get
+            Return $"osAutoCast {osAutoCastVersion} | By OddSoft"
+        End Get
+    End Property
+
     Public ReadOnly Property objLoadProg As osProgLoad
         Get
             Return Me.LoadingProgressBar
@@ -43,6 +118,17 @@ Public Class osInMon
             Return Me.LoadingText
         End Get
     End Property
+
+    Public ReadOnly Property objOutline As Grid
+        Get
+            Return Me.LoadingContainerOutline
+        End Get
+    End Property
+
+    Public Sub New()
+        InitializeComponent()
+        DataContext = Me
+    End Sub
 
     Private Sub ValidateTaskAndRun(objTask As Func(Of Task), ByRef objValidTask As Task, ByRef isValid As Boolean)
         If objTask Is Nothing Then
@@ -64,14 +150,14 @@ Public Class osInMon
     End Sub
 
     Private Sub ApplyLoadText(txtLoad As String)
-        objLoadText.Text = txtLoad
+        AnimatedText = txtLoad
     End Sub
 
     Public Function DisplayLoadMsg(txtLoad As String) As Task
         Return PrepDispatcher().InvokeAsync(
             Sub()
                 ApplyLoadText(txtLoad)
-            End Sub, DispatcherPriority.Normal).Task
+            End Sub, DispatcherPriority.Send).Task
     End Function
 
     Private Async Function InitializeContentLoad() As Task
@@ -95,10 +181,12 @@ Public Class osInMon
         With FetchLoadData(objLoadStep)
 
             Dim objTask_DispLoadMsg = DisplayLoadMsg(.LoadMsg)
+            Await Task.Delay(175)
 
             Dim objTask_UpProg = PrepDispatcher().InvokeAsync(
-                Sub() objLoadProg.UpdateLoadProgress(.LoadProgStatus),
-                    DispatcherPriority.Send)
+                Sub()
+                    objLoadProg.UpdateLoadProgress(.LoadProgStatus)
+                End Sub, DispatcherPriority.Send)
 
             Await EvalDelay(.PreLoadDuration)
 
@@ -175,4 +263,9 @@ Public Class osInMon
         CoreDataLib.InputMonSvc = New InputMonitorService()
     End Sub
 
+    Private Sub ComposeOutline(sender As Object, e As RoutedEventArgs) Handles LoadingContainerOutline.Loaded
+        EstablishOutline(objOutline, ContentBorder_Radius)
+    End Sub
+
 End Class
+

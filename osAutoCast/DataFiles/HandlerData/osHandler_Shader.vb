@@ -15,7 +15,7 @@ Imports pxShader_Vertex = SharpDX.Direct3D11.VertexShader
 
 Public Module osHandler_Shader
 
-    Private ShaderCompressedData As String = "osShader_Data.csd"
+    Private ShaderCompressedData As String = "osEffect_Shaders.csd"
 
     Private pxShaderData_Pixel As pxShaderPixel
     Private pxShaderData_Text As pxShaderText

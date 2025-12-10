@@ -8,23 +8,22 @@
     <oseffect:TexelSizeConverter x:Key="TexelSizeConverter" />
 
     <DataTemplate x:Key="osEffectText" DataType="{x:Type sys:String}">
-        <TextBlock x:Name="btnContent" Text="{Binding}" Padding="{StaticResource osBtn_TextPadding}"                  
-                   SnapsToDevicePixels="True" HorizontalAlignment="Center" VerticalAlignment="Center"      
-                   TextAlignment="Center"
-                   LineStackingStrategy="BlockLineHeight" LineHeight="{StaticResource osBtn_FontSize}"
-                   FontWeight="{StaticResource osBtn_FontWeight}" FontSize="{StaticResource osBtn_FontSize}"
+        <TextBlock x:Name="btnContent" Text="{Binding}" Padding="{StaticResource osBtn_TextPadding}"                     
+                   HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" SnapsToDevicePixels="True"
+                   LineStackingStrategy="BlockLineHeight" FontSize="{StaticResource osBtn_FontSize}" 
+                   LineHeight="{StaticResource osBtn_FontSize}" FontWeight="{StaticResource osBtn_FontWeight}" 
                    Foreground="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}">
             <TextBlock.Effect>
-                <local:osEffect x:Name="btnGlow" Thickness="{StaticResource osEffect_Thickness}" Spread="{StaticResource osEffect_Spread}"
+                <local:osEffectManager x:Name="btnGlow" Thickness="{StaticResource osEffect_Thickness}" Spread="{StaticResource osEffect_Spread}"
                                 Fade="{StaticResource osEffect_Fade}" GlowColor="{StaticResource osEffect_Color}"
                                 StrokeStrength="{StaticResource osEffect_Stroke}" GlowStrength="{StaticResource osEffect_Glow}">
-                    <local:osEffect.TexelSize>
+                    <local:osEffectManager.TexelSize>
                         <MultiBinding Converter="{StaticResource TexelSizeConverter}">
                             <Binding ElementName="btnContent" Path="ActualWidth"/>
                             <Binding ElementName="btnContent" Path="ActualHeight"/>
                         </MultiBinding>
-                    </local:osEffect.TexelSize>
-                </local:osEffect>
+                    </local:osEffectManager.TexelSize>
+                </local:osEffectManager>
             </TextBlock.Effect>
         </TextBlock>
         <DataTemplate.Triggers>
@@ -59,16 +58,16 @@
                    FontWeight="{StaticResource osBtn_FontWeight}" FontSize="{StaticResource osBtn_FontSize}"
                    Foreground="{Binding RelativeSource={RelativeSource AncestorType=ToggleButton}, Path=Foreground}">
             <TextBlock.Effect>
-                <local:osEffect x:Name="toggleGlow" Thickness="{StaticResource osEffect_Thickness}" Spread="{StaticResource osEffect_Spread}"
+                <local:osEffectManager x:Name="toggleGlow" Thickness="{StaticResource osEffect_Thickness}" Spread="{StaticResource osEffect_Spread}"
                                 Fade="{StaticResource osEffect_Fade}" GlowColor="{StaticResource osEffect_Color}"
                                 StrokeStrength="{StaticResource osEffect_Stroke}" GlowStrength="{StaticResource osEffect_Glow}">
-                    <local:osEffect.TexelSize>
+                    <local:osEffectManager.TexelSize>
                         <MultiBinding Converter="{StaticResource TexelSizeConverter}">
                             <Binding ElementName="toggleTxtContent" Path="ActualWidth"/>
                             <Binding ElementName="toggleTxtContent" Path="ActualHeight"/>
                         </MultiBinding>
-                    </local:osEffect.TexelSize>
-                </local:osEffect>
+                    </local:osEffectManager.TexelSize>
+                </local:osEffectManager>
             </TextBlock.Effect>
         </TextBlock>
         <DataTemplate.Triggers>

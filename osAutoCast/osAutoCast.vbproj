@@ -93,7 +93,7 @@
     <Prefer32Bit>true</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup>
-    <ApplicationIcon>Resources\osIcon.ico</ApplicationIcon>
+    <ApplicationIcon>ResourceLib\osIcon.ico</ApplicationIcon>
   </PropertyGroup>
   <PropertyGroup>
     <ManifestCertificateThumbprint>44390ABD3E763AFBE9CA6A836B6DD67C171B4319</ManifestCertificateThumbprint>
@@ -185,7 +185,8 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="DataFiles\ModelData\osLoadingProgressBar.vb" />
-    <Compile Include="DataFiles\StyleData\EffectLib\osEffect.vb" />
+    <Compile Include="DataFiles\VisualData\StyleLib\osStyleManager.vb" />
+    <Compile Include="DataFiles\VisualData\EffectsLib\osEffectManager.vb" />
     <Compile Include="GlobalSuppressions.vb" />
     <Compile Include="DataFiles\HandlerData\osHandler_Prefs.vb" />
     <Compile Include="DataFiles\InterfaceData\PrefsUI\osPrefs.Designer.vb">
@@ -221,47 +222,47 @@
     <Compile Include="DataFiles\ModelData\EasingModel.vb" />
     <Compile Include="DataFiles\ModelData\OddLibProgressBar.vb" />
     <Compile Include="DataFiles\TypeData\DataTypeLib.vb" />
-    <Page Include="DataFiles\StyleData\osUI_StyleEffects.xaml">
+    <Page Include="DataFiles\VisualData\StyleLib\StyleResources\StyleConfigs\osUI_StyleEffects.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="DataFiles\StyleData\osUI_StyleIndex.xaml">
+    <Page Include="DataFiles\VisualData\StyleLib\StyleResources\StyleConfigs\osUI_StyleIndex.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="DataFiles\StyleData\osUI_StyleBase.xaml">
+    <Page Include="DataFiles\VisualData\StyleLib\StyleResources\StyleConfigs\osUI_StyleBase.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="DataFiles\StyleData\osUI_StyleSettings.xaml">
+    <Page Include="DataFiles\VisualData\StyleLib\StyleResources\StyleConfigs\osUI_StyleSettings.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="DataFiles\StyleData\osUI_StyleViews.xaml">
+    <Page Include="DataFiles\VisualData\StyleLib\StyleResources\StyleConfigs\osUI_StyleViews.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="DataFiles\StyleData\osUI_StyleVisuals.xaml">
+    <Page Include="DataFiles\VisualData\StyleLib\StyleResources\StyleConfigs\osUI_StyleVisuals.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="DataFiles\StyleData\StyleLib\osUI_Style-Container.xaml">
+    <Page Include="DataFiles\VisualData\StyleLib\StyleResources\StyleProfiles\osUI_Style-Container.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="DataFiles\StyleData\StyleLib\osUI_Style-Border.xaml">
+    <Page Include="DataFiles\VisualData\StyleLib\StyleResources\StyleProfiles\osUI_Style-Border.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="DataFiles\StyleData\StyleLib\osUI_Style-Button.xaml">
+    <Page Include="DataFiles\VisualData\StyleLib\StyleResources\StyleProfiles\osUI_Style-Button.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="DataFiles\StyleData\StyleLib\osUI_Style-LoadScreen.xaml">
+    <Page Include="DataFiles\VisualData\StyleLib\StyleResources\StyleProfiles\osUI_Style-LoadScreen.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="DataFiles\StyleData\StyleLib\osUI_Style-Toggle.xaml">
+    <Page Include="DataFiles\VisualData\StyleLib\StyleResources\StyleProfiles\osUI_Style-Toggle.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -313,8 +314,8 @@
     <None Include="..\.editorconfig">
       <Link>.editorconfig</Link>
     </None>
-    <Resource Include="DataFiles\StyleData\EffectLib\osShader_Text.ps" />
-    <EmbeddedResource Include="DataFiles\InterfaceData\ShaderLib\osShader_Data.csd" />
+    <Resource Include="DataFiles\VisualData\EffectsLib\EffectResources\osShader_Text.ps" />
+    <EmbeddedResource Include="DataFiles\VisualData\EffectsLib\EffectResources\osEffect_Shaders.csd" />
     <None Include="My Project\app.manifest" />
     <None Include="My Project\DataSources\osPrefStore.ProgVisualQualityData.datasource" />
     <None Include="My Project\Settings.settings">
@@ -327,10 +328,10 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
-    <None Include="Resources\osIcon.ico" />
+    <None Include="ResourceLib\osIcon.ico" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\osIcon_Disabled.ico" />
+    <None Include="ResourceLib\osIcon_Disabled.ico" />
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include=".NETFramework,Version=v4.8">
@@ -345,8 +346,7 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\osProgShader.ps" />
-    <Resource Include="Resources\osSplashLoader.png" />
+    <Resource Include="ResourceLib\osSplashLoader.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.VisualBasic.targets" />
 </Project>

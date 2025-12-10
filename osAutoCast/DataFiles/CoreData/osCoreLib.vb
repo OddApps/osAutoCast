@@ -23,6 +23,7 @@ Imports osAutoCast.DataTypeLib.PromptResponse
 Imports osAutoCast.DataTypeLib.TriggerAction
 Imports osBinder = System.Windows.Data
 Imports osBrushColor = System.Windows.Media.Brushes
+Imports osBrush = System.Windows.Media.Brush
 Imports osColors = System.Windows.Media
 Imports osControls = System.Windows.Controls
 Imports osForms = System.Windows.Forms
@@ -31,8 +32,11 @@ Imports osProgColor = SharpDX.Mathematics.Interop.RawColor4
 Imports osRect = SharpDX.Mathematics.Interop
 Imports osUtilities = SharpDX.Utilities
 Imports osVert = System.Windows.VerticalAlignment
+Imports osPoint = System.Windows.Point
+Imports osSize = System.Windows.Size
 Imports pxShader_Pixel = SharpDX.Direct3D11.PixelShader
 Imports pxShader_Vertex = SharpDX.Direct3D11.VertexShader
+Imports osSweep = System.Windows.Media.SweepDirection
 
 #Disable Warning IDE0060 ' Remove unused parameter
 #Disable Warning IDE1006 ' Remove unused parameter
@@ -747,7 +751,7 @@ Public NotInheritable Class MenuOverlayWindow
     Private OverlayOpacity_Tray As Double = 0.01
     Private OverlayOpacity_Popup As Double = 0.0
 
-    Private VisualDataLocation As String = "/DataFiles/StyleData/osUI_StyleVisuals.xaml"
+    Private VisualDataLocation As String = "/DataFiles/VisualData/StyleLib/StyleResources/StyleConfigs/osUI_StyleVisuals.xaml"
     Private VisualDataURI As System.Uri = New System.Uri(VisualDataLocation, System.UriKind.Relative)
 
     Private objScreenData As Rectangle = SystemInformation.VirtualScreen
@@ -1496,6 +1500,8 @@ Module osFuncLib_UI
 
     Private Const progEaseThreshold As Double = 0.32
 
+    Private dirSweep As osSweep = osSweep.Clockwise
+
     Public Function PrepDispatcher(Optional IsAutoPass As Boolean = False) As Dispatcher
         Return If(IsAutoPass, osHandler_UI.osGui_AutoPass.Dispatcher,
             Application.Current.Dispatcher)
@@ -1550,6 +1556,280 @@ Module osFuncLib_UI
                                         End Using
                                     End Sub
         ctrlPanel.Invalidate()
+    End Sub
+
+    Private Function GetBrdr() As SolidColorBrush
+        Return New SolidColorBrush(GetBrdrColor()).FreezeReturn()
+    End Function
+
+    Private Function GetBrdrColor() As osColors.Color
+        Return osColors.Color.FromArgb(CalcRGB(255), CalcRGB(48), CalcRGB(0), CalcRGB(0))
+    End Function
+
+    Private Function CalcRGB(cVal As Byte) As Byte
+        Return CByte(cVal)
+    End Function
+
+    Private Function SetPoint(pX As Double, pY As Double) As osPoint
+        Return New osPoint(pX, pY)
+    End Function
+
+    Private Function SetSize(sW As Double, sH As Double) As osSize
+        Return New osSize(sW, sH)
+    End Function
+
+    Private Function SnapToPixel(pt As osPoint, dpi As DpiScale) As osPoint
+        ' convert to device pixels, round, convert back
+        Dim dx = Math.Round(pt.X * dpi.DpiScaleX)
+        Dim dy = Math.Round(pt.Y * dpi.DpiScaleY)
+        Return New osPoint(dx / dpi.DpiScaleX, dy / dpi.DpiScaleY)
+    End Function
+
+    Private Function DefineBorderOutline(elem As Visual, rect As Rect, radius As Double) As Geometry
+        ' get DPI for pixel snapping
+        Dim dpi = VisualTreeHelper.GetDpi(elem)
+
+        Dim r = Math.Max(0, Math.Min(radius, Math.Min(rect.Width / 2.0, rect.Height / 2.0)))
+        Dim g As New StreamGeometry()
+        Using ctx As StreamGeometryContext = g.Open()
+            ' build points and snap them
+            Dim p0 = SnapToPixel(SetPoint(rect.X + r, rect.Y), dpi)              ' start
+            Dim p1 = SnapToPixel(SetPoint(rect.Right - r, rect.Y), dpi)          ' top-right start
+            Dim p2 = SnapToPixel(SetPoint(rect.Right, rect.Y + r), dpi)          ' arc end
+            Dim p3 = SnapToPixel(SetPoint(rect.Right, rect.Bottom - r), dpi)
+            Dim p4 = SnapToPixel(SetPoint(rect.Right - r, rect.Bottom), dpi)
+            Dim p5 = SnapToPixel(SetPoint(rect.X + r, rect.Bottom), dpi)
+            Dim p6 = SnapToPixel(SetPoint(rect.X, rect.Bottom - r), dpi)
+            Dim p7 = SnapToPixel(SetPoint(rect.X, rect.Y + r), dpi)
+
+            ctx.BeginFigure(p0, True, True)
+
+            ctx.LineTo(p1, True, False)
+            ctx.ArcTo(p2, SetSize(r, r), 0, False, SweepDirection.Clockwise, True, False)
+
+            ctx.LineTo(p3, True, False)
+            ctx.ArcTo(p4, SetSize(r, r), 0, False, SweepDirection.Clockwise, True, False)
+
+            ctx.LineTo(p5, True, False)
+            ctx.ArcTo(p6, SetSize(r, r), 0, False, SweepDirection.Clockwise, True, False)
+
+            ctx.LineTo(p7, True, False)
+            ctx.ArcTo(p0, SetSize(r, r), 0, False, SweepDirection.Clockwise, True, False)
+        End Using
+
+        g.Freeze()
+        Return g
+    End Function
+
+    'Private Function DefineBorderOutline(rect As Rect, radius As Double) As Geometry
+    '    Dim r = Math.Max(0, Math.Min(radius, Math.Min(rect.Width / 2.0, rect.Height / 2.0)))
+
+    '    Dim g As New StreamGeometry()
+
+    '    Using ctx As StreamGeometryContext = g.Open()
+    '        With ctx
+    '            .BeginFigure(SetPoint(rect.X + r, rect.Y),
+    '                         True, True)
+
+    '            .LineTo(SetPoint(rect.Right - r, rect.Y),
+    '                    True, False)
+
+    '            .ArcTo(SetPoint(rect.Right, rect.Y + r),
+    '                   SetSize(r, r), 0, False,
+    '                   dirSweep, True, False)
+
+    '            .LineTo(SetPoint(rect.Right, rect.Bottom - r), True, False)
+
+    '            .ArcTo(SetPoint(rect.Right - r, rect.Bottom),
+    '                  SetSize(r, r), 0, False,
+    '                  dirSweep, True, False)
+
+    '            .LineTo(SetPoint(rect.X + r, rect.Bottom), True, False)
+
+    '            .ArcTo(SetPoint(rect.X, rect.Bottom - r),
+    '                  SetSize(r, r), 0, False,
+    '                  dirSweep, True, False)
+
+    '            .LineTo(SetPoint(rect.X, rect.Y + r), True, False)
+
+    '            .ArcTo(SetPoint(rect.X + r, rect.Y),
+    '                  SetSize(r, r), 0, False,
+    '                  dirSweep, True, False)
+    '        End With
+    '    End Using
+
+    '    g.Freeze()
+    '    Return g
+    'End Function
+
+    Public Sub EstablishBorder(elem As FrameworkElement, radius As Double, borderThickness As Double, borderBrush As osBrush)
+        If elem Is Nothing Then Return
+
+        elem.SetValue(UIElement.ClipToBoundsProperty, True)
+
+        Dim updateAction As Action =
+    Sub()
+        Dim w = elem.ActualWidth
+        Dim h = elem.ActualHeight
+        If w <= 0 OrElse h <= 0 Then Return
+
+        Dim half = borderThickness / 2.0
+        ' Inset the geometry so the stroke (centered on the geometry) stays fully inside the element bounds.
+        Dim rect = New Rect(half, half, Math.Max(0, w - borderThickness), Math.Max(0, h - borderThickness))
+        Dim clipGeo = DefineBorderOutline(elem, rect, Math.Max(0, radius - half)) ' reduce radius a bit if you want exact corner look
+
+        ' Apply clip (inset)
+        elem.Clip = clipGeo
+        elem.SetValue(UIElement.ClipToBoundsProperty, True)
+
+        ' Build the visible Path -- align it to top-left and size it so it overlays exactly
+        Dim path As Path = Nothing
+        If TypeOf elem.Tag Is Path Then
+            path = DirectCast(elem.Tag, Path)
+        Else
+            path = New Path()
+            elem.Tag = path
+            ' default alignment so it overlays correctly when added to a Grid
+            path.HorizontalAlignment = HorizontalAlignment.Left
+            path.VerticalAlignment = VerticalAlignment.Top
+        End If
+
+        ' Path draws the same geometry (centered stroke), and because clip was inset the full stroke is visible
+        path.Data = clipGeo
+        path.StrokeThickness = borderThickness
+        path.StrokeLineJoin = PenLineJoin.Round
+        path.StrokeStartLineCap = PenLineCap.Round
+        path.StrokeEndLineCap = PenLineCap.Round
+        path.Stroke = If(borderBrush, osBrushColor.Black)
+        path.Fill = osBrushColor.Transparent
+        path.IsHitTestVisible = False
+
+        ' Add path as a child of the panel (Grid) and size it
+        Dim parent = TryCast(elem, osControls.Panel)
+        If parent IsNot Nothing Then
+            If Not parent.Children.Contains(path) Then
+                parent.Children.Add(path)
+            End If
+            ' Make sure the path covers the same area
+            path.Width = w
+            path.Height = h
+            path.Margin = New Thickness(0)
+        Else
+            ' fallback: try to add into parent panel if exists
+            Dim parentPanel As osControls.Panel = TryCast(VisualTreeHelper.GetParent(elem), osControls.Panel)
+            If parentPanel IsNot Nothing Then
+                If Not parentPanel.Children.Contains(path) Then
+                    parentPanel.Children.Add(path)
+                End If
+                ' compute elem position relative to parent and place the path there
+                Dim elemPos As osPoint = elem.TransformToAncestor(parentPanel).Transform(New osPoint(0, 0))
+                path.Width = w
+                path.Height = h
+                path.Margin = New Thickness(elemPos.X, elemPos.Y, 0, 0)
+            End If
+        End If
+    End Sub
+
+        'Dim updateAction As Action =
+        '    Sub()
+        '        Dim w = elem.ActualWidth
+        '        Dim h = elem.ActualHeight
+
+        '        If w <= 0 OrElse h <= 0 Then Return
+
+        '        Dim half = borderThickness / 2.0
+        '        Dim rect = New Rect(half, half, w - borderThickness, h - borderThickness)
+
+        '        'Dim rect = New Rect(0, 0, w, h)
+        '        Dim clipGeo = DefineBorderOutline(rect, radius)
+
+        '        elem.Clip = clipGeo
+
+        '        Dim path As Path = Nothing
+
+        '        If TypeOf elem.Tag Is Path Then
+        '            path = DirectCast(elem.Tag, Path)
+        '        Else
+        '            path = New Path()
+        '            elem.Tag = path
+        '        End If
+
+        '        path.Data = clipGeo
+        '        path.Stroke = If(borderBrush, osBrushColor.Black)
+        '        path.StrokeThickness = borderThickness
+        '        path.StrokeStartLineCap = PenLineCap.Round
+        '        path.StrokeEndLineCap = PenLineCap.Round
+        '        path.StrokeLineJoin = PenLineJoin.Round
+        '        path.Fill = osBrushColor.Transparent
+        '        path.IsHitTestVisible = False
+
+        '        Dim parent = TryCast(elem, osControls.Panel)
+        '        If parent IsNot Nothing Then
+        '            If Not parent.Children.Contains(path) Then
+        '                parent.Children.Add(path)
+        '            End If
+        '            path.Width = w
+        '            path.Height = h
+        '            Canvas.SetLeft(path, 0)
+
+        '            Canvas.SetTop(path, 0)
+        '        Else
+        '            Dim parentPanel As osControls.Panel = TryCast(VisualTreeHelper.GetParent(elem), osControls.Panel)
+        '            If parentPanel IsNot Nothing Then
+        '                If Not parentPanel.Children.Contains(path) Then
+        '                    parentPanel.Children.Add(path)
+        '                End If
+        '                Dim elemPos As osPoint = elem.TransformToAncestor(parentPanel).Transform(New osPoint(0, 0))
+        '                path.Width = w
+        '                path.Height = h
+        '                Canvas.SetLeft(path, elemPos.X)
+        '                Canvas.SetTop(path, elemPos.Y)
+        '            End If
+        '        End If
+        '    End Sub
+        AddHandler elem.SizeChanged, Sub(s, e)
+                                         updateAction()
+                                     End Sub
+        If Not elem.IsLoaded Then
+            AddHandler elem.Loaded, Sub(s, e)
+                                        updateAction()
+                                    End Sub
+        Else
+            updateAction()
+        End If
+    End Sub
+
+    Public Sub EstablishOutline(elem As FrameworkElement, radius As Double)
+        If elem Is Nothing Then Return
+
+        elem.SetValue(UIElement.ClipToBoundsProperty, True)
+
+        Dim updateAction As Action =
+            Sub()
+                Dim w = elem.ActualWidth - 2.5
+                Dim h = elem.ActualHeight - 2.5
+
+                If w <= 0 OrElse h <= 0 Then Return
+
+                Dim rect = New Rect(1.5, 1.5, w, h)
+                Dim clipGeo = DefineBorderOutline(elem, rect, radius)
+
+                'Dim eps = 0.25 ' pixels — try 0.5 or 1.0
+                'Dim rect = New Rect(-eps, -eps, w + eps * 2, h + eps * 2)
+                'Dim clipGeo = DefineBorderOutline(elem, rect, radius + eps)
+
+                elem.Clip = clipGeo
+            End Sub
+        AddHandler elem.SizeChanged, Sub(s, e)
+                                         updateAction()
+                                     End Sub
+        If Not elem.IsLoaded Then
+            AddHandler elem.Loaded, Sub(s, e)
+                                        updateAction()
+                                    End Sub
+        Else
+            updateAction()
+        End If
     End Sub
 
     Public Function EaseProgress2(progVal As Double) As Single

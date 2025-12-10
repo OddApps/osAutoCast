@@ -282,6 +282,7 @@ Public Module DataTypeLib
         OverlayOpen
         OverlayClose
         OverlayClose_ByBtn
+        LoadText_Fade
     End Enum
 
     Public Enum LoadingProgStatus
@@ -313,6 +314,17 @@ Public Module DataTypeLib
         LoadService
         LoadComplete
     End Enum
+
+    Public Enum LoadEventType
+        LoadEv_Show
+        LoadEv_Close
+        LoadEv_Complete
+    End Enum
+
+    Public Structure LoadTextVisual
+        Const LoadTxt_In = "LoadTextVisuals_FadeIn"
+        Const LoadTxt_Out = "LoadTextVisuals_FadeOut"
+    End Structure
 
     Public Enum osShaderType
         sTypePixel
@@ -375,7 +387,7 @@ Public Module osVisEaseData
         {New osVisualEaseDetails(PopupOpen_Fade)}, {New osVisualEaseDetails(PopupClose)},
         {New osVisualEaseDetails(PopupClose_ByCmd)}, {New osVisualEaseDetails(PopupClose_ByBtn)},
         {New osVisualEaseDetails(OverlayOpen)}, {New osVisualEaseDetails(OverlayClose)},
-        {New osVisualEaseDetails(OverlayClose_ByBtn)}
+        {New osVisualEaseDetails(OverlayClose_ByBtn)}, {New osVisualEaseDetails(LoadText_Fade)}
     }
 
     Public Function GetVisualEase(objVisE As VisualEasing) As EasingFunctionBase
@@ -415,6 +427,9 @@ Public Module osVisEaseData
                     .EasingMode = EasingMode.EaseInOut
                 }
             Case OverlayClose_ByBtn : Return New QuadraticEase() With {
+                    .EasingMode = EasingMode.EaseOut
+                }
+            Case LoadText_Fade : Return New CubicEase() With {
                     .EasingMode = EasingMode.EaseOut
                 }
         End Select

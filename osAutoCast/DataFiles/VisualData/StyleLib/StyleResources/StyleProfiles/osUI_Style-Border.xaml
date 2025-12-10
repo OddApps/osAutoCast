@@ -83,7 +83,7 @@
         <Style.Resources>
             <ResourceDictionary>
                 <ResourceDictionary.MergedDictionaries>
-                    <ResourceDictionary Source="/DataFiles/StyleData/osUI_StyleVisuals.xaml"  />
+                    <ResourceDictionary Source="/DataFiles/VisualData/StyleLib/StyleResources/StyleConfigs/osUI_StyleVisuals.xaml"  />
                 </ResourceDictionary.MergedDictionaries>
             </ResourceDictionary>
         </Style.Resources>

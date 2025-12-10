@@ -16,19 +16,17 @@ Namespace osLoadingElements
 
         Public Sub New()
             With Me
-                Me.FillBrush = New SolidColorBrush(Colors.Red)
-                Me.TrackBrush = New SolidColorBrush(Color.FromRgb(&HE, &HE, &HE))
+                'Me.FillBrush = New SolidColorBrush(Colors.Red)
+                'Me.TrackBrush = New SolidColorBrush(Color.FromRgb(&HE, &HE, &HE))
 
-                Me.CornerRadius = New CornerRadius(0) ' <-- now CornerRadius type
-                Me.AnimationDuration = TimeSpan.FromMilliseconds(400)
+                'Me.CornerRadius = New CornerRadius(0) ' <-- now CornerRadius type
 
                 Me.EasingFunction = New ExponentialEase() With {
                 .EasingMode = EasingMode.EaseOut
             }
 
-                Me.Minimum = 0
-                Me.Maximum = 250
             End With
+
         End Sub
 
 #Region "Fields for fast/slow animation & cancellation"
@@ -434,6 +432,7 @@ Namespace osLoadingElements
                                 Sub()
                                     Me.BeginAnimation(AnimatedProgressProperty, Nothing)
                                     SetValue(AnimatedProgressProperty, prevTarget)
+
                                 End Sub)
 
                             RemoveHandler interimAnim.Completed, interimHandler
@@ -445,8 +444,9 @@ Namespace osLoadingElements
 
                     Me.Dispatcher.Invoke(
                         Sub()
+                            Storyboard.SetDesiredFrameRate(interimAnim, 35)
                             Me.BeginAnimation(AnimatedProgressProperty, interimAnim)
-                        End Sub, DispatcherPriority.Render)
+                        End Sub, DispatcherPriority.Send)
 
                     Return
                 End If
@@ -672,6 +672,9 @@ Namespace osLoadingElements
             Dim progTrack_Geometry = CreateRoundRectGeometry(progTrack_Rect, progTrack_CornerRadius)
             dc.DrawGeometry(If(TrackBrush, Brushes.LightGray), Nothing, progTrack_Geometry)
 
+            EstablishProgFreeze(TryCast(progTrack_Geometry, Freezable))
+            dc.PushClip(progTrack_Geometry)
+
             Dim fillWidth = (AnimatedProgress / 100.0) * w
 
             If fillWidth > 0.0001 Then
@@ -690,66 +693,10 @@ Namespace osLoadingElements
 
                 Dim progFill_Geometry = CreateRoundRectGeometry(progFill_Rect, progFill_CornerRadius)
                 dc.DrawGeometry(If(FillBrush, Brushes.DodgerBlue), Nothing, progFill_Geometry)
+
+                dc.Pop()
             End If
 
-            'If BorderBrush IsNot Nothing AndAlso
-            '    (BorderThickness.Left > 0 OrElse BorderThickness.Top > 0 OrElse
-            '    BorderThickness.Right > 0 OrElse BorderThickness.Bottom > 0) Then
-
-            '    Dim bt = BorderThickness
-
-            '    Dim outerRect = New Rect(0, 0, w, h)
-            '    Dim outerCR = GetClampedCornerRadius(Me.CornerRadius, outerRect.Width, outerRect.Height)
-
-            '    ' Compute inner rect by insetting each side by the corresponding border thickness
-            '    Dim innerX = bt.Left
-            '    Dim innerY = bt.Top
-            '    Dim innerW = Math.Max(0.0, w - (bt.Left + bt.Right))
-            '    Dim innerH = Math.Max(0.0, h - (bt.Top + bt.Bottom))
-
-            '    ' Dim borderBrush = borderBrush
-
-            '    ' If inner rect has non-positive width/height, treat as full filled border (no hole)
-            '    If innerW <= 0 OrElse innerH <= 0 Then
-            '        ' Draw the full outer rounded rect filled with BorderBrush (no hollow)
-            '        Dim outerGeoOnly = CreateRoundRectGeometry(outerRect, outerCR)
-            '        EstablishProgFreeze(TryCast(outerGeoOnly, Freezable))
-            '        dc.DrawGeometry(BorderBrush, Nothing, outerGeoOnly)
-            '    Else
-            '        Dim innerRect = New Rect(innerX, innerY, innerW, innerH)
-
-            '        ' Reduce corner radii for inner rect. Use max of adjacent side thicknesses to reduce a corner.
-            '        ' This approximates the correct shrink of radii when inset by asymmetric thickness.
-            '        Dim tlReduce = Math.Max(bt.Left, bt.Top)
-            '        Dim trReduce = Math.Max(bt.Top, bt.Right)
-            '        Dim brReduce = Math.Max(bt.Right, bt.Bottom)
-            '        Dim blReduce = Math.Max(bt.Bottom, bt.Left)
-
-            '        Dim innerCRRaw As New CornerRadius(
-            '            Math.Max(0.0, outerCR.TopLeft - tlReduce),
-            '            Math.Max(0.0, outerCR.TopRight - trReduce),
-            '            Math.Max(0.0, outerCR.BottomRight - brReduce),
-            '            Math.Max(0.0, outerCR.BottomLeft - blReduce)
-            '        )
-
-            '        Dim innerCR = GetClampedCornerRadius(innerCRRaw, innerRect.Width, innerRect.Height)
-
-            '        Dim outerGeo2 = CreateRoundRectGeometry(outerRect, outerCR)
-            '        Dim innerGeo2 = CreateRoundRectGeometry(innerRect, innerCR)
-
-            '        Dim borderRing As Geometry = Nothing
-            '        Try
-            '            borderRing = Geometry.Combine(outerGeo2, innerGeo2, GeometryCombineMode.Exclude, Nothing)
-            '            If borderRing IsNot Nothing AndAlso borderRing.CanFreeze Then borderRing.Freeze()
-            '        Catch
-            '            ' If Combine fails for any reason, fall back to drawing outer geometry as a filled border.
-            '            borderRing = outerGeo2
-            '        End Try
-
-            '        EstablishProgFreeze(TryCast(borderRing, Freezable))
-            '        dc.DrawGeometry(BorderBrush, Nothing, borderRing)
-            '    End If
-            'End If
             If BorderBrush IsNot Nothing AndAlso
                 (BorderThickness.Left > 0 OrElse BorderThickness.Top > 0 OrElse
                 BorderThickness.Right > 0 OrElse BorderThickness.Bottom > 0) Then
@@ -857,92 +804,9 @@ Namespace osLoadingElements
             End Using
 
             g.Freeze()
+
             Return g
         End Function
-
-        ' Ensure each corner radius is non-negative and not larger than half of width/height
-        'Private Function GetClampedCornerRadius(cr As CornerRadius, width As Double, height As Double) As CornerRadius
-        '    Dim halfW = Math.Max(0.0, width / 2.0)
-        '    Dim halfH = Math.Max(0.0, height / 2.0)
-        '    Dim maxR = Math.Min(halfW, halfH)
-
-        '    Dim tl = Math.Max(0.0, Math.Min(cr.TopLeft, maxR))
-        '    Dim tr = Math.Max(0.0, Math.Min(cr.TopRight, maxR))
-        '    Dim br = Math.Max(0.0, Math.Min(cr.BottomRight, maxR))
-        '    Dim bl = Math.Max(0.0, Math.Min(cr.BottomLeft, maxR))
-
-        '    Return New CornerRadius(tl, tr, br, bl)
-        'End Function
-
-        ' Builds a StreamGeometry that represents a rectangle with potentially different corner radii
-        'Private Function CreateRoundRectGeometry(rect As Rect, cr As CornerRadius) As Geometry
-        '    Dim x = rect.X
-        '    Dim y = rect.Y
-        '    Dim w = rect.Width
-        '    Dim h = rect.Height
-
-        '    ' clamp again in case someone passes crazy values
-        '    Dim corner = GetClampedCornerRadius(cr, w, h)
-        '    Dim tl = corner.TopLeft
-        '    Dim tr = corner.TopRight
-        '    Dim br = corner.BottomRight
-        '    Dim bl = corner.BottomLeft
-
-        '    Dim geo As New StreamGeometry()
-        '    geo.FillRule = FillRule.EvenOdd
-
-        '    Using ctx = geo.Open()
-        '        ' start at top-left + tl
-        '        ctx.BeginFigure(New Point(x + tl, y), True, True) ' isFilled = True, isClosed = True
-
-        '        ' top line to top-right corner start
-        '        ctx.LineTo(New Point(x + w - tr, y), True, False)
-
-        '        ' top-right corner arc
-        '        If tr > 0 Then
-        '            ctx.ArcTo(New Point(x + w, y + tr),
-        '                      New Size(tr, tr), 0, False, SweepDirection.Clockwise, True, False)
-        '        Else
-        '            ctx.LineTo(New Point(x + w, y), True, False)
-        '        End If
-
-        '        ' right line down
-        '        ctx.LineTo(New Point(x + w, y + h - br), True, False)
-
-        '        ' bottom-right corner arc
-        '        If br > 0 Then
-        '            ctx.ArcTo(New Point(x + w - br, y + h),
-        '                      New Size(br, br), 0, False, SweepDirection.Clockwise, True, False)
-        '        Else
-        '            ctx.LineTo(New Point(x + w, y + h), True, False)
-        '        End If
-
-        '        ' bottom line to bottom-left corner start
-        '        ctx.LineTo(New Point(x + bl, y + h), True, False)
-
-        '        ' bottom-left corner arc
-        '        If bl > 0 Then
-        '            ctx.ArcTo(New Point(x, y + h - bl),
-        '                      New Size(bl, bl), 0, False, SweepDirection.Clockwise, True, False)
-        '        Else
-        '            ctx.LineTo(New Point(x, y + h), True, False)
-        '        End If
-
-        '        ' left line up
-        '        ctx.LineTo(New Point(x, y + tl), True, False)
-
-        '        ' top-left corner arc
-        '        If tl > 0 Then
-        '            ctx.ArcTo(New Point(x + tl, y),
-        '                      New Size(tl, tl), 0, False, SweepDirection.Clockwise, True, False)
-        '        Else
-        '            ctx.LineTo(New Point(x, y), True, False)
-        '        End If
-        '    End Using
-
-        '    geo.Freeze()
-        '    Return geo
-        'End Function
 
 #End Region
 

@@ -6,7 +6,23 @@
 
     <!-- ** Load Screen Settings ** -->
 
-    <oscolor:SolidColorBrush x:Key="osLoadScreen_BgColor" Color="#FF100D0B" />
+    <oscolor:SolidColorBrush x:Key="osLoadScreen_BG" Color="#FF100D0B" />
+    <oscolor:SolidColorBrush x:Key="osLoadScreen_Border" Color="#FF380000" />
+    <oscolor:SolidColorBrush x:Key="osLoadScreen_Transparent" Color="Transparent" />
+
+    <oscolor:SolidColorBrush x:Key="osLoadScreen_ProgressFill" Color="#FF5F1212" />
+    <oscolor:SolidColorBrush x:Key="osLoadScreen_ProgressTrack" Color="#A1242424" />
+
+    <oscolor:SolidColorBrush x:Key="osLoadScreen_ContentBG" Color="#42323232" />
+    <oscolor:SolidColorBrush x:Key="osLoadScreen_ContentBorder" Color="#66323232" />
+
+    <VisSettings:osVisConfig x:Key="osLoadText_StartDuration" visDur="0" />
+    <VisSettings:osVisConfig x:Key="osLoadText_FadeDuration" visDur="175" />
+
+    <VisSettings:osVisualEasing x:Key="osLoadText_FadeEase" visEasing="LoadText_Fade" />
+
+    <sys:Double x:Key="osLoadText_FadedOut">0.0</sys:Double>
+    <sys:Double x:Key="osLoadText_FadedIn">1.0</sys:Double>
 
     <!-- ** Effect Settings ** -->
 
