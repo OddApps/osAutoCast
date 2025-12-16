@@ -1,5 +1,4 @@
-﻿Imports System.Threading
-Imports System.Windows.Interop
+﻿Imports System.Windows.Interop
 Imports System.Windows.Media.Imaging
 Imports System.Windows.Threading
 Imports SharpDX.Direct3D9

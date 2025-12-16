@@ -1,5 +1,4 @@
-﻿Imports System.Threading
-Imports osAutoCast.DataTypeLib.ProgressMode
+﻿Imports osAutoCast.DataTypeLib.ProgressMode
 Imports osAutoCast.DataTypeLib.TriggerAction
 
 Public Class progGui_AutoPass

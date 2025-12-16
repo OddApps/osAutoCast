@@ -1,4 +1,5 @@
 ﻿<Window x:Class="osPopupMenu_GUI" x:Name="winPopupMenu" xmlns:osStyle="clr-namespace:osAutoCast.osStyle"
+        xmlns:local="clr-namespace:osAutoCast"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" mc:Ignorable="d" Topmost="True"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="osPopupMenu_GUI" IsTabStop="False"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008" Background="Transparent"
@@ -6,9 +7,8 @@
         WindowStartupLocation="CenterScreen" ShowActivated="False" WindowStyle="None"
         ShowInTaskbar="False" DataContext="{Binding RelativeSource={RelativeSource Self}}" 
         Style="{StaticResource MainContentContainerStyle}" Focusable="False">
-
-    <Border x:Name="popupMainContainer" CacheMode="BitmapCache" 
-            RenderOptions.BitmapScalingMode="HighQuality"
+  
+    <Border x:Name="popupMainContainer"
             Style="{StaticResource MainContainerStyle}">
         <Grid x:Name="popupContentContainer" 
               Style="{StaticResource ContentContainerStyle}">
@@ -16,7 +16,7 @@
                 <ColumnDefinition/>
             </Grid.ColumnDefinitions>
             <ToggleButton x:Name="pmChk_IsEnabled" Grid.Row="0" Grid.Column="0"
-                          IsChecked="{Binding IsAppEnabled, Mode=TwoWay, ElementName=winPopupMenu}"
+                          IsChecked="{Binding osEnabledStatus, Source={StaticResource osEnabledStatusConfig}, Mode=TwoWay,UpdateSourceTrigger=PropertyChanged}"
                           Style="{StaticResource pmBtnEnabledStatusStyle}" />
             <StackPanel x:Name="stackPanel" Grid.Row="1" Grid.Column="0" 
                         DataContext="{Binding RelativeSource={RelativeSource AncestorType=Window}}">

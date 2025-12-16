@@ -1,5 +1,4 @@
 ﻿Imports System.ComponentModel
-Imports System.Threading
 Imports System.Windows.Forms
 Imports SharpDX
 Imports SharpDX.Direct2D1
@@ -208,8 +207,6 @@ Public Class ProgBarGui_AutoCast
 
         ProgressEaseFunc = If(pEase,
             Function(x) x)
-
-        osHandler_Graphics.EnsureCreated()
 
         InitDeviceAndSwapChain()
 

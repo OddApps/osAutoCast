@@ -4,9 +4,9 @@
                     xmlns:osLoadProg="clr-namespace:osAutoCast.osLoadingElements">
 
     <Style x:Key="LoadingContainerStyle" TargetType="{x:Type Window}">
-        <Setter Property="Background" Value="{StaticResource osLoadScreen_Transparent}"/>
-        <Setter Property="Opacity" Value="0"/>
-        <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
+        <Setter Property="Background" Value="{StaticResource osLoadScreen_Transparent}" />
+        <Setter Property="Opacity" Value="0" />
+        <Setter Property="RenderTransformOrigin" Value="0.5,0.5" />
         <Style.Resources>
             <Storyboard x:Key="LoadScreenFadeIn">
                 <DoubleAnimation Storyboard.TargetProperty="Opacity"
@@ -32,58 +32,62 @@
     </Style>
 
     <Style x:Key="LoadingContainerOutlineStyle" TargetType="{x:Type Grid}">
-        <Setter Property="Background" Value="{StaticResource osLoadScreen_BG}"/>
+        <Setter Property="Background" Value="{StaticResource osLoadScreen_BG}" />
     </Style>
 
     <Style x:Key="LoadingContentStyle" TargetType="{x:Type Border}">
-        <Setter Property="Background" Value="{StaticResource osLoadScreen_BG}"/>
+        <Setter Property="Background" Value="{StaticResource osLoadScreen_BG}" />
         <Setter Property="BorderBrush" Value="{StaticResource osLoadScreen_Border}" />
         <Setter Property="BorderThickness" Value="12" />
         <Setter Property="CornerRadius" Value="11" />
     </Style>
 
     <Style x:Key="LoadingContentInnerBorderStyle" TargetType="{x:Type Border}">
-        <Setter Property="Background" Value="{StaticResource osLoadScreen_Transparent}"/>
+        <Setter Property="Background" Value="{StaticResource osLoadScreen_Transparent}" />
     </Style>
 
     <Style x:Key="LoadingContainerLayoutStyle" TargetType="{x:Type Grid}">
-        <Setter Property="Background" Value="{StaticResource osLoadScreen_Transparent}"/>
-        <Setter Property="Height" Value="524"/>
-        <Setter Property="Width" Value="488"/>
+        <Setter Property="Background" Value="{StaticResource osLoadScreen_Transparent}" />
+        <Setter Property="Height" Value="524" />
+        <Setter Property="Width" Value="488" />
         <Setter Property="osStyle:osContainerLayout.Rows" Value="*" />
     </Style>
 
     <Style x:Key="LoadingImageStyle" TargetType="{x:Type Image}">
-        <Setter Property="Width" Value="486"/>
+        <Setter Property="Width" Value="486" />
         <Setter Property="RenderTransformOrigin" Value="0.5,0.5" />
-        <Setter Property="VerticalAlignment" Value="Top"/>
-        <Setter Property="Source" Value="pack://application:,,,/ResourceLib/osSplashLoader.png"/>
+        <Setter Property="VerticalAlignment" Value="Top" />
+        <Setter Property="HorizontalAlignment" Value="Center" />
+        <Setter Property="Source" Value="pack://application:,,,/ResourceLib/osSplashLoader.png" />
         <Setter Property="RenderTransform">
             <Setter.Value>
                 <TransformGroup>
-                    <TranslateTransform Y="4"/>
+                    <TranslateTransform Y="2" />
                 </TransformGroup>
             </Setter.Value>
         </Setter>
     </Style>
 
     <Style x:Key="LoadingContentContainerStyle" TargetType="{x:Type Border}">
-        <Setter Property="Background" Value="{StaticResource osLoadScreen_ContentBG}"/>
+        <Setter Property="Background" Value="{StaticResource osLoadScreen_ContentBG}" />
         <Setter Property="BorderBrush" Value="{StaticResource osLoadScreen_ContentBorder}" />
         <Setter Property="BorderThickness" Value="0,2,0,0" />
         <Setter Property="Padding" Value="0,0,0,0" />
         <Setter Property="Margin" Value="25,0,25,0" />
-        <Setter Property="VerticalAlignment" Value="Bottom"/>
-        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="VerticalAlignment" Value="Bottom" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="Grid.Column" Value="0" />
+        <Setter Property="Grid.Row" Value="0" />
     </Style>
 
     <Style x:Key="LoadingContentAreaLayoutStyle" TargetType="{x:Type Grid}">
-        <Setter Property="osStyle:osContainerLayout.Rows" Value="*,auto" />
-        <Setter Property="VerticalAlignment" Value="Bottom"/>
+        <Setter Property="VerticalAlignment" Value="Bottom" />
+        <Setter Property="Grid.Column" Value="0" />
+        <Setter Property="Grid.Row" Value="0" />
     </Style>
 
     <Style x:Key="LoadingDataContentStyle" TargetType="{x:Type StackPanel}">
-        <Setter Property="Orientation" Value="Vertical"/>
+        <Setter Property="Orientation" Value="Vertical" />
         <Setter Property="HorizontalAlignment" Value="Center" />
         <Setter Property="Margin" Value="0,0,0,0" />
     </Style>
@@ -93,39 +97,45 @@
         <Setter Property="Height" Value="34" />
         <Setter Property="FontSize" Value="24" />
         <Setter Property="FontWeight" Value="Bold" />
-        <Setter Property="TextAlignment" Value="Center"/>
+        <Setter Property="TextAlignment" Value="Center" />
         <Setter Property="Margin" Value="0,4,0,2" />
-        <Setter Property="HorizontalAlignment" Value="Center"/>
-        <Setter Property="VerticalAlignment" Value="Center"/>
-        <Setter Property="UseLayoutRounding" Value="True"/>
-        <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Disabled"/>
-        <Style.Resources>
-            <Storyboard x:Key="LoadTextVisuals_FadeIn">
-                <DoubleAnimationUsingKeyFrames x:Name="visLoadText_FadeIn" FillBehavior="HoldEnd"
-                                               Storyboard.TargetName="LoadingText"
-                                               Storyboard.TargetProperty="Opacity">
-                    <EasingDoubleKeyFrame KeyTime="{StaticResource osLoadText_StartDuration}"
-                                          Value="{StaticResource osLoadText_FadedOut}"
-                                          EasingFunction="{StaticResource osLoadText_FadeEase}" />
-                    <EasingDoubleKeyFrame KeyTime="{StaticResource osLoadText_FadeDuration}"
-                                          Value="{StaticResource osLoadText_FadedIn}"
-                                          EasingFunction="{StaticResource osLoadText_FadeEase}" />
-                </DoubleAnimationUsingKeyFrames>
-            </Storyboard>
-            <Storyboard x:Key="LoadTextVisuals_FadeOut">
-                <DoubleAnimationUsingKeyFrames x:Name="visLoadText_FadeOut"
-                                               Storyboard.TargetName="LoadingText"
-                                               Storyboard.TargetProperty="Opacity"
-                                               FillBehavior="HoldEnd">
-                    <EasingDoubleKeyFrame KeyTime="{StaticResource osLoadText_StartDuration}"
-                                          Value="{StaticResource osLoadText_FadedIn}"
-                                          EasingFunction="{StaticResource osLoadText_FadeEase}" />
-                    <EasingDoubleKeyFrame KeyTime="{StaticResource osLoadText_FadeDuration}"
-                                          Value="{StaticResource osLoadText_FadedOut}"
-                                          EasingFunction="{StaticResource osLoadText_FadeEase}" />
-                </DoubleAnimationUsingKeyFrames>
-            </Storyboard>
-        </Style.Resources>
+        <Setter Property="HorizontalAlignment" Value="Center" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="UseLayoutRounding" Value="True" />
+        <Setter Property="LineHeight" Value="30" />
+        <Setter Property="LineStackingStrategy" Value="BlockLineHeight" />
+        <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Disabled" />
+    </Style>
+
+    <Style x:Key="LoadingAppDetailContainerStyle" TargetType="{x:Type Grid}">
+        <Setter Property="Margin" Value="4,10,4,2" />
+        <Setter Property="Grid.Column" Value="0" />
+        <Setter Property="Grid.Row" Value="1" />
+    </Style>
+
+    <Style x:Key="LoadingAppDetailContentStyle" TargetType="{x:Type TextBlock}">
+        <Setter Property="Foreground" Value="#FFC0C0C0" />
+        <Setter Property="Height" Value="22" />
+        <Setter Property="FontSize" Value="16" />
+        <Setter Property="FontWeight" Value="Light" />
+        <Setter Property="FontFamily" Value="Tahoma" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="TextOptions.TextRenderingMode" Value="ClearType" />
+        <Setter Property="TextOptions.TextFormattingMode" Value="Display" />
+        <Setter Property="LineHeight" Value="18" />
+        <Setter Property="LineStackingStrategy" Value="BlockLineHeight" />
+    </Style>
+
+    <Style x:Key="LoadingAppDetailContentStyle_Dev" BasedOn="{StaticResource LoadingAppDetailContentStyle}" TargetType="{x:Type TextBlock}">
+        <Setter Property="Padding" Value="2,0,0,0" />
+        <Setter Property="TextAlignment" Value="Left" />
+        <Setter Property="Grid.Column" Value="0" />
+    </Style>
+
+    <Style x:Key="LoadingAppDetailContentStyle_Ver" BasedOn="{StaticResource LoadingAppDetailContentStyle}" TargetType="{x:Type TextBlock}">
+        <Setter Property="Padding" Value="0,0,2,0" />
+        <Setter Property="TextAlignment" Value="Right" />
+        <Setter Property="Grid.Column" Value="1" />
     </Style>
 
     <Style x:Key="LoadingProgressStyle" TargetType="{x:Type osLoadProg:osLoadingProgressBar}">
@@ -133,12 +143,12 @@
         <Setter Property="Minimum" Value="0" />
         <Setter Property="Maximum" Value="250" />
         <Setter Property="Margin" Value="0,2,0,0" />
-        <Setter Property="FillBrush" Value="{StaticResource osLoadScreen_ProgressFill}"/>
-        <Setter Property="TrackBrush" Value="{StaticResource osLoadScreen_ProgressTrack}"/>
-        <Setter Property="BorderBrush" Value="{StaticResource osLoadScreen_Transparent}"/>
-        <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="TrackCornerRadius" Value="0,0,6,6"/>
-        <Setter Property="FillCornerRadius" Value="0,0,6,6"/>
+        <Setter Property="FillBrush" Value="{StaticResource osLoadScreen_ProgressFill}" />
+        <Setter Property="TrackBrush" Value="{StaticResource osLoadScreen_ProgressTrack}" />
+        <Setter Property="BorderBrush" Value="{StaticResource osLoadScreen_Transparent}" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="TrackCornerRadius" Value="0,0,6,6" />
+        <Setter Property="FillCornerRadius" Value="0,0,6,6" />
     </Style>
 
 </ResourceDictionary>

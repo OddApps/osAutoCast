@@ -24,6 +24,11 @@ Class Application
         {LoadEv_Close, "LoadScreenFadeOut"}
     }
 
+    Private Async Sub osAutoCast_Startup(sender As Object, e As StartupEventArgs) Handles Me.Startup
+        Await PrepLoadScreen()
+        Await objLoaderScreen.ProvisionApp()
+    End Sub
+
     Private Function LoadVis_Select() As Style
         Return objLoaderScreen.Style
     End Function
@@ -39,15 +44,11 @@ Class Application
     End Function
 
     Private Function GetVisualKey(objVisType As LoadEventType) As String
-        Return idxLoadScreenVisuals.First(Function(visKey)
-                                              Return visKey.Key = objVisType
-                                          End Function).Value
+        Return idxLoadScreenVisuals.First(
+            Function(visKey)
+                Return visKey.Key = objVisType
+            End Function).Value
     End Function
-
-    Private Async Sub osAutoCast_Startup(sender As Object, e As StartupEventArgs) Handles Me.Startup
-        Await PrepLoadScreen()
-        Await objLoaderScreen.ProvisionApp()
-    End Sub
 
     Private Async Function PrepLoadScreen() As Task
         InitLoadVisual()
@@ -137,6 +138,7 @@ Class Application
                         objTask_VisualComplete = Nothing
 
                         objLoaderScreen.Close()
+                        osHandler_UI.RecaptureResources()
                     End Sub
 
                 AddHandler objLoaderScreen.osLoadComplete, evLoad_LoadComplete
@@ -147,10 +149,6 @@ Class Application
         Return If(visShow, CType(objLoaderScreen.Resources("LoadScreenFadeIn"), Storyboard),
             CType(objLoaderScreen.Resources("LoadScreenFadeOut"), Storyboard))
     End Function
-
-    Private Sub TaskWaitForLoadComplete()
-        objTask_LoadComplete.ResetAndInitTask()
-    End Sub
 
     Public Shared Sub RestartMonitor()
         DoInitTriggerMonitor()

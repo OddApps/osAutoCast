@@ -10,34 +10,13 @@ Imports System.ComponentModel
 Public Class osEffectManager
     Inherits ShaderEffect
 
-    'Private Shared ReadOnly _shader As New PixelShader() With {
-    '    .UriSource = New Uri("/osAutoCast;component/DataFiles/StyleData/EffectLib/osShader_Text.ps", UriKind.Relative)
-    '}
-
-    'Public Sub New()
-    '    With Me
-    '        .PixelShader = _shader
-
-    '        .PaddingLeft = 6
-    '        .PaddingRight = 6
-
-    '        .PaddingTop = 3
-    '        .PaddingBottom = 3
-    '    End With
-
-    '    UpdateShaderValue(InputProperty)
-    '    UpdateShaderValue(TexelSizeProperty)
-    '    UpdateShaderValue(ThicknessProperty)
-    '    UpdateShaderValue(SpreadProperty)
-    '    UpdateShaderValue(FadeProperty)
-    '    UpdateShaderValue(GlowColorProperty)
-    '    UpdateShaderValue(StrokeStrengthProperty)
-    '    UpdateShaderValue(GlowStrengthProperty)
-    'End Sub
+    Private Shared ReadOnly _shader As New PixelShader() With {
+        .UriSource = New Uri("/osAutoCast;component/DataFiles/VisualData/EffectsLib/EffectResources/osShader_Text.ps", UriKind.Relative)
+    }
 
     Public Sub New()
         With Me
-            .PixelShader = FetchShader(sTypeText).sText
+            .PixelShader = _shader
 
             .PaddingLeft = 6
             .PaddingRight = 6
@@ -55,6 +34,27 @@ Public Class osEffectManager
         UpdateShaderValue(StrokeStrengthProperty)
         UpdateShaderValue(GlowStrengthProperty)
     End Sub
+
+    'Public Sub New()
+    '    With Me
+    '        .PixelShader = FetchShader(sTypeText).sText
+
+    '        .PaddingLeft = 6
+    '        .PaddingRight = 6
+
+    '        .PaddingTop = 3
+    '        .PaddingBottom = 3
+    '    End With
+
+    '    UpdateShaderValue(InputProperty)
+    '    UpdateShaderValue(TexelSizeProperty)
+    '    UpdateShaderValue(ThicknessProperty)
+    '    UpdateShaderValue(SpreadProperty)
+    '    UpdateShaderValue(FadeProperty)
+    '    UpdateShaderValue(GlowColorProperty)
+    '    UpdateShaderValue(StrokeStrengthProperty)
+    '    UpdateShaderValue(GlowStrengthProperty)
+    'End Sub
 
     Public Shared ReadOnly InputProperty As DependencyProperty = ShaderEffect.
         RegisterPixelShaderSamplerProperty("Input", GetType(osEffectManager), 0)

@@ -9,6 +9,8 @@ Imports osAutoCast.DataTypeLib.osShaderType
 Imports osAutoCast.DataTypeLib.OverlayVisualType
 Imports osAutoCast.DataTypeLib.VisualEasing
 Imports osAutoCast.DataTypeLib.TriggerAction
+Imports osAutoCast.DataTypeLib.TrayMenuVisuals
+Imports osAutoCast.DataTypeLib.LoadTextVisualType
 Imports osAutoCast.osShaderDataLib
 Imports osDraw = System.Drawing
 Imports osForms = System.Windows.Forms
@@ -20,6 +22,8 @@ Imports osText = SharpDX.DirectWrite
 Imports pxShader_Pixel = SharpDX.Direct3D11.PixelShader
 Imports pxShader_Text = System.Windows.Media.Effects.PixelShader
 Imports pxShader_Vertex = SharpDX.Direct3D11.VertexShader
+Imports osColor = System.Windows.Media.Color
+Imports osVisibility = System.Windows.Visibility
 
 #Disable Warning BC42353
 
@@ -48,6 +52,12 @@ Public Module DataTypeLib
         ToEnabled
         ToDisabled
         CancelUpdate
+    End Enum
+
+    Public Enum UpdateStatusAction
+        SetStatus_Enabled
+        SetStatus_Disabled
+        RetainStatus
     End Enum
 
     Public Enum InjectType
@@ -285,6 +295,40 @@ Public Module DataTypeLib
         LoadText_Fade
     End Enum
 
+    Public Enum TrayMenuVisuals
+        TrayMenuVis
+        GameMenuToggleVis
+        StatusToggleVis
+        MenuItemVis
+        MenuItemBorderVis
+        GameMenuItemVis
+    End Enum
+
+    Public Structure TrayMenuItemType
+        Const MenuItemType_Status = "StatusToggleVis"
+        Const MenuItemType_Game = "GameMenuToggleVis"
+        Const MenuItemType_Default = "MenuItemVis"
+        Const MenuItemType_Border = "MenuItemBorderVis"
+        Const MenuItemType_GameItem = "GameMenuItemVis"
+    End Structure
+
+    Public Enum TrayMenuState
+        TrayMenu_Close
+        TrayMenu_Open
+    End Enum
+
+    Public Enum GameMenuState
+        GameMenu_Close
+        GameMenu_Open
+    End Enum
+
+    Public Enum GameMenuVisuals
+        GameMenuVis_Height
+        GameMenuVis_Opacity
+        GameMenuVis_Visible
+        GameMenuVis_Position
+    End Enum
+
     Public Enum LoadingProgStatus
         LoadStatus_StartUp
         LoadStatus_Init
@@ -326,6 +370,11 @@ Public Module DataTypeLib
         Const LoadTxt_Out = "LoadTextVisuals_FadeOut"
     End Structure
 
+    Public Enum LoadTextVisualType
+        LoadTextFade_In
+        LoadTextFade_Out
+    End Enum
+
     Public Enum osShaderType
         sTypePixel
         sTypeVertex
@@ -335,6 +384,70 @@ Public Module DataTypeLib
 #End Region
 
 End Module
+
+
+Public Class GameMenuVisData
+
+    Public Property visStart As Double = Nothing
+    Public Property visEnd As Double = Nothing
+
+    Public Property visVisibility As osVisibility = Nothing
+
+    Public Sub New()
+    End Sub
+
+    Public Sub New(sVal As Double, eVal As Double, Optional vVal As osVisibility = Nothing)
+        visStart = sVal
+        visEnd = eVal
+        visVisibility = vVal
+    End Sub
+
+End Class
+
+Public Class osLoadTextColors
+
+    Public Property txtHidden As osColor
+    Public Property txtShown As osColor
+
+    Public Property visStart As osColor
+    Public Property visTarget As osColor
+
+    Public Sub New()
+    End Sub
+
+    Public Sub New(ByRef objTextArea As TextBlock, ByRef objTextBrush As SolidColorBrush)
+        objTextBrush = TryCast(objTextArea.Foreground, SolidColorBrush)
+
+        With objTextBrush
+            If .IsFrozen Then
+                objTextBrush = .CloneCurrentValue()
+                objTextArea.Foreground = objTextBrush
+            End If
+
+            With .Color
+                txtHidden = osColor.FromArgb(0, .R, .G, .B)
+                txtShown = osColor.FromArgb(255, .R, .G, .B)
+            End With
+        End With
+    End Sub
+
+    Public Sub New(LoadVisType As LoadTextVisualType, ByRef objTextArea As TextBlock, ByRef objTextBrush As SolidColorBrush)
+        objTextBrush = TryCast(objTextArea.Foreground, SolidColorBrush)
+
+        With objTextBrush
+            If .IsFrozen Then
+                objTextBrush = .CloneCurrentValue()
+                objTextArea.Foreground = objTextBrush
+            End If
+
+            With .Color
+                visStart = osColor.FromArgb(If(LoadVisType = LoadTextFade_In, 0, 255), .R, .G, .B)
+                visTarget = osColor.FromArgb(If(LoadVisType = LoadTextFade_In, 255, 0), .R, .G, .B)
+            End With
+        End With
+    End Sub
+
+End Class
 
 Public Class LoadDataObject
 
@@ -935,10 +1048,7 @@ Public Module osPopupMenuLib
         Sub(objGui_PopupMenu As osPopupMenu_GUI)
             If objGui_PopupMenu IsNot Nothing Then
                 With objGui_PopupMenu
-
                     Try
-                        ' RemoveHandler .Closed, AddressOf osHandler_UI.PrepDispatch
-
                         If .IsLoaded Then
                             .IsHitTestVisible = False
                             .Opacity = 0
@@ -984,21 +1094,21 @@ Public Module osPopupMenuLib
             End If
         End Sub
 
-    Private Sub ExecPrepUI_PopupMenu(objGui_PopupMenu As osPopupMenu_GUI, objGui_PopupMenuOverlay As MenuOverlayWindow)
-        Dim objWin_PopupMenu = objGui_PopupMenu
+    'Private Sub ExecPrepUI_PopupMenu(objGui_PopupMenu As osPopupMenu_GUI, objGui_PopupMenuOverlay As MenuOverlayWindow)
+    '    Dim objWin_PopupMenu = objGui_PopupMenu
 
-        With objWin_PopupMenu
-            .Owner = objGui_PopupMenuOverlay
-            .Owner.ShowInTaskbar = False
+    '    With objWin_PopupMenu
+    '        .Owner = objGui_PopupMenuOverlay
+    '        .Owner.ShowInTaskbar = False
 
-            .ShowInTaskbar = False
-            .Topmost = True
-            .ShowActivated = False
+    '        .ShowInTaskbar = False
+    '        .Topmost = True
+    '        .ShowActivated = False
 
-            .PrepPopupMenu()
-            .TriggerPopupMenu()
-        End With
-    End Sub
+    '        .PrepPopupMenu()
+    '        .TriggerPopupMenu()
+    '    End With
+    'End Sub
 
     Private Sub ExecPrepUI_PopupMenuOverlay(objGui_PopupMenuOverlay As MenuOverlayWindow)
         'With objGui_PopupMenuOverlay
@@ -1042,7 +1152,17 @@ Public Module osPopupMenuLib
                End Function
     End Function
 
-    Public DisplayUI_PopupMenu As Action(Of osPopupMenu_GUI, MenuOverlayWindow) = AddressOf ExecPrepUI_PopupMenu
+
+    Public Function GenerateTrayMenuGUI() As Func(Of osTrayMenu_GUI)
+        Return Function()
+                   Return PrepDispatcher().Invoke(
+                       Function()
+                           Return New osTrayMenu_GUI()
+                       End Function)
+               End Function
+    End Function
+
+    ' Public DisplayUI_PopupMenu As Action(Of osPopupMenu_GUI, MenuOverlayWindow) = AddressOf ExecPrepUI_PopupMenu
     Public DisplayUI_PopupMenuOverlay As Action(Of MenuOverlayWindow) = AddressOf ExecPrepUI_PopupMenuOverlay
     Public DisplayUI_TrayOverlay As Action(Of MenuOverlayWindow) = AddressOf ExecPrepUI_TrayMenuOverlay
 
@@ -1617,10 +1737,33 @@ Public Class ResponseBox
                     Return PromptResponse.isYes
                 Case osForms.DialogResult.No
                     Return PromptResponse.isNo
+                Case osForms.DialogResult.Cancel
+                    Return PromptResponse.isCancel
             End Select
         End Using
     End Function
 
+End Class
+
+Public NotInheritable Class PromptResponseState
+    Private Sub New()
+    End Sub
+
+    Private Shared _depth As Integer = 0
+
+    Public Shared ReadOnly Property isPromptResponseOpen As Boolean
+        Get
+            Return Threading.Volatile.Read(_depth) > 0
+        End Get
+    End Property
+
+    Public Shared Sub EnterPromptResponse()
+        Threading.Interlocked.Increment(_depth)
+    End Sub
+
+    Public Shared Sub ExitPromptResponse()
+        Threading.Interlocked.Decrement(_depth)
+    End Sub
 End Class
 
 Public Class PromptData
@@ -1654,7 +1797,7 @@ Public Class PromptData
             Case PromptType.DisableService
                 Msg = "This will Disable osAutoCast... Continue?"
                 Title = "Disable"
-                MsgType = MsgBoxType.isAlert
+                MsgType = MsgBoxType.isQuestion
         End Select
     End Sub
 

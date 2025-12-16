@@ -1,14 +1,18 @@
 ﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:local="clr-namespace:osAutoCast"
                     xmlns:sys="clr-namespace:System;assembly=mscorlib"
                     xmlns:VisSettings="clr-namespace:osAutoCast.osVisConfigSettings"
                     xmlns:oscolor="clr-namespace:System.Windows.Media;assembly=PresentationCore">
 
+    <local:osEnabledStatusConfig x:Key="osEnabledStatusConfig"/>
+    
     <!-- ** Load Screen Settings ** -->
 
     <oscolor:SolidColorBrush x:Key="osLoadScreen_BG" Color="#FF100D0B" />
     <oscolor:SolidColorBrush x:Key="osLoadScreen_Border" Color="#FF380000" />
     <oscolor:SolidColorBrush x:Key="osLoadScreen_Transparent" Color="Transparent" />
+
+    <oscolor:Color x:Key="osLoadScreen_LoadTextColor">#FFC0C0C0</oscolor:Color>
 
     <oscolor:SolidColorBrush x:Key="osLoadScreen_ProgressFill" Color="#FF5F1212" />
     <oscolor:SolidColorBrush x:Key="osLoadScreen_ProgressTrack" Color="#A1242424" />
@@ -16,14 +20,21 @@
     <oscolor:SolidColorBrush x:Key="osLoadScreen_ContentBG" Color="#42323232" />
     <oscolor:SolidColorBrush x:Key="osLoadScreen_ContentBorder" Color="#66323232" />
 
-    <VisSettings:osVisConfig x:Key="osLoadText_StartDuration" visDur="0" />
-    <VisSettings:osVisConfig x:Key="osLoadText_FadeDuration" visDur="175" />
+    <!-- ** Tray Menu Settings ** -->
 
-    <VisSettings:osVisualEasing x:Key="osLoadText_FadeEase" visEasing="LoadText_Fade" />
+    <oscolor:SolidColorBrush x:Key="osTrayMenu_BG" Color="#FF363636" />
 
-    <sys:Double x:Key="osLoadText_FadedOut">0.0</sys:Double>
-    <sys:Double x:Key="osLoadText_FadedIn">1.0</sys:Double>
+    <sys:Double x:Key="osTrayMenuBtn_Height">32</sys:Double>
 
+    <sys:Double x:Key="osTrayMenuEffect_Glow">0.5</sys:Double>
+    <sys:Double x:Key="osTrayMenuEffect_Thickness">1.2</sys:Double>
+    <sys:Double x:Key="osTrayMenuEffect_Spread">4</sys:Double>
+    <sys:Double x:Key="osTrayMenuEffect_Fade">0</sys:Double>
+    <sys:Double x:Key="osTrayMenuEffect_Stroke">1</sys:Double>
+
+    <oscolor:Color x:Key="osTrayMenuEffect_Color">#A1060606</oscolor:Color>
+    <oscolor:Color x:Key="osTrayMenuEffect_DisColor">#A1A1A1A1</oscolor:Color>
+    
     <!-- ** Effect Settings ** -->
 
     <sys:Double x:Key="osEffect_Thickness">1.2</sys:Double>

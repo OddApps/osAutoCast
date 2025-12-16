@@ -1,192 +1,107 @@
 ﻿Imports System.Windows.Media.Animation
 Imports System.Windows.Threading
 Imports System
-Imports System.Threading
 Imports System.Threading.Tasks
 Imports System.Windows
 Imports System.Windows.Controls
 Imports osProgLoad = osAutoCast.osLoadingElements.osLoadingProgressBar
-Imports osAutoCast.DataTypeLib.LoadContentData
-Imports osAutoCast.DataTypeLib.LoadingProgStatus
 Imports osAutoCast.DataTypeLib.LoadStep
 Imports osAutoCast.DataTypeLib.LoadTextVisual
+Imports osAutoCast.DataTypeLib.LoadContentData
+Imports osAutoCast.DataTypeLib.LoadingProgStatus
+Imports osAutoCast.DataTypeLib.LoadTextVisualType
 Imports System.Runtime.InteropServices
 Imports System.Windows.Interop
 Imports osColor = System.Windows.Media.Color
 
 #Disable Warning BC42353
+#Disable Warning BC42104
 
 Public Class osInMon
-
-    Public Event osLoadComplete(sender As Object, e As EventArgs)
-
-    Private evtLoadComplete As EventHandler = AddressOf TriggerCompleteEvent
-
-    Private isTaskValid As Boolean
-    Private objValidTask As Task
-
-    Private ReadOnly LoadDataIdx As New List(Of osLoadData) From
-        {
-            {New osLoadData(LoadStart, isLoading, LoadStatus_StartUp, 450, "Launching")},
-            {New osLoadData(LoadInit, isInit, LoadStatus_Init, 450, "Initializing Data", objPreLoadDuration:=150)},
-            {New osLoadData(LoadPrefs, isPrefPrep, LoadStatus_PrefPrep, 425, "Loading Preferences", Function() PrepPrefs(), 115)},
-            {New osLoadData(LoadUI, isLoadingUI, LoadStatus_LoadingUI, 375, "Loading Interface", Function() osHandler_UI.PrepAndLoadUI(), 125)},
-            {New osLoadData(LoadConfig, isApplyConfig, LoadStatus_ApplyConfig, 500, "Applying Configuration", Function() osMenu_Init(), 125)},
-            {New osLoadData(LoadService, isStartingSvc, LoadStatus_StartingSvc, 550, "Activating Service", Function() InputMonitor_Start(), 100)},
-            {New osLoadData(LoadComplete, isStarting, LoadStatus_Starting, 550, "Starting osAutoCast", Function() LoadFinalize(), 500)}
-        }
-
-    Public objAnimation_FadeIn As Storyboard = Nothing
-    Private objAnimation_FadeOut As Storyboard = Nothing
-
-    Private Const ContentBorder_Radius As Double = 12
-    Private Const ContentBorder_Thickness As Double = 10
-
-    Public Property osAutoCastVersion As String = "Ver 3.0"
-
-    Public Property AnimatedText As String
-        Get
-            Return GetValue(AnimatedTextProperty)
-        End Get
-        Set(value As String)
-            SetValue(AnimatedTextProperty, value)
-        End Set
-    End Property
-
-    Public ReadOnly AnimatedTextProperty As DependencyProperty = DependencyProperty.
-        Register("AnimatedText", GetType(String), GetType(osInMon),
-                 New PropertyMetadata("", AddressOf OnAnimatedTextChanged))
-
-    Private Sub OnAnimatedTextChanged(d As DependencyObject, e As DependencyPropertyChangedEventArgs)
-        EstablishVisual(LoadTxt_Out, objAnimation_FadeOut)
-
-        Dim evtLoadText_FadeOutComplete As EventHandler = Nothing
-
-        evtLoadText_FadeOutComplete =
-            Sub()
-                RemoveHandler objAnimation_FadeOut.Completed,
-                                    evtLoadText_FadeOutComplete
-
-                objLoadText.Text = e.NewValue?.ToString()
-                EstablishVisual(LoadTxt_In, objAnimation_FadeIn)
-
-                objAnimation_FadeIn.Begin(objLoadText)
-            End Sub
-
-        AddHandler objAnimation_FadeOut.Completed, evtLoadText_FadeOutComplete
-
-        objAnimation_FadeOut.Begin(objLoadText)
-    End Sub
-
-    Private Function ConvVisual(objVis As Object) As Storyboard
-        Return TryCast(objVis, Storyboard)
-    End Function
-
-    Private Function GetAnimationResources() As ResourceDictionary
-        With objLoadText.Style
-            Return .Resources
-        End With
-    End Function
-
-    Private Function GetVisual(isTextFadeIn As String) As Storyboard
-        With ConvVisual(GetAnimationResources()(isTextFadeIn))
-            Dim objVisAni = .Clone()
-            Storyboard.SetDesiredFrameRate(objVisAni, 20)
-            Return objVisAni
-        End With
-    End Function
-
-    Public Sub EstablishVisual(isTextFadeIn As String, ByRef objSetVisual As Storyboard)
-        Dim objPopupVis As Storyboard = GetVisual(isTextFadeIn)
-        objSetVisual = objPopupVis
-    End Sub
-
-    Public ReadOnly Property osAutoCastTitle As String
-        Get
-            Return $"osAutoCast {osAutoCastVersion} | By OddSoft"
-        End Get
-    End Property
-
-    Public ReadOnly Property objLoadProg As osProgLoad
-        Get
-            Return Me.LoadingProgressBar
-        End Get
-    End Property
-
-    Public ReadOnly Property objLoadText As TextBlock
-        Get
-            Return Me.LoadingText
-        End Get
-    End Property
-
-    Public ReadOnly Property objOutline As Grid
-        Get
-            Return Me.LoadingContainerOutline
-        End Get
-    End Property
-
-    Public Sub New()
-        InitializeComponent()
-        DataContext = Me
-    End Sub
-
-    Private Sub ValidateTaskAndRun(objTask As Func(Of Task), ByRef objValidTask As Task, ByRef isValid As Boolean)
-        If objTask Is Nothing Then
-            isValid = False
-            objValidTask = Nothing
-        Else
-            isValid = True
-            objValidTask = objTask.Invoke()
-        End If
-    End Sub
-
-    Private Function ChkFinalTask(objLoadingProgStatus As LoadingProgStatus) As Boolean
-        Return objLoadingProgStatus = LoadStatus_Starting
-    End Function
-
-    Private Sub TriggerCompleteEvent(s As Object, e As EventArgs)
-        RaiseEvent osLoadComplete(s, e)
-        RemoveHandler objLoadProg.LoadProgComplete, evtLoadComplete
-    End Sub
-
-    Private Sub ApplyLoadText(txtLoad As String)
-        AnimatedText = txtLoad
-    End Sub
-
-    Public Function DisplayLoadMsg(txtLoad As String) As Task
-        Return PrepDispatcher().InvokeAsync(
-            Sub()
-                ApplyLoadText(txtLoad)
-            End Sub, DispatcherPriority.Send).Task
-    End Function
 
     Private Async Function InitializeContentLoad() As Task
         AddHandler objLoadProg.LoadProgComplete, evtLoadComplete
 
         Await PerformLoadStep(LoadStart)
-
         Await Task.Delay(500)
-
         Await PerformLoadStep(LoadInit)
     End Function
 
-    Private Function FetchLoadData(getLoadStep As LoadStep) As osLoadData
-        Return LoadDataIdx.First(
-            Function(objLoadStep)
-                Return objLoadStep.LoadingStep = getLoadStep
-            End Function)
+    Private Sub ImplementLoadVisEvents(ByRef objVisTask As TaskCompletionSource(Of Boolean))
+        Dim _objVisTask = objVisTask
+
+        With objVis_TextFadeIn
+            evtLoadText_FadeIn =
+                Sub()
+                    RemoveHandler .Completed, evtLoadText_FadeIn
+
+                    objTextBrush.BeginAnimation(SolidColorBrush.ColorProperty, Nothing)
+
+                    With _objVisTask
+                        .TrySetResult(True) : .ResetTask()
+                    End With
+                End Sub
+
+            AddHandler .Completed, evtLoadText_FadeIn
+        End With
+    End Sub
+
+    Private Sub ImplementLoadVisEvents()
+        With objVis_TextFadeOut
+            evtLoadText_FadeOutComplete =
+                Sub()
+                    RemoveHandler .Completed, evtLoadText_FadeOutComplete
+                    objTextBrush.BeginAnimation(SolidColorBrush.ColorProperty, Nothing)
+                End Sub
+
+            AddHandler .Completed, evtLoadText_FadeOutComplete
+        End With
+    End Sub
+
+    Private Async Function TriggerLoadTextVis(LoadVisType As LoadTextVisualType, Optional txtLoadMsg As String = "") As Task
+        With objTextBrush
+            Select Case LoadVisType
+                Case LoadTextFade_In
+                    visLoadTextEventTask.ResetAndInitTask()
+
+                    ImplementLoadVisEvents(visLoadTextEventTask)
+
+                    Dim objVisTask_In = PrepDispatcher().InvokeAsync(
+                        Sub()
+                            ApplyLoadText(txtLoadMsg)
+                            .BeginAnimation(objVisTxtColor, objVis_TextFadeIn)
+                        End Sub)
+
+                    Await visLoadTextEventTask.Task
+                Case LoadTextFade_Out
+                    ImplementLoadVisEvents()
+
+                    Dim objVisTask_Out = PrepDispatcher().InvokeAsync(
+                        Sub()
+                            .BeginAnimation(objVisTxtColor, objVis_TextFadeOut)
+                        End Sub)
+            End Select
+
+        End With
     End Function
 
     Private Async Function PerformLoadStep(objLoadStep As LoadStep) As Task
         With FetchLoadData(objLoadStep)
 
-            Dim objTask_DispLoadMsg = DisplayLoadMsg(.LoadMsg)
-            Await Task.Delay(175)
+            Dim objTask_UpProg As DispatcherOperation
 
-            Dim objTask_UpProg = PrepDispatcher().InvokeAsync(
-                Sub()
-                    objLoadProg.UpdateLoadProgress(.LoadProgStatus)
-                End Sub, DispatcherPriority.Send)
+            Dim objTask_Load = PrepDispatcher().InvokeAsync(
+                Async Function()
+                    Dim objTask_VisOut =
+                            TriggerLoadTextVis(LoadTextFade_Out)
+
+                    objTask_UpProg = PrepDispatcher().InvokeAsync(
+                        Sub()
+                            objLoadProg.UpdateLoadProgress(.LoadProgStatus)
+                        End Sub, DispatcherPriority.Render)
+
+                    Await TriggerLoadTextVis(LoadTextFade_In, .LoadMsg)
+                End Function, DispatcherPriority.Render)
 
             Await EvalDelay(.PreLoadDuration)
 
@@ -230,6 +145,19 @@ Public Class osInMon
         Await Task.Run(
             Async Function()
                 Await Task.Delay(250)
+
+                PrepDispatcher().Invoke(
+                    Sub()
+                        objAnimation_LoadTextVis.Children.Clear()
+                        objAnimation_LoadTextVis = Nothing
+
+                        objTextBrush = Nothing
+
+                        isAppLoaded = True
+                    End Sub)
+
+                visLoadTextEventTask.ResetTask()
+
             End Function)
     End Function
 
@@ -263,9 +191,139 @@ Public Class osInMon
         CoreDataLib.InputMonSvc = New InputMonitorService()
     End Sub
 
+End Class
+
+Partial Class osInMon
+
+    Public Event osLoadComplete(sender As Object, e As EventArgs)
+
+    Private evtLoadComplete As EventHandler = AddressOf TriggerCompleteEvent
+
+    Private isTaskValid As Boolean
+    Private objValidTask As Task
+
+    Private objAnimation_LoadTextVis As Storyboard = Nothing
+
+    Private visLoadTextEventTask As TaskCompletionSource(Of Boolean)
+
+    Private evtLoadText_FadeIn As EventHandler
+    Private evtLoadText_FadeOutComplete As EventHandler
+
+    Private objTextBrush As SolidColorBrush
+
+    Private Const ContentBorder_Radius As Double = 12
+
+    Private ReadOnly LoadDataIdx As New List(Of osLoadData) From
+        {
+            {New osLoadData(LoadStart, isLoading, LoadStatus_StartUp, 450, "Launching", objPreLoadDuration:=115)},
+            {New osLoadData(LoadInit, isInit, LoadStatus_Init, 550, "Initializing Data", objPreLoadDuration:=150)},
+            {New osLoadData(LoadPrefs, isPrefPrep, LoadStatus_PrefPrep, 500, "Loading Preferences", Function() PrepPrefs(), 125)},
+            {New osLoadData(LoadUI, isLoadingUI, LoadStatus_LoadingUI, 450, "Loading Interface", Function() osHandler_UI.PrepAndLoadUI(), 125)},
+            {New osLoadData(LoadConfig, isApplyConfig, LoadStatus_ApplyConfig, 475, "Applying Configuration", Function() osMenu_Init(), 125)},
+            {New osLoadData(LoadService, isStartingSvc, LoadStatus_StartingSvc, 450, "Activating Service", Function() InputMonitor_Start(), 110)},
+            {New osLoadData(LoadComplete, isStarting, LoadStatus_Starting, 450, "Starting osAutoCast", Function() LoadFinalize(), 500)}
+        }
+
+    Public Property osAutoCastVersion As String = "Ver 3.0"
+
+    Public ReadOnly Property osAutoCastTitle As String
+        Get
+            Return $"osAutoCast {osAutoCastVersion} | By OddSoft"
+        End Get
+    End Property
+
+    Public ReadOnly Property objLoadProg As osProgLoad
+        Get
+            Return Me.LoadingProgressBar
+        End Get
+    End Property
+
+    Public ReadOnly Property objLoadText As TextBlock
+        Get
+            Return Me.LoadingText
+        End Get
+    End Property
+
+    Public ReadOnly Property objOutline As Grid
+        Get
+            Return Me.LoadingContainerOutline
+        End Get
+    End Property
+
+    Public ReadOnly Property objVis_TextFadeOut As Timeline
+        Get
+            Return objAnimation_LoadTextVis.Children(0)
+        End Get
+    End Property
+
+    Public ReadOnly Property objVis_TextFadeIn As Timeline
+        Get
+            Return objAnimation_LoadTextVis.Children(1)
+        End Get
+    End Property
+
+    Public ReadOnly Property objVisTxtColor As DependencyProperty
+        Get
+            Return SolidColorBrush.ColorProperty
+        End Get
+    End Property
+
+    Public Sub New()
+        InitializeComponent()
+        DataContext = Me
+
+        ComposeVisual()
+    End Sub
+
+    Private Function FetchLoadData(getLoadStep As LoadStep) As osLoadData
+        Return LoadDataIdx.First(
+            Function(objLoadStep)
+                Return objLoadStep.LoadingStep = getLoadStep
+            End Function)
+    End Function
+
+    Private Function CreateVisArray() As TimelineCollection
+        With New osLoadTextColors(objLoadText, objTextBrush)
+            Return New TimelineCollection() From {
+                {New ColorAnimation(.txtShown, .txtHidden,
+                                    TimeSpan.FromMilliseconds(110), FillBehavior.HoldEnd)},
+                {New ColorAnimation(.txtHidden, .txtShown,
+                                    TimeSpan.FromMilliseconds(110), FillBehavior.HoldEnd)}}
+        End With
+    End Function
+
+    Private Sub ComposeVisual()
+        objAnimation_LoadTextVis = New Storyboard() With {
+            .Children = CreateVisArray()
+        }
+    End Sub
+
+    Private Sub ValidateTaskAndRun(objTask As Func(Of Task), ByRef objValidTask As Task, ByRef isValid As Boolean)
+        If objTask Is Nothing Then
+            isValid = False
+            objValidTask = Nothing
+        Else
+            isValid = True
+            objValidTask = objTask.Invoke()
+        End If
+    End Sub
+
+    Private Function ChkFinalTask(objLoadingProgStatus As LoadingProgStatus) As Boolean
+        Return objLoadingProgStatus = LoadStatus_Starting
+    End Function
+
+    Private Sub TriggerCompleteEvent(s As Object, e As EventArgs)
+        RaiseEvent osLoadComplete(s, e)
+        RemoveHandler objLoadProg.LoadProgComplete, evtLoadComplete
+    End Sub
+
+    Private Sub ApplyLoadText(txtLoad As String)
+        objLoadText.Text = txtLoad
+    End Sub
+
     Private Sub ComposeOutline(sender As Object, e As RoutedEventArgs) Handles LoadingContainerOutline.Loaded
         EstablishOutline(objOutline, ContentBorder_Radius)
     End Sub
 
-End Class
 
+End Class

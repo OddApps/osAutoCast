@@ -27,6 +27,10 @@ Namespace osStyle
             RegisterAttached("Background", GetType(Brush), GetType(osStyles),
                              New PropertyMetadata(Brushes.Transparent))
 
+        Public Shared ReadOnly DefaultBackgroundProperty As DependencyProperty = DependencyProperty.
+            RegisterAttached("DefaultBackground", GetType(Brush), GetType(osStyles),
+                             New FrameworkPropertyMetadata(Brushes.Transparent, FrameworkPropertyMetadataOptions.AffectsRender))
+
         Public Shared ReadOnly TemplateProperty As DependencyProperty = DependencyProperty.
             RegisterAttached("Template", GetType(ControlTemplate), GetType(osStyles),
                              New PropertyMetadata(Nothing, AddressOf UpdateView))
@@ -61,6 +65,14 @@ Namespace osStyle
 
         Public Shared Function GetBackground(ByVal objButton As UIElement) As Brush
             Return CType(objButton.GetValue(BackgroundProperty), Brush)
+        End Function
+
+        Public Shared Sub SetDefaultBackground(ByVal objButton As UIElement, ByVal valDefaultBackground As Brush)
+            objButton.SetValue(DefaultBackgroundProperty, valDefaultBackground)
+        End Sub
+
+        Public Shared Function GetDefaultBackground(ByVal objButton As UIElement) As Brush
+            Return CType(objButton.GetValue(DefaultBackgroundProperty), Brush)
         End Function
 
         Public Shared Sub SetTemplate(ByVal objTemplate As DependencyObject, ByVal valTemplate As ControlTemplate)
@@ -172,7 +184,10 @@ Namespace osStyle
         Private Shared Sub GenerateContainer(grid As Grid)
             Dim rowsSpec = GetRows(grid)
             If rowsSpec Is Nothing Then rowsSpec = ""
-            Dim parts = rowsSpec.Split(New Char() {","c}, StringSplitOptions.RemoveEmptyEntries)
+
+            Dim parts = rowsSpec.Split(New Char() {","c},
+                                       StringSplitOptions.RemoveEmptyEntries)
+
             Dim contentCount = parts.Length
             If contentCount = 0 Then
                 Return
@@ -180,19 +195,23 @@ Namespace osStyle
 
             For i As Integer = grid.Children.Count - 1 To 0 Step -1
                 Dim fe = TryCast(grid.Children(i), FrameworkElement)
+
                 If fe IsNot Nothing AndAlso fe.Tag IsNot Nothing AndAlso fe.Tag.ToString() = SeparatorTag Then
                     grid.Children.RemoveAt(i)
                 End If
             Next
 
             Dim childMeta As New List(Of Tuple(Of UIElement, Integer, Integer))()
+
             For Each chObj As UIElement In grid.Children
                 Dim fe = TryCast(chObj, FrameworkElement)
+
                 If fe Is Nothing Then Continue For
                 If fe.Tag IsNot Nothing AndAlso fe.Tag.ToString() = SeparatorTag Then Continue For
 
                 Dim origRow As Integer = Grid.GetRow(chObj)
                 Dim origRowSpan As Integer = Grid.GetRowSpan(chObj)
+
                 If origRowSpan < 1 Then origRowSpan = 1
 
                 If origRow < 0 Then origRow = 0
@@ -208,41 +227,50 @@ Namespace osStyle
             childMeta = childMeta.OrderBy(Function(t) t.Item2).ThenBy(Function(t) t.Item1.GetHashCode()).ToList()
 
             grid.RowDefinitions.Clear()
+
             For i As Integer = 0 To contentCount - 1
                 Dim token = parts(i).Trim()
                 Dim defContent As New RowDefinition()
+
                 If String.Equals(token, "auto", StringComparison.OrdinalIgnoreCase) Then
                     defContent.Height = GridLength.Auto
                 ElseIf token.EndsWith("*"c) Then
                     Dim starPart = token.TrimEnd("*"c)
                     Dim value As Double = 1.0
+
                     If Not String.IsNullOrEmpty(starPart) Then
                         Double.TryParse(starPart, value)
                     End If
+
                     defContent.Height = New GridLength(value, GridUnitType.Star)
                 Else
                     Dim px As Double = 0
+
                     If Double.TryParse(token, px) Then
                         defContent.Height = New GridLength(px, GridUnitType.Pixel)
                     Else
                         defContent.Height = GridLength.Auto
                     End If
                 End If
+
                 grid.RowDefinitions.Add(defContent)
 
                 If i < contentCount - 1 Then
                     Dim sepThickness = GetSeparatorThickness(grid)
                     Dim defSep As New RowDefinition()
+
                     If sepThickness <= 0 Then
                         defSep.Height = New GridLength(0, GridUnitType.Pixel)
                     Else
                         defSep.Height = New GridLength(sepThickness, GridUnitType.Pixel)
                     End If
+
                     grid.RowDefinitions.Add(defSep)
                 End If
             Next
 
             Dim totalRows = grid.RowDefinitions.Count
+
             For Each tup In childMeta
                 Dim ch = tup.Item1
                 Dim origRow = tup.Item2
@@ -254,6 +282,7 @@ Namespace osStyle
                 If newRow > totalRows - 1 Then
                     newRow = Math.Max(0, totalRows - 1)
                 End If
+
                 If newRow + newSpan > totalRows Then
                     newSpan = Math.Max(1, totalRows - newRow)
                 End If
@@ -264,23 +293,25 @@ Namespace osStyle
 
             Dim sepBrush = GetSeparatorBrush(grid)
             Dim sepThicknessFinal = GetSeparatorThickness(grid)
+
             If sepThicknessFinal > 0 AndAlso contentCount > 1 Then
                 Dim colSpan As Integer = If(grid.ColumnDefinitions.Count > 0, grid.ColumnDefinitions.Count, 1)
 
                 For i As Integer = 0 To contentCount - 2
                     Dim sepRowIndex = i * 2 + 1
+
                     Dim rect As New Rectangle() With {
-                .HorizontalAlignment = HorizontalAlignment.Stretch,
-                .VerticalAlignment = VerticalAlignment.Stretch,
-                .Fill = If(sepBrush, Brushes.LightGray),
-                .IsHitTestVisible = False,
-                .Tag = SeparatorTag,
-                .SnapsToDevicePixels = True
-            }
+                        .HorizontalAlignment = HorizontalAlignment.Stretch,
+                        .VerticalAlignment = VerticalAlignment.Stretch,
+                        .Fill = If(sepBrush, Brushes.LightGray),
+                        .IsHitTestVisible = False,
+                        .Tag = SeparatorTag,
+                        .SnapsToDevicePixels = True
+                    }
+
                     Grid.SetRow(rect, sepRowIndex)
                     Grid.SetColumn(rect, 0)
                     Grid.SetColumnSpan(rect, colSpan)
-
                     Grid.SetZIndex(rect, 10000)
 
                     grid.Children.Add(rect)
@@ -288,6 +319,7 @@ Namespace osStyle
             End If
 
             Dim wnd = Window.GetWindow(grid)
+
             If wnd IsNot Nothing Then
                 If wnd.SizeToContent = SizeToContent.Manual Then
                     wnd.UpdateLayout()

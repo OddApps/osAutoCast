@@ -1,5 +1,4 @@
-﻿Imports System.Threading
-Imports System.Windows.Threading
+﻿Imports System.Windows.Threading
 Imports Microsoft.Win32.SafeHandles
 Imports SharpDX.Direct3D
 Imports SharpDX.Direct3D11

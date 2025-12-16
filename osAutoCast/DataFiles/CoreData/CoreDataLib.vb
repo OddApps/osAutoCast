@@ -1,7 +1,6 @@
 ﻿Imports System.IO
 Imports System.Reflection
 Imports System.Text.RegularExpressions
-Imports System.Threading
 Imports System.Runtime.InteropServices
 Imports osAutoCast.DataTypeLib.osShaderType
 Imports osAutoCast.DataTypeLib.DetectOpts
@@ -35,7 +34,8 @@ Public NotInheritable Class CoreDataLib
     Private Shared ReadOnly isDebug As Boolean = False
 
     Public Shared osTrayIcon As Forms.NotifyIcon
-    Public Shared osTrayPopupMenu As System.Windows.Controls.ContextMenu
+
+    Public Shared osTrayMenuVisualsApplied As Boolean = False
 
     Public Shared dirProgFiles As String = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles)
     Public Shared dirMtga As String = Path.Combine(dirProgFiles, "Wizards of the Coast",
@@ -52,7 +52,7 @@ Public NotInheritable Class CoreDataLib
     Public Shared osPrefStoreData As osPrefStore
     Public Shared isDispPref As Boolean = False
 
-    Public Shared Property osEnabledStatus As Boolean = True
+    Public Shared Property osEnabledStatus2 As Boolean = True
     Public Shared osEnStatus_Popup As Boolean = False
 
     Public Const mEvent_Down As Integer = 2
@@ -79,11 +79,11 @@ Public NotInheritable Class CoreDataLib
     }
 
     Public Shared Function osStatus_Fetch() As Boolean
-        Return osEnabledStatus
+        Return osEnabledStatusConfig.Instance.osEnabledStatus
     End Function
 
     Public Shared Function osStatus_IsDisabled() As Boolean
-        Return osEnabledStatus = False
+        Return osEnabledStatusConfig.Instance.osEnabledStatus = False
     End Function
 
     Public Shared Function GetFuse() As Integer
@@ -141,6 +141,12 @@ Public NotInheritable Class CoreDataLib
                                           osPrefStoreData.MainOpts_apProgH)
         End Select
     End Function
+
+    Public Shared Sub TerminateTrayMenu()
+        Try
+            osHandler_UI.osTrayMenu.Close()
+        Catch : End Try
+    End Sub
 
     Private Shared Function GetShaderType(objShaderRes As String) As osShaderType
         Return ShaderTypeIdx(DetermineShaderType(objShaderRes))

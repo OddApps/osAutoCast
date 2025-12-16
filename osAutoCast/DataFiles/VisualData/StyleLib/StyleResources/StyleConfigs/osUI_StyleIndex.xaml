@@ -9,5 +9,6 @@
         <ResourceDictionary Source="/DataFiles/VisualData/StyleLib/StyleResources/StyleProfiles/osUI_Style-Button.xaml"/>
         <ResourceDictionary Source="/DataFiles/VisualData/StyleLib/StyleResources/StyleProfiles/osUI_Style-Container.xaml"/>
         <ResourceDictionary Source="/DataFiles/VisualData/StyleLib/StyleResources/StyleProfiles/osUI_Style-Toggle.xaml"/>
+        <ResourceDictionary Source="/DataFiles/VisualData/StyleLib/StyleResources/StyleProfiles/osUI_Style-TrayMenu.xaml"/>
     </ResourceDictionary.MergedDictionaries>
 </ResourceDictionary>

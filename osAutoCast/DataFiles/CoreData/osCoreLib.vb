@@ -21,6 +21,9 @@ Imports osAutoCast.DataTypeLib.ProgStatus
 Imports osAutoCast.DataTypeLib.ProgressMode
 Imports osAutoCast.DataTypeLib.PromptResponse
 Imports osAutoCast.DataTypeLib.TriggerAction
+Imports osAutoCast.DataTypeLib.TrayMenuVisuals
+Imports osAutoCast.DataTypeLib.TrayMenuItemType
+Imports osAutoCast.DataTypeLib.UpdateStatusAction
 Imports osBinder = System.Windows.Data
 Imports osBrushColor = System.Windows.Media.Brushes
 Imports osBrush = System.Windows.Media.Brush
@@ -41,6 +44,7 @@ Imports osSweep = System.Windows.Media.SweepDirection
 #Disable Warning IDE0060 ' Remove unused parameter
 #Disable Warning IDE1006 ' Remove unused parameter
 #Disable Warning BC42353
+#Disable Warning BC42107
 
 Public NotInheritable Class osFuncLib_InputScan
 
@@ -540,6 +544,21 @@ Public NotInheritable Class osFuncLib_ShowOpts
         osFuncLib_InputScan.isActionComplete = True
     End Function
 
+    Public Shared Async Function ExecuteDispOpts(fromTray As Boolean) As Task
+        PrepUtilityTrigger(TriggerType.ShowPrefs)
+
+        PrepDispatcher().Invoke(Sub()
+                                    With osHandler_UI.osGui_Prefs
+                                        .Show()
+                                    End With
+                                End Sub)
+
+        Await AnticipateExit(osHandler_UI.osGui_Prefs)
+
+        osHandler_UI.ResetOptsUI()
+        osFuncLib_InputScan.isActionComplete = True
+    End Function
+
     Private Shared Sub osPrefs_PrepHandlers()
         chkCloseSettings = New TaskCompletionSource(Of Boolean)()
 
@@ -793,6 +812,7 @@ Public NotInheritable Class MenuOverlayWindow
 
             .Background = osBrushColor.Black
             .Opacity = OverlayOpacity_Tray
+            .Topmost = False
         End With
     End Sub
 
@@ -1118,6 +1138,7 @@ Public Module osFuncLib_TrayMenu
     Private _inputSub As InputManager
 
     Public Property osIsEnabled As Boolean
+    Public Property isAppLoaded As Boolean = False
 
     Private chkMenuOpen As TaskCompletionSource(Of Boolean)
 
@@ -1138,132 +1159,185 @@ Public Module osFuncLib_TrayMenu
 
     Private osMenuBind As osMenuFuncBinder
 
-    Private pmFunc_TerminateOverlay As MouseButtonEventHandler = AddressOf ClosePopupMenu
+    ' Private pmFunc_TerminateOverlay As MouseButtonEventHandler = AddressOf ClosePopupMenu
+
+    Private evtTerminateTrayMenu As EventHandler
+
+    Private TrayMenuVisualLocation As String = "/DataFiles/VisualData/StyleLib/StyleResources/StyleProfiles/osUI_Style-TrayMenu.xaml"
+    Private TrayMenuVisualURI As System.Uri = New System.Uri(TrayMenuVisualLocation, System.UriKind.Relative)
 
     Private Const GWL_EXSTYLE As Integer = -20
     Private Const WS_EX_NOACTIVATE As Integer = &H8000000
 
-    <DllImport("user32.dll", SetLastError:=True)>
-    Private Function GetWindowLong(hWnd As IntPtr, nIndex As Integer) As Integer
-    End Function
+    'Public Property objTrayMenu As osControls.ContextMenu
+    '    Set(value As osControls.ContextMenu)
+    '        osHandler_UI.osTrayMenu = value
+    '    End Set
+    '    Get
+    '        Return osHandler_UI.osTrayMenu
+    '    End Get
+    'End Property
 
-    <DllImport("user32.dll", SetLastError:=True)>
-    Private Function SetWindowLong(hWnd As IntPtr, nIndex As Integer, dwNewLong As Integer) As Integer
-    End Function
+    'Public ReadOnly Property objTrayMnuRes As ResourceDictionary
+    '    Get
+    '        If objTrayMenu IsNot Nothing Then
+    '            Return objTrayMenu.Resources
+    '        End If
+    '    End Get
+    'End Property
+
+    '<DllImport("user32.dll", SetLastError:=True)>
+    'Private Function GetWindowLong(hWnd As IntPtr, nIndex As Integer) As Integer
+    'End Function
+
+    '<DllImport("user32.dll", SetLastError:=True)>
+    'Private Function SetWindowLong(hWnd As IntPtr, nIndex As Integer, dwNewLong As Integer) As Integer
+    'End Function
+
+    'Private Function FormTrayMenuVisual(objVis As Object) As Style
+    '    Return CType(objVis, Style)
+    'End Function
+
+    'Private Function SeekTrayMenuVisIdx(Optional ByRef objPopupMenu As osControls.ContextMenu = Nothing) As Dictionary(Of TrayMenuVisuals, Style)
+    '    Return New Dictionary(Of TrayMenuVisuals, Style) From {
+    '        {TrayMenuVis, GetTrayMenuVisual("TrayMenuContainerStyle", objPopupMenu)},
+    '        {GameMenuToggleVis, GetTrayMenuVisual("TrayMenuItemGameMenuStyle", objPopupMenu)},
+    '        {StatusToggleVis, GetTrayMenuVisual("TrayMenuItemEnDisStyle", objPopupMenu)},
+    '        {MenuItemVis, GetTrayMenuVisual("TrayMenuItemDefaultStyle", objPopupMenu)},
+    '        {MenuItemBorderVis, GetTrayMenuVisual("TrayMenuItemBorderStyle", objPopupMenu)},
+    '        {GameMenuItemVis, GetTrayMenuVisual("TrayMenuItemGameStyle", objPopupMenu)}
+    '    }
+    'End Function
+
+    'Private Function GetTrayMenuVisual(objVisType As String, Optional ByRef objPopupMenu As osControls.ContextMenu = Nothing) As Style
+    '    Return FormTrayMenuVisual(If(objPopupMenu, objTrayMnuRes)(objVisType))
+    'End Function
+
+    'Private Function ApplyTrayMenuVisual(objVisType As TrayMenuVisuals, ByRef objPopupMenu As osControls.ContextMenu) As Style
+    '    Return SeekTrayMenuVisIdx(objPopupMenu).First(Function(visKey)
+    '                                                      Return visKey.Key = objVisType
+    '                                                  End Function).Value
+    'End Function
+
+    'Private Sub ApplyTrayMenuVisual(objVisType As TrayMenuVisuals, ByRef TrayMenuObj As osControls.MenuItem)
+    '    Dim visTrayMenuObj = SeekTrayMenuVisIdx().First(
+    '        Function(visKey)
+    '            Return visKey.Key = objVisType
+    '        End Function).Value
+
+    '    TrayMenuObj.Style = visTrayMenuObj
+    'End Sub
 
     Public Async Function DisplayTrayMenu() As Task
-        PrepUtilityTrigger(TriggerType.ShowMenu)
+        PrepUtilityTrigger(TriggerType.ShowTrayMenu)
 
-        Dim objGetMenu = osTrayPopupMenu
+        If osHandler_UI.osTrayMenu Is Nothing Then
+            osHandler_UI.osTrayMenu = New osTrayMenu_GUI
+        End If
 
-        Dim objTask_ShowTrayMenu = PrepDispatcher().InvokeAsync(
-               Async Function()
-
-                   Await osHandler_UI.LaunchGui(TriggerShowTrayMenu)
-
-                   AddHandler osHandler_UI.osPopupMenuOverlay.MouseDown,
-                   pmFunc_TerminateOverlay
-
-                   osHandler_UI.DisplayGUI(TriggerType.ShowTrayMenu)
-
-                   GenMenuHost()
-
-                   With objGetMenu
-                       .PlacementTarget = objMenuHost
-                       .Placement = osControls.Primitives.PlacementMode.MousePoint
-                       .StaysOpen = False
-                       .IsOpen = True
-                   End With
-
-                   SetNoActivateStyleForContextMenu(osMenuObj)
-
-               End Function, DispatcherPriority.Normal)
-
-        Await objTask_ShowTrayMenu.Task.Unwrap()
-
-        osFuncLib_InputScan.isActionComplete = True
+        Await osHandler_UI.osTrayMenu.DisplayTrayMenu()
+        osHandler_UI.osTrayMenu.Activate()
     End Function
 
-    Public Sub ClosePopupMenu()
-        osTrayPopupMenu.IsOpen = False
-    End Sub
+    'Private Function SetTrayMenuVisData(ByRef objPopupMenu As osControls.ContextMenu) As Style
+    '    Dim objTrayMenuVis As New ResourceDictionary() With {
+    '        .Source = TrayMenuVisualURI
+    '    }
 
-    Public Sub ClosePopupMenu(isFromMenu As Boolean)
-        osTrayPopupMenu.IsOpen = False
+    '    objPopupMenu.Resources.
+    '        MergedDictionaries.Add(objTrayMenuVis)
+    'End Function
 
-        osHandler_UI.DispatchOverlay()
-        Dim doGameFocus = SetGameFocus()
-    End Sub
+    'Private Function FetchMenuItemType(strItemType As String) As TrayMenuVisuals
+    '    Return DirectCast([Enum].Parse(GetType(TrayMenuVisuals), strItemType, True), TrayMenuVisuals)
+    'End Function
 
-    Private Sub CloseMenuHost()
-        Try
-            objMenuHost.Close()
-        Catch ex As Exception
+    'Public Async Function ClosePopupMenu() As Task
+    '    'osHandler_UI.osTrayMenu.Hide()
 
-        End Try
+    '    Await osHandler_UI.osTrayMenu.InitTrayMenuClose()
 
-        If objMenuHost IsNot Nothing Then
-            objMenuHost = Nothing
-        End If
-    End Sub
+    '    If osHandler_UI.isOverlayActive() Then
+    '        RemoveHandler osHandler_UI.osPopupMenuOverlay.MouseDown,
+    '                                     pmFunc_TerminateOverlay
+    '    End If
 
-    Private Sub GenMenuHost()
-        If objMenuHost IsNot Nothing Then
-            objMenuHost = Nothing
-        End If
+    '    osHandler_UI.DispatchOverlay()
+    '    Dim doGameFocus = SetGameFocus()
+    '    'objTrayMenu.IsOpen = False
+    'End Function
 
-        objMenuHost = New MenuHostWindow()
+    'Public Sub ClosePopupMenu(isFromMenu As Boolean)
+    '    objTrayMenu.IsOpen = False
 
-        With objMenuHost
-            Dim p = Control.MousePosition
-            .Left = p.X
-            .Top = p.Y
+    '    osHandler_UI.DispatchOverlay()
+    '    Dim doGameFocus = SetGameFocus()
+    'End Sub
 
-            .Show()
-        End With
-    End Sub
+    'Private Sub CloseMenuHost()
+    '    Try
+    '        objMenuHost.Close()
+    '    Catch ex As Exception
 
-    Private Function ConfirmStatusChange(newStatus As Boolean) As UpdateStatus
-        If newStatus = False Then
-            Dim chkConfirmDisable = GetResponse(PromptType.DisableService)
+    '    End Try
 
-            Select Case chkConfirmDisable
-                Case isYes
-                    osFuncLib_InputScan.SetMonitorState(MonitorStatus.Paused)
-                    Return UpdateStatus.ToDisabled
-            End Select
-        Else
-            osFuncLib_InputScan.SetMonitorState(MonitorStatus.Starting)
-            Application.RestartMonitor()
+    '    If objMenuHost IsNot Nothing Then
+    '        objMenuHost = Nothing
+    '    End If
+    'End Sub
 
-            Return UpdateStatus.ToEnabled
-        End If
-    End Function
+    'Private Sub GenMenuHost()
+    '    If objMenuHost IsNot Nothing Then
+    '        objMenuHost = Nothing
+    '    End If
 
-    Public Sub VerifyStatusChange(setStatus As Boolean)
-        If CoreDataLib.osEnStatus_Popup Then
-            CoreDataLib.osEnStatus_Popup = False
-            Exit Sub
-        End If
+    '    objMenuHost = New MenuHostWindow()
 
-        Dim result = ConfirmStatusChange(setStatus)
-        If result = UpdateStatus.CancelUpdate Then Return
+    '    With objMenuHost
+    '        Dim p = Control.MousePosition
+    '        .Left = p.X
+    '        .Top = p.Y
 
-        SetNewStatus(setStatus)
-    End Sub
+    '        .Show()
+    '    End With
+    'End Sub
+
+    'Private Function ConfirmStatusChange(newStatus As Boolean) As UpdateStatus
+    '    If newStatus = False Then
+    '        Dim chkConfirmDisable = GetResponse(PromptType.DisableService)
+
+    '        Select Case chkConfirmDisable
+    '            Case isYes
+    '                osFuncLib_InputScan.SetMonitorState(MonitorStatus.Paused)
+    '                Return UpdateStatus.ToDisabled
+    '        End Select
+    '    Else
+    '        osFuncLib_InputScan.SetMonitorState(MonitorStatus.Starting)
+    '        Application.RestartMonitor()
+
+    '        Return UpdateStatus.ToEnabled
+    '    End If
+    'End Function
+
+    'Public Sub VerifyStatusChange(setStatus As Boolean)
+    '    If CoreDataLib.osEnStatus_Popup Then
+    '        CoreDataLib.osEnStatus_Popup = False
+    '        Exit Sub
+    '    End If
+
+    '    Dim result = ConfirmStatusChange(setStatus)
+    '    If result = UpdateStatus.CancelUpdate Then Return
+
+    '    SetNewStatus(setStatus)
+    'End Sub
 
     Private Sub SetNewStatus(setStatus As Boolean)
-        osEnabledStatus = setStatus
+        'osEnabledStatus = setStatus
     End Sub
 
     Private Sub UpdateTrayIcon(chkStatus As Boolean)
-        If chkStatus Then
-            osTrayIcon.Icon = My.Resources.osIcon
-            osTrayIcon.Text = "osAutoCast | Enabled"
-        Else
-            osTrayIcon.Icon = My.Resources.osIcon_Disabled
-            osTrayIcon.Text = "osAutoCast | Disabled"
-        End If
+        osTrayIcon.Icon = If(chkStatus, My.Resources.osIcon,
+            My.Resources.osIcon_Disabled)
     End Sub
 
     Private Sub UpdateTrayText(isEnabled As Boolean)
@@ -1273,14 +1347,9 @@ Public Module osFuncLib_TrayMenu
     Public Sub UpdateTray(isEnabled As Boolean, Optional isFromTray As Boolean = False)
         UpdateTrayIcon(isEnabled)
         UpdateTrayText(isEnabled)
-
-        If isFromTray Then
-            CoreDataLib.osEnStatus_Popup = True
-            osMenu_EnDis.IsChecked = isEnabled
-        End If
     End Sub
 
-    Private Sub PrepTrayMenu(objOsMenu As osControls.ContextMenu)
+    Private Sub PrepTrayMenu()
         osTrayIcon = New NotifyIcon With {
             .Icon = My.Resources.osIcon,
             .Text = "osAutoCast | Enabled",
@@ -1289,158 +1358,170 @@ Public Module osFuncLib_TrayMenu
 
         AddHandler osTrayIcon.MouseUp,
             Async Sub(sender As Object, e As MouseEventArgs)
+                If Not isAppLoaded Then Exit Sub
                 If e.Button = osForms.MouseButtons.Right Then
                     Await DisplayTrayMenu()
                 End If
             End Sub
     End Sub
 
-    Private Function CreateMenuItem(menuHeader As String) As osControls.MenuItem
-        Return New osControls.MenuItem With {.Header = menuHeader}
-    End Function
+    'Private Sub CreateMenuItem(menuHeader As String, menuItemType As String, ByRef objMenu As osControls.MenuItem, Optional isEnable As Boolean = False)
+    '    If isEnable Then
+    '        objMenu = New osControls.MenuItem With {
+    '            .Header = "Enabled",
+    '            .IsCheckable = True,
+    '            .IsChecked = True,
+    '            .Name = "osMenuEnDis",
+    '            .Tag = menuItemType
+    '        }
+    '    Else
+    '        objMenu = New osControls.MenuItem With {
+    '            .Header = menuHeader,
+    '            .Tag = menuItemType
+    '        }
+    '    End If
+    'End Sub
 
-    Private Sub CreateMenuItem(menuHeader As String, ByRef objMenu As osControls.MenuItem, Optional isEnable As Boolean = False)
-        If isEnable Then
-            objMenu = New osControls.MenuItem With {
-                .Header = "Enabled",
-                .IsCheckable = True,
-                .IsChecked = True,
-                .Name = "osMenuEnDis"
-            }
-        Else
-            objMenu = New osControls.MenuItem With {
-                .Header = menuHeader
-            }
-        End If
-    End Sub
+    'Private Sub EstablishPopupMenu(ByRef objPopupMenu As osControls.ContextMenu)
+    '    Dim newTrayMenu As New osControls.ContextMenu With {
+    '        .FontFamily = New osColors.FontFamily("Trebuchet MS"),
+    '        .FontSize = 14
+    '    }
 
-    Private Sub EstablishPopupMenu(ByRef objPopupMenu As osControls.ContextMenu)
-        objPopupMenu = New osControls.ContextMenu With {
-            .FontFamily = New osColors.FontFamily("Trebuchet MS"),
-            .FontSize = 14
-        }
-    End Sub
+    '    SetTrayMenuVisData(newTrayMenu)
+    '    newTrayMenu.Style = ApplyTrayMenuVisual(TrayMenuVis, newTrayMenu)
+    '    objPopupMenu = newTrayMenu
+    '    'objPopupMenu = New osControls.ContextMenu With {
+    '    '    .FontFamily = New osColors.FontFamily("Trebuchet MS"),
+    '    '    .FontSize = 14
+    '    '}
+    'End Sub
 
-    Private Sub PopulatePopupMenu()
-        osMenu_GameOpts.Items.Add(osGameMenu_Play)
-        osMenu_GameOpts.Items.Add(osGameMenu_Leave)
+    'Private Sub PopulatePopupMenu()
+    '    osMenu_GameOpts.Items.Add(osGameMenu_Play)
+    '    osMenu_GameOpts.Items.Add(osGameMenu_Leave)
 
-        With osMenuObj
-            .Items.Add(osMenu_EnDis)
-            .Items.Add(New Separator())
-            .Items.Add(osMenu_GameOpts)
-            .Items.Add(New Separator())
-            .Items.Add(osMenu_Opts)
-            .Items.Add(osMenuExit)
-        End With
-    End Sub
+    '    With osMenuObj
+    '        .Items.Add(osMenu_EnDis)
+    '        .Items.Add(New Separator())
+    '        .Items.Add(osMenu_GameOpts)
+    '        .Items.Add(New Separator())
+    '        .Items.Add(osMenu_Opts)
+    '        .Items.Add(osMenuExit)
+    '    End With
+    'End Sub
 
-    Private Sub SetMenuHandlers()
+    'Private Sub SetMenuHandlers()
 
-        AddHandler osMenu_Opts.Click,
-            Async Sub()
-                osFuncLib_InputScan.SetMonitorState(MonitorStatus.InCmd)
-                Await osFuncLib_ShowOpts.ExecuteDispOpts()
+    '    AddHandler osMenu_Opts.Click,
+    '        Async Sub()
+    '            osFuncLib_InputScan.SetMonitorState(MonitorStatus.InCmd)
+    '            Await osFuncLib_ShowOpts.ExecuteDispOpts()
 
-                ClosePopupMenu()
-            End Sub
+    '            ClosePopupMenu()
+    '        End Sub
 
-        AddHandler osMenuExit.Click,
-            Sub()
-                Dim chkConfirmExit = GetResponse(PromptType.CloseApp)
-                If chkConfirmExit = isNo Then Exit Sub
+    '    AddHandler osMenuExit.Click,
+    '        Sub()
+    '            Dim chkConfirmExit = GetResponse(PromptType.CloseApp)
+    '            If chkConfirmExit = isNo Then Exit Sub
 
-                ClosePopupMenu()
-                osStopApp()
-            End Sub
+    '            ClosePopupMenu()
+    '            osStopApp()
+    '        End Sub
 
-        AddHandler osGameMenu_Play.Click,
-            Sub()
-                Dim procStart_MTGA As New ProcessStartInfo With {
-                    .FileName = dirMtgaExe,
-                    .WorkingDirectory = dirMtga,
-                    .WindowStyle = ProcessWindowStyle.Maximized
-                }
+    '    AddHandler osGameMenu_Play.Click,
+    '        Sub()
+    '            Dim procStart_MTGA As New ProcessStartInfo With {
+    '                .FileName = dirMtgaExe,
+    '                .WorkingDirectory = dirMtga,
+    '                .WindowStyle = ProcessWindowStyle.Maximized
+    '            }
 
-                Process.Start(procStart_MTGA)
-                ClosePopupMenu()
-            End Sub
+    '            Process.Start(procStart_MTGA)
+    '            ClosePopupMenu()
+    '        End Sub
 
-        AddHandler osGameMenu_Leave.Click,
-            Sub()
-                Dim chkConfirmCloseGame = GetResponse(PromptType.GameMenu_Leave)
+    '    AddHandler osGameMenu_Leave.Click,
+    '        Sub()
+    '            Dim chkConfirmCloseGame = GetResponse(PromptType.GameMenu_Leave)
 
-                If chkConfirmCloseGame = isYes Then
-                    With cmd_KillGame
-                        osRunCmd.RunCmd(.First(),
-                                        .Last())
-                    End With
-                End If
+    '            If chkConfirmCloseGame = isYes Then
+    '                With cmd_KillGame
+    '                    osRunCmd.RunCmd(.First(),
+    '                                    .Last())
+    '                End With
+    '            End If
 
-                ClosePopupMenu()
-            End Sub
+    '            ClosePopupMenu()
+    '        End Sub
 
-        AddHandler osMenuObj.Closed,
-            Sub()
-                CloseMenuHost()
+    '    AddHandler osMenuObj.Closed,
+    '        Sub()
+    '            CloseMenuHost()
 
-                If osHandler_UI.isOverlayActive() Then
-                    RemoveHandler osHandler_UI.osPopupMenuOverlay.MouseDown,
-                                                 pmFunc_TerminateOverlay
-                End If
+    '            If osHandler_UI.isOverlayActive() Then
+    '                RemoveHandler osHandler_UI.osPopupMenuOverlay.MouseDown,
+    '                                             pmFunc_TerminateOverlay
+    '            End If
 
-                osHandler_UI.DispatchOverlay()
-                Dim doGameFocus = SetGameFocus()
-            End Sub
+    '            osHandler_UI.DispatchOverlay()
+    '            Dim doGameFocus = SetGameFocus()
+    '        End Sub
 
-    End Sub
+    'End Sub
 
-    Private Sub PopulateMenu_Popup(ByRef objSetMenu As osControls.ContextMenu)
-        EstablishPopupMenu(osMenuObj)
+    'Private Sub PopulateMenu_Popup(ByRef objSetMenu As osControls.ContextMenu)
+    '    EstablishPopupMenu(osMenuObj)
 
-        CreateMenuItem("Enabled", osMenu_EnDis, True)
-        CreateMenuItem("MTG Menu", osMenu_GameOpts)
-        CreateMenuItem("Play Game", osGameMenu_Play)
-        CreateMenuItem("Leave Game", osGameMenu_Leave)
-        CreateMenuItem("Preferences", osMenu_Opts)
-        CreateMenuItem("Exit", osMenuExit)
+    '    CreateMenuItem("Enabled", MenuItemType_Status, osMenu_EnDis, True)
+    '    CreateMenuItem("MTG Menu", MenuItemType_Game, osMenu_GameOpts)
+    '    CreateMenuItem("Play Game", MenuItemType_GameItem, osGameMenu_Play)
+    '    CreateMenuItem("Leave Game", MenuItemType_GameItem, osGameMenu_Leave)
+    '    CreateMenuItem("Preferences", MenuItemType_Default, osMenu_Opts)
+    '    CreateMenuItem("Exit", MenuItemType_Border, osMenuExit)
 
-        PopulatePopupMenu()
+    '    PopulatePopupMenu()
 
-        SetMenuHandlers()
+    '    SetMenuHandlers()
 
-        objSetMenu = osMenuObj
-    End Sub
+    '    objSetMenu = osMenuObj
+    'End Sub
 
-    Private Sub osStopApp()
-        osTrayIcon.Visible = False
-        End
-    End Sub
+    'Private Sub osStopApp()
+    '    osTrayIcon.Visible = False
+    '    End
+    'End Sub
 
     Public Async Function osMenu_Init() As Task
-        Await Task.Run(Async Function()
-                           Dim b = PrepDispatcher().InvokeAsync(Async Function()
-                                                                    PopulateMenu_Popup(osTrayPopupMenu)
-                                                                    PrepTrayMenu(osTrayPopupMenu)
+        Await Task.Run(
+            Async Function()
+                Dim objTask_InitTrayMenu =
+                    PrepDispatcher().InvokeAsync(
+                        Async Function()
+                            Await osHandler_UI.InitAndShowTrayMenu()
+                            osHandler_UI.osTrayMenu = osHandler_UI.osTrayMenu
+                            PrepTrayMenu()
 
-                                                                    osIsEnabled = True
+                            Await Task.Delay(100)
 
-                                                                    With New osMenuFuncData(AddressOf osStatus_Fetch, AddressOf VerifyStatusChange)
-                                                                        Await osMenuFuncBinder.BindChecked_Popup(osTrayPopupMenu.Items.Item(0),
-                                                                                      .osMenuFunc_GetStatus, .osMenuFunc_ApplyStatus)
-                                                                    End With
-                                                                End Function)
-                           Await b.Task.Unwrap()
-                       End Function)
+                            'With New osMenuFuncData(AddressOf osStatus_Fetch, AddressOf VerifyStatusChange)
+                            '    Await osMenuFuncBinder.BindChecked_Popup(objTrayMenu.Items.Item(0),
+                            '                                              .osMenuFunc_GetStatus, .osMenuFunc_ApplyStatus)
+                            'End With
+                        End Function)
+
+                Await objTask_InitTrayMenu.Task
+            End Function)
     End Function
 
-    Private Sub SetNoActivateStyleForContextMenu(cm As osControls.ContextMenu)
-        Dim src = TryCast(PresentationSource.FromVisual(cm), Interop.HwndSource)
-        If src Is Nothing Then Return
-        Dim h = src.Handle
-        Dim ex = GetWindowLong(h, GWL_EXSTYLE)
-        SetWindowLong(h, GWL_EXSTYLE, ex Or WS_EX_NOACTIVATE)
-    End Sub
+    'Private Sub SetNoActivateStyleForContextMenu(cm As osControls.ContextMenu)
+    '    Dim src = TryCast(PresentationSource.FromVisual(cm), Interop.HwndSource)
+    '    If src Is Nothing Then Return
+    '    Dim h = src.Handle
+    '    Dim ex = GetWindowLong(h, GWL_EXSTYLE)
+    '    SetWindowLong(h, GWL_EXSTYLE, ex Or WS_EX_NOACTIVATE)
+    'End Sub
 
 End Module
 
@@ -1586,13 +1667,11 @@ Module osFuncLib_UI
     End Function
 
     Private Function DefineBorderOutline(elem As Visual, rect As Rect, radius As Double) As Geometry
-        ' get DPI for pixel snapping
         Dim dpi = VisualTreeHelper.GetDpi(elem)
 
         Dim r = Math.Max(0, Math.Min(radius, Math.Min(rect.Width / 2.0, rect.Height / 2.0)))
         Dim g As New StreamGeometry()
         Using ctx As StreamGeometryContext = g.Open()
-            ' build points and snap them
             Dim p0 = SnapToPixel(SetPoint(rect.X + r, rect.Y), dpi)              ' start
             Dim p1 = SnapToPixel(SetPoint(rect.Right - r, rect.Y), dpi)          ' top-right start
             Dim p2 = SnapToPixel(SetPoint(rect.Right, rect.Y + r), dpi)          ' arc end
@@ -1620,47 +1699,6 @@ Module osFuncLib_UI
         g.Freeze()
         Return g
     End Function
-
-    'Private Function DefineBorderOutline(rect As Rect, radius As Double) As Geometry
-    '    Dim r = Math.Max(0, Math.Min(radius, Math.Min(rect.Width / 2.0, rect.Height / 2.0)))
-
-    '    Dim g As New StreamGeometry()
-
-    '    Using ctx As StreamGeometryContext = g.Open()
-    '        With ctx
-    '            .BeginFigure(SetPoint(rect.X + r, rect.Y),
-    '                         True, True)
-
-    '            .LineTo(SetPoint(rect.Right - r, rect.Y),
-    '                    True, False)
-
-    '            .ArcTo(SetPoint(rect.Right, rect.Y + r),
-    '                   SetSize(r, r), 0, False,
-    '                   dirSweep, True, False)
-
-    '            .LineTo(SetPoint(rect.Right, rect.Bottom - r), True, False)
-
-    '            .ArcTo(SetPoint(rect.Right - r, rect.Bottom),
-    '                  SetSize(r, r), 0, False,
-    '                  dirSweep, True, False)
-
-    '            .LineTo(SetPoint(rect.X + r, rect.Bottom), True, False)
-
-    '            .ArcTo(SetPoint(rect.X, rect.Bottom - r),
-    '                  SetSize(r, r), 0, False,
-    '                  dirSweep, True, False)
-
-    '            .LineTo(SetPoint(rect.X, rect.Y + r), True, False)
-
-    '            .ArcTo(SetPoint(rect.X + r, rect.Y),
-    '                  SetSize(r, r), 0, False,
-    '                  dirSweep, True, False)
-    '        End With
-    '    End Using
-
-    '    g.Freeze()
-    '    Return g
-    'End Function
 
     Public Sub EstablishBorder(elem As FrameworkElement, radius As Double, borderThickness As Double, borderBrush As osBrush)
         If elem Is Nothing Then Return
@@ -1730,103 +1768,49 @@ Module osFuncLib_UI
         End If
     End Sub
 
-        'Dim updateAction As Action =
-        '    Sub()
-        '        Dim w = elem.ActualWidth
-        '        Dim h = elem.ActualHeight
-
-        '        If w <= 0 OrElse h <= 0 Then Return
-
-        '        Dim half = borderThickness / 2.0
-        '        Dim rect = New Rect(half, half, w - borderThickness, h - borderThickness)
-
-        '        'Dim rect = New Rect(0, 0, w, h)
-        '        Dim clipGeo = DefineBorderOutline(rect, radius)
-
-        '        elem.Clip = clipGeo
-
-        '        Dim path As Path = Nothing
-
-        '        If TypeOf elem.Tag Is Path Then
-        '            path = DirectCast(elem.Tag, Path)
-        '        Else
-        '            path = New Path()
-        '            elem.Tag = path
-        '        End If
-
-        '        path.Data = clipGeo
-        '        path.Stroke = If(borderBrush, osBrushColor.Black)
-        '        path.StrokeThickness = borderThickness
-        '        path.StrokeStartLineCap = PenLineCap.Round
-        '        path.StrokeEndLineCap = PenLineCap.Round
-        '        path.StrokeLineJoin = PenLineJoin.Round
-        '        path.Fill = osBrushColor.Transparent
-        '        path.IsHitTestVisible = False
-
-        '        Dim parent = TryCast(elem, osControls.Panel)
-        '        If parent IsNot Nothing Then
-        '            If Not parent.Children.Contains(path) Then
-        '                parent.Children.Add(path)
-        '            End If
-        '            path.Width = w
-        '            path.Height = h
-        '            Canvas.SetLeft(path, 0)
-
-        '            Canvas.SetTop(path, 0)
-        '        Else
-        '            Dim parentPanel As osControls.Panel = TryCast(VisualTreeHelper.GetParent(elem), osControls.Panel)
-        '            If parentPanel IsNot Nothing Then
-        '                If Not parentPanel.Children.Contains(path) Then
-        '                    parentPanel.Children.Add(path)
-        '                End If
-        '                Dim elemPos As osPoint = elem.TransformToAncestor(parentPanel).Transform(New osPoint(0, 0))
-        '                path.Width = w
-        '                path.Height = h
-        '                Canvas.SetLeft(path, elemPos.X)
-        '                Canvas.SetTop(path, elemPos.Y)
-        '            End If
-        '        End If
-        '    End Sub
-        AddHandler elem.SizeChanged, Sub(s, e)
-                                         updateAction()
-                                     End Sub
+        AddHandler elem.SizeChanged,
+            Sub(s, e)
+                updateAction()
+            End Sub
         If Not elem.IsLoaded Then
-            AddHandler elem.Loaded, Sub(s, e)
-                                        updateAction()
-                                    End Sub
+            AddHandler elem.Loaded,
+                Sub(s, e)
+                    updateAction()
+                End Sub
         Else
             updateAction()
         End If
     End Sub
 
-    Public Sub EstablishOutline(elem As FrameworkElement, radius As Double)
-        If elem Is Nothing Then Return
+    Public Sub EstablishOutline(objOutline As FrameworkElement, radius As Double, Optional clipOffset As Double = 2.5)
+        If objOutline Is Nothing Then Return
 
-        elem.SetValue(UIElement.ClipToBoundsProperty, True)
+        objOutline.SetValue(UIElement.ClipToBoundsProperty, True)
 
         Dim updateAction As Action =
             Sub()
-                Dim w = elem.ActualWidth - 2.5
-                Dim h = elem.ActualHeight - 2.5
+                Dim outlineW = objOutline.ActualWidth - clipOffset
+                Dim outlineH = objOutline.ActualHeight - clipOffset
 
-                If w <= 0 OrElse h <= 0 Then Return
+                If outlineW <= 0 OrElse
+                    outlineH <= 0 Then Return
 
-                Dim rect = New Rect(1.5, 1.5, w, h)
-                Dim clipGeo = DefineBorderOutline(elem, rect, radius)
+                Dim outlineRect = New Rect(1.5, 1.5, outlineW, outlineH)
+                Dim outlineGeo = DefineBorderOutline(objOutline, outlineRect, radius)
 
-                'Dim eps = 0.25 ' pixels — try 0.5 or 1.0
-                'Dim rect = New Rect(-eps, -eps, w + eps * 2, h + eps * 2)
-                'Dim clipGeo = DefineBorderOutline(elem, rect, radius + eps)
-
-                elem.Clip = clipGeo
+                objOutline.Clip = outlineGeo
             End Sub
-        AddHandler elem.SizeChanged, Sub(s, e)
-                                         updateAction()
-                                     End Sub
-        If Not elem.IsLoaded Then
-            AddHandler elem.Loaded, Sub(s, e)
-                                        updateAction()
-                                    End Sub
+
+        AddHandler objOutline.SizeChanged,
+            Sub(s, e)
+                updateAction()
+            End Sub
+
+        If Not objOutline.IsLoaded Then
+            AddHandler objOutline.Loaded,
+                Sub(s, e)
+                    updateAction()
+                End Sub
         Else
             updateAction()
         End If
@@ -1960,6 +1944,103 @@ Public Class TrayIconBridge
         End With
 
     End Sub
+End Class
+
+Public Class osEnabledStatusConfig
+    Implements INotifyPropertyChanged
+
+    Private Shared _instance As osEnabledStatusConfig
+    Public Shared ReadOnly Property Instance As osEnabledStatusConfig
+        Get
+            If _instance Is Nothing Then
+                _instance = New osEnabledStatusConfig()
+            End If
+            Return _instance
+        End Get
+    End Property
+
+    Private _EnabledStatus As Boolean = True
+    Public Property osEnabledStatus As Boolean
+        Get
+            Return _EnabledStatus
+        End Get
+        Set(newStatus As Boolean)
+            PromptResponseState.EnterPromptResponse()
+
+            Try
+                Dim TriggerStatusChange As Boolean = True
+
+                Select Case ValidateStatus(newStatus)
+                    Case SetStatus_Enabled
+                        ApplyStatusUpdate(SetStatus_Enabled)
+                    Case SetStatus_Disabled
+                        If ConfirmStatusUpdate() = UpdateStatus.ToDisabled Then
+                            ApplyStatusUpdate(SetStatus_Disabled)
+                        Else
+                            TriggerStatusChange = False : End If
+                    Case RetainStatus
+                        TriggerStatusChange = False
+                End Select
+
+                If TriggerStatusChange Then
+                    RaiseEvent PropertyChanged(Me, New PropertyChangedEventArgs(
+                                           NameOf(osEnabledStatus))) : End If
+            Finally
+                PromptResponseState.ExitPromptResponse()
+            End Try
+        End Set
+    End Property
+
+    Private Function ValidateStatus(chkNewStatus As Boolean) As UpdateStatusAction
+        If _EnabledStatus <> chkNewStatus Then
+            Return If(chkNewStatus, SetStatus_Enabled,
+                SetStatus_Disabled)
+        Else
+            Return RetainStatus
+        End If
+    End Function
+
+    Private Sub ApplyStatusUpdate(newStatus As UpdateStatusAction)
+        Select Case newStatus
+            Case SetStatus_Enabled
+                osFuncLib_InputScan.SetMonitorState(MonitorStatus.Starting)
+                Application.RestartMonitor()
+            Case SetStatus_Disabled
+                osFuncLib_InputScan.SetMonitorState(MonitorStatus.Paused)
+        End Select
+
+        SetStatusAction(TranslateStatus(newStatus))
+    End Sub
+
+    Private Function TranslateStatus(valStatus As UpdateStatusAction) As Boolean
+        Return If(valStatus = SetStatus_Enabled,
+            True, False)
+    End Function
+
+    Private Function ConfirmStatusUpdate() As UpdateStatus
+        Select Case GetResponse(PromptType.DisableService)
+            Case isYes
+                Return UpdateStatus.ToDisabled
+            Case Else
+                Return UpdateStatus.CancelUpdate
+        End Select
+    End Function
+
+    Private Sub SetStatusAction(setStatus As Boolean)
+        _EnabledStatus = setStatus
+        UpdateTray(setStatus)
+    End Sub
+
+    Public Function osEnabledStatus_Fetch() As Boolean
+        Return _EnabledStatus
+    End Function
+
+    Public Function osChkEnabledStatus_IsDisabled() As Boolean
+        Return _EnabledStatus = False
+    End Function
+
+    Public Event PropertyChanged As PropertyChangedEventHandler _
+        Implements INotifyPropertyChanged.PropertyChanged
 End Class
 
 Public NotInheritable Class osMenuFuncBinder

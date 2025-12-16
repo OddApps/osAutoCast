@@ -123,15 +123,9 @@ Public Class osPopupMenu_GUI
     Private Async Sub TriggerVisuals(objVisualData As Storyboard, isNew As Boolean)
         Await objContainer.Dispatcher.BeginInvoke(
             Sub()
-                Try
-                    objVisualData.Begin(objContainer, isControllable:=True)
-                    ' objVisualData.SeekAlignedToLastTick(objContainer, TimeSpan.Zero, TimeSeekOrigin.BeginTime)
-                    ' objVisualData.Pause(objContainer)
-                    '' Debug.WriteLine(objVisualData.GetCurrentTime(objContainer))
-                    ' objVisualData.Resume(objContainer)
-                Catch ex As Exception
-
-                End Try
+                Try : objVisualData.Begin(objContainer,
+                                          isControllable:=True)
+                Catch ex As Exception : End Try
             End Sub, DispatcherPriority.Render)
     End Sub
 
@@ -387,55 +381,6 @@ Partial Public Class osPopupMenu_GUI
             End If
         End Set
     End Property
-
-    Public _isAppEnabled As Boolean
-    Public Property IsAppEnabled As Boolean
-        Get
-            Return osStatus_Fetch()
-        End Get
-        Set(value As Boolean)
-            If ChkNewVal(value) Then
-                Dim chkStatusChange = ConfirmStatusChange(value)
-
-                If StatusChanged(chkStatusChange) Then
-                    SetNewStatus(value)
-                    OnPropertyChanged()
-                End If
-            End If
-        End Set
-    End Property
-
-    Private Function ChkNewVal(valEnable As Boolean) As Boolean
-        Return osIsEnabled <> valEnable
-    End Function
-
-    Private Function StatusChanged(chkVal As UpdateStatus) As Boolean
-        Return chkVal <> UpdateStatus.CancelUpdate
-    End Function
-
-    Private Function ConfirmStatusChange(newStatus As Boolean) As UpdateStatus
-        If newStatus = False Then
-            Select Case GetResponse(PromptType.DisableService)
-                Case isYes
-                    osFuncLib_InputScan.SetMonitorState(MonitorStatus.Paused)
-                    Return UpdateStatus.ToDisabled
-            End Select
-        Else
-            osFuncLib_InputScan.SetMonitorState(MonitorStatus.Starting)
-            Application.RestartMonitor()
-
-            Return UpdateStatus.ToEnabled
-        End If
-    End Function
-
-    Private Sub SetNewStatus(setStatus As Boolean)
-        osIsEnabled = setStatus
-        osEnabledStatus = setStatus
-
-        _isAppEnabled = setStatus
-
-        UpdateTray(setStatus, True)
-    End Sub
 
     Public Sub New()
         InitializeComponent()

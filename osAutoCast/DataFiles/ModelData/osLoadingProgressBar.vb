@@ -1,6 +1,5 @@
 ﻿Imports System
 Imports System.Globalization
-Imports System.Threading
 Imports System.Windows
 Imports System.Windows.Media
 Imports System.Windows.Media.Animation
@@ -16,15 +15,9 @@ Namespace osLoadingElements
 
         Public Sub New()
             With Me
-                'Me.FillBrush = New SolidColorBrush(Colors.Red)
-                'Me.TrackBrush = New SolidColorBrush(Color.FromRgb(&HE, &HE, &HE))
-
-                'Me.CornerRadius = New CornerRadius(0) ' <-- now CornerRadius type
-
                 Me.EasingFunction = New ExponentialEase() With {
                 .EasingMode = EasingMode.EaseOut
             }
-
             End With
 
         End Sub
@@ -37,8 +30,8 @@ Namespace osLoadingElements
         Private ReadOnly _lockObj As New Object()
         Private _currentSlowTarget As Double? = Nothing
 
-        Private ReadOnly _fastDuration As TimeSpan = TimeSpan.FromMilliseconds(400)
-        Private ReadOnly _slowDuration As TimeSpan = TimeSpan.FromSeconds(2.5)
+        Private ReadOnly _fastDuration As TimeSpan = TimeSpan.FromMilliseconds(410)
+        Private ReadOnly _slowDuration As TimeSpan = TimeSpan.FromSeconds(4)
 
         Private ProgDuration_Set As Duration = New Duration(_fastDuration)
         Private ProgDuration_Next As Duration = New Duration(_slowDuration)
@@ -306,7 +299,11 @@ Namespace osLoadingElements
                 Dim vNext = (.NextProgVal / 250) * 100
 
                 onLastTask = .LastTaskVal
+                ' If clocker IsNot Nothing Then clocker.Controller.Pause()
 
+
+                ' Dim objTask_DispLoadMsg = objInMon.DisplayLoadMsg(isTxt)
+                ' If clocker IsNot Nothing Then clocker.Controller.Resume()
                 StartProgress(vSet, vNext)
             End With
         End Sub
@@ -390,6 +387,146 @@ Namespace osLoadingElements
             End If
         End Sub
 
+        Public clocker As AnimationClock
+
+        Private _isPaused As Boolean = False
+        Private _pausedTo As Double? = Nothing
+        Private _pausedRemainingMs As Double = 0
+        Private _pausedEasing As IEasingFunction = Nothing
+        Private _pausedWasRendering As Boolean = False
+
+        ' Call this to pause the visual progress immediately.
+        Public Sub PauseProgress()
+            ' If already paused, nothing to do
+            If _isPaused Then Return
+
+            ' Grab current visible value and current animation timing
+            Dim currVal As Double = 0
+            Me.Dispatcher.Invoke(
+        Sub()
+            currVal = CDbl(GetValue(AnimatedProgressProperty))
+        End Sub)
+
+            ' Capture any currently-targeted slow-ease target so resume heads toward it.
+            Dim curTarget As Double? = Nothing
+            Dim remainingMs As Double = 0
+            Dim easing As IEasingFunction = Nothing
+            Dim wasRendering As Boolean = False
+
+            SyncLock _lockObj
+                wasRendering = _renderingActive
+
+                ' store pending slow target if there is one
+                If _currentSlowTarget.HasValue Then
+                    curTarget = _currentSlowTarget.Value
+                Else
+                    ' if there was an active tween, use _renderTo (StartFrameTween stored it)
+                    If _renderingActive Then
+                        curTarget = _renderTo
+                    End If
+                End If
+
+                ' compute remaining time based on render stopwatch/duration
+                If _renderingActive AndAlso _renderDurationSeconds > 0 Then
+                    Dim elapsed = _renderSw.Elapsed.TotalMilliseconds
+                    remainingMs = Math.Max(0, _renderDurationSeconds - elapsed)
+                    easing = _renderEasing
+                Else
+                    remainingMs = 0
+                    easing = _renderEasing
+                End If
+
+                ' Cancel any slow token which will also stop its background registration (this will
+                ' cause the reg callback to freeze the value where it is).
+                If _cts IsNot Nothing Then
+                    Try
+                        _cts.Cancel()
+                        _cts.Dispose()
+                    Catch : End Try
+                    _cts = Nothing
+                    _currentSlowTarget = Nothing
+                End If
+            End SyncLock
+
+            ' Stop the frame loop to freeze visual updates.
+            StopRenderingLoop()
+
+            ' Ensure the AnimatedProgressProperty is exactly the current value and not animating
+            Me.Dispatcher.Invoke(
+        Sub()
+            Me.BeginAnimation(AnimatedProgressProperty, Nothing)
+            SetValue(AnimatedProgressProperty, currVal)
+            InvalidateVisual()
+        End Sub)
+
+            ' Save paused state for resume
+            _pausedTo = curTarget
+            _pausedRemainingMs = remainingMs
+            _pausedEasing = easing
+            _pausedWasRendering = wasRendering
+            _isPaused = True
+        End Sub
+
+        ' Call this to resume after PauseProgress()
+        Public Sub ResumeProgress()
+            If Not _isPaused Then Return
+
+            ' Clear paused flag early so nested calls of StartProgress behave normally.
+            _isPaused = False
+
+            Dim target As Double? = _pausedTo
+            Dim remainingMs As Double = _pausedRemainingMs
+            Dim easing As IEasingFunction = _pausedEasing
+
+            ' Reset paused fields
+            _pausedTo = Nothing
+            _pausedRemainingMs = 0
+            _pausedEasing = Nothing
+            _pausedWasRendering = False
+
+            ' If we had no meaningful target to continue to, do nothing
+            If Not target.HasValue Then Return
+
+            ' Start a continuation tween from current visible value to the paused target
+            Dim currVisible As Double = 0
+            Me.Dispatcher.Invoke(
+        Sub()
+            currVisible = CDbl(GetValue(AnimatedProgressProperty))
+        End Sub)
+
+            ' If there's effectively no remaining time, snap to target
+            If remainingMs <= 1 Then
+                Me.Dispatcher.Invoke(
+            Sub()
+                Me.BeginAnimation(AnimatedProgressProperty, Nothing)
+                SetValue(AnimatedProgressProperty, target.Value)
+                InvalidateVisual()
+            End Sub)
+                Return
+            End If
+
+            ' Use a new animation version so old callbacks won't interfere
+            Dim myVersion = Interlocked.Increment(_animVersion)
+
+            ' Use the same easing if available, otherwise fallback to your normal easing
+            Dim resumeEasing As IEasingFunction = If(easing, New ExponentialEase() With {.EasingMode = EasingMode.EaseInOut})
+
+            ' Start a frame tween that will finish the remaining portion
+            StartFrameTween(currVisible, target.Value, TimeSpan.FromMilliseconds(remainingMs),
+                    resumeEasing, myVersion, Sub()
+                                                 ' on completion, clear any slow target bookkeeping (like StartSlowEase does)
+                                                 SyncLock _lockObj
+                                                     If _cts IsNot Nothing Then
+                                                         Try
+                                                             _cts.Dispose()
+                                                         Catch : End Try
+                                                         _cts = Nothing
+                                                     End If
+                                                     _currentSlowTarget = Nothing
+                                                 End SyncLock
+                                             End Sub)
+        End Sub
+
         Private Sub StartProgress(newPct As Double, Optional nextPct As Double? = Nothing)
             Dim nextVal = If(nextPct.HasValue,
                 nextPct.Value, newPct)
@@ -444,9 +581,8 @@ Namespace osLoadingElements
 
                     Me.Dispatcher.Invoke(
                         Sub()
-                            Storyboard.SetDesiredFrameRate(interimAnim, 35)
                             Me.BeginAnimation(AnimatedProgressProperty, interimAnim)
-                        End Sub, DispatcherPriority.Send)
+                        End Sub)
 
                     Return
                 End If
@@ -761,11 +897,11 @@ Namespace osLoadingElements
             Dim maxR = Math.Min(w, h) / 2.0
 
             Return New CornerRadius(
-        Math.Max(0, Math.Min(cr.TopLeft, maxR)),
-        Math.Max(0, Math.Min(cr.TopRight, maxR)),
-        Math.Max(0, Math.Min(cr.BottomRight, maxR)),
-        Math.Max(0, Math.Min(cr.BottomLeft, maxR))
-    )
+                Math.Max(0, Math.Min(cr.TopLeft, maxR)),
+                Math.Max(0, Math.Min(cr.TopRight, maxR)),
+                Math.Max(0, Math.Min(cr.BottomRight, maxR)),
+                Math.Max(0, Math.Min(cr.BottomLeft, maxR))
+            )
         End Function
 
         Private Function CreateRoundRectGeometry(r As Rect, cr As CornerRadius) As StreamGeometry
@@ -777,8 +913,8 @@ Namespace osLoadingElements
                 ctx.LineTo(New Point(r.Right - cr.TopRight, r.Y), True, False)
                 If cr.TopRight > 0 Then
                     ctx.ArcTo(New Point(r.Right, r.Y + cr.TopRight),
-                      New Size(cr.TopRight, cr.TopRight), 0, False,
-                      SweepDirection.Clockwise, True, False)
+                              New Size(cr.TopRight, cr.TopRight), 0, False,
+                              SweepDirection.Clockwise, True, False)
                 End If
 
                 ctx.LineTo(New Point(r.Right, r.Bottom - cr.BottomRight), True, False)
