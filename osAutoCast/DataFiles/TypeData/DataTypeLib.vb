@@ -378,7 +378,8 @@ Public Module DataTypeLib
     Public Enum osShaderType
         sTypePixel
         sTypeVertex
-        sTypeText
+        sTypeText_G
+        sTypeText_S
     End Enum
 
 #End Region
@@ -563,7 +564,8 @@ Public Class osShaderDataLib
 
     Public Interface iPxShader
         ReadOnly Property iShaderType As osShaderType
-        Function sText() As pxShader_Text
+        Function sText_G() As pxShader_Text
+        Function sText_S() As pxShader_Text
         Function sPixel() As pxShader_Pixel
         Function sVertex() As pxShader_Vertex
     End Interface
@@ -587,7 +589,11 @@ Public Class osShaderDataLib
             Return Nothing
         End Function
 
-        Public Function isShaderText() As pxShader_Text Implements iPxShader.sText
+        Public Function isShaderText_G() As pxShader_Text Implements iPxShader.sText_G
+            Return Nothing
+        End Function
+
+        Public Function isShaderText_S() As pxShader_Text Implements iPxShader.sText_S
             Return Nothing
         End Function
 
@@ -597,7 +603,7 @@ Public Class osShaderDataLib
 
     End Class
 
-    Public Class pxShaderText
+    Public Class pxShaderText_G
         Implements iPxShader
 
         Public Property pxShaderEff As pxShader_Text
@@ -608,7 +614,7 @@ Public Class osShaderDataLib
 
         Public ReadOnly Property iShaderType As osShaderType Implements iPxShader.iShaderType
             Get
-                Return sTypeText
+                Return sTypeText_G
             End Get
         End Property
 
@@ -620,7 +626,44 @@ Public Class osShaderDataLib
             Return Nothing
         End Function
 
-        Public Function isShaderText() As pxShader_Text Implements iPxShader.sText
+        Public Function isShaderText_G() As pxShader_Text Implements iPxShader.sText_G
+            Return pxShaderEff
+        End Function
+
+        Public Function isShaderText_S() As pxShader_Text Implements iPxShader.sText_S
+            Return Nothing
+        End Function
+
+    End Class
+
+    Public Class pxShaderText_S
+        Implements iPxShader
+
+        Public Property pxShaderEff As pxShader_Text
+
+        Public Sub New(ShaderEff As pxShader_Text)
+            Me.pxShaderEff = ShaderEff
+        End Sub
+
+        Public ReadOnly Property iShaderType As osShaderType Implements iPxShader.iShaderType
+            Get
+                Return sTypeText_S
+            End Get
+        End Property
+
+        Public Function isShaderObject() As pxShader_Pixel Implements iPxShader.sPixel
+            Return Nothing
+        End Function
+
+        Public Function isShaderVertex() As pxShader_Vertex Implements iPxShader.sVertex
+            Return Nothing
+        End Function
+
+        Public Function isShaderText_G() As pxShader_Text Implements iPxShader.sText_G
+            Return Nothing
+        End Function
+
+        Public Function isShaderText_S() As pxShader_Text Implements iPxShader.sText_S
             Return pxShaderEff
         End Function
 
@@ -649,7 +692,11 @@ Public Class osShaderDataLib
             Return pxShaderVer
         End Function
 
-        Public Function isShaderText() As pxShader_Text Implements iPxShader.sText
+        Public Function isShaderText_G() As pxShader_Text Implements iPxShader.sText_G
+            Return Nothing
+        End Function
+
+        Public Function isShaderText_S() As pxShader_Text Implements iPxShader.sText_S
             Return Nothing
         End Function
 
@@ -788,17 +835,13 @@ Public Class InjectInputData
     Protected Overridable Sub Dispose(disposing As Boolean)
         If Not disposedValue Then
             If disposing Then
-                ' TODO: dispose managed state (managed objects)
             End If
 
-            ' TODO: free unmanaged resources (unmanaged objects) and override finalizer
-            ' TODO: set large fields to null
             disposedValue = True
         End If
     End Sub
 
     Public Sub Dispose() Implements IDisposable.Dispose
-        ' Do not change this code. Put cleanup code in 'Dispose(disposing As Boolean)' method
         Dispose(disposing:=True)
         GC.SuppressFinalize(Me)
     End Sub
@@ -825,7 +868,6 @@ Public Class ProgTextPos
     Public Property txtY As Integer
 
     Public Sub New()
-        ' Default constructor
     End Sub
 
     Public Sub New(pGraphics As System.Drawing.Graphics, pGUI As System.Windows.Forms.Form)
@@ -968,10 +1010,6 @@ Public Class ProgEdgeObj
         End If
     End Sub
 
-    Public Sub New(eX As Integer, eW As Integer, eB As System.Windows.Media.Brush)
-
-    End Sub
-
 End Class
 
 Public Class ProgEdgeData
@@ -980,7 +1018,6 @@ Public Class ProgEdgeData
     Public Property EdgeNew As Integer
 
     Public Sub New()
-
     End Sub
 
     Public Sub New(progVal As Double, progWidth As Double, ByRef objChunk As Double)
@@ -1094,36 +1131,6 @@ Public Module osPopupMenuLib
             End If
         End Sub
 
-    'Private Sub ExecPrepUI_PopupMenu(objGui_PopupMenu As osPopupMenu_GUI, objGui_PopupMenuOverlay As MenuOverlayWindow)
-    '    Dim objWin_PopupMenu = objGui_PopupMenu
-
-    '    With objWin_PopupMenu
-    '        .Owner = objGui_PopupMenuOverlay
-    '        .Owner.ShowInTaskbar = False
-
-    '        .ShowInTaskbar = False
-    '        .Topmost = True
-    '        .ShowActivated = False
-
-    '        .PrepPopupMenu()
-    '        .TriggerPopupMenu()
-    '    End With
-    'End Sub
-
-    Private Sub ExecPrepUI_PopupMenuOverlay(objGui_PopupMenuOverlay As MenuOverlayWindow)
-        'With objGui_PopupMenuOverlay
-        '    AddHandler .objStacker.MouseUp,
-        '        Sub(sender As Object, e As MouseButtonEventArgs)
-        '            If DetermineMouseClick(e) Then
-        '                osHandler_UI.pmFunc_TerminatePopupMenu(sender, e)
-        '            End If
-        '        End Sub
-
-        '    .InitPopupMenuOverlay()
-        '    .InitTransitionVisuals(aniOpen, OverlayVisual_Open)
-        'End With
-    End Sub
-
     Private Sub ExecPrepUI_TrayMenuOverlay(objGui_PopupMenuOverlay As MenuOverlayWindow)
         With objGui_PopupMenuOverlay
             .PrepTrayMenuOverlay()
@@ -1152,7 +1159,6 @@ Public Module osPopupMenuLib
                End Function
     End Function
 
-
     Public Function GenerateTrayMenuGUI() As Func(Of osTrayMenu_GUI)
         Return Function()
                    Return PrepDispatcher().Invoke(
@@ -1162,8 +1168,6 @@ Public Module osPopupMenuLib
                End Function
     End Function
 
-    ' Public DisplayUI_PopupMenu As Action(Of osPopupMenu_GUI, MenuOverlayWindow) = AddressOf ExecPrepUI_PopupMenu
-    Public DisplayUI_PopupMenuOverlay As Action(Of MenuOverlayWindow) = AddressOf ExecPrepUI_PopupMenuOverlay
     Public DisplayUI_TrayOverlay As Action(Of MenuOverlayWindow) = AddressOf ExecPrepUI_TrayMenuOverlay
 
 End Module
@@ -1373,6 +1377,13 @@ Public Class ProgressEventData
         Me.evDispMsg = evMsg
     End Sub
 
+End Class
+
+Public Class BindingDef
+    Public Property Control As osForms.Control
+    Public Property ControlProp As String
+    Public Property DataSource As Object
+    Public Property DataProp As String
 End Class
 
 Public Class PrefRecordIndex
@@ -1756,6 +1767,10 @@ Public NotInheritable Class PromptResponseState
             Return Threading.Volatile.Read(_depth) > 0
         End Get
     End Property
+
+    Public Shared Sub PreventSecondaryClose()
+        Threading.Interlocked.Increment(_depth)
+    End Sub
 
     Public Shared Sub EnterPromptResponse()
         Threading.Interlocked.Increment(_depth)

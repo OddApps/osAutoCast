@@ -3,12 +3,14 @@ Imports System.Reflection
 Imports System.Text.RegularExpressions
 Imports System.Runtime.InteropServices
 Imports osAutoCast.DataTypeLib.osShaderType
+Imports osAutoCast.osEnabledStatusConfig
 Imports osAutoCast.DataTypeLib.DetectOpts
 Imports osAutoCast.DataTypeLib.TriggerType
 Imports osAutoCast.DataTypeLib.ProgressMode
 Imports osAutoCast.DataTypeLib.TriggerAction
 Imports osProgDevice = SharpDX.Direct3D11.Device
 Imports osRegEx = System.Text.RegularExpressions.Regex
+Imports osStatus = osAutoCast.osEnabledStatusConfig
 
 #Disable Warning IDE0060 ' Remove unused parameter
 #Disable Warning BC42353
@@ -64,7 +66,8 @@ Public NotInheritable Class CoreDataLib
     Private Shared objCancelTask As Task
 
     Private Shared ReadOnly ShaderTypeIdx As New Dictionary(Of String, osShaderType) From {
-        {"Text", sTypeText},
+        {"TextGlow", sTypeText_G},
+        {"TextStroke", sTypeText_S},
         {"ProgPixel", sTypePixel},
         {"ProgVertex", sTypeVertex}
     }
@@ -79,11 +82,11 @@ Public NotInheritable Class CoreDataLib
     }
 
     Public Shared Function osStatus_Fetch() As Boolean
-        Return osEnabledStatusConfig.Instance.osEnabledStatus
+        Return osStatus.Instance.osEnabledStatus_Fetch()
     End Function
 
     Public Shared Function osStatus_IsDisabled() As Boolean
-        Return osEnabledStatusConfig.Instance.osEnabledStatus = False
+        Return osStatus.Instance.osEnabledStatus = False
     End Function
 
     Public Shared Function GetFuse() As Integer
@@ -195,7 +198,9 @@ Public NotInheritable Class CoreDataLib
     End Function
 
     Public Shared Function VerifyRunStatus() As Boolean
-        If osStatus_IsDisabled() Then
+        Dim m = osStatus.Instance.osChkEnabledStatus_IsDisabled()
+
+        If osStatus.Instance.osChkEnabledStatus_IsDisabled() Then
             Return False
         Else
             Return ChkExecPermission()

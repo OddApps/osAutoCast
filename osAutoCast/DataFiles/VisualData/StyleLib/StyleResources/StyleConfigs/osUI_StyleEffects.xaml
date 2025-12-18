@@ -2,36 +2,53 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:sys="clr-namespace:System;assembly=mscorlib"
                     xmlns:oseffect="clr-namespace:osAutoCast.osEffectConv"
+                    xmlns:osEffects="clr-namespace:osAutoCast.osEffectLibs"
                     xmlns:osStyle="clr-namespace:osAutoCast.osStyle"
                     xmlns:local="clr-namespace:osAutoCast">
     
     <oseffect:TexelSizeConverter x:Key="TexelSizeConverter" />
 
     <DataTemplate x:Key="osEffectText" DataType="{x:Type sys:String}">
-        <TextBlock x:Name="btnContent" Text="{Binding}" Padding="{StaticResource osBtn_TextPadding}"                     
-                   HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" SnapsToDevicePixels="True"
-                   LineStackingStrategy="BlockLineHeight" FontSize="{StaticResource osBtn_FontSize}" 
-                   LineHeight="{StaticResource osBtn_FontSize}" FontWeight="{StaticResource osBtn_FontWeight}" 
-                   Foreground="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}">
-            <TextBlock.Effect>
-                <local:osEffectManager x:Name="btnGlow" Thickness="{StaticResource osEffect_Thickness}" Spread="{StaticResource osEffect_Spread}"
-                                Fade="{StaticResource osEffect_Fade}" GlowColor="{StaticResource osEffect_Color}"
-                                StrokeStrength="{StaticResource osEffect_Stroke}" GlowStrength="{StaticResource osEffect_Glow}">
-                    <local:osEffectManager.TexelSize>
-                        <MultiBinding Converter="{StaticResource TexelSizeConverter}">
+        <Border><Border.Effect>
+            <osEffects:osEffect_Stroke x:Name="btnStroke" Thickness="{StaticResource osEffect_StrokeThickness}"
+                Spread="{StaticResource osEffect_StrokeSpread}" Fade="{StaticResource osEffect_StrokeFade}"
+                GlowColor="{StaticResource osEffect_StrokeColor}" GlowStrength="{StaticResource osEffect_StrokeRadius}"
+                StrokeStrength="{StaticResource osEffect_Stroke}">
+                <osEffects:osEffect_Stroke.TexelSize>
+                    <MultiBinding Converter="{StaticResource TexelSizeConverter}">
                             <Binding ElementName="btnContent" Path="ActualWidth"/>
                             <Binding ElementName="btnContent" Path="ActualHeight"/>
-                        </MultiBinding>
-                    </local:osEffectManager.TexelSize>
-                </local:osEffectManager>
-            </TextBlock.Effect>
-        </TextBlock>
+                    </MultiBinding>
+                </osEffects:osEffect_Stroke.TexelSize>
+            </osEffects:osEffect_Stroke></Border.Effect>
+            <TextBlock x:Name="btnContent" Text="{Binding}" Padding="{StaticResource osBtn_TextPadding}"
+                HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" SnapsToDevicePixels="True"
+                LineStackingStrategy="BlockLineHeight" FontSize="{StaticResource osBtn_FontSize}" 
+                LineHeight="{StaticResource osBtn_FontSize}" FontWeight="{StaticResource osBtn_FontWeight}" 
+                Foreground="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}">
+                <TextBlock.Effect>
+                    <osEffects:osEffect_Glow x:Name="btnGlow" Thickness="{StaticResource osEffect_GlowThickness}"
+                        Spread="{StaticResource osEffect_GlowSpread}" Fade="{StaticResource osEffect_GlowFade}"
+                        GlowColor="{StaticResource osEffect_GlowColor}" GlowStrength="{StaticResource osEffect_GlowRadius}">
+                        <osEffects:osEffect_Glow.TexelSize>
+                            <MultiBinding Converter="{StaticResource TexelSizeConverter}">
+                                <Binding ElementName="btnContent" Path="ActualWidth"/>
+                                <Binding ElementName="btnContent" Path="ActualHeight"/>
+                            </MultiBinding>
+                        </osEffects:osEffect_Glow.TexelSize>
+                    </osEffects:osEffect_Glow>                    
+                </TextBlock.Effect>
+            </TextBlock>
+        </Border>
         <DataTemplate.Triggers>
             <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=Button}}" Value="True">
                 <DataTrigger.EnterActions>                    
                     <BeginStoryboard>
                         <Storyboard>
                             <DoubleAnimation Storyboard.TargetName="btnGlow"
+                                             Storyboard.TargetProperty="Fade"
+                                             To="1" Duration="0:0:0.25"/>
+                            <DoubleAnimation Storyboard.TargetName="btnStroke"
                                              Storyboard.TargetProperty="Fade"
                                              To="1" Duration="0:0:0.25"/>
                         </Storyboard>
@@ -42,7 +59,10 @@
                         <Storyboard>
                             <DoubleAnimation Storyboard.TargetName="btnGlow"
                                              Storyboard.TargetProperty="Fade"
-                                             To="0" Duration="0:0:0.35"/>                            
+                                             To="0" Duration="0:0:0.35"/>
+                            <DoubleAnimation Storyboard.TargetName="btnStroke"
+                                             Storyboard.TargetProperty="Fade"
+                                             To="0" Duration="0:0:0.35"/>
                         </Storyboard>
                     </BeginStoryboard>
                 </DataTrigger.ExitActions>
@@ -51,31 +71,49 @@
     </DataTemplate>
 
     <DataTemplate x:Key="osEffectTextToggle" DataType="{x:Type sys:String}">
-        <TextBlock x:Name="toggleTxtContent" Text="{Binding}" Padding="{StaticResource osBtn_TextPadding}"                  
+        <Border>
+            <Border.Effect>
+                <osEffects:osEffect_Stroke x:Name="toggleStroke" Thickness="{StaticResource osEffect_StrokeThickness}"
+                Spread="{StaticResource osEffect_StrokeSpread}" Fade="{StaticResource osEffect_StrokeFade}"
+                GlowColor="{StaticResource osEffect_StrokeColor}" 
+                StrokeStrength="{StaticResource osEffect_Stroke}">
+                    <osEffects:osEffect_Stroke.TexelSize>
+                        <MultiBinding Converter="{StaticResource TexelSizeConverter}">
+                            <Binding ElementName="toggleTxtContent" Path="ActualWidth"/>
+                            <Binding ElementName="toggleTxtContent" Path="ActualHeight"/>
+                        </MultiBinding>
+                    </osEffects:osEffect_Stroke.TexelSize>
+                </osEffects:osEffect_Stroke>
+            </Border.Effect>
+            <TextBlock x:Name="toggleTxtContent" Text="{Binding}" Padding="{StaticResource osBtn_TextPadding}"                  
                    SnapsToDevicePixels="True" HorizontalAlignment="Center" VerticalAlignment="Center"                   
                    TextAlignment="Center"
                    LineStackingStrategy="BlockLineHeight" LineHeight="{StaticResource osBtn_FontSize}"
                    FontWeight="{StaticResource osBtn_FontWeight}" FontSize="{StaticResource osBtn_FontSize}"
                    Foreground="{Binding RelativeSource={RelativeSource AncestorType=ToggleButton}, Path=Foreground}">
-            <TextBlock.Effect>
-                <local:osEffectManager x:Name="toggleGlow" Thickness="{StaticResource osEffect_Thickness}" Spread="{StaticResource osEffect_Spread}"
-                                Fade="{StaticResource osEffect_Fade}" GlowColor="{StaticResource osEffect_Color}"
-                                StrokeStrength="{StaticResource osEffect_Stroke}" GlowStrength="{StaticResource osEffect_Glow}">
-                    <local:osEffectManager.TexelSize>
-                        <MultiBinding Converter="{StaticResource TexelSizeConverter}">
-                            <Binding ElementName="toggleTxtContent" Path="ActualWidth"/>
-                            <Binding ElementName="toggleTxtContent" Path="ActualHeight"/>
-                        </MultiBinding>
-                    </local:osEffectManager.TexelSize>
-                </local:osEffectManager>
-            </TextBlock.Effect>
-        </TextBlock>
+                <TextBlock.Effect>
+                    <osEffects:osEffect_Glow x:Name="toggleGlow" Thickness="{StaticResource osEffect_GlowThickness}"
+                                Fade="{StaticResource osEffect_GlowFade}" GlowColor="{StaticResource osEffect_GlowColor}"
+                                GlowStrength="{StaticResource osEffect_GlowRadius}">
+                        <osEffects:osEffect_Glow.TexelSize>
+                            <MultiBinding Converter="{StaticResource TexelSizeConverter}">
+                                <Binding ElementName="toggleTxtContent" Path="ActualWidth"/>
+                                <Binding ElementName="toggleTxtContent" Path="ActualHeight"/>
+                            </MultiBinding>
+                        </osEffects:osEffect_Glow.TexelSize>
+                    </osEffects:osEffect_Glow>
+                </TextBlock.Effect>
+            </TextBlock>
+        </Border>
         <DataTemplate.Triggers>
             <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=ToggleButton}}" Value="True">
                 <DataTrigger.EnterActions>
                     <BeginStoryboard>
                         <Storyboard>
                             <DoubleAnimation Storyboard.TargetName="toggleGlow"
+                                             Storyboard.TargetProperty="Fade"
+                                             To="1" Duration="0:0:0.25"/>
+                            <DoubleAnimation Storyboard.TargetName="toggleStroke"
                                              Storyboard.TargetProperty="Fade"
                                              To="1" Duration="0:0:0.25"/>
                         </Storyboard>
@@ -87,6 +125,9 @@
                             <DoubleAnimation Storyboard.TargetName="toggleGlow"
                                              Storyboard.TargetProperty="Fade"
                                              To="0" Duration="0:0:0.35"/>
+                            <DoubleAnimation Storyboard.TargetName="toggleStroke"
+                                             Storyboard.TargetProperty="Fade"
+                                             To="0" Duration="0:0:0.35"/>
                         </Storyboard>
                     </BeginStoryboard>
                 </DataTrigger.ExitActions>
@@ -94,4 +135,134 @@
         </DataTemplate.Triggers>
     </DataTemplate>
 
+    <DataTemplate x:Key="osTrayTogBtnText" DataType="{x:Type sys:String}">
+        <Border>
+            <Border.Effect>
+                <osEffects:osEffect_Stroke x:Name="traymenuToggleStroke" Thickness="{StaticResource osEffect_StrokeThickness}"
+                Spread="{StaticResource osEffect_StrokeSpread}" Fade="{StaticResource osEffect_StrokeFade}"
+                GlowColor="{StaticResource osTrayMenuEffect_StrokeColor}"
+                StrokeStrength="{StaticResource osEffect_Stroke}">
+                    <osEffects:osEffect_Stroke.TexelSize>
+                        <MultiBinding Converter="{StaticResource TexelSizeConverter}">
+                            <Binding ElementName="traymenuToggleContent" Path="ActualWidth"/>
+                            <Binding ElementName="traymenuToggleContent" Path="ActualHeight"/>
+                        </MultiBinding>
+                    </osEffects:osEffect_Stroke.TexelSize>
+                </osEffects:osEffect_Stroke>
+            </Border.Effect>
+            <TextBlock x:Name="traymenuToggleContent" Text="{Binding}" Padding="0,3"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" 
+                               TextAlignment="Center" FontSize="18" FontWeight="Bold"  TextOptions.TextRenderingMode="ClearType"
+                               Foreground="{Binding RelativeSource={RelativeSource AncestorType=ToggleButton}, Path=Foreground}"
+                               local:TextBlockExtensions.CharacterSpacing="1.20">
+                <TextBlock.Effect>
+                    <osEffects:osEffect_Glow x:Name="traymenuToggleGlow" Thickness="{StaticResource osTrayMenuEffect_Thickness}"
+                                                    Fade="{StaticResource osTrayMenuEffect_Fade}"
+                                                   GlowColor="{StaticResource osTrayMenuEffect_Color}"
+                                                   GlowStrength="{StaticResource osTrayMenuEffect_Glow}">
+                        <osEffects:osEffect_Glow.TexelSize>
+                            <MultiBinding Converter="{StaticResource TexelSizeConverter}">
+                                <Binding ElementName="traymenuToggleContent" Path="ActualWidth"/>
+                                <Binding ElementName="traymenuToggleContent" Path="ActualHeight"/>
+                            </MultiBinding>
+                        </osEffects:osEffect_Glow.TexelSize>
+                    </osEffects:osEffect_Glow>
+                </TextBlock.Effect>
+            </TextBlock>
+        </Border>
+        <DataTemplate.Triggers>
+            <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=ToggleButton}}" Value="True">
+                <DataTrigger.EnterActions>
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation Storyboard.TargetName="traymenuToggleGlow"
+                                             Storyboard.TargetProperty="Fade"
+                                             To="1" Duration="0:0:0.25"/>
+                            <DoubleAnimation Storyboard.TargetName="traymenuToggleStroke"
+                                             Storyboard.TargetProperty="Fade"
+                                             To="1" Duration="0:0:0.25"/>
+                        </Storyboard>
+                    </BeginStoryboard>
+                </DataTrigger.EnterActions>
+                <DataTrigger.ExitActions>
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation Storyboard.TargetName="traymenuToggleGlow"
+                                             Storyboard.TargetProperty="Fade"
+                                             To="0" Duration="0:0:0.35"/>
+                            <DoubleAnimation Storyboard.TargetName="traymenuToggleStroke"
+                                             Storyboard.TargetProperty="Fade"
+                                             To="0" Duration="0:0:0.35"/>
+                        </Storyboard>
+                    </BeginStoryboard>
+                </DataTrigger.ExitActions>
+            </DataTrigger>
+        </DataTemplate.Triggers>
+    </DataTemplate>
+
+    <DataTemplate x:Key="osTrayBtnText" DataType="{x:Type sys:String}">
+        <Border>
+            <Border.Effect>
+                <osEffects:osEffect_Stroke x:Name="traymenuStroke" Thickness="{StaticResource osEffect_StrokeThickness}"
+                Spread="{StaticResource osEffect_StrokeSpread}" Fade="{StaticResource osEffect_StrokeFade}"
+                GlowColor="{StaticResource osTrayMenuEffect_StrokeColor}"
+                StrokeStrength="{StaticResource osEffect_Stroke}">
+                    <osEffects:osEffect_Stroke.TexelSize>
+                        <MultiBinding Converter="{StaticResource TexelSizeConverter}">
+                            <Binding ElementName="traymenuContent" Path="ActualWidth"/>
+                            <Binding ElementName="traymenuContent" Path="ActualHeight"/>
+                        </MultiBinding>
+                    </osEffects:osEffect_Stroke.TexelSize>
+                </osEffects:osEffect_Stroke>
+            </Border.Effect>
+            <TextBlock x:Name="traymenuContent" Text="{Binding}" Padding="0,3"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" 
+                               TextAlignment="Center" FontSize="18" FontWeight="Bold" TextOptions.TextRenderingMode="ClearType"
+                               Foreground="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
+                               local:TextBlockExtensions.CharacterSpacing="1.20" TextOptions.TextFormattingMode="Ideal">
+                <TextBlock.Effect>
+                    <osEffects:osEffect_Glow x:Name="traymenuGlow" Thickness="{StaticResource osTrayMenuEffect_Thickness}" 
+                                             Fade="{StaticResource osTrayMenuEffect_Fade}"
+                                                   GlowColor="{StaticResource osTrayMenuEffect_Color}" 
+                                                   GlowStrength="{StaticResource osTrayMenuEffect_Glow}">
+                        <osEffects:osEffect_Glow.TexelSize>
+                            <MultiBinding Converter="{StaticResource TexelSizeConverter}">
+                                <Binding ElementName="traymenuContent" Path="ActualWidth"/>
+                                <Binding ElementName="traymenuContent" Path="ActualHeight"/>
+                            </MultiBinding>
+                        </osEffects:osEffect_Glow.TexelSize>
+                    </osEffects:osEffect_Glow>
+                </TextBlock.Effect>
+            </TextBlock>
+        </Border>
+        <DataTemplate.Triggers>
+            <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=Button}}" Value="True">
+                <DataTrigger.EnterActions>
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation Storyboard.TargetName="traymenuGlow"
+                                             Storyboard.TargetProperty="Fade"
+                                             To="1" Duration="0:0:0.25"/>
+                            <DoubleAnimation Storyboard.TargetName="traymenuStroke"
+                                             Storyboard.TargetProperty="Fade"
+                                             To="1" Duration="0:0:0.25"/>
+                        </Storyboard>
+                    </BeginStoryboard>
+                </DataTrigger.EnterActions>
+                <DataTrigger.ExitActions>
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation Storyboard.TargetName="traymenuGlow"
+                                             Storyboard.TargetProperty="Fade"
+                                             To="0" Duration="0:0:0.35"/>
+                            <DoubleAnimation Storyboard.TargetName="traymenuStroke"
+                                             Storyboard.TargetProperty="Fade"
+                                             To="0" Duration="0:0:0.35"/>
+                        </Storyboard>
+                    </BeginStoryboard>
+                </DataTrigger.ExitActions>
+            </DataTrigger>
+        </DataTemplate.Triggers>
+    </DataTemplate>
+    
 </ResourceDictionary>

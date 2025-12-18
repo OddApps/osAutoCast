@@ -319,18 +319,11 @@ Class osHandler_Prefs
     Public Sub New()
     End Sub
 
-    Public Sub New(ByRef objPrefDataHolder As PrefRecordIndex)
-        If Not DoPrefsExist() Then CreateDefaultPrefs()
-
-        CoreDataLib.osPrefStoreData = New osPrefStore
-        objPrefDataHolder = PopulatePrefData()
-    End Sub
-
     Public Async Function LoadPrefs() As Task(Of PrefRecordIndex)
         If Not DoPrefsExist() Then CreateDefaultPrefs()
 
         CoreDataLib.osPrefStoreData = New osPrefStore
-        Return Await PopulatePrefDataA()
+        Return Await PopulatePrefData()
     End Function
 
     Private Function DoPrefsExist() As Boolean
@@ -360,179 +353,70 @@ Class osHandler_Prefs
         Return prefLines.ToList()
     End Function
 
-    Private Async Function PopulatePrefDataA() As Task(Of PrefRecordIndex)
-        Return Await Task.Run(Function()
-                                  Dim pRecIdxObj As New PrefRecordIndex
+    Private Async Function PopulatePrefData() As Task(Of PrefRecordIndex)
+        Return Await Task.Run(
+            Function()
+                Dim pRecIdxObj As New PrefRecordIndex
 
-                                  Dim inCatalog As Boolean = False
+                Dim inCatalog As Boolean = False
 
-                                  Dim currentData As New List(Of PrefRecordData)
-                                  Dim currentType As String = Nothing
+                Dim currentData As New List(Of PrefRecordData)
+                Dim currentType As String = Nothing
 
-                                  Dim pFileData = IO.File.ReadAllLines(CoreDataLib.osPrefFile).ToList()
+                Dim pFileData = IO.File.ReadAllLines(CoreDataLib.osPrefFile).ToList()
 
-                                  For Each prefLineData In pFileData.Select(Function(l) l.Trim())
-                                      If isPrefHeader(prefLineData) Then
-                                          inCatalog = True
-                                      ElseIf prefLineData = "_PrefCatalog" Then
-                                          inCatalog = False
-                                      ElseIf inCatalog Then
-                                          If isPrefType(prefLineData) Then
-                                              currentType = FormatPrefType(prefLineData)
-                                              currentData = New List(Of PrefRecordData)
-                                          ElseIf isPrefType(prefLineData, True) Then
-                                              If VerifyRecordType(currentType, prefLineData) Then
-                                                  pRecIdxObj.CreateRecord(currentType, currentData.ToArray())
-                                                  currentType = Nothing
-                                              End If
-                                          ElseIf isPrefData(currentType, prefLineData) Then
-                                              currentData.Add(New PrefRecordData(prefLineData))
-                                          End If
-                                      End If
-                                  Next
-
-                                  Return pRecIdxObj
-                              End Function)
-    End Function
-
-    Private Function PopulatePrefData() As PrefRecordIndex
-
-        Dim pRecIdxObj As New PrefRecordIndex
-
-        Dim inCatalog As Boolean = False
-
-        Dim currentData As New List(Of PrefRecordData)
-        Dim currentType As String = Nothing
-
-        Dim pFileData = IO.File.ReadAllLines(CoreDataLib.osPrefFile).ToList()
-
-        For Each prefLineData In pFileData.Select(Function(l) l.Trim())
-            If isPrefHeader(prefLineData) Then
-                inCatalog = True
-            ElseIf prefLineData = "_PrefCatalog" Then
-                inCatalog = False
-            ElseIf inCatalog Then
-                If isPrefType(prefLineData) Then
-                    currentType = FormatPrefType(prefLineData)
-                    currentData = New List(Of PrefRecordData)
-                ElseIf isPrefType(prefLineData, True) Then
-                    If VerifyRecordType(currentType, prefLineData) Then
-                        pRecIdxObj.CreateRecord(currentType, currentData.ToArray())
-                        currentType = Nothing
+                For Each prefLineData In pFileData.Select(Function(l) l.Trim())
+                    If isPrefHeader(prefLineData) Then
+                        inCatalog = True
+                    ElseIf prefLineData = "_PrefCatalog" Then
+                        inCatalog = False
+                    ElseIf inCatalog Then
+                        If isPrefType(prefLineData) Then
+                            currentType = FormatPrefType(prefLineData)
+                            currentData = New List(Of PrefRecordData)
+                        ElseIf isPrefType(prefLineData, True) Then
+                            If VerifyRecordType(currentType, prefLineData) Then
+                                pRecIdxObj.CreateRecord(currentType, currentData.ToArray())
+                                currentType = Nothing
+                            End If
+                        ElseIf isPrefData(currentType, prefLineData) Then
+                            currentData.Add(New PrefRecordData(prefLineData))
+                        End If
                     End If
-                ElseIf isPrefData(currentType, prefLineData) Then
-                    currentData.Add(New PrefRecordData(prefLineData))
-                End If
-            End If
-        Next
+                Next
 
-        Return pRecIdxObj
+                Return pRecIdxObj
+            End Function)
     End Function
-
-    Public Sub ProcessPrefIndex(prefRecIdx As PrefRecordIndex)
-        For Each pRec As PrefRecord In prefRecIdx.RecIdx
-            For Each pRecData As PrefRecordData In pRec.PrefRecord
-                Dim pi As PropertyInfo = Me.PrefStoreProp(pRec, pRecData)
-                pi.SetValue(CoreDataLib.osPrefStoreData, Me.PrepPref(pRecData, pi.PropertyType), Nothing)
-            Next
-        Next
-
-        CoreDataLib.osPrefStoreData.GenPrefBinds()
-
-        prefRecIdx.RecIdx.
-            ForEach(Sub(pRec)
-                        For Each pRecData In pRec.PrefRecord
-                            With PrefStoreProp(pRec, pRecData)
-                                .SetValue(CoreDataLib.osPrefStoreData, PrepPref(pRecData, .PropertyType))
-                            End With
-                        Next
-                    End Sub)
-
-        CoreDataLib.osPrefStoreData.GenPrefBinds()
-    End Sub
-
-    'Public Async Function LoadPrefsAsync(prefRecIdx As PrefRecordIndex) As Task
-    '    ' For each pref record, compute the value off the UI thread, then set it on the UI thread.
-    '    Dim computeTasks As New List(Of Task(Of (PropertyInfo, Object)))()
-
-    '    ' Create tasks that compute valueObj (but do NOT set the property yet)
-    '    For Each pRec As PrefRecord In prefRecIdx.RecIdx
-    '        For Each pRecData As PrefRecordData In pRec.PrefRecord
-    '            Dim pi As PropertyInfo = Me.PrefStoreProp(pRec, pRecData)
-
-    '            Dim t As Task(Of (PropertyInfo, Object)) = Task.Run(Function()
-    '                                                                    Dim val = Me.PrepPref(pRecData, pi.PropertyType)
-    '                                                                    Return (pi, CType(val, Object))
-    '                                                                End Function)
-    '            computeTasks.Add(t)
-    '        Next
-    '    Next
-
-    '    ' Wait for all computations to finish (runs on thread pool)
-    '    Dim results = Await Task.WhenAll(computeTasks)
-
-    '    ' Now set values on UI thread
-    '    Dim a As New List(Of Task)
-    '    For Each res In results
-    '        a.Add(Task.Run(Sub()
-    '                           res.Item1.SetValue(CoreDataLib.osPrefStoreData, res.Item2, Nothing)
-    '                       End Sub))
-    '    Next
-    '    Await Task.WhenAll(a)
-    '    Dim b = Task.Run(Async Function()
-    '                         CoreDataLib.osPrefStoreData.GenPrefBinds()
-    '                         Await Task.Delay(1)
-    '                     End Function)
-
-    '    Dim c = b
-    'End Function
 
     Public Async Function LoadPrefsAsync(prefRecIdx As PrefRecordIndex) As Task
         If prefRecIdx Is Nothing Then Return
 
-        ' 1) Kick off background computations for each pref (do NOT set properties here)
-        Dim computeTasks As New List(Of Task(Of (PropertyInfo, Object)))()
+        Dim objPrefData = Await Task.
+            WhenAll(prefRecIdx.RecIdx.SelectMany(
+            Function(pRec) pRec.PrefRecord,
+            Function(pRec, pRecData)
+                Dim objPropInfo = Me.PrefStoreProp(pRec, pRecData)
 
-        For Each pRec As PrefRecord In prefRecIdx.RecIdx
-            For Each pRecData As PrefRecordData In pRec.PrefRecord
-                Dim pi As PropertyInfo = Me.PrefStoreProp(pRec, pRecData)
-                ' Capture local vars for closure safety
-                Dim localPi = pi
-                Dim localData = pRecData
+                Return Task.Run(
+                    Function() (objPropInfo,
+                        Me.PrepPref(pRecData, objPropInfo.PropertyType)))
+            End Function))
 
-                Dim t As Task(Of (PropertyInfo, Object)) = Task.Run(Function()
-                                                                        Dim val = Me.PrepPrefa(localData, localPi.PropertyType)
-                                                                        Return (localPi, CType(val, Object))
-                                                                    End Function)
-                computeTasks.Add(t)
-            Next
-        Next
+        Await PrepDispatcher.InvokeAsync(
+            Sub()
+                Dim objPrefStore = CoreDataLib.osPrefStoreData
 
-        Dim results() As (PropertyInfo, Object) = Nothing
+                For Each objPref In objPrefData
+                    objPref.Item1.SetValue(objPrefStore, objPref.Item2, Nothing)
+                Next
 
-        Try
-            results = Await Task.WhenAll(computeTasks) ' runs on threadpool until completed
-        Catch ex As Exception
-            ' If any compute task failed, rethrow or handle. Bubble up for caller to catch.
-            Throw
-        End Try
-
-        ' 2) Apply results + call GenPrefBinds on the UI thread.
-        '    This example uses WPF's Application.Current.Dispatcher. If you are WinForms,
-        '    replace with a Control.Invoke/BeginInvoke or capture SynchronizationContext earlier.
-
-        ' Use InvokeAsync to run on UI thread and await completion
-        Await PrepDispatcher.InvokeAsync(Sub()
-                                             For Each res In results
-                                                 res.Item1.SetValue(CoreDataLib.osPrefStoreData, res.Item2, Nothing)
-                                             Next
-                                             CoreDataLib.osPrefStoreData.GenPrefBinds()
-                                         End Sub)
+                objPrefStore.GenPrefBinds()
+            End Sub)
 
     End Function
 
-    ' --- helper functions below remain the same (PrepPref etc.) ---
-    Private Function PrepPrefa(pRecData As PrefRecordData, valType As Type) As Object
+    Private Function PrepPref(pRecData As PrefRecordData, valType As Type) As Object
         Return Convert.ChangeType(pRecData.PrefVal, valType)
     End Function
 
@@ -549,9 +433,11 @@ Class osHandler_Prefs
                 Return ""
             End If
 
-            Return strPrefLine.Substring(dashIdx + 1, pipeIdx - dashIdx - 1)
+            Return strPrefLine.Substring(dashIdx + 1,
+                                         pipeIdx - dashIdx - 1)
         Else
-            Return strPrefLine.Substring(1, strPrefLine.IndexOf("-"c) - 1)
+            Return strPrefLine.Substring(1, strPrefLine.
+                                         IndexOf("-"c) - 1)
         End If
 
     End Function
@@ -579,19 +465,6 @@ Class osHandler_Prefs
             pLineData.Contains(":")
     End Function
 
-    Private Function isPrefData(pRec As PrefRecord, strData As String) As Boolean
-        Return pRec IsNot Nothing AndAlso
-            strData.Contains(":")
-    End Function
-
-    Private Function PrepPref(pRecData As PrefRecordData, valType As Type) As Object
-        Return Convert.ChangeType(pRecData.PrefVal, valType)
-    End Function
-
-    Private Function GetPrefTypes() As Type
-        Return GetType(CoreDataLib)
-    End Function
-
     Private Function PrefStoreTypes() As Type
         Return CoreDataLib.osPrefStoreData.GetType()
     End Function
@@ -604,10 +477,6 @@ Class osHandler_Prefs
 
     Private Function FetchPrefVar(recType As String, recName As String) As String
         Return $"{recType}_{recName}"
-    End Function
-
-    Private Function FetchPrefVar(recType As String, recName As String, isVault As Boolean) As String
-        Return $"os{recType}_{recName}"
     End Function
 
 #Region "IDisposable Support"

@@ -171,7 +171,6 @@
     </ApplicationDefinition>
     <Compile Include="DataFiles\HandlerData\osHandler_Graphics.vb" />
     <Compile Include="DataFiles\HandlerData\osHandler_Shader.vb" />
-    <Compile Include="DataFiles\HandlerData\osHandler_TrayMenu.vb" />
     <Compile Include="DataFiles\HandlerData\osHandler_UI.vb" />
     <Compile Include="DataFiles\InputMonData\osInMon.xaml.vb">
       <DependentUpon>osInMon.xaml</DependentUpon>
@@ -189,6 +188,7 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="DataFiles\ModelData\osLoadingProgressBar.vb" />
+    <Compile Include="DataFiles\ModelData\osTextDisplay.vb" />
     <Compile Include="DataFiles\VisualData\StyleLib\osStyleManager.vb" />
     <Compile Include="DataFiles\VisualData\EffectsLib\osEffectManager.vb" />
     <Compile Include="GlobalSuppressions.vb" />
@@ -328,6 +328,10 @@
       <Link>.editorconfig</Link>
     </None>
     <Resource Include="DataFiles\VisualData\EffectsLib\EffectResources\osShader_Text.ps" />
+    <EmbeddedResource Include="DataFiles\VisualData\EffectsLib\EffectResources\osEffect_Shaders2.csd" />
+    <Resource Include="DataFiles\VisualData\EffectsLib\EffectResources\osEffect_Texx.ps" />
+    <Resource Include="DataFiles\VisualData\EffectsLib\EffectResources\osEffect_TextGlow.ps" />
+    <Resource Include="DataFiles\VisualData\EffectsLib\EffectResources\osEffect_TextStroke.ps" />
     <EmbeddedResource Include="DataFiles\VisualData\EffectsLib\EffectResources\osEffect_Shaders.csd" />
     <None Include="My Project\app.manifest" />
     <None Include="My Project\DataSources\osPrefStore.ProgVisualQualityData.datasource" />

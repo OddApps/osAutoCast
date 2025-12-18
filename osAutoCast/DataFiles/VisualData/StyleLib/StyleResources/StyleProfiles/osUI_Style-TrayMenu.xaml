@@ -2,11 +2,71 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:oseffect="clr-namespace:osAutoCast.osEffectConv"
                     xmlns:osStyle="clr-namespace:osAutoCast.osStyle"
-                    xmlns:sys="clr-namespace:System;assembly=mscorlib"
-                    xmlns:gamemenuopts="clr-namespace:osAutoCast.GameMenuOpts"
-                    xmlns:local="clr-namespace:osAutoCast">
+                    xmlns:gamemenuopts="clr-namespace:osAutoCast.GameMenuOpts">
 
     <oseffect:TexelSizeConverter x:Key="TexelSizeConverter" />
+
+    <Style x:Key="TrayMenuStyle" TargetType="{x:Type Window}">
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+        <Setter Property="VerticalAlignment" Value="Stretch"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Stretch"/>
+        <Style.Resources>
+            <Storyboard x:Key="TrayMenuVis_Display">
+                <DoubleAnimation Storyboard.TargetName="TrayMenuOutlineRender"
+                                 Storyboard.TargetProperty="ScaleX"
+                                 From="0" To="1" Duration="0:0:0.550"
+                                 FillBehavior="HoldEnd">
+                    <DoubleAnimation.EasingFunction>
+                        <QuadraticEase EasingMode="EaseInOut" />
+                    </DoubleAnimation.EasingFunction>
+                </DoubleAnimation>
+                <DoubleAnimation Storyboard.TargetName="TrayMenuOutlineRender" 
+                                 Storyboard.TargetProperty="ScaleY"
+                                 From="0" To="1" FillBehavior="HoldEnd"
+                                 Duration="0:0:0.550">
+                    <DoubleAnimation.EasingFunction>
+                        <QuadraticEase EasingMode="EaseInOut" />
+                    </DoubleAnimation.EasingFunction>
+                </DoubleAnimation>
+                <DoubleAnimation Storyboard.TargetName="TrayMenuOutline" 
+                                 Storyboard.TargetProperty="Opacity"
+                                 From="0" To="1" Duration="0:0:0.550"
+                                 FillBehavior="HoldEnd">
+                    <DoubleAnimation.EasingFunction>
+                        <ExponentialEase EasingMode="EaseIn" />
+                    </DoubleAnimation.EasingFunction>
+                </DoubleAnimation>
+            </Storyboard>
+            <Storyboard x:Key="TrayMenuVis_Close">
+                <DoubleAnimation Storyboard.TargetName="TrayMenuOutlineRender" 
+                                 Storyboard.TargetProperty="ScaleX"
+                                 From="1" To="0" Duration="0:0:0.550"
+                                 FillBehavior="HoldEnd">
+                    <DoubleAnimation.EasingFunction>
+                        <QuadraticEase EasingMode="EaseInOut" />
+                    </DoubleAnimation.EasingFunction>
+                </DoubleAnimation>
+                <DoubleAnimation Storyboard.TargetName="TrayMenuOutlineRender" 
+                                 Storyboard.TargetProperty="ScaleY"
+                                 From="1" To="0" Duration="0:0:0.550"
+                                 FillBehavior="HoldEnd">
+                    <DoubleAnimation.EasingFunction>
+                        <QuadraticEase EasingMode="EaseInOut" />
+                    </DoubleAnimation.EasingFunction>
+                </DoubleAnimation>
+                <DoubleAnimation Storyboard.TargetName="TrayMenuOutline" 
+                                 Storyboard.TargetProperty="Opacity"
+                                 From="1" To="0" Duration="0:0:0.550"
+                                 FillBehavior="HoldEnd">
+                    <DoubleAnimation.EasingFunction>
+                        <ExponentialEase EasingMode="EaseOut" />
+                    </DoubleAnimation.EasingFunction>
+                </DoubleAnimation>
+            </Storyboard>
+
+        </Style.Resources>
+    </Style>
 
     <Style x:Key="TrayMenuContainerOutlineStyle" TargetType="{x:Type Grid}">
         <Setter Property="Background" Value="{StaticResource osTrayMenu_BG}" />
@@ -14,6 +74,8 @@
         <Setter Property="VerticalAlignment" Value="Center"/>
         <Setter Property="Margin" Value="0,3"/>
         <Setter Property="Opacity" Value="0"/>
+        <Setter Property="CacheMode" Value="BitmapCache"/>
+        <Setter Property="RenderOptions.BitmapScalingMode" Value="LowQuality"/>
         <Setter Property="RenderTransformOrigin" Value="1,1"/>
     </Style>
 
@@ -34,70 +96,8 @@
         <Setter Property="osStyle:osContainerLayout.SeparatorThickness" Value="1"/>
     </Style>
 
-    <Style x:Key="TrayMenuStyle" TargetType="{x:Type Window}">
-        <Setter Property="HorizontalAlignment" Value="Center"/>
-        <Setter Property="VerticalAlignment" Value="Stretch"/>
-        <Setter Property="HorizontalContentAlignment" Value="Center"/>
-        <Setter Property="VerticalContentAlignment" Value="Stretch"/>
-        <Style.Resources>
-            <Storyboard x:Key="TrayMenuVis_Display">
-                <DoubleAnimation Storyboard.TargetName="RootScale"
-                                 Storyboard.TargetProperty="ScaleX"
-                                 From="0" To="1" Duration="0:0:0.475"
-                                 FillBehavior="HoldEnd">
-                    <DoubleAnimation.EasingFunction>
-                        <QuadraticEase EasingMode="EaseInOut" />
-                    </DoubleAnimation.EasingFunction>
-                </DoubleAnimation>
-                <DoubleAnimation Storyboard.TargetName="RootScale" 
-                                 Storyboard.TargetProperty="ScaleY"
-                                 From="0" To="1" FillBehavior="HoldEnd"
-                                 Duration="0:0:0.475">
-                    <DoubleAnimation.EasingFunction>
-                        <QuadraticEase EasingMode="EaseInOut" />
-                    </DoubleAnimation.EasingFunction>
-                </DoubleAnimation>
-                <DoubleAnimation Storyboard.TargetName="TrayMenuOutline" 
-                                 Storyboard.TargetProperty="Opacity"
-                                 From="0" To="1" Duration="0:0:0.475"
-                                 FillBehavior="HoldEnd">
-                    <DoubleAnimation.EasingFunction>
-                        <QuadraticEase EasingMode="EaseInOut" />
-                    </DoubleAnimation.EasingFunction>
-                </DoubleAnimation>
-            </Storyboard>
-            <Storyboard x:Key="TrayMenuVis_Close">
-                <DoubleAnimation Storyboard.TargetName="RootScale" 
-                                 Storyboard.TargetProperty="ScaleX"
-                                 From="1" To="0" Duration="0:0:0.475"
-                                 FillBehavior="HoldEnd">
-                    <DoubleAnimation.EasingFunction>
-                        <QuadraticEase EasingMode="EaseInOut" />
-                    </DoubleAnimation.EasingFunction>
-                </DoubleAnimation>
-                <DoubleAnimation Storyboard.TargetName="RootScale" 
-                                 Storyboard.TargetProperty="ScaleY"
-                                 From="1" To="0" Duration="0:0:0.475"
-                                 FillBehavior="HoldEnd">
-                    <DoubleAnimation.EasingFunction>
-                        <QuadraticEase EasingMode="EaseInOut" />
-                    </DoubleAnimation.EasingFunction>
-                </DoubleAnimation>
-                <DoubleAnimation Storyboard.TargetName="TrayMenuOutline" 
-                                 Storyboard.TargetProperty="Opacity"
-                                 From="1" To="0" Duration="0:0:0.475"
-                                 FillBehavior="HoldEnd">
-                    <DoubleAnimation.EasingFunction>
-                        <QuadraticEase EasingMode="EaseInOut" />
-                    </DoubleAnimation.EasingFunction>
-                </DoubleAnimation>
-            </Storyboard>
-
-        </Style.Resources>
-    </Style>
-
     <Style x:Key="TrayMenuContainerBorderStyle" TargetType="{x:Type Border}">
-        <Setter Property="BorderBrush" Value="#FF222222" />
+        <Setter Property="BorderBrush" Value="#FF252525" />
         <Setter Property="Background" Value="{StaticResource osTrayMenu_BG}" />
         <Setter Property="BorderThickness" Value="6" />
         <Setter Property="CornerRadius" Value="5" />
@@ -115,53 +115,7 @@
         <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="osStyle:osStyles.BorderBrush" Value="#FF2B2828"/>
         <Setter Property="osStyle:osStyles.Background" Value="#FF575757"/>
-        <Setter Property="ContentTemplate">
-            <Setter.Value>
-                <DataTemplate  DataType="{x:Type sys:String}">
-                    <TextBlock x:Name="traymenuContent" Text="{Binding}" Padding="0,3"
-                               HorizontalAlignment="Center" VerticalAlignment="Center" 
-                               TextAlignment="Center" FontSize="18" FontWeight="Bold"
-                               Foreground="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
-                               local:TextBlockExtensions.CharacterSpacing="1.20">
-                        <TextBlock.Effect>
-                            <local:osEffectManager x:Name="traymenuGlow" Thickness="{StaticResource osTrayMenuEffect_Thickness}"
-                                                   Spread="{StaticResource osTrayMenuEffect_Spread}" Fade="{StaticResource osTrayMenuEffect_Fade}"
-                                                   GlowColor="{StaticResource osTrayMenuEffect_Color}" StrokeStrength="{StaticResource osTrayMenuEffect_Stroke}"
-                                                   GlowStrength="{StaticResource osTrayMenuEffect_Glow}">
-                                <local:osEffectManager.TexelSize>
-                                    <MultiBinding Converter="{StaticResource TexelSizeConverter}">
-                                        <Binding ElementName="traymenuContent" Path="ActualWidth"/>
-                                        <Binding ElementName="traymenuContent" Path="ActualHeight"/>
-                                    </MultiBinding>
-                                </local:osEffectManager.TexelSize>
-                            </local:osEffectManager>
-                        </TextBlock.Effect>
-                    </TextBlock>
-                    <DataTemplate.Triggers>
-                        <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=Button}}" Value="True">
-                            <DataTrigger.EnterActions>
-                                <BeginStoryboard>
-                                    <Storyboard>
-                                        <DoubleAnimation Storyboard.TargetName="traymenuGlow"
-                                             Storyboard.TargetProperty="Fade"
-                                             To="1" Duration="0:0:0.25"/>
-                                    </Storyboard>
-                                </BeginStoryboard>
-                            </DataTrigger.EnterActions>
-                            <DataTrigger.ExitActions>
-                                <BeginStoryboard>
-                                    <Storyboard>
-                                        <DoubleAnimation Storyboard.TargetName="traymenuGlow"
-                                             Storyboard.TargetProperty="Fade"
-                                             To="0" Duration="0:0:0.35"/>
-                                    </Storyboard>
-                                </BeginStoryboard>
-                            </DataTrigger.ExitActions>
-                        </DataTrigger>
-                    </DataTemplate.Triggers>
-                </DataTemplate>
-            </Setter.Value>
-        </Setter>
+        <Setter Property="ContentTemplate" Value="{StaticResource osTrayBtnText}" />
        <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type Button}">
@@ -170,12 +124,18 @@
                             BorderThickness="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=(osStyle:osStyles.BorderThickness)}"
                             BorderBrush="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=(osStyle:osStyles.BorderBrush)}">
                         <ContentPresenter x:Name="TrayMenuItem" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"
-                                          VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0"/>
+                                          VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0" />
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter Property="Background" TargetName="TrayMenuItemBorder"
                                     Value="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=(osStyle:osStyles.Background)}" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter Property="Background" TargetName="TrayMenuItemBorder"
+                                    Value="{StaticResource osTrayMenu_BtnPress}" />
+                            <Setter Property="Foreground" 
+                                    Value="{StaticResource osTrayMenu_BtnPressText}" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -242,7 +202,7 @@
     <Style x:Key="TrayMenuItemBorderStyle" TargetType="{x:Type Button}"
            BasedOn="{StaticResource TrayMenuItemStyle}">
         <Setter Property="osStyle:osStyles.BorderThickness" Value="0,0,0,0"/>
-        <Setter Property="osStyle:osStyles.CornerRadius" Value="0,0,5,5"/>
+        <Setter Property="osStyle:osStyles.CornerRadius" Value="0,0,2,2"/>
         <Setter Property="osStyle:osStyles.BorderBrush" Value="#FF222222"/>
         <Setter Property="osStyle:osStyles.Background" Value="#FF575757"/>
         <Setter Property="Template">
@@ -285,59 +245,13 @@
         <Setter Property="osStyle:osStyles.BorderBrush" Value="#FF2B2828"/>
         <Setter Property="osStyle:osStyles.Background" Value="#FF575757"/>
         <Setter Property="osStyle:osStyles.DefaultBackground" Value="#FF363636"/>
+        <Setter Property="ContentTemplate" Value="{StaticResource osTrayTogBtnText}" />
     </Style>
 
     <Style x:Key="TrayMenuItemEnDisStyle" BasedOn="{StaticResource TrayMenuItemToggleStyle}" TargetType="{x:Type ToggleButton}">
         <Setter Property="osStyle:osStyles.BorderThickness" Value="0,0,0,0"/>
-        <Setter Property="osStyle:osStyles.CornerRadius" Value="5,5,0,0"/>
+        <Setter Property="osStyle:osStyles.CornerRadius" Value="2,2,0,0"/>
         <Setter Property="IsChecked" Value="{Binding osEnabledStatus, Source={StaticResource osEnabledStatusConfig}, Mode=TwoWay,UpdateSourceTrigger=PropertyChanged}" />
-        <Setter Property="ContentTemplate">
-            <Setter.Value>
-                <DataTemplate DataType="{x:Type sys:String}">
-                    <TextBlock x:Name="traymenuToggleContent" Text="{Binding}" Padding="0,3"
-                               HorizontalAlignment="Center" VerticalAlignment="Center" 
-                               TextAlignment="Center" FontSize="18" FontWeight="Bold"
-                               Foreground="{Binding RelativeSource={RelativeSource AncestorType=ToggleButton}, Path=Foreground}"
-                               local:TextBlockExtensions.CharacterSpacing="1.20">
-                        <TextBlock.Effect>
-                            <local:osEffectManager x:Name="traymenuToggleGlow" Thickness="{StaticResource osTrayMenuEffect_Thickness}"
-                                                   Spread="{StaticResource osTrayMenuEffect_Spread}" Fade="{StaticResource osTrayMenuEffect_Fade}"
-                                                   GlowColor="{StaticResource osTrayMenuEffect_Color}" StrokeStrength="{StaticResource osTrayMenuEffect_Stroke}"
-                                                   GlowStrength="{StaticResource osTrayMenuEffect_Glow}">
-                                <local:osEffectManager.TexelSize>
-                                    <MultiBinding Converter="{StaticResource TexelSizeConverter}">
-                                        <Binding ElementName="traymenuToggleContent" Path="ActualWidth"/>
-                                        <Binding ElementName="traymenuToggleContent" Path="ActualHeight"/>
-                                    </MultiBinding>
-                                </local:osEffectManager.TexelSize>
-                            </local:osEffectManager>
-                        </TextBlock.Effect>
-                    </TextBlock>
-                    <DataTemplate.Triggers>
-                        <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=ToggleButton}}" Value="True">
-                            <DataTrigger.EnterActions>
-                                <BeginStoryboard>
-                                    <Storyboard>
-                                        <DoubleAnimation Storyboard.TargetName="traymenuToggleGlow"
-                                             Storyboard.TargetProperty="Fade"
-                                             To="1" Duration="0:0:0.25"/>
-                                    </Storyboard>
-                                </BeginStoryboard>
-                            </DataTrigger.EnterActions>
-                            <DataTrigger.ExitActions>
-                                <BeginStoryboard>
-                                    <Storyboard>
-                                        <DoubleAnimation Storyboard.TargetName="traymenuToggleGlow"
-                                             Storyboard.TargetProperty="Fade"
-                                             To="0" Duration="0:0:0.35"/>
-                                    </Storyboard>
-                                </BeginStoryboard>
-                            </DataTrigger.ExitActions>
-                        </DataTrigger>
-                    </DataTemplate.Triggers>
-                </DataTemplate>
-            </Setter.Value>
-        </Setter>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type ToggleButton}" >
@@ -380,6 +294,7 @@
                             </MultiTrigger.Conditions>
                             <Setter TargetName="TrayMenuItemToggleBorderEn" Property="Background"
                                     Value="#FF575757" />
+                            <Setter TargetName="TrayMenuItemToggleBorderEn" Property="Effect" Value="{x:Null}" />
                         </MultiTrigger>
                         <MultiTrigger>
                             <MultiTrigger.Conditions>
@@ -411,6 +326,12 @@
                                 </Setter.Value>
                             </Setter>
                         </MultiTrigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter Property="Background" TargetName="TrayMenuItemToggleBorderEn"
+                                    Value="{StaticResource osTrayMenu_BtnPress}" />
+                            <Setter Property="Foreground" 
+                                    Value="{StaticResource osTrayMenu_BtnPressText}" />
+                        </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
@@ -422,53 +343,6 @@
         <Setter Property="osStyle:osStyles.BorderThickness" Value="0,0,0,0"/>
         <Setter Property="osStyle:osStyles.BorderBrush" Value="#FF222222"/>
         <Setter Property="osStyle:osStyles.Background" Value="#FF575757"/>
-        <Setter Property="ContentTemplate">
-            <Setter.Value>
-                <DataTemplate  DataType="{x:Type sys:String}">
-                    <TextBlock x:Name="traymenuContent" Text="{Binding}" Padding="0,3"
-                               HorizontalAlignment="Center" VerticalAlignment="Center" 
-                               TextAlignment="Center" FontSize="18" FontWeight="Bold"
-                               Foreground="{Binding RelativeSource={RelativeSource AncestorType=ToggleButton}, Path=Foreground}"
-                               local:TextBlockExtensions.CharacterSpacing="1.20">
-                        <TextBlock.Effect>
-                            <local:osEffectManager x:Name="traymenuGlow" Thickness="{StaticResource osTrayMenuEffect_Thickness}"
-                                                   Spread="{StaticResource osTrayMenuEffect_Spread}" Fade="{StaticResource osTrayMenuEffect_Fade}"
-                                                   GlowColor="{StaticResource osTrayMenuEffect_Color}" StrokeStrength="{StaticResource osTrayMenuEffect_Stroke}"
-                                                   GlowStrength="{StaticResource osTrayMenuEffect_Glow}">
-                                <local:osEffectManager.TexelSize>
-                                    <MultiBinding Converter="{StaticResource TexelSizeConverter}">
-                                        <Binding ElementName="traymenuContent" Path="ActualWidth"/>
-                                        <Binding ElementName="traymenuContent" Path="ActualHeight"/>
-                                    </MultiBinding>
-                                </local:osEffectManager.TexelSize>
-                            </local:osEffectManager>
-                        </TextBlock.Effect>
-                    </TextBlock>
-                    <DataTemplate.Triggers>
-                        <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=ToggleButton}}" Value="True">
-                            <DataTrigger.EnterActions>
-                                <BeginStoryboard>
-                                    <Storyboard>
-                                        <DoubleAnimation Storyboard.TargetName="traymenuGlow"
-                                             Storyboard.TargetProperty="Fade"
-                                             To="1" Duration="0:0:0.25"/>
-                                    </Storyboard>
-                                </BeginStoryboard>
-                            </DataTrigger.EnterActions>
-                            <DataTrigger.ExitActions>
-                                <BeginStoryboard>
-                                    <Storyboard>
-                                        <DoubleAnimation Storyboard.TargetName="traymenuGlow"
-                                             Storyboard.TargetProperty="Fade"
-                                             To="0" Duration="0:0:0.35"/>
-                                    </Storyboard>
-                                </BeginStoryboard>
-                            </DataTrigger.ExitActions>
-                        </DataTrigger>
-                    </DataTemplate.Triggers>
-                </DataTemplate>
-            </Setter.Value>
-        </Setter>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type ToggleButton}">
@@ -483,6 +357,12 @@
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter Property="Background" TargetName="gmTrayView_Border"
                                     Value="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=(osStyle:osStyles.Background)}" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter Property="Background" TargetName="gmTrayView_Border"
+                                    Value="{StaticResource osTrayMenu_BtnPress}" />
+                            <Setter Property="Foreground" 
+                                    Value="{StaticResource osTrayMenu_BtnPressText}" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

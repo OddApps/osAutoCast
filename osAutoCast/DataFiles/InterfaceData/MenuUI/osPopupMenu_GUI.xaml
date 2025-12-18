@@ -7,9 +7,8 @@
         WindowStartupLocation="CenterScreen" ShowActivated="False" WindowStyle="None"
         ShowInTaskbar="False" DataContext="{Binding RelativeSource={RelativeSource Self}}" 
         Style="{StaticResource MainContentContainerStyle}" Focusable="False">
-  
-    <Border x:Name="popupMainContainer"
-            Style="{StaticResource MainContainerStyle}">
+
+    <Border x:Name="popupMainContainer" Style="{StaticResource MainContainerStyle}">
         <Grid x:Name="popupContentContainer" 
               Style="{StaticResource ContentContainerStyle}">
             <Grid.ColumnDefinitions>

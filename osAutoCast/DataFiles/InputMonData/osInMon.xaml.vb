@@ -126,18 +126,13 @@ Public Class osInMon
         End If
     End Function
 
-    Private Async Function PrepPrefs() As Task
-        Await Task.Run(
+    Private Function PrepPrefs() As Task
+        Return Task.Run(
             Async Function()
-                Dim objTask_PrepPrefs = PrepDispatcher().InvokeAsync(
-                    Async Function()
-                        Using osPrefManager As New osHandler_Prefs()
-                            CoreDataLib.osPrefIndex = Await osPrefManager.LoadPrefs()
-                            Await osPrefManager.LoadPrefsAsync(CoreDataLib.osPrefIndex)
-                        End Using
-                    End Function)
-
-                Await objTask_PrepPrefs.Task.Unwrap()
+                Using osPrefManager As New osHandler_Prefs()
+                    CoreDataLib.osPrefIndex = Await osPrefManager.LoadPrefs()
+                    Await osPrefManager.LoadPrefsAsync(CoreDataLib.osPrefIndex)
+                End Using
             End Function)
     End Function
 
@@ -215,12 +210,12 @@ Partial Class osInMon
 
     Private ReadOnly LoadDataIdx As New List(Of osLoadData) From
         {
-            {New osLoadData(LoadStart, isLoading, LoadStatus_StartUp, 450, "Launching", objPreLoadDuration:=115)},
-            {New osLoadData(LoadInit, isInit, LoadStatus_Init, 550, "Initializing Data", objPreLoadDuration:=150)},
-            {New osLoadData(LoadPrefs, isPrefPrep, LoadStatus_PrefPrep, 500, "Loading Preferences", Function() PrepPrefs(), 125)},
-            {New osLoadData(LoadUI, isLoadingUI, LoadStatus_LoadingUI, 450, "Loading Interface", Function() osHandler_UI.PrepAndLoadUI(), 125)},
-            {New osLoadData(LoadConfig, isApplyConfig, LoadStatus_ApplyConfig, 475, "Applying Configuration", Function() osMenu_Init(), 125)},
-            {New osLoadData(LoadService, isStartingSvc, LoadStatus_StartingSvc, 450, "Activating Service", Function() InputMonitor_Start(), 110)},
+            {New osLoadData(LoadStart, isLoading, LoadStatus_StartUp, 500, "Launching", objPreLoadDuration:=125)},
+            {New osLoadData(LoadInit, isInit, LoadStatus_Init, 500, "Initializing Data", objPreLoadDuration:=150)},
+            {New osLoadData(LoadPrefs, isPrefPrep, LoadStatus_PrefPrep, 500, "Loading Preferences", Function() PrepPrefs(), 220)},
+            {New osLoadData(LoadUI, isLoadingUI, LoadStatus_LoadingUI, 450, "Loading Interface", Function() osHandler_UI.PrepAndLoadUI(), 350)},
+            {New osLoadData(LoadConfig, isApplyConfig, LoadStatus_ApplyConfig, 475, "Applying Configuration", Function() osMenu_Init(), 220)},
+            {New osLoadData(LoadService, isStartingSvc, LoadStatus_StartingSvc, 450, "Activating Service", Function() InputMonitor_Start(), 220)},
             {New osLoadData(LoadComplete, isStarting, LoadStatus_Starting, 450, "Starting osAutoCast", Function() LoadFinalize(), 500)}
         }
 
@@ -324,6 +319,5 @@ Partial Class osInMon
     Private Sub ComposeOutline(sender As Object, e As RoutedEventArgs) Handles LoadingContainerOutline.Loaded
         EstablishOutline(objOutline, ContentBorder_Radius)
     End Sub
-
 
 End Class

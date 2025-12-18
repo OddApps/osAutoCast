@@ -9,9 +9,9 @@
 @set "outdir=C:\Users\OddAdmin\source\repos\osAutoCast\osEffectCompiles"
 @set "output=%outdir%\%~n1.ps"
 
-set /p stype=Pixel or Vertex: 
-set /p version=Shader Version: 
-set /p entrypoint=Entry Point: 
+@set /p stype=Pixel or Vertex: 
+@set /p version=Shader Version: 
+@set /p entrypoint=Entry Point: 
 
 @echo Compiling %~nx1
 

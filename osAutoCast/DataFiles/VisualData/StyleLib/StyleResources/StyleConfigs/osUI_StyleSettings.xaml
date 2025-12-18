@@ -24,25 +24,40 @@
 
     <oscolor:SolidColorBrush x:Key="osTrayMenu_BG" Color="#FF363636" />
 
+    <oscolor:SolidColorBrush x:Key="osTrayMenu_BtnPress" Color="#FF959595" />
+    <oscolor:SolidColorBrush x:Key="osTrayMenu_BtnPressText" Color="#FF575757" />
+    
     <sys:Double x:Key="osTrayMenuBtn_Height">32</sys:Double>
 
     <sys:Double x:Key="osTrayMenuEffect_Glow">0.5</sys:Double>
     <sys:Double x:Key="osTrayMenuEffect_Thickness">1.2</sys:Double>
     <sys:Double x:Key="osTrayMenuEffect_Spread">4</sys:Double>
     <sys:Double x:Key="osTrayMenuEffect_Fade">0</sys:Double>
+    
     <sys:Double x:Key="osTrayMenuEffect_Stroke">1</sys:Double>
 
     <oscolor:Color x:Key="osTrayMenuEffect_Color">#A1060606</oscolor:Color>
+    <oscolor:Color x:Key="osTrayMenuEffect_StrokeColor">#FF060606</oscolor:Color>
+    
     <oscolor:Color x:Key="osTrayMenuEffect_DisColor">#A1A1A1A1</oscolor:Color>
     
     <!-- ** Effect Settings ** -->
 
-    <sys:Double x:Key="osEffect_Thickness">1.2</sys:Double>
-    <sys:Double x:Key="osEffect_Spread">6</sys:Double>
-    <sys:Double x:Key="osEffect_Fade">0</sys:Double>
+    <sys:Double x:Key="osEffect_GlowThickness">1.2</sys:Double>
+    <sys:Double x:Key="osEffect_GlowSpread">4</sys:Double>
+    <sys:Double x:Key="osEffect_GlowFade">0</sys:Double>
+    <sys:Double x:Key="osEffect_GlowStroke">0</sys:Double>
+    <sys:Double x:Key="osEffect_GlowRadius">0.5</sys:Double>
+    
+    <oscolor:Color x:Key="osEffect_GlowColor">#A1421110</oscolor:Color>
+
+    <sys:Double x:Key="osEffect_StrokeThickness">1.2</sys:Double>
+    <sys:Double x:Key="osEffect_StrokeSpread">6</sys:Double>
+    <sys:Double x:Key="osEffect_StrokeFade">0</sys:Double>
     <sys:Double x:Key="osEffect_Stroke">1</sys:Double>
-    <sys:Double x:Key="osEffect_Glow">0.5</sys:Double>    
-    <oscolor:Color x:Key="osEffect_Color">#A1421110</oscolor:Color>
+    <sys:Double x:Key="osEffect_StrokeRadius">0.5</sys:Double>
+    
+    <oscolor:Color x:Key="osEffect_StrokeColor">#FF421110</oscolor:Color>
 
     <!-- ** Button Settings ** -->
     

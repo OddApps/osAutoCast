@@ -18,22 +18,18 @@ Public Module osHandler_Shader
     Private ShaderCompressedData As String = "osEffect_Shaders.csd"
 
     Private pxShaderData_Pixel As pxShaderPixel
-    Private pxShaderData_Text As pxShaderText
     Private pxShaderData_Vertex As pxShaderVertex
-
-    Private shaderBytes_Pixel As Byte()
-    Private shaderBytes_Text As Byte()
-    Private shaderBytes_Vertex As Byte()
+    Private pxShaderData_Text_G As pxShaderText_G
+    Private pxShaderData_Text_S As pxShaderText_S
 
     Public osShaderNameList As New List(Of String) From {
-        {"osShader_ProgPixel.ps"},
-        {"osShader_ProgVertex.ps"},
-        {"osShader_Text.ps"}
+        {"osShader_ProgPixel.ps"}, {"osShader_ProgVertex.ps"},
+        {"osShader_TextGlow.ps"}, {"osShader_TextStroke.ps"}
     }
 
     Public ShaderDataIdx As New Dictionary(Of String, Byte())
 
-    Private ShaderDataNames() As String = {"Px", "Vx", "Tx"}
+    Private ShaderDataNames() As String = {"Px", "Vx", "TxG", "TxS"}
 
     Public ReadOnly osShaderIdx As New Concurrent.
         ConcurrentBag(Of idxShaderRecord)
@@ -137,17 +133,31 @@ Public Module osHandler_Shader
                             End Sub)
                     End Sub)
 
-                Dim objShaderTask_Tx = Task.Run(
+                Dim objShaderTask_TxG = Task.Run(
                     Sub()
                         PrepDispatcher().Invoke(
                             Sub()
                                 Dim pxShaderObj As New pxShader_Text
 
-                                Using objShaderStream As New MemoryStream(ShaderDataIdx("Tx"))
+                                Using objShaderStream As New MemoryStream(ShaderDataIdx("TxG"))
                                     pxShaderObj.SetStreamSource(objShaderStream)
                                 End Using
 
-                                pxShaderData_Text = New pxShaderText(pxShaderObj)
+                                pxShaderData_Text_G = New pxShaderText_G(pxShaderObj)
+                            End Sub)
+                    End Sub)
+
+                Dim objShaderTask_TxS = Task.Run(
+                    Sub()
+                        PrepDispatcher().Invoke(
+                            Sub()
+                                Dim pxShaderObj As New pxShader_Text
+
+                                Using objShaderStream As New MemoryStream(ShaderDataIdx("TxS"))
+                                    pxShaderObj.SetStreamSource(objShaderStream)
+                                End Using
+
+                                pxShaderData_Text_S = New pxShaderText_S(pxShaderObj)
                             End Sub)
                     End Sub)
 
@@ -167,9 +177,8 @@ Public Module osHandler_Shader
                             End Sub)
                     End Sub)
 
-                Await Task.WhenAll(objShaderTask_Px,
-                                   objShaderTask_Tx,
-                                   objShaderTask_Vx)
+                Await Task.WhenAll(objShaderTask_Px, objShaderTask_Vx,
+                                   objShaderTask_TxG, objShaderTask_TxS)
 
             End Function)
     End Function
@@ -183,9 +192,12 @@ Public Module osHandler_Shader
                     Case sTypePixel
                         osShaderIdx.Add(New idxShaderRecord(
                                         idxID, pxShaderData_Pixel))
-                    Case sTypeText
+                    Case sTypeText_G
                         osShaderIdx.Add(New idxShaderRecord(
-                                        idxID, pxShaderData_Text))
+                                        idxID, pxShaderData_Text_G))
+                    Case sTypeText_S
+                        osShaderIdx.Add(New idxShaderRecord(
+                                        idxID, pxShaderData_Text_S))
                     Case sTypeVertex
                         osShaderIdx.Add(New idxShaderRecord(
                                         idxID, pxShaderData_Vertex))

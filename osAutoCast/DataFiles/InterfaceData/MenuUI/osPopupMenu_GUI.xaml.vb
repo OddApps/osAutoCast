@@ -13,6 +13,7 @@ Imports osAutoCast.GameMenuOpts
 Imports osAutoCast.osStyle
 
 #Disable Warning BC42353
+#Disable Warning BC42104
 
 Public Class osPopupMenu_GUI
 
@@ -142,6 +143,23 @@ Public Class osPopupMenu_GUI
         End With
     End Function
 
+    Private Sub SetVisualMode(objAniType As AnimationType)
+        Dim setBitMapMode As BitmapScalingMode
+        Dim setCacheMode As CacheMode
+
+        Select Case objAniType
+            Case aniOpen
+                setBitMapMode = BitmapScalingMode.HighQuality
+                setCacheMode = Nothing
+            Case aniClose
+                setBitMapMode = BitmapScalingMode.LowQuality
+                setCacheMode = New BitmapCache()
+        End Select
+
+        objContainer.CacheMode = setCacheMode
+        RenderOptions.SetBitmapScalingMode(objContainer, setBitMapMode)
+    End Sub
+
     Public Sub EstablishVisual(objVisType As PopupVisualType, ByRef objSetVisual As Storyboard)
         Dim objPopupVis As Storyboard = GetVisual(objVisType)
 
@@ -175,6 +193,8 @@ Public Class osPopupMenu_GUI
                 EstablishVisual(objVisType, objAnimation_Open)
             Case aniClose
                 EstablishVisual(objVisType, objAnimation_Close)
+
+                SetVisualMode(aniClose)
         End Select
 
         ProcessVisualEvents(objAniType, objVisAction)
@@ -193,6 +213,8 @@ Public Class osPopupMenu_GUI
 
             InitTransitionVisuals(aniOpen, PopupVisual_Open, VisualStarted)
             Await objTask_Open.Task
+
+            SetVisualMode(aniOpen)
         End If
     End Function
 

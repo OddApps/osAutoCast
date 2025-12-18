@@ -37,39 +37,57 @@ Public Class osPrefs
         MyBase.WndProc(m)
     End Sub
 
-    Public Sub osPrefsPrep()
+    Public Function BuildPrefBindingsAsync() As Task(Of List(Of BindingDef))
+        Return Task.Run(
+            Function()
+                Dim objPrefStoreData = CoreDataLib.osPrefStoreData
 
-        Dim lstPrefVQ As New osPref_DataTable
+                Return New List(Of BindingDef) From {
+                    ComposeBindingDef(objPrefStoreData, txtAutoCastFuse, "acFuse", objPrefStoreData),
+                    ComposeBindingDef(objPrefStoreData, chkAutoCastRTC, "acRTC", objPrefStoreData),
+                    ComposeBindingDef(objPrefStoreData, txtAutoPassSafetyTimer, "apSafetyTimer", objPrefStoreData),
+                    ComposeBindingDef(objPrefStoreData, lstVisualQuality, "goVisualQuality", objPrefStoreData)
+               }
+            End Function)
+    End Function
 
-        With lstVisualQuality
-            .DisplayMember = "vqName"
-            .ValueMember = "vqIdx"
-            .DataSource = lstPrefVQ.osPrefVQ_DT
-        End With
+    Private Function ComposeBindingDef(objPrefStore As osPrefStore, objCtrl As Control,
+                                       objPrefName As String, objDataSrc As Object) As BindingDef
+        Return New BindingDef With {.Control = objCtrl, .DataSource = objDataSrc,
+            .ControlProp = objPrefStore.GetPrefBindDefs(objPrefName).ControlProp,
+            .DataProp = objPrefStore.GetPrefBindDefs(objPrefName).DataProp
+        }
+    End Function
 
-        txtAutoCastFuse.DataBindings.
-            Add(New Binding(CoreDataLib.osPrefStoreData.GetPrefBindDefs("acFuse").ControlProp,
-                            CoreDataLib.osPrefStoreData, CoreDataLib.osPrefStoreData.GetPrefBindDefs("acFuse").DataProp,
-                            False, DataSourceUpdateMode.OnPropertyChanged))
+    Public Async Function osPrefsPrepAsync(objTask_BindPrefLst As Task(Of List(Of BindingDef))) As Task
+        Dim objBindPrefLst = Await objTask_BindPrefLst
+        Me.SuspendLayout()
 
-        chkAutoCastRTC.DataBindings.
-            Add(New Binding(CoreDataLib.osPrefStoreData.GetPrefBindDefs("acRTC").ControlProp,
-                            CoreDataLib.osPrefStoreData, CoreDataLib.osPrefStoreData.GetPrefBindDefs("acRTC").DataProp,
-                            False, DataSourceUpdateMode.OnPropertyChanged))
+        Try
 
-        txtAutoPassSafetyTimer.DataBindings.
-            Add(New Binding(CoreDataLib.osPrefStoreData.GetPrefBindDefs("apSafetyTimer").ControlProp,
-                            CoreDataLib.osPrefStoreData, CoreDataLib.osPrefStoreData.GetPrefBindDefs("apSafetyTimer").DataProp,
-                            False, DataSourceUpdateMode.OnPropertyChanged))
+            Dim lstPrefVQ As New osPref_DataTable
 
-        lstVisualQuality.DataBindings.
-            Add(New Binding(CoreDataLib.osPrefStoreData.GetPrefBindDefs("goVisualQuality").ControlProp,
-                            CoreDataLib.osPrefStoreData, CoreDataLib.osPrefStoreData.GetPrefBindDefs("goVisualQuality").DataProp,
-                            False, DataSourceUpdateMode.OnPropertyChanged))
+            With lstVisualQuality
+                .DisplayMember = "vqName"
+                .ValueMember = "vqIdx"
+                .DataSource = lstPrefVQ.osPrefVQ_DT
+            End With
 
-        objPrefTracker = New osPrefTracker(Of osPrefStore)(CoreDataLib.osPrefStoreData)
+            For Each prefDef In objBindPrefLst
+                With prefDef
+                    .Control.DataBindings.Add(
+                        New Binding(.ControlProp, .DataSource, .DataProp,
+                                    False, DataSourceUpdateMode.OnPropertyChanged))
+                End With
+            Next
 
-    End Sub
+            objPrefTracker = New osPrefTracker(Of
+                osPrefStore)(CoreDataLib.osPrefStoreData)
+        Finally
+            Me.ResumeLayout()
+        End Try
+
+    End Function
 
     Private Sub SavePrefs(sender As Object, e As EventArgs) Handles btnSavePrefs.Click
         If objPrefTracker.HasChanges Then
@@ -101,6 +119,7 @@ Public Class osPrefs
             End If
         End If
     End Sub
+
 
     Private Sub txtAutoCastFuse_MouseWheel(sender As Object, e As MouseEventArgs) Handles txtAutoCastFuse.MouseWheel
         Dim objVal_ACF = DirectCast(sender, NumericUpDown)

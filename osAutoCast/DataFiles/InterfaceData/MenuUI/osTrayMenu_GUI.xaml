@@ -7,15 +7,15 @@
         ShowInTaskbar="False" DataContext="{Binding RelativeSource={RelativeSource Self}}" 
         Style="{StaticResource TrayMenuStyle}">
 
-    <Grid x:Name="TrayMenuOutline" CacheMode="BitmapCache"
-          Style="{StaticResource TrayMenuContainerOutlineStyle}">
+    <Grid x:Name="TrayMenuOutline" Style="{StaticResource TrayMenuContainerOutlineStyle}">
         <Grid.RenderTransform>
-            <ScaleTransform x:Name="RootScale" ScaleX="0" ScaleY="0"/>
+            <ScaleTransform x:Name="TrayMenuOutlineRender"
+                            ScaleX="0" ScaleY="0"/>
         </Grid.RenderTransform>
-        <Border x:Name="trayMainContainer"
+        <Border x:Name="TrayMainContainer"
                 Style="{StaticResource TrayMenuContainerBorderStyle}">
             <Border Background="Transparent" CornerRadius="6">
-                <Grid x:Name="trayContentContainer"
+                <Grid x:Name="TrayContentContainer"
                       Style="{StaticResource TrayMenuContentContainerStyle}">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition/>
@@ -29,25 +29,25 @@
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
-                        <ToggleButton x:Name="btnShowGameTrayMenu"
+                        <ToggleButton x:Name="TrayMenuBtn_ToggleGameMenu"
                                       Grid.Row="0" Content="Game Menu"
                                       Style="{StaticResource TrayMenuItemGameMenuStyle}" />
                         <Border x:Name="TrayMenuGamePanel" Grid.Row="1"
                                 Style="{StaticResource HideShowGameTrayMenu}">
                             <Grid>
-                                <Button x:Name="TrayBtn_StartGame"
+                                <Button x:Name="TrayMenuBtn_StartGame"
                                         Content="Start MTGA" Focusable="False"
                                         Style="{StaticResource GameTrayMenu_ShowStart}" />
-                                <Button x:Name="TrayBtn_CloseGame"
+                                <Button x:Name="TrayMenuBtn_CloseGame"
                                         Content="Close MTGA" Focusable="False"
                                         Style="{StaticResource GameTrayMenu_ShowClose}" />
                             </Grid>
                         </Border>
                     </Grid>
-                    <Button x:Name="pmBtn_ShowOptions" Content="Options"
+                    <Button x:Name="TrayMenuBtn_ShowOptions" Content="Options"
                             Grid.Row="2" Grid.Column="0" Focusable="False"
                             Style="{StaticResource TrayMenuItemDefaultStyle}" />
-                    <Button x:Name="pmBtn_Exit" Content="Exit" 
+                    <Button x:Name="TrayMenuBtn_Exit" Content="Exit" 
                             Grid.Row="3" Grid.Column="0" Focusable="False" 
                             Style="{StaticResource TrayMenuItemBorderStyle}" />
                 </Grid>

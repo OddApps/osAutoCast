@@ -2,6 +2,16 @@
 Imports osAutoCast.DataTypeLib.LoadContentData
 Imports osAutoCast.DataTypeLib.LoadEventType
 Imports osAutoCast.osInMon
+Imports osAutoCast.osShaderDataLib
+Imports SharpDX.D3DCompiler
+Imports SharpDX.Direct3D11
+Imports osAsm = System.Reflection.Assembly
+Imports osProgDevice = SharpDX.Direct3D11.Device
+Imports pxShader_Pixel = SharpDX.Direct3D11.PixelShader
+Imports pxShader_Text = System.Windows.Media.Effects.PixelShader
+Imports pxShader_Vertex = SharpDX.Direct3D11.VertexShader
+Imports System.Collections.Concurrent
+Imports System.IO
 
 #Disable Warning BC42353
 Class Application
