@@ -111,6 +111,79 @@ Public Module osHandler_Shader
             End Function)
     End Function
 
+    Public Async Function PreloadShaderCatalog(objShaderLst As Dictionary(Of String, Byte())) As Task
+        Await Task.Run(
+            Async Function()
+
+                ShaderDataIdx = objShaderLst
+
+                Dim objShaderTask_Px = Task.Run(
+                    Sub()
+                        PrepDispatcher().Invoke(
+                            Sub()
+                                Dim pxShaderObj As pxShader_Pixel
+
+                                Using objShaderStream As New MemoryStream(ShaderDataIdx("Px"))
+                                    Using objShaderByte = ShaderBytecode.FromStream(objShaderStream)
+                                        pxShaderObj = New PixelShader(ShaderDevice, objShaderByte)
+                                    End Using
+                                End Using
+
+                                pxShaderData_Pixel = New pxShaderPixel(pxShaderObj)
+                            End Sub)
+                    End Sub)
+
+                Dim objShaderTask_TxG = Task.Run(
+                    Sub()
+                        PrepDispatcher().Invoke(
+                            Sub()
+                                Dim pxShaderObj As New pxShader_Text
+
+                                Using objShaderStream As New MemoryStream(ShaderDataIdx("TxG"))
+                                    pxShaderObj.SetStreamSource(objShaderStream)
+                                End Using
+
+                                pxShaderData_Text_G = New pxShaderText_G(pxShaderObj)
+                            End Sub)
+                    End Sub)
+
+                Dim objShaderTask_TxS = Task.Run(
+                    Sub()
+                        PrepDispatcher().Invoke(
+                            Sub()
+                                Dim pxShaderObj As New pxShader_Text
+
+                                Using objShaderStream As New MemoryStream(ShaderDataIdx("TxS"))
+                                    pxShaderObj.SetStreamSource(objShaderStream)
+                                End Using
+
+                                pxShaderData_Text_S = New pxShaderText_S(pxShaderObj)
+                            End Sub)
+                    End Sub)
+
+                Dim objShaderTask_Vx = Task.Run(
+                    Sub()
+                        PrepDispatcher().Invoke(
+                            Sub()
+                                Dim pxShaderObj As pxShader_Vertex
+
+                                Using objShaderStream As New MemoryStream(ShaderDataIdx("Vx"))
+                                    Using objShaderByte = ShaderBytecode.FromStream(objShaderStream)
+                                        pxShaderObj = New VertexShader(ShaderDevice, objShaderByte)
+                                    End Using
+                                End Using
+
+                                pxShaderData_Vertex = New pxShaderVertex(pxShaderObj)
+                            End Sub)
+                    End Sub)
+
+                Await Task.WhenAll(objShaderTask_Px, objShaderTask_Vx,
+                                   objShaderTask_TxG, objShaderTask_TxS)
+
+            End Function)
+    End Function
+
+
     Public Async Function PreloadShaderCatalog(objShaderTask As Task(Of Dictionary(Of String, Byte()))) As Task
         Await Task.Run(
             Async Function()

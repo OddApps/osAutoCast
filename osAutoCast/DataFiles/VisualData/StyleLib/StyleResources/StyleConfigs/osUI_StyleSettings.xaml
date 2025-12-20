@@ -29,15 +29,19 @@
     
     <sys:Double x:Key="osTrayMenuBtn_Height">32</sys:Double>
 
-    <sys:Double x:Key="osTrayMenuEffect_Glow">0.5</sys:Double>
-    <sys:Double x:Key="osTrayMenuEffect_Thickness">1.2</sys:Double>
+    <sys:Double x:Key="osTrayMenuEffect_Glow">1</sys:Double>
+    <sys:Double x:Key="osTrayMenuEffect_GlowRadius">4</sys:Double>
+    <sys:Double x:Key="osTrayMenuEffect_GlowThickness">0.3</sys:Double>
+    
+    
+    <sys:Double x:Key="osTrayMenuEffect_StrokeThickness">1.0</sys:Double>
     <sys:Double x:Key="osTrayMenuEffect_Spread">4</sys:Double>
     <sys:Double x:Key="osTrayMenuEffect_Fade">0</sys:Double>
-    
+    <sys:Double x:Key="osTrayMenuEffect_Vertical">1.5</sys:Double>
     <sys:Double x:Key="osTrayMenuEffect_Stroke">1</sys:Double>
 
-    <oscolor:Color x:Key="osTrayMenuEffect_Color">#A1060606</oscolor:Color>
-    <oscolor:Color x:Key="osTrayMenuEffect_StrokeColor">#FF060606</oscolor:Color>
+    <oscolor:Color x:Key="osTrayMenuEffect_Color">#a1060606</oscolor:Color>
+    <oscolor:Color x:Key="osTrayMenuEffect_StrokeColor">#c4060606</oscolor:Color>
     
     <oscolor:Color x:Key="osTrayMenuEffect_DisColor">#A1A1A1A1</oscolor:Color>
     

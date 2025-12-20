@@ -327,12 +327,9 @@
     <None Include="..\.editorconfig">
       <Link>.editorconfig</Link>
     </None>
-    <Resource Include="DataFiles\VisualData\EffectsLib\EffectResources\osShader_Text.ps" />
-    <EmbeddedResource Include="DataFiles\VisualData\EffectsLib\EffectResources\osEffect_Shaders2.csd" />
-    <Resource Include="DataFiles\VisualData\EffectsLib\EffectResources\osEffect_Texx.ps" />
-    <Resource Include="DataFiles\VisualData\EffectsLib\EffectResources\osEffect_TextGlow.ps" />
-    <Resource Include="DataFiles\VisualData\EffectsLib\EffectResources\osEffect_TextStroke.ps" />
     <EmbeddedResource Include="DataFiles\VisualData\EffectsLib\EffectResources\osEffect_Shaders.csd" />
+    <Resource Include="DataFiles\VisualData\EffectsLib\EffectResources\osShader_TextGlow.ps" />
+    <Resource Include="DataFiles\VisualData\EffectsLib\EffectResources\osShader_TextStroke.ps" />
     <None Include="My Project\app.manifest" />
     <None Include="My Project\DataSources\osPrefStore.ProgVisualQualityData.datasource" />
     <None Include="My Project\Settings.settings">

@@ -15,52 +15,52 @@
             <Storyboard x:Key="TrayMenuVis_Display">
                 <DoubleAnimation Storyboard.TargetName="TrayMenuOutlineRender"
                                  Storyboard.TargetProperty="ScaleX"
-                                 From="0" To="1" Duration="0:0:0.550"
+                                 From="0" To="1" Duration="0:0:0.45"
                                  FillBehavior="HoldEnd">
                     <DoubleAnimation.EasingFunction>
-                        <QuadraticEase EasingMode="EaseInOut" />
+                        <QuadraticEase EasingMode="EaseIn" />
                     </DoubleAnimation.EasingFunction>
                 </DoubleAnimation>
                 <DoubleAnimation Storyboard.TargetName="TrayMenuOutlineRender" 
                                  Storyboard.TargetProperty="ScaleY"
-                                 From="0" To="1" FillBehavior="HoldEnd"
-                                 Duration="0:0:0.550">
+                                 From="0" To="1" Duration="0:0:0.45"
+                                 FillBehavior="HoldEnd">
                     <DoubleAnimation.EasingFunction>
-                        <QuadraticEase EasingMode="EaseInOut" />
+                        <QuadraticEase EasingMode="EaseIn" />
                     </DoubleAnimation.EasingFunction>
                 </DoubleAnimation>
                 <DoubleAnimation Storyboard.TargetName="TrayMenuOutline" 
                                  Storyboard.TargetProperty="Opacity"
-                                 From="0" To="1" Duration="0:0:0.550"
+                                 From="0" To="1" Duration="0:0:0.45"
                                  FillBehavior="HoldEnd">
                     <DoubleAnimation.EasingFunction>
-                        <ExponentialEase EasingMode="EaseIn" />
+                        <QuadraticEase EasingMode="EaseIn" />
                     </DoubleAnimation.EasingFunction>
                 </DoubleAnimation>
             </Storyboard>
             <Storyboard x:Key="TrayMenuVis_Close">
                 <DoubleAnimation Storyboard.TargetName="TrayMenuOutlineRender" 
                                  Storyboard.TargetProperty="ScaleX"
-                                 From="1" To="0" Duration="0:0:0.550"
+                                 From="1" To="0" Duration="0:0:0.475"
                                  FillBehavior="HoldEnd">
                     <DoubleAnimation.EasingFunction>
-                        <QuadraticEase EasingMode="EaseInOut" />
+                        <QuadraticEase EasingMode="EaseOut" />
                     </DoubleAnimation.EasingFunction>
                 </DoubleAnimation>
                 <DoubleAnimation Storyboard.TargetName="TrayMenuOutlineRender" 
                                  Storyboard.TargetProperty="ScaleY"
-                                 From="1" To="0" Duration="0:0:0.550"
+                                 From="1" To="0" Duration="0:0:0.475"
                                  FillBehavior="HoldEnd">
                     <DoubleAnimation.EasingFunction>
-                        <QuadraticEase EasingMode="EaseInOut" />
+                        <QuadraticEase EasingMode="EaseOut" />
                     </DoubleAnimation.EasingFunction>
                 </DoubleAnimation>
                 <DoubleAnimation Storyboard.TargetName="TrayMenuOutline" 
                                  Storyboard.TargetProperty="Opacity"
-                                 From="1" To="0" Duration="0:0:0.550"
+                                 From="1" To="0" Duration="0:0:0.475"
                                  FillBehavior="HoldEnd">
                     <DoubleAnimation.EasingFunction>
-                        <ExponentialEase EasingMode="EaseOut" />
+                        <QuadraticEase EasingMode="EaseOut" />
                     </DoubleAnimation.EasingFunction>
                 </DoubleAnimation>
             </Storyboard>
@@ -93,7 +93,7 @@
                 </LinearGradientBrush>
             </Setter.Value>
         </Setter>
-        <Setter Property="osStyle:osContainerLayout.SeparatorThickness" Value="1"/>
+        <Setter Property="osStyle:osContainerLayout.SeparatorThickness" Value="2"/>
     </Style>
 
     <Style x:Key="TrayMenuContainerBorderStyle" TargetType="{x:Type Border}">
@@ -109,38 +109,32 @@
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="Foreground" Value="#FF8f8f8f"/>
         <Setter Property="Padding" Value="0"/>
-        <Setter Property="Height" Value="30"/>
+        <Setter Property="Height" Value="32"/>
         <Setter Property="HorizontalAlignment" Value="Stretch"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="osStyle:osStyles.BorderBrush" Value="#FF2B2828"/>
         <Setter Property="osStyle:osStyles.Background" Value="#FF575757"/>
+        <Setter Property="UseLayoutRounding" Value="True"/>
         <Setter Property="ContentTemplate" Value="{StaticResource osTrayBtnText}" />
-       <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="{x:Type Button}">
-                    <Border x:Name="TrayMenuItemBorder" Background="{TemplateBinding Background}" Height="30"
-                            CornerRadius="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=(osStyle:osStyles.CornerRadius)}"
-                            BorderThickness="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=(osStyle:osStyles.BorderThickness)}"
-                            BorderBrush="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=(osStyle:osStyles.BorderBrush)}">
-                        <ContentPresenter x:Name="TrayMenuItem" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"
-                                          VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0" />
-                    </Border>
-                    <ControlTemplate.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter Property="Background" TargetName="TrayMenuItemBorder"
-                                    Value="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=(osStyle:osStyles.Background)}" />
-                        </Trigger>
-                        <Trigger Property="IsPressed" Value="True">
-                            <Setter Property="Background" TargetName="TrayMenuItemBorder"
-                                    Value="{StaticResource osTrayMenu_BtnPress}" />
-                            <Setter Property="Foreground" 
-                                    Value="{StaticResource osTrayMenu_BtnPressText}" />
-                        </Trigger>
-                    </ControlTemplate.Triggers>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
+        <Setter Property="Template" Value="{StaticResource TrayMenuLayout_Btn}" />
+    </Style>    
+
+    <Style x:Key="TrayMenuItemToggleStyle" TargetType="{x:Type ToggleButton}">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="#FF8f8f8f"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="Height" Value="32"/>
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="UseLayoutRounding" Value="True"/>
+        <Setter Property="osStyle:osStyles.BorderBrush" Value="#FF2B2828"/>
+        <Setter Property="osStyle:osStyles.Background" Value="#FF575757"/>
+        <Setter Property="osStyle:osStyles.DefaultBackground" Value="#FF363636"/>
+        <Setter Property="ContentTemplate" Value="{StaticResource osTrayTogBtnText}" />
+        <Setter Property="Template" Value="{Binding RelativeSource={RelativeSource TemplatedParent},
+            Path=(osStyle:osStyles.Template)}" />
     </Style>
 
     <Style x:Key="TrayMenuItemDefaultStyle" TargetType="{x:Type Button}"
@@ -153,8 +147,10 @@
 
     <Style x:Key="GameTrayMenu_ShowStart" TargetType="{x:Type Button}"
            BasedOn="{StaticResource TrayMenuItemDefaultStyle}">
+        <Setter Property="Visibility" Value="Collapsed" />
+        <Setter Property="osStyle:osStyles.Background" Value="#FF575757"/>
         <Setter Property="osStyle:osStyles.CornerRadius" Value="0,0,0,0"/>
-        <Setter Property="osStyle:osStyles.BorderThickness" Value="0,2,0,0"/>
+        <Setter Property="osStyle:osStyles.BorderThickness" Value="0,1,0,0"/>
         <Setter Property="osStyle:osStyles.BorderBrush">
             <Setter.Value>
                 <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
@@ -165,8 +161,6 @@
                 </LinearGradientBrush>
             </Setter.Value>
         </Setter>
-        <Setter Property="osStyle:osStyles.Background" Value="#FF363636"/>
-        <Setter Property="Visibility" Value="Collapsed" />
         <Style.Triggers>
             <DataTrigger Binding="{Binding DisplayGameTrayMenuItem}"
                          Value="{x:Static gamemenuopts:GameMenuItem.ShowStart}">
@@ -178,8 +172,9 @@
     <Style x:Key="GameTrayMenu_ShowClose" TargetType="{x:Type Button}"
            BasedOn="{StaticResource TrayMenuItemDefaultStyle}">
         <Setter Property="Visibility" Value="Collapsed" />
+        <Setter Property="osStyle:osStyles.Background" Value="#FF575757"/>
         <Setter Property="osStyle:osStyles.CornerRadius" Value="0,0,0,0"/>
-        <Setter Property="osStyle:osStyles.BorderThickness" Value="0,2,0,0"/>
+        <Setter Property="osStyle:osStyles.BorderThickness" Value="0,1,0,0"/>
         <Setter Property="osStyle:osStyles.BorderBrush">
             <Setter.Value>
                 <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
@@ -190,7 +185,6 @@
                 </LinearGradientBrush>
             </Setter.Value>
         </Setter>
-        <Setter Property="osStyle:osStyles.Background" Value="#C4363636"/>
         <Style.Triggers>
             <DataTrigger Binding="{Binding DisplayGameTrayMenuItem}"
                          Value="{x:Static gamemenuopts:GameMenuItem.ShowClose}">
@@ -205,137 +199,14 @@
         <Setter Property="osStyle:osStyles.CornerRadius" Value="0,0,2,2"/>
         <Setter Property="osStyle:osStyles.BorderBrush" Value="#FF222222"/>
         <Setter Property="osStyle:osStyles.Background" Value="#FF575757"/>
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="{x:Type Button}">
-                    <Border x:Name="TrayMenuItemBorder" Background="{TemplateBinding Background}"
-                            CornerRadius="0,0,2,2"
-                            BorderThickness="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=(osStyle:osStyles.BorderThickness)}"
-                            BorderBrush="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=(osStyle:osStyles.BorderBrush)}">
-                        <ContentPresenter x:Name="TrayMenuItem" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"
-                                          VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0"/>
-                    </Border>
-                    <ControlTemplate.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter Property="Background" TargetName="TrayMenuItemBorder"
-                                    Value="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=(osStyle:osStyles.Background)}" />
-                        </Trigger>
-                    </ControlTemplate.Triggers>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
     </Style>
 
-    <Style x:Key="TrayMenuItemGameStyle" TargetType="{x:Type Button}"
-           BasedOn="{StaticResource TrayMenuItemStyle}">
-        <Setter Property="Background" Value="#A1101010" />
-        <Setter Property="osStyle:osStyles.CornerRadius" Value="0,0,0,0"/>
-        <Setter Property="osStyle:osStyles.BorderThickness" Value="0,0,0,0"/>
-        <Setter Property="osStyle:osStyles.BorderBrush" Value="#FF222222"/>
-        <Setter Property="osStyle:osStyles.Background" Value="#FF575757"/>
-    </Style>
-
-    <Style x:Key="TrayMenuItemToggleStyle" TargetType="{x:Type ToggleButton}">
-        <Setter Property="Background" Value="Transparent"/>
-        <Setter Property="Foreground" Value="#FF8f8f8f"/>
-        <Setter Property="Padding" Value="0"/>
-        <Setter Property="HorizontalAlignment" Value="Stretch"/>
-        <Setter Property="HorizontalContentAlignment" Value="Center"/>
-        <Setter Property="VerticalContentAlignment" Value="Center"/>
-        <Setter Property="osStyle:osStyles.BorderBrush" Value="#FF2B2828"/>
-        <Setter Property="osStyle:osStyles.Background" Value="#FF575757"/>
-        <Setter Property="osStyle:osStyles.DefaultBackground" Value="#FF363636"/>
-        <Setter Property="ContentTemplate" Value="{StaticResource osTrayTogBtnText}" />
-    </Style>
-
-    <Style x:Key="TrayMenuItemEnDisStyle" BasedOn="{StaticResource TrayMenuItemToggleStyle}" TargetType="{x:Type ToggleButton}">
+    <Style x:Key="TrayMenuItemEnDisStyle" TargetType="{x:Type ToggleButton}"
+           BasedOn="{StaticResource TrayMenuItemToggleStyle}">
         <Setter Property="osStyle:osStyles.BorderThickness" Value="0,0,0,0"/>
         <Setter Property="osStyle:osStyles.CornerRadius" Value="2,2,0,0"/>
         <Setter Property="IsChecked" Value="{Binding osEnabledStatus, Source={StaticResource osEnabledStatusConfig}, Mode=TwoWay,UpdateSourceTrigger=PropertyChanged}" />
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="{x:Type ToggleButton}" >
-                    <Border x:Name="TrayMenuItemToggleBorderEn" CornerRadius="2,2,0,0" Width="{TemplateBinding Width}" 
-                            Background="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=(osStyle:osStyles.DefaultBackground)}"                           
-                            BorderThickness="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=(osStyle:osStyles.BorderThickness)}"
-                            BorderBrush="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=(osStyle:osStyles.BorderBrush)}">
-                        <ContentPresenter x:Name="TrayMenuItemToggleContentEn" Content="{TemplateBinding Content}"
-                                          ContentTemplate="{TemplateBinding ContentTemplate}" Margin="0"
-                                          VerticalAlignment="Center" HorizontalAlignment="Center" />
-                    </Border>
-                    <ControlTemplate.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="TrayMenuItemToggleBorderEn" Property="Background"
-                                    Value="#FF575757" />
-                        </Trigger>
-                        <Trigger Property="IsMouseOver" Value="False">
-                            <Setter TargetName="TrayMenuItemToggleBorderEn" Property="Background"
-                                    Value="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=(osStyle:osStyles.DefaultBackground)}" />
-                        </Trigger>
-                        <Trigger Property="IsChecked" Value="False">                            
-                            <Setter Property="Content" Value="Disabled" />
-                            <Setter TargetName="TrayMenuItemToggleBorderEn" Property="Background" Value="#FF0F0F0F" />
-                            <Setter Property="Foreground" Value="#FF373636" />
-                            <Setter TargetName="TrayMenuItemToggleContentEn" Property="Effect">
-                                <Setter.Value>
-                                    <BlurEffect Radius="4" />
-                                </Setter.Value>
-                            </Setter>
-                        </Trigger>
-                        <Trigger Property="IsChecked" Value="True">
-                            <Setter Property="Content" Value="Enabled" />
-                            <Setter Property="Foreground" Value="#FF8C8A8A" />
-                            <Setter TargetName="TrayMenuItemToggleBorderEn" Property="Effect" Value="{x:Null}" />
-                        </Trigger>
-                        <MultiTrigger>
-                            <MultiTrigger.Conditions>
-                                <Condition Property="IsChecked" Value="True" />
-                                <Condition Property="IsMouseOver" Value="True" />
-                            </MultiTrigger.Conditions>
-                            <Setter TargetName="TrayMenuItemToggleBorderEn" Property="Background"
-                                    Value="#FF575757" />
-                            <Setter TargetName="TrayMenuItemToggleBorderEn" Property="Effect" Value="{x:Null}" />
-                        </MultiTrigger>
-                        <MultiTrigger>
-                            <MultiTrigger.Conditions>
-                            <Condition Property="IsChecked" Value="True" />
-                            <Condition Property="IsMouseOver" Value="False" />
-                        </MultiTrigger.Conditions>
-                        <Setter TargetName="TrayMenuItemToggleBorderEn" Property="Background"
-                                Value="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=(osStyle:osStyles.DefaultBackground)}" />
-                        </MultiTrigger>
-                        <MultiTrigger>
-                            <MultiTrigger.Conditions>
-                                <Condition Property="IsChecked" Value="False" />
-                                <Condition Property="IsMouseOver" Value="True" />
-                            </MultiTrigger.Conditions>
-                            <Setter TargetName="TrayMenuItemToggleBorderEn" Property="Background"
-                                    Value="#FF575757" />
-                        </MultiTrigger>
-                        <MultiTrigger>
-                            <MultiTrigger.Conditions>
-                                <Condition Property="IsChecked" Value="False" />
-                                <Condition Property="IsMouseOver" Value="False" />
-                            </MultiTrigger.Conditions>
-                            <Setter Property="Content" Value="Disabled" />
-                            <Setter TargetName="TrayMenuItemToggleBorderEn" Property="Background" Value="#FF0F0F0F" />
-                            <Setter Property="Foreground" Value="#FF373636" />
-                            <Setter TargetName="TrayMenuItemToggleContentEn" Property="Effect">
-                                <Setter.Value>
-                                    <BlurEffect Radius="4" />
-                                </Setter.Value>
-                            </Setter>
-                        </MultiTrigger>
-                        <Trigger Property="IsPressed" Value="True">
-                            <Setter Property="Background" TargetName="TrayMenuItemToggleBorderEn"
-                                    Value="{StaticResource osTrayMenu_BtnPress}" />
-                            <Setter Property="Foreground" 
-                                    Value="{StaticResource osTrayMenu_BtnPressText}" />
-                        </Trigger>
-                    </ControlTemplate.Triggers>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
+        <Setter Property="osStyle:osStyles.Template" Value="{StaticResource TrayMenuToggleLayout_EnStatus}" />
     </Style>
 
     <Style x:Key="TrayMenuItemGameMenuStyle" BasedOn="{StaticResource TrayMenuItemToggleStyle}" TargetType="{x:Type ToggleButton}">
@@ -343,31 +214,7 @@
         <Setter Property="osStyle:osStyles.BorderThickness" Value="0,0,0,0"/>
         <Setter Property="osStyle:osStyles.BorderBrush" Value="#FF222222"/>
         <Setter Property="osStyle:osStyles.Background" Value="#FF575757"/>
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="{x:Type ToggleButton}">
-                    <Border x:Name="gmTrayView_Border" Background="{TemplateBinding Background}"
-                            CornerRadius="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=(osStyle:osStyles.CornerRadius)}"
-                            BorderThickness="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=(osStyle:osStyles.BorderThickness)}"
-                            BorderBrush="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=(osStyle:osStyles.BorderBrush)}">
-                        <ContentPresenter x:Name="mnuGameContent" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"
-                                          VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0"/>
-                    </Border>
-                    <ControlTemplate.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter Property="Background" TargetName="gmTrayView_Border"
-                                    Value="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=(osStyle:osStyles.Background)}" />
-                        </Trigger>
-                        <Trigger Property="IsPressed" Value="True">
-                            <Setter Property="Background" TargetName="gmTrayView_Border"
-                                    Value="{StaticResource osTrayMenu_BtnPress}" />
-                            <Setter Property="Foreground" 
-                                    Value="{StaticResource osTrayMenu_BtnPressText}" />
-                        </Trigger>
-                    </ControlTemplate.Triggers>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
+        <Setter Property="osStyle:osStyles.Template" Value="{StaticResource TrayMenuToggleLayout_GameMenu}" />
     </Style>
 
     <Style x:Key="HideShowGameTrayMenu" TargetType="{x:Type Border}">
@@ -375,7 +222,7 @@
         <Setter Property="BorderThickness" Value="0,0,0,0" />
         <Setter Property="Margin" Value="0"/>
         <Setter Property="Height" Value="0" />
-        <Setter Property="MaxHeight" Value="30" />
+        <Setter Property="MaxHeight" Value="32" />
         <Setter Property="Opacity" Value="0" />
         <Setter Property="Visibility" Value="Collapsed" />
         <Setter Property="ClipToBounds" Value="True" />   

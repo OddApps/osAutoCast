@@ -1135,65 +1135,19 @@ End Class
 
 Public Module osFuncLib_TrayMenu
 
-    Private _inputSub As InputManager
-
-    Public Property osIsEnabled As Boolean
     Public Property isAppLoaded As Boolean = False
 
-    Private chkMenuOpen As TaskCompletionSource(Of Boolean)
-
-    Private MenuCloseClkMon As ObserveMenuCloseClick
-
-    Private objMenuHost As MenuHostWindow
-
-    Private osMenuObj As osControls.ContextMenu
-
-    Private osMenuOverlay As MenuOverlayWindow = Nothing
-
-    Private osMenu_EnDis As osControls.MenuItem
-    Private osMenu_GameOpts As osControls.MenuItem
-    Private osGameMenu_Play As osControls.MenuItem
-    Private osGameMenu_Leave As osControls.MenuItem
-    Private osMenu_Opts As osControls.MenuItem
-    Private osMenuExit As osControls.MenuItem
-
-    Private osMenuBind As osMenuFuncBinder
-
-    ' Private pmFunc_TerminateOverlay As MouseButtonEventHandler = AddressOf ClosePopupMenu
-
-    Private evtTerminateTrayMenu As EventHandler
-
-    Private TrayMenuVisualLocation As String = "/DataFiles/VisualData/StyleLib/StyleResources/StyleProfiles/osUI_Style-TrayMenu.xaml"
-    Private TrayMenuVisualURI As System.Uri = New System.Uri(TrayMenuVisualLocation, System.UriKind.Relative)
-
-    Private Const GWL_EXSTYLE As Integer = -20
-    Private Const WS_EX_NOACTIVATE As Integer = &H8000000
-
-    'Public Function DisplayTrayMenu() As Task
-    '    Return Task.Run(
-    '        Sub()
-    '            osHandler_UI.osTrayMenu.DisplayTrayMenu()
-
-
-    '            PrepUtilityTrigger(TriggerType.ShowTrayMenu)
-    '            osHandler_UI.osTrayMenu.Activate()
-    '        End Sub)
-    'End Function
-
     Public Sub DisplayTrayMenu()
-        ' Show immediately — no work before visuals
-        osHandler_UI.osTrayMenu.DisplayTrayMenu()
-        'PrepUtilityTrigger(TriggerType.ShowTrayMenu)
-        osHandler_UI.osTrayMenu.Activate()
-        PrepDispatcher().BeginInvoke(
-        DispatcherPriority.Background,
-        Sub()
-            PrepUtilityTrigger(TriggerType.ShowTrayMenu)
-        End Sub)
-    End Sub
+        With osHandler_UI.osTrayMenu
+            .DisplayTrayMenu()
+            .Activate()
+        End With
 
-    Private Sub SetNewStatus(setStatus As Boolean)
-        'osEnabledStatus = setStatus
+        PrepDispatcher().BeginInvoke(
+            DispatcherPriority.Background,
+                Sub()
+                    PrepUtilityTrigger(TriggerType.ShowTrayMenu)
+                End Sub)
     End Sub
 
     Private Sub UpdateTrayIcon(chkStatus As Boolean)
@@ -1210,7 +1164,7 @@ Public Module osFuncLib_TrayMenu
         UpdateTrayText(isEnabled)
     End Sub
 
-    Private Sub PrepTrayMenu()
+    Public Sub PrepTrayMenu()
         osTrayIcon = New NotifyIcon With {
             .Icon = My.Resources.osIcon,
             .Text = "osAutoCast | Enabled",
@@ -1221,41 +1175,32 @@ Public Module osFuncLib_TrayMenu
              Sub(sender As Object, e As EventArgs)
                  If Not isAppLoaded Then Exit Sub
                  DisplayTrayMenu()
-                 'If e.Button = osForms.MouseButtons.Right Then
-                 '    DisplayTrayMenu()
-                 'End If
              End Sub
     End Sub
 
-    Public Async Function osMenu_Init() As Task
-        Await Task.Run(
-            Async Function()
-                Dim objTask_InitTrayMenu =
+    'Public Async Function osMenu_Init() As Task
+
+    '    Dim aa =
+    '    Await osHandler_UI.PrepTrayMenuDisp()
+    'End Function
+
+    Public Function osMenu_Init() As Task
+        Return Task.Run(
+             Function()
+                 Dim objTask_InitTrayMenu =
                     PrepDispatcher().InvokeAsync(
                         Async Function()
-                            Await osHandler_UI.PrepTrayMenuDisp()
+                            Dim oo = osHandler_UI.PrepTrayMenuDisp()
 
-                            PrepTrayMenu()
-
-                            Await Task.Delay(100)
-
-                            'With New osMenuFuncData(AddressOf osStatus_Fetch, AddressOf VerifyStatusChange)
-                            '    Await osMenuFuncBinder.BindChecked_Popup(objTrayMenu.Items.Item(0),
-                            '                                              .osMenuFunc_GetStatus, .osMenuFunc_ApplyStatus)
-                            'End With
+                            Do While osHandler_UI.osTrayMenu Is Nothing
+                                Await Task.Delay(1)
+                            Loop
+                            osHandler_UI.osTrayMenu.PrepTrayMenuInit()
                         End Function)
 
-                Await objTask_InitTrayMenu.Task
-            End Function)
+                 Return objTask_InitTrayMenu.Task.Unwrap()
+             End Function)
     End Function
-
-    'Private Sub SetNoActivateStyleForContextMenu(cm As osControls.ContextMenu)
-    '    Dim src = TryCast(PresentationSource.FromVisual(cm), Interop.HwndSource)
-    '    If src Is Nothing Then Return
-    '    Dim h = src.Handle
-    '    Dim ex = GetWindowLong(h, GWL_EXSTYLE)
-    '    SetWindowLong(h, GWL_EXSTYLE, ex Or WS_EX_NOACTIVATE)
-    'End Sub
 
 End Module
 
@@ -1406,134 +1351,62 @@ Module osFuncLib_UI
     End Function
 
     Private Function SnapToPixel(pt As osPoint, dpi As DpiScale) As osPoint
-        ' convert to device pixels, round, convert back
         Dim dx = Math.Round(pt.X * dpi.DpiScaleX)
         Dim dy = Math.Round(pt.Y * dpi.DpiScaleY)
+
         Return New osPoint(dx / dpi.DpiScaleX, dy / dpi.DpiScaleY)
     End Function
 
-    Private Function DefineBorderOutline(elem As Visual, rect As Rect, radius As Double) As Geometry
-        Dim dpi = VisualTreeHelper.GetDpi(elem)
+    Private Function DefineBorderOutline(elem As Visual, objBorderOutline As Rect, radius As Double) As Geometry
+        Dim dpiRes = VisualTreeHelper.GetDpi(elem)
 
-        Dim r = Math.Max(0, Math.Min(radius, Math.Min(rect.Width / 2.0, rect.Height / 2.0)))
-        Dim g As New StreamGeometry()
-        Using ctx As StreamGeometryContext = g.Open()
-            Dim p0 = SnapToPixel(SetPoint(rect.X + r, rect.Y), dpi)              ' start
-            Dim p1 = SnapToPixel(SetPoint(rect.Right - r, rect.Y), dpi)          ' top-right start
-            Dim p2 = SnapToPixel(SetPoint(rect.Right, rect.Y + r), dpi)          ' arc end
-            Dim p3 = SnapToPixel(SetPoint(rect.Right, rect.Bottom - r), dpi)
-            Dim p4 = SnapToPixel(SetPoint(rect.Right - r, rect.Bottom), dpi)
-            Dim p5 = SnapToPixel(SetPoint(rect.X + r, rect.Bottom), dpi)
-            Dim p6 = SnapToPixel(SetPoint(rect.X, rect.Bottom - r), dpi)
-            Dim p7 = SnapToPixel(SetPoint(rect.X, rect.Y + r), dpi)
+        Dim objRadius = Math.Max(0, Math.Min(radius, Math.Min(objBorderOutline.Width / 2.0, objBorderOutline.Height / 2.0)))
+        Dim objOutlineGeometry As New StreamGeometry()
 
-            ctx.BeginFigure(p0, True, True)
+        Using ctx As StreamGeometryContext = objOutlineGeometry.Open()
+            With objBorderOutline
+                Dim p0 = SnapToPixel(SetPoint(.X + objRadius, .Y), dpiRes)
+                Dim p1 = SnapToPixel(SetPoint(.Right - objRadius, .Y), dpiRes)
+                Dim p2 = SnapToPixel(SetPoint(.Right, .Y + objRadius), dpiRes)
+                Dim p3 = SnapToPixel(SetPoint(.Right, .Bottom - objRadius), dpiRes)
+                Dim p4 = SnapToPixel(SetPoint(.Right - objRadius, .Bottom), dpiRes)
+                Dim p5 = SnapToPixel(SetPoint(.X + objRadius, .Bottom), dpiRes)
+                Dim p6 = SnapToPixel(SetPoint(.X, .Bottom - objRadius), dpiRes)
+                Dim p7 = SnapToPixel(SetPoint(.X, .Y + objRadius), dpiRes)
 
-            ctx.LineTo(p1, True, False)
-            ctx.ArcTo(p2, SetSize(r, r), 0, False, SweepDirection.Clockwise, True, False)
+                With ctx
+                    .BeginFigure(p0, True, True)
 
-            ctx.LineTo(p3, True, False)
-            ctx.ArcTo(p4, SetSize(r, r), 0, False, SweepDirection.Clockwise, True, False)
+                    .LineTo(p1, True, False)
+                    .ArcTo(p2, SetSize(objRadius, objRadius), 0, False,
+                          SweepDirection.Clockwise, True, False)
 
-            ctx.LineTo(p5, True, False)
-            ctx.ArcTo(p6, SetSize(r, r), 0, False, SweepDirection.Clockwise, True, False)
+                    .LineTo(p3, True, False)
+                    .ArcTo(p4, SetSize(objRadius, objRadius), 0, False,
+                          SweepDirection.Clockwise, True, False)
 
-            ctx.LineTo(p7, True, False)
-            ctx.ArcTo(p0, SetSize(r, r), 0, False, SweepDirection.Clockwise, True, False)
+                    .LineTo(p5, True, False)
+                    .ArcTo(p6, SetSize(objRadius, objRadius), 0, False,
+                          SweepDirection.Clockwise, True, False)
+
+                    .LineTo(p7, True, False)
+                    .ArcTo(p0, SetSize(objRadius, objRadius), 0, False,
+                          SweepDirection.Clockwise, True, False)
+                End With
+            End With
         End Using
 
-        g.Freeze()
-        Return g
+        objOutlineGeometry.Freeze()
+
+        Return objOutlineGeometry
     End Function
-
-    Public Sub EstablishBorder(elem As FrameworkElement, radius As Double, borderThickness As Double, borderBrush As osBrush)
-        If elem Is Nothing Then Return
-
-        elem.SetValue(UIElement.ClipToBoundsProperty, True)
-
-        Dim updateAction As Action =
-    Sub()
-        Dim w = elem.ActualWidth
-        Dim h = elem.ActualHeight
-        If w <= 0 OrElse h <= 0 Then Return
-
-        Dim half = borderThickness / 2.0
-        ' Inset the geometry so the stroke (centered on the geometry) stays fully inside the element bounds.
-        Dim rect = New Rect(half, half, Math.Max(0, w - borderThickness), Math.Max(0, h - borderThickness))
-        Dim clipGeo = DefineBorderOutline(elem, rect, Math.Max(0, radius - half)) ' reduce radius a bit if you want exact corner look
-
-        ' Apply clip (inset)
-        elem.Clip = clipGeo
-        elem.SetValue(UIElement.ClipToBoundsProperty, True)
-
-        ' Build the visible Path -- align it to top-left and size it so it overlays exactly
-        Dim path As Path = Nothing
-        If TypeOf elem.Tag Is Path Then
-            path = DirectCast(elem.Tag, Path)
-        Else
-            path = New Path()
-            elem.Tag = path
-            ' default alignment so it overlays correctly when added to a Grid
-            path.HorizontalAlignment = HorizontalAlignment.Left
-            path.VerticalAlignment = VerticalAlignment.Top
-        End If
-
-        ' Path draws the same geometry (centered stroke), and because clip was inset the full stroke is visible
-        path.Data = clipGeo
-        path.StrokeThickness = borderThickness
-        path.StrokeLineJoin = PenLineJoin.Round
-        path.StrokeStartLineCap = PenLineCap.Round
-        path.StrokeEndLineCap = PenLineCap.Round
-        path.Stroke = If(borderBrush, osBrushColor.Black)
-        path.Fill = osBrushColor.Transparent
-        path.IsHitTestVisible = False
-
-        ' Add path as a child of the panel (Grid) and size it
-        Dim parent = TryCast(elem, osControls.Panel)
-        If parent IsNot Nothing Then
-            If Not parent.Children.Contains(path) Then
-                parent.Children.Add(path)
-            End If
-            ' Make sure the path covers the same area
-            path.Width = w
-            path.Height = h
-            path.Margin = New Thickness(0)
-        Else
-            ' fallback: try to add into parent panel if exists
-            Dim parentPanel As osControls.Panel = TryCast(VisualTreeHelper.GetParent(elem), osControls.Panel)
-            If parentPanel IsNot Nothing Then
-                If Not parentPanel.Children.Contains(path) Then
-                    parentPanel.Children.Add(path)
-                End If
-                ' compute elem position relative to parent and place the path there
-                Dim elemPos As osPoint = elem.TransformToAncestor(parentPanel).Transform(New osPoint(0, 0))
-                path.Width = w
-                path.Height = h
-                path.Margin = New Thickness(elemPos.X, elemPos.Y, 0, 0)
-            End If
-        End If
-    End Sub
-
-        AddHandler elem.SizeChanged,
-            Sub(s, e)
-                updateAction()
-            End Sub
-        If Not elem.IsLoaded Then
-            AddHandler elem.Loaded,
-                Sub(s, e)
-                    updateAction()
-                End Sub
-        Else
-            updateAction()
-        End If
-    End Sub
 
     Public Sub EstablishOutline(objOutline As FrameworkElement, radius As Double, Optional clipOffset As Double = 2.5)
         If objOutline Is Nothing Then Return
 
         objOutline.SetValue(UIElement.ClipToBoundsProperty, True)
 
-        Dim updateAction As Action =
+        Dim Func_SetOutline As Action =
             Sub()
                 Dim outlineW = objOutline.ActualWidth - clipOffset
                 Dim outlineH = objOutline.ActualHeight - clipOffset
@@ -1549,16 +1422,16 @@ Module osFuncLib_UI
 
         AddHandler objOutline.SizeChanged,
             Sub(s, e)
-                updateAction()
+                Func_SetOutline()
             End Sub
 
         If Not objOutline.IsLoaded Then
             AddHandler objOutline.Loaded,
                 Sub(s, e)
-                    updateAction()
+                    Func_SetOutline()
                 End Sub
         Else
-            updateAction()
+            Func_SetOutline()
         End If
     End Sub
 

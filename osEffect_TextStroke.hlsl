@@ -4,9 +4,8 @@ float2 TexelSize      : register(c0);
 float  Thickness      : register(c1);
 float  Spread         : register(c2);
 float  Fade           : register(c3);
-float4 GlowColor      : register(c4);
+float4 StrokeColor      : register(c4);
 float  StrokeStrength : register(c5);
-float  GlowStrength   : register(c6);
 
 float sampleA(float2 uv, float2 off)
 {
@@ -39,13 +38,13 @@ float4 main(float2 uv : TEXCOORD0) : COLOR
     float outline =
         smoothstep(0.0, 1.0 / max(Spread, 0.001), edge);
 
-    outline = pow(outline, 0.65); // AA sharpening
+    outline = pow(outline, 0.65); 
 
     float intensity = outline * StrokeStrength * Fade;
 
     float4 add;
-    add.rgb = GlowColor.rgb * GlowColor.a * intensity;
-    add.a   = GlowColor.a * intensity;
+    add.rgb = StrokeColor.rgb * StrokeColor.a * intensity;
+    add.a   = StrokeColor.a * intensity;
 
     float4 result;
     result.rgb = src.rgb + add.rgb * (1.0 - src.a);

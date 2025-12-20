@@ -33,7 +33,11 @@ Public NotInheritable Class osHandler_UI
     Private Shared _osTrayMenu As Lazy(Of osTrayMenu_GUI)
     Public Shared ReadOnly Property osTrayMenu As osTrayMenu_GUI
         Get
-            Return _osTrayMenu.Value
+            Try
+                Return _osTrayMenu.Value
+            Catch ex As Exception
+                Return Nothing
+            End Try
         End Get
     End Property
 
@@ -120,8 +124,8 @@ Public NotInheritable Class osHandler_UI
             End Sub).Task
     End Function
 
-    Private Shared Async Function LoadOptsUI(objTask_BindPrefLst As Task(Of List(Of BindingDef))) As Task
-        Await osGui_Prefs.osPrefsPrepAsync(objTask_BindPrefLst)
+    Private Shared Function LoadOptsUI(objTask_BindPrefLst As Task(Of List(Of BindingDef))) As Task
+        Return osGui_Prefs.osPrefsPrepAsync(objTask_BindPrefLst)
     End Function
 
     Private Shared Async Function PrepShaderData() As Task
@@ -136,18 +140,23 @@ Public NotInheritable Class osHandler_UI
         objBuildShader = BuildShaderCatalog()
 
         Await CreateOptsUI()
+
         Dim objPrefLst = osGui_Prefs.
             BuildPrefBindingsAsync()
 
+        Dim objTask_LoadPrefs = LoadOptsUI(objPrefLst)
         Dim objTask_PrepGraphics = PrepShaderData()
 
-        Dim objTask_LoadPrefs = LoadOptsUI(objPrefLst)
+        'Await PreloadShaderCatalog(objBuildShader)
 
-        Await objTask_PrepGraphics
-        Await PreloadShaderCatalog(objBuildShader)
+        'Dim a As New List(Of Func(Of Task)) From {Function() CreatePopupMenuOverlay(), Function() CreatePopupMenu(),
+        '                                 Function() LoadAllShaders(), Function() objTask_LoadPrefs}
 
-        Dim objTasks_LoadUI = Task.WhenAll(CreatePopupMenuOverlay(), CreatePopupMenu(),
-                                           LoadAllShaders(), objTask_LoadPrefs)
+        'Parallel.ForEach(a, Sub(objTask)
+        '                        Dim ab = objTask.Invoke()
+        '                    End Sub)
+        Await Task.WhenAll(CreatePopupMenuOverlay(), CreatePopupMenu(),
+                           LoadAllShaders(objTask_PrepGraphics, objBuildShader), objTask_LoadPrefs)
     End Function
 
     Private Shared Function LoadAllShaders() As Task
@@ -159,6 +168,28 @@ Public NotInheritable Class osHandler_UI
 
                 Return Task.WhenAll(objTask_LoadShaders)
             End Function)
+    End Function
+
+    Private Shared Function LoadAllShaders(objTaskPrepGraphics As Task, objShaderTask As Task(Of Dictionary(Of String, Byte()))) As Task
+        Return Task.Run(
+           Async Function()
+               Await objTaskPrepGraphics
+
+               Dim objLoadedShaders = Await objShaderTask
+               Await PreloadShaderCatalog(objLoadedShaders)
+
+               For Each objShader In ShaderDetailsIdx
+                   objTask_LoadShaders.Add(AddShaderToIdx(objShader))
+               Next
+
+               Return Task.WhenAll(objTask_LoadShaders)
+               'Parallel.ForEach(objTask_LoadShaders,
+               '                     Sub(obj_ShaderTask)
+               '                         Dim aa = obj_ShaderTask
+               '                     End Sub)
+
+
+           End Function)
     End Function
 
     Public Shared Async Function LaunchGui(progGui As TriggerAction) As Task
@@ -442,7 +473,7 @@ Public NotInheritable Class osHandler_UI
             _osTrayMenu = New Lazy(Of osTrayMenu_GUI)(
                 GenerateTrayMenuGUI(), osThreadMode.ExecutionAndPublication)
 
-            osTrayMenu.PrepTrayMenuInit()
+            ' osTrayMenu.PrepTrayMenuInit()
         End If
     End Sub
 

@@ -148,6 +148,7 @@ Public Class osInMon
 
                         objTextBrush = Nothing
 
+                        PrepTrayMenu()
                         isAppLoaded = True
                     End Sub)
 
@@ -212,9 +213,9 @@ Partial Class osInMon
         {
             {New osLoadData(LoadStart, isLoading, LoadStatus_StartUp, 500, "Launching", objPreLoadDuration:=125)},
             {New osLoadData(LoadInit, isInit, LoadStatus_Init, 500, "Initializing Data", objPreLoadDuration:=150)},
-            {New osLoadData(LoadPrefs, isPrefPrep, LoadStatus_PrefPrep, 500, "Loading Preferences", Function() PrepPrefs(), 220)},
+            {New osLoadData(LoadPrefs, isPrefPrep, LoadStatus_PrefPrep, 500, "Loading Preferences", Function() PrepPrefs(), 275)},
             {New osLoadData(LoadUI, isLoadingUI, LoadStatus_LoadingUI, 450, "Loading Interface", Function() osHandler_UI.PrepAndLoadUI(), 350)},
-            {New osLoadData(LoadConfig, isApplyConfig, LoadStatus_ApplyConfig, 475, "Applying Configuration", Function() osMenu_Init(), 220)},
+            {New osLoadData(LoadConfig, isApplyConfig, LoadStatus_ApplyConfig, 475, "Applying Configuration", Function() osMenu_Init(), 275)},
             {New osLoadData(LoadService, isStartingSvc, LoadStatus_StartingSvc, 450, "Activating Service", Function() InputMonitor_Start(), 220)},
             {New osLoadData(LoadComplete, isStarting, LoadStatus_Starting, 450, "Starting osAutoCast", Function() LoadFinalize(), 500)}
         }

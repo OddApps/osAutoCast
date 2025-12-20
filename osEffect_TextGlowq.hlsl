@@ -2,10 +2,11 @@ sampler2D inputSampler : register(s0);
 
 float2 TexelSize      : register(c0);
 float  Thickness      : register(c1);
-float  Fade           : register(c2);
-float4 GlowColor      : register(c3);
-float  GlowStrength   : register(c4);
-float VerticalGlow : register(c5);
+float  Spread         : register(c2);
+float  Fade           : register(c3);
+float4 GlowColor      : register(c4);
+float  StrokeStrength : register(c5);
+float  GlowStrength   : register(c6);
 
 float sampleA(float2 uv, float2 off)
 {
@@ -31,28 +32,24 @@ float4 main(float2 uv : TEXCOORD0) : COLOR
         float2(0.3827,0.9239), float2(-0.3827,0.9239),
         float2(0.3827,-0.9239), float2(-0.3827,-0.9239)
     };
-	
-[unroll]
-for (int i = 0; i < 16; i++)
-{
-    float2 d = dirs[i];
 
-    // Vertical emphasis
-    float bias = lerp(1.0, VerticalGlow, abs(d.y));
+	float vBoost = 1.8;   // vertical emphasis
+	float hBoost = 1.0;
+	
+    [unroll]
+    for (int i = 0; i < 16; i++)
+    {
+		float2 d = dirs[i];
 
-    float a1 = sampleA(uv, d * step * 1.0);
-    float a2 = sampleA(uv, d * step * 2.5);
-    float a3 = sampleA(uv, d * step * 5.0);
-	
-	float sumBuf = 0.0;
-	
-	sumBuf += a1 * 1.0;
-	sumBuf += a2 * 0.6;
-	sumBuf += a3 * 0.25;
-	
-	sum += sumBuf * bias;
-	w   += 1.85 * bias;
-}
+		float bias = abs(d.y) > abs(d.x) ? vBoost : hBoost;
+
+		float a1 = sampleA(uv, d * step * 1.0);
+		float a2 = sampleA(uv, d * step * 2.5);
+		float a3 = sampleA(uv, d * step * 5.0);
+
+		sum += (a1 * 1.0 + a2 * 0.6 + a3 * 0.25) * bias;
+		w   += 1.85 * bias;
+    }
 
     float glow = sum / w;
     glow = 1.0 - exp(-glow * GlowStrength * 2.2);

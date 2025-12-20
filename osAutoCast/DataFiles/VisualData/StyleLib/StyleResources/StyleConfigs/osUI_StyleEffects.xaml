@@ -12,7 +12,7 @@
         <Border><Border.Effect>
             <osEffects:osEffect_Stroke x:Name="btnStroke" Thickness="{StaticResource osEffect_StrokeThickness}"
                 Spread="{StaticResource osEffect_StrokeSpread}" Fade="{StaticResource osEffect_StrokeFade}"
-                GlowColor="{StaticResource osEffect_StrokeColor}" GlowStrength="{StaticResource osEffect_StrokeRadius}"
+                StrokeColor="{StaticResource osEffect_StrokeColor}"
                 StrokeStrength="{StaticResource osEffect_Stroke}">
                 <osEffects:osEffect_Stroke.TexelSize>
                     <MultiBinding Converter="{StaticResource TexelSizeConverter}">
@@ -28,7 +28,7 @@
                 Foreground="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}">
                 <TextBlock.Effect>
                     <osEffects:osEffect_Glow x:Name="btnGlow" Thickness="{StaticResource osEffect_GlowThickness}"
-                        Spread="{StaticResource osEffect_GlowSpread}" Fade="{StaticResource osEffect_GlowFade}"
+                        Fade="{StaticResource osEffect_GlowFade}"
                         GlowColor="{StaticResource osEffect_GlowColor}" GlowStrength="{StaticResource osEffect_GlowRadius}">
                         <osEffects:osEffect_Glow.TexelSize>
                             <MultiBinding Converter="{StaticResource TexelSizeConverter}">
@@ -75,7 +75,7 @@
             <Border.Effect>
                 <osEffects:osEffect_Stroke x:Name="toggleStroke" Thickness="{StaticResource osEffect_StrokeThickness}"
                 Spread="{StaticResource osEffect_StrokeSpread}" Fade="{StaticResource osEffect_StrokeFade}"
-                GlowColor="{StaticResource osEffect_StrokeColor}" 
+                StrokeColor="{StaticResource osEffect_StrokeColor}" 
                 StrokeStrength="{StaticResource osEffect_Stroke}">
                     <osEffects:osEffect_Stroke.TexelSize>
                         <MultiBinding Converter="{StaticResource TexelSizeConverter}">
@@ -136,12 +136,12 @@
     </DataTemplate>
 
     <DataTemplate x:Key="osTrayTogBtnText" DataType="{x:Type sys:String}">
-        <Border>
+        <Border VerticalAlignment="Center">
             <Border.Effect>
-                <osEffects:osEffect_Stroke x:Name="traymenuToggleStroke" Thickness="{StaticResource osEffect_StrokeThickness}"
-                Spread="{StaticResource osEffect_StrokeSpread}" Fade="{StaticResource osEffect_StrokeFade}"
-                GlowColor="{StaticResource osTrayMenuEffect_StrokeColor}"
-                StrokeStrength="{StaticResource osEffect_Stroke}">
+                <osEffects:osEffect_Stroke x:Name="traymenuToggleStroke" Thickness="{StaticResource osTrayMenuEffect_StrokeThickness}"
+                Spread="{StaticResource osTrayMenuEffect_Spread}" Fade="{StaticResource osEffect_StrokeFade}"
+                StrokeColor="{StaticResource osTrayMenuEffect_StrokeColor}"
+                StrokeStrength="{StaticResource osTrayMenuEffect_Stroke}">
                     <osEffects:osEffect_Stroke.TexelSize>
                         <MultiBinding Converter="{StaticResource TexelSizeConverter}">
                             <Binding ElementName="traymenuToggleContent" Path="ActualWidth"/>
@@ -150,17 +150,19 @@
                     </osEffects:osEffect_Stroke.TexelSize>
                 </osEffects:osEffect_Stroke>
             </Border.Effect>
-            <TextBlock x:Name="traymenuToggleContent" Text="{Binding}" Padding="0,3"
-                               HorizontalAlignment="Center" VerticalAlignment="Center" 
-                               TextAlignment="Center" FontSize="18" FontWeight="Bold"  TextOptions.TextRenderingMode="ClearType"
-                               Foreground="{Binding RelativeSource={RelativeSource AncestorType=ToggleButton}, Path=Foreground}"
-                               local:TextBlockExtensions.CharacterSpacing="1.20">
+            <Grid VerticalAlignment="Stretch">
+                <TextBlock x:Name="traymenuToggleContent" Text="{Binding}" Padding="0,2"
+                           HorizontalAlignment="Stretch" VerticalAlignment="Center" 
+                           LineHeight="18" LineStackingStrategy="BlockLineHeight" 
+                           TextAlignment="Center" FontSize="16" FontWeight="Bold"                            
+                           local:TextBlockExtensions.CharacterSpacing="1.20" SnapsToDevicePixels="True"
+                           Foreground="{Binding RelativeSource={RelativeSource AncestorType=ToggleButton}, Path=Foreground}">
                 <TextBlock.Effect>
-                    <osEffects:osEffect_Glow x:Name="traymenuToggleGlow" Thickness="{StaticResource osTrayMenuEffect_Thickness}"
-                                                    Fade="{StaticResource osTrayMenuEffect_Fade}"
-                                                   GlowColor="{StaticResource osTrayMenuEffect_Color}"
-                                                   GlowStrength="{StaticResource osTrayMenuEffect_Glow}">
-                        <osEffects:osEffect_Glow.TexelSize>
+                        <osEffects:osEffect_Glow x:Name="traymenuToggleGlow" Thickness="0.3"
+                                                 Fade="{StaticResource osEffect_GlowFade}"
+                                                 GlowColor="#a1060606" 
+                                                 GlowStrength="4">
+                            <osEffects:osEffect_Glow.TexelSize>
                             <MultiBinding Converter="{StaticResource TexelSizeConverter}">
                                 <Binding ElementName="traymenuToggleContent" Path="ActualWidth"/>
                                 <Binding ElementName="traymenuToggleContent" Path="ActualHeight"/>
@@ -169,6 +171,7 @@
                     </osEffects:osEffect_Glow>
                 </TextBlock.Effect>
             </TextBlock>
+            </Grid>
         </Border>
         <DataTemplate.Triggers>
             <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=ToggleButton}}" Value="True">
@@ -201,12 +204,12 @@
     </DataTemplate>
 
     <DataTemplate x:Key="osTrayBtnText" DataType="{x:Type sys:String}">
-        <Border>
+        <Border VerticalAlignment="Center">
             <Border.Effect>
-                <osEffects:osEffect_Stroke x:Name="traymenuStroke" Thickness="{StaticResource osEffect_StrokeThickness}"
-                Spread="{StaticResource osEffect_StrokeSpread}" Fade="{StaticResource osEffect_StrokeFade}"
-                GlowColor="{StaticResource osTrayMenuEffect_StrokeColor}"
-                StrokeStrength="{StaticResource osEffect_Stroke}">
+                <osEffects:osEffect_Stroke x:Name="traymenuStroke" Thickness="{StaticResource osTrayMenuEffect_StrokeThickness}"
+                Spread="{StaticResource osTrayMenuEffect_Spread}" Fade="{StaticResource osEffect_StrokeFade}"
+                StrokeColor="{StaticResource osTrayMenuEffect_StrokeColor}"
+                StrokeStrength="{StaticResource osTrayMenuEffect_Stroke}">
                     <osEffects:osEffect_Stroke.TexelSize>
                         <MultiBinding Converter="{StaticResource TexelSizeConverter}">
                             <Binding ElementName="traymenuContent" Path="ActualWidth"/>
@@ -215,25 +218,28 @@
                     </osEffects:osEffect_Stroke.TexelSize>
                 </osEffects:osEffect_Stroke>
             </Border.Effect>
-            <TextBlock x:Name="traymenuContent" Text="{Binding}" Padding="0,3"
-                               HorizontalAlignment="Center" VerticalAlignment="Center" 
-                               TextAlignment="Center" FontSize="18" FontWeight="Bold" TextOptions.TextRenderingMode="ClearType"
-                               Foreground="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
-                               local:TextBlockExtensions.CharacterSpacing="1.20" TextOptions.TextFormattingMode="Ideal">
-                <TextBlock.Effect>
-                    <osEffects:osEffect_Glow x:Name="traymenuGlow" Thickness="{StaticResource osTrayMenuEffect_Thickness}" 
-                                             Fade="{StaticResource osTrayMenuEffect_Fade}"
-                                                   GlowColor="{StaticResource osTrayMenuEffect_Color}" 
-                                                   GlowStrength="{StaticResource osTrayMenuEffect_Glow}">
-                        <osEffects:osEffect_Glow.TexelSize>
-                            <MultiBinding Converter="{StaticResource TexelSizeConverter}">
-                                <Binding ElementName="traymenuContent" Path="ActualWidth"/>
-                                <Binding ElementName="traymenuContent" Path="ActualHeight"/>
-                            </MultiBinding>
-                        </osEffects:osEffect_Glow.TexelSize>
-                    </osEffects:osEffect_Glow>
-                </TextBlock.Effect>
-            </TextBlock>
+            <Grid VerticalAlignment="Stretch">
+                <TextBlock x:Name="traymenuContent" Text="{Binding}" Padding="0,2"
+                           HorizontalAlignment="Stretch" VerticalAlignment="Center" 
+                           LineHeight="18" LineStackingStrategy="BlockLineHeight" 
+                           TextAlignment="Center" FontSize="16" FontWeight="Bold"                            
+                           local:TextBlockExtensions.CharacterSpacing="1.20" SnapsToDevicePixels="True"
+                           Foreground="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}">
+                    <TextBlock.Effect>
+                        <osEffects:osEffect_Glow x:Name="traymenuGlow" Thickness="0.3"
+                                                 Fade="{StaticResource osEffect_GlowFade}"
+                                                 GlowColor="#a1060606" 
+                                                 GlowStrength="4" >
+                            <osEffects:osEffect_Glow.TexelSize>
+                                <MultiBinding Converter="{StaticResource TexelSizeConverter}">
+                                    <Binding ElementName="traymenuContent" Path="ActualWidth"/>
+                                    <Binding ElementName="traymenuContent" Path="ActualHeight"/>
+                                </MultiBinding>
+                            </osEffects:osEffect_Glow.TexelSize>
+                        </osEffects:osEffect_Glow>
+                    </TextBlock.Effect>
+                </TextBlock>
+            </Grid>
         </Border>
         <DataTemplate.Triggers>
             <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=Button}}" Value="True">

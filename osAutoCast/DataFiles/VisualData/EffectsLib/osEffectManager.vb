@@ -8,163 +8,6 @@ Imports System.Windows.Media.Animation
 Imports System.ComponentModel
 
 Public Class osEffectManager
-    Inherits ShaderEffect
-
-    Private Shared ReadOnly _shader As New PixelShader() With {
-        .UriSource = New Uri("/osAutoCast;component/DataFiles/VisualData/EffectsLib/EffectResources/osEffect_TextStroke.ps", UriKind.Relative)
-    }
-
-    Public Sub New()
-        With Me
-            .PixelShader = _shader
-
-            .PaddingLeft = 6
-            .PaddingRight = 6
-
-            .PaddingTop = 3
-            .PaddingBottom = 3
-        End With
-
-        UpdateShaderValue(InputProperty)
-        UpdateShaderValue(TexelSizeProperty)
-        UpdateShaderValue(ThicknessProperty)
-        UpdateShaderValue(SpreadProperty)
-        UpdateShaderValue(FadeProperty)
-        UpdateShaderValue(GlowColorProperty)
-        UpdateShaderValue(StrokeStrengthProperty)
-        UpdateShaderValue(GlowStrengthProperty)
-    End Sub
-
-    'Public Sub New()
-    '    With Me
-    '        .PixelShader = FetchShader(sTypeText).sText
-
-    '        .PaddingLeft = 6
-    '        .PaddingRight = 6
-
-    '        .PaddingTop = 3
-    '        .PaddingBottom = 3
-    '    End With
-
-    '    UpdateShaderValue(InputProperty)
-    '    UpdateShaderValue(TexelSizeProperty)
-    '    UpdateShaderValue(ThicknessProperty)
-    '    UpdateShaderValue(SpreadProperty)
-    '    UpdateShaderValue(FadeProperty)
-    '    UpdateShaderValue(GlowColorProperty)
-    '    UpdateShaderValue(StrokeStrengthProperty)
-    '    UpdateShaderValue(GlowStrengthProperty)
-    'End Sub
-
-    Public Shared ReadOnly InputProperty =
-        RegisterPixelShaderSamplerProperty("Input", GetType(osEffectManager), 0)
-
-    Public Property Input As Brush
-        Get
-            Return GetValue(InputProperty)
-        End Get
-        Set(value As Brush)
-            SetValue(InputProperty, value)
-        End Set
-    End Property
-
-    Public Shared ReadOnly TexelSizeProperty As DependencyProperty = GenProp(propTexel)
-    Public Property TexelSize As Point
-        Get
-            Return CType(GetValue(TexelSizeProperty), Point)
-        End Get
-        Set(value As Point)
-            SetValue(TexelSizeProperty, value)
-        End Set
-    End Property
-
-    Public Shared ReadOnly ThicknessProperty As DependencyProperty = GenProp(propThickness)
-    Public Property Thickness As Double
-        Get
-            Return CDbl(GetValue(ThicknessProperty))
-        End Get
-        Set(value As Double)
-            SetValue(ThicknessProperty, value)
-        End Set
-    End Property
-
-    Public Shared ReadOnly SpreadProperty As DependencyProperty = GenProp(propSpread)
-    Public Property Spread As Double
-        Get
-            Return CDbl(GetValue(SpreadProperty))
-        End Get
-        Set(value As Double)
-            SetValue(SpreadProperty, value)
-        End Set
-    End Property
-
-    Public Shared ReadOnly FadeProperty As DependencyProperty = GenProp(propFade)
-    Public Property Fade As Double
-        Get
-            Return CDbl(GetValue(FadeProperty))
-        End Get
-        Set(value As Double)
-            SetValue(FadeProperty, value)
-        End Set
-    End Property
-
-    Public Shared ReadOnly GlowColorProperty As DependencyProperty = GenProp(propGlowColor)
-    Public Property GlowColor As Color
-        Get
-            Return CType(GetValue(GlowColorProperty), Color)
-        End Get
-        Set(value As Color)
-            SetValue(GlowColorProperty, value)
-        End Set
-    End Property
-
-    Public Shared ReadOnly StrokeStrengthProperty As DependencyProperty = GenProp(propStroke)
-    Public Property StrokeStrength As Double
-        Get
-            Return CDbl(GetValue(StrokeStrengthProperty))
-        End Get
-        Set(value As Double)
-            SetValue(StrokeStrengthProperty, value)
-        End Set
-    End Property
-
-    Public Shared ReadOnly GlowStrengthProperty As DependencyProperty = GenProp(propGlow)
-    Public Property GlowStrength As Double
-        Get
-            Return CDbl(GetValue(GlowStrengthProperty))
-        End Get
-        Set(value As Double)
-            SetValue(GlowStrengthProperty, value)
-        End Set
-    End Property
-
-    Private Shared Function GenProp(menuProp As MenuProperty) As DependencyProperty
-        Select Case menuProp
-            Case propTexel
-                Return DependencyProperty.Register("TexelSize", GetType(Point), GetType(osEffectManager),
-                                           New UIPropertyMetadata(New Point(1, 1),
-                                                                  PixelShaderConstantCallback(0)))
-            Case propThickness
-                Return DependencyProperty.Register("Thickness", GetType(Double), GetType(osEffectManager),
-                                                   New UIPropertyMetadata(2.0, PixelShaderConstantCallback(1)))
-            Case propSpread
-                Return DependencyProperty.Register("Spread", GetType(Double), GetType(osEffectManager),
-                                                   New UIPropertyMetadata(3.0, PixelShaderConstantCallback(2)))
-            Case propFade
-                Return DependencyProperty.Register("Fade", GetType(Double), GetType(osEffectManager),
-                                                   New UIPropertyMetadata(0.0, PixelShaderConstantCallback(3)))
-            Case propGlowColor
-                Return DependencyProperty.Register("GlowColor", GetType(Color), GetType(osEffectManager),
-                                                   New UIPropertyMetadata(Color.FromArgb(&HCC, &HFF, &HBF, &H0),
-                                                                          PixelShaderConstantCallback(4)))
-            Case propStroke
-                Return DependencyProperty.Register("StrokeStrength", GetType(Double), GetType(osEffectManager),
-                                                   New UIPropertyMetadata(1.0, PixelShaderConstantCallback(5)))
-            Case propGlow
-                Return DependencyProperty.Register("GlowStrength", GetType(Double), GetType(osEffectManager),
-                                                   New UIPropertyMetadata(1.0, PixelShaderConstantCallback(6)))
-        End Select
-    End Function
 
 End Class
 
@@ -173,34 +16,13 @@ Namespace osEffectLibs
     Public Class osEffect_Stroke
         Inherits ShaderEffect
 
-        'Private Shared ReadOnly _shader As New PixelShader() With {
-        '    .UriSource = New Uri("/osAutoCast;component/DataFiles/VisualData/EffectsLib/EffectResources/osEffect_TextStroke.ps", UriKind.Relative)
-        '}
-
-        'Public Sub New()
-        '    With Me
-        '        .PixelShader = _shader
-
-        '        .PaddingLeft = 6
-        '        .PaddingRight = 6
-
-        '        .PaddingTop = 3
-        '        .PaddingBottom = 3
-        '    End With
-
-        '    UpdateShaderValue(InputProperty)
-        '    UpdateShaderValue(TexelSizeProperty)
-        '    UpdateShaderValue(ThicknessProperty)
-        '    UpdateShaderValue(SpreadProperty)
-        '    UpdateShaderValue(FadeProperty)
-        '    UpdateShaderValue(GlowColorProperty)
-        '    UpdateShaderValue(StrokeStrengthProperty)
-        '    UpdateShaderValue(GlowStrengthProperty)
-        'End Sub
+        Private Shared ReadOnly _shader As New PixelShader() With {
+        .UriSource = New Uri("/osAutoCast;component/DataFiles/VisualData/EffectsLib/EffectResources/osShader_TextStroke.ps", UriKind.Relative)
+    }
 
         Public Sub New()
             With Me
-                .PixelShader = FetchShader(sTypeText_S).sText_S
+                .PixelShader = _shader 'FetchShader(sTypeText_S).sText_S
 
                 .PaddingLeft = 6
                 .PaddingRight = 6
@@ -214,9 +36,8 @@ Namespace osEffectLibs
             UpdateShaderValue(ThicknessProperty)
             UpdateShaderValue(SpreadProperty)
             UpdateShaderValue(FadeProperty)
-            UpdateShaderValue(GlowColorProperty)
+            UpdateShaderValue(StrokeColorProperty)
             UpdateShaderValue(StrokeStrengthProperty)
-            UpdateShaderValue(GlowStrengthProperty)
         End Sub
 
         Public Shared ReadOnly InputProperty =
@@ -271,13 +92,13 @@ Namespace osEffectLibs
             End Set
         End Property
 
-        Public Shared ReadOnly GlowColorProperty As DependencyProperty = GenProp(propGlowColor)
-        Public Property GlowColor As Color
+        Public Shared ReadOnly StrokeColorProperty As DependencyProperty = GenProp(propStrokeColor)
+        Public Property StrokeColor As Color
             Get
-                Return CType(GetValue(GlowColorProperty), Color)
+                Return CType(GetValue(StrokeColorProperty), Color)
             End Get
             Set(value As Color)
-                SetValue(GlowColorProperty, value)
+                SetValue(StrokeColorProperty, value)
             End Set
         End Property
 
@@ -291,22 +112,11 @@ Namespace osEffectLibs
             End Set
         End Property
 
-        Public Shared ReadOnly GlowStrengthProperty As DependencyProperty = GenProp(propGlow)
-        Public Property GlowStrength As Double
-            Get
-                Return CDbl(GetValue(GlowStrengthProperty))
-            End Get
-            Set(value As Double)
-                SetValue(GlowStrengthProperty, value)
-            End Set
-        End Property
-
         Private Shared Function GenProp(menuProp As MenuProperty) As DependencyProperty
             Select Case menuProp
                 Case propTexel
                     Return DependencyProperty.Register("TexelSize", GetType(Point), GetType(osEffect_Stroke),
-                                               New UIPropertyMetadata(New Point(1, 1),
-                                                                      PixelShaderConstantCallback(0)))
+                                                       New UIPropertyMetadata(New Point(1, 1), PixelShaderConstantCallback(0)))
                 Case propThickness
                     Return DependencyProperty.Register("Thickness", GetType(Double), GetType(osEffect_Stroke),
                                                        New UIPropertyMetadata(2.0, PixelShaderConstantCallback(1)))
@@ -316,51 +126,26 @@ Namespace osEffectLibs
                 Case propFade
                     Return DependencyProperty.Register("Fade", GetType(Double), GetType(osEffect_Stroke),
                                                        New UIPropertyMetadata(0.0, PixelShaderConstantCallback(3)))
-                Case propGlowColor
-                    Return DependencyProperty.Register("GlowColor", GetType(Color), GetType(osEffect_Stroke),
+                Case propStrokeColor
+                    Return DependencyProperty.Register("StrokeColor", GetType(Color), GetType(osEffect_Stroke),
                                                        New UIPropertyMetadata(Color.FromArgb(&HCC, &HFF, &HBF, &H0),
                                                                               PixelShaderConstantCallback(4)))
                 Case propStroke
                     Return DependencyProperty.Register("StrokeStrength", GetType(Double), GetType(osEffect_Stroke),
                                                        New UIPropertyMetadata(1.0, PixelShaderConstantCallback(5)))
-                Case propGlow
-                    Return DependencyProperty.Register("GlowStrength", GetType(Double), GetType(osEffect_Stroke),
-                                                       New UIPropertyMetadata(0.0, PixelShaderConstantCallback(6)))
             End Select
         End Function
     End Class
 
     Public Class osEffect_Glow
         Inherits ShaderEffect
-
-        'Private Shared ReadOnly _shader As New PixelShader() With {
-        '    .UriSource = New Uri("/osAutoCast;component/DataFiles/VisualData/EffectsLib/EffectResources/osEffect_TextGlow.ps", UriKind.Relative)
-        '}
-
-        'Public Sub New()
-        '    With Me
-        '        .PixelShader = _shader
-
-        '        .PaddingLeft = 6
-        '        .PaddingRight = 6
-
-        '        .PaddingTop = 3
-        '        .PaddingBottom = 3
-        '    End With
-
-        '    UpdateShaderValue(InputProperty)
-        '    UpdateShaderValue(TexelSizeProperty)
-        '    UpdateShaderValue(ThicknessProperty)
-        '    UpdateShaderValue(SpreadProperty)
-        '    UpdateShaderValue(FadeProperty)
-        '    UpdateShaderValue(GlowColorProperty)
-        '    UpdateShaderValue(StrokeStrengthProperty)
-        '    UpdateShaderValue(GlowStrengthProperty)
-        'End Sub
+        Private Shared ReadOnly _shader As New PixelShader() With {
+        .UriSource = New Uri("/osAutoCast;component/DataFiles/VisualData/EffectsLib/EffectResources/osShader_TextGlow.ps", UriKind.Relative)
+    }
 
         Public Sub New()
             With Me
-                .PixelShader = FetchShader(sTypeText_G).sText_G
+                .PixelShader = _shader 'FetchShader(sTypeText_G).sText_G
 
                 .PaddingLeft = 6
                 .PaddingRight = 6
@@ -372,11 +157,10 @@ Namespace osEffectLibs
             UpdateShaderValue(InputProperty)
             UpdateShaderValue(TexelSizeProperty)
             UpdateShaderValue(ThicknessProperty)
-            UpdateShaderValue(SpreadProperty)
             UpdateShaderValue(FadeProperty)
             UpdateShaderValue(GlowColorProperty)
-            UpdateShaderValue(StrokeStrengthProperty)
             UpdateShaderValue(GlowStrengthProperty)
+            UpdateShaderValue(VerticalGlowProperty)
         End Sub
 
         Public Shared ReadOnly InputProperty =
@@ -411,16 +195,6 @@ Namespace osEffectLibs
             End Set
         End Property
 
-        Public Shared ReadOnly SpreadProperty As DependencyProperty = GenProp(propSpread)
-        Public Property Spread As Double
-            Get
-                Return CDbl(GetValue(SpreadProperty))
-            End Get
-            Set(value As Double)
-                SetValue(SpreadProperty, value)
-            End Set
-        End Property
-
         Public Shared ReadOnly FadeProperty As DependencyProperty = GenProp(propFade)
         Public Property Fade As Double
             Get
@@ -441,16 +215,6 @@ Namespace osEffectLibs
             End Set
         End Property
 
-        Public Shared ReadOnly StrokeStrengthProperty As DependencyProperty = GenProp(propStroke)
-        Public Property StrokeStrength As Double
-            Get
-                Return CDbl(GetValue(StrokeStrengthProperty))
-            End Get
-            Set(value As Double)
-                SetValue(StrokeStrengthProperty, value)
-            End Set
-        End Property
-
         Public Shared ReadOnly GlowStrengthProperty As DependencyProperty = GenProp(propGlow)
         Public Property GlowStrength As Double
             Get
@@ -461,31 +225,37 @@ Namespace osEffectLibs
             End Set
         End Property
 
+        Public Shared ReadOnly VerticalGlowProperty As DependencyProperty = GenProp(propVerticalGlow)
+        Public Property VerticalGlow As Double
+            Get
+                Return CDbl(GetValue(VerticalGlowProperty))
+            End Get
+            Set(value As Double)
+                SetValue(VerticalGlowProperty, value)
+            End Set
+        End Property
+
         Private Shared Function GenProp(menuProp As MenuProperty) As DependencyProperty
             Select Case menuProp
                 Case propTexel
                     Return DependencyProperty.Register("TexelSize", GetType(Point), GetType(osEffect_Glow),
-                                               New UIPropertyMetadata(New Point(1, 1),
-                                                                      PixelShaderConstantCallback(0)))
+                                                       New UIPropertyMetadata(New Point(1, 1), PixelShaderConstantCallback(0)))
                 Case propThickness
                     Return DependencyProperty.Register("Thickness", GetType(Double), GetType(osEffect_Glow),
                                                        New UIPropertyMetadata(2.0, PixelShaderConstantCallback(1)))
-                Case propSpread
-                    Return DependencyProperty.Register("Spread", GetType(Double), GetType(osEffect_Glow),
-                                                       New UIPropertyMetadata(0.0, PixelShaderConstantCallback(2)))
                 Case propFade
                     Return DependencyProperty.Register("Fade", GetType(Double), GetType(osEffect_Glow),
-                                                       New UIPropertyMetadata(0.0, PixelShaderConstantCallback(3)))
+                                                       New UIPropertyMetadata(0.0, PixelShaderConstantCallback(2)))
                 Case propGlowColor
                     Return DependencyProperty.Register("GlowColor", GetType(Color), GetType(osEffect_Glow),
                                                        New UIPropertyMetadata(Color.FromArgb(&HCC, &HFF, &HBF, &H0),
-                                                                              PixelShaderConstantCallback(4)))
-                Case propStroke
-                    Return DependencyProperty.Register("StrokeStrength", GetType(Double), GetType(osEffect_Glow),
-                                                       New UIPropertyMetadata(0.0, PixelShaderConstantCallback(5)))
+                                                                              PixelShaderConstantCallback(3)))
                 Case propGlow
                     Return DependencyProperty.Register("GlowStrength", GetType(Double), GetType(osEffect_Glow),
-                                                       New UIPropertyMetadata(1.0, PixelShaderConstantCallback(6)))
+                                                       New UIPropertyMetadata(1.0, PixelShaderConstantCallback(4)))
+                Case propVerticalGlow
+                    Return DependencyProperty.Register("VerticalGlow", GetType(Double), GetType(osEffect_Glow),
+                                                       New UIPropertyMetadata(1.0, PixelShaderConstantCallback(5)))
             End Select
         End Function
     End Class

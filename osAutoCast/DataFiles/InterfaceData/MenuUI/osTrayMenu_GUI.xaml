@@ -8,10 +8,10 @@
         Style="{StaticResource TrayMenuStyle}">
 
     <Grid x:Name="TrayMenuOutline" Style="{StaticResource TrayMenuContainerOutlineStyle}">
-        <Grid.RenderTransform>
+        <!--<Grid.RenderTransform>
             <ScaleTransform x:Name="TrayMenuOutlineRender"
                             ScaleX="0" ScaleY="0"/>
-        </Grid.RenderTransform>
+        </Grid.RenderTransform>-->
         <Border x:Name="TrayMainContainer"
                 Style="{StaticResource TrayMenuContainerBorderStyle}">
             <Border Background="Transparent" CornerRadius="6">

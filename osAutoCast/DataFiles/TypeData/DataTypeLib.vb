@@ -239,7 +239,9 @@ Public Module DataTypeLib
         propGlow
         propFade
         propSpread
+        propStrokeColor
         propGlowColor
+        propVerticalGlow
     End Enum
 
     Public Enum AnimationType
