@@ -1,0 +1,48 @@
+﻿<Window x:Class="osLoader_UI" x:Name="winUI_Loader" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" Topmost="True"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:osLoadProg="clr-namespace:osAutoCast.osLoadingElements" SizeToContent="WidthAndHeight" SnapsToDevicePixels="True"
+        mc:Ignorable="d" WindowStartupLocation="CenterScreen" UseLayoutRounding="True" Title="{Binding osAutoCastTitle}"  
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" WindowStyle="None"
+        ResizeMode="NoResize" AllowsTransparency="True" Style="{StaticResource LoadingContainerStyle}">
+
+    <Grid x:Name="LoadingContainerOutline" Style="{StaticResource LoadingContainerOutlineStyle}">
+        
+        <Border x:Name="LoadingContentBorder" Style="{StaticResource LoadingContentStyle}">
+            <Border Style="{StaticResource LoadingContentInnerBorderStyle}">
+                <Grid x:Name="LoadingContentContainer" Style="{StaticResource LoadingContainerLayoutStyle}">
+                    <Image Grid.Column="0" Grid.Row="0"
+					    Style="{StaticResource LoadingImageStyle}" />
+                    <Grid x:Name="LoadContentAreaLayout"
+					    Style="{StaticResource LoadingContentAreaLayoutStyle}">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <Border x:Name="LoadContentContainer"
+						    Style="{StaticResource LoadingContentContainerStyle}">
+                            <StackPanel Style="{StaticResource LoadingDataContentStyle}">
+                                <TextBlock x:Name="LoadingText" Style="{StaticResource LoadingTextStyle}" />
+                                <osLoadProg:osLoadingProgressBar x:Name="uiLoad_ProgressBar"
+								    RenderOptions.BitmapScalingMode="LowQuality"
+								    Style="{StaticResource LoadingProgressStyle}" />
+                            </StackPanel>
+                        </Border>
+                        <Grid x:Name="LoadAppDetailContainer"
+						    Style="{StaticResource LoadingAppDetailContainerStyle}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock x:Name="DevText" Text="By OddSoft"
+							    Style="{StaticResource LoadingAppDetailContentStyle_Dev}" />
+                            <TextBlock x:Name="VerText" Text="{Binding osAutoCastVersion}"
+							    Style="{StaticResource LoadingAppDetailContentStyle_Ver}" />
+                        </Grid>
+                    </Grid>
+                </Grid>
+            </Border>
+        </Border>
+        
+    </Grid>
+    
+</Window>

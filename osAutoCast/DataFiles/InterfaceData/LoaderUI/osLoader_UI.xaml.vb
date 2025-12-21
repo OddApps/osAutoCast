@@ -10,6 +10,8 @@ Imports osAutoCast.DataTypeLib.LoadTextVisual
 Imports osAutoCast.DataTypeLib.LoadContentData
 Imports osAutoCast.DataTypeLib.LoadingProgStatus
 Imports osAutoCast.DataTypeLib.LoadTextVisualType
+Imports osAutoCast.DataTypeLib.LoaderEasing
+Imports osAutoCast.osHandler_UI
 Imports System.Runtime.InteropServices
 Imports System.Windows.Interop
 Imports osColor = System.Windows.Media.Color
@@ -17,14 +19,12 @@ Imports osColor = System.Windows.Media.Color
 #Disable Warning BC42353
 #Disable Warning BC42104
 
-Public Class osInMon
+Public Class osLoader_UI
 
     Private Async Function InitializeContentLoad() As Task
-        AddHandler objLoadProg.LoadProgComplete, evtLoadCompleter
+        AddHandler objLoadProgBar.LoadProgComplete, evtLoaderComplete
 
-        Await PerformLoadStep(LoadStart)
         Await Task.Delay(500)
-        Await PerformLoadStep(LoadInit)
     End Function
 
     Private Sub ImplementLoadVisEvents(ByRef objVisTask As TaskCompletionSource(Of Boolean))
@@ -97,7 +97,7 @@ Public Class osInMon
 
                     objTask_UpProg = PrepDispatcher().InvokeAsync(
                         Sub()
-                            objLoadProg.UpdateLoadProgress(.LoadProgStatus)
+                            objLoadProgBar.UpdateLoadProgress(.LoadProgStatus)
                         End Sub, DispatcherPriority.Render)
 
                     Await TriggerLoadTextVis(LoadTextFade_In, .LoadMsg)
@@ -106,7 +106,7 @@ Public Class osInMon
             Await EvalDelay(.PreLoadDuration)
 
             If ChkFinalTask(.LoadProgStatus) Then
-                Await objLoadProg.MonitorLoadProgress() : End If
+                Await objLoadProgBar.MonitorLoadProgress() : End If
 
             ValidateTaskAndRun(.LoadProcess, objValidTask,
                                isTaskValid)
@@ -126,45 +126,97 @@ Public Class osInMon
         End If
     End Function
 
-    Private Function PrepPrefs() As Task
-        Return Task.Run(
-            Async Function()
-                Using osPrefManager As New osHandler_Prefs()
-                    CoreDataLib.osPrefIndex = Await osPrefManager.LoadPrefs()
-                    Await osPrefManager.LoadPrefsAsync(CoreDataLib.osPrefIndex)
-                End Using
-            End Function)
-    End Function
-
     Private Async Function LoadFinalize() As Task
         Await Task.Run(
-            Async Function()
-                Await Task.Delay(250)
+             Sub()
+                 PrepDispatcher().Invoke(
+                     Sub()
+                         objAnimation_LoadTextVis.Children.Clear()
+                         objAnimation_LoadTextVis = Nothing
 
-                PrepDispatcher().Invoke(
-                    Sub()
-                        objAnimation_LoadTextVis.Children.Clear()
-                        objAnimation_LoadTextVis = Nothing
+                         objTextBrush = Nothing
 
-                        objTextBrush = Nothing
+                         PrepTrayMenu()
+                         isAppLoaded = True
+                     End Sub)
 
-                        PrepTrayMenu()
-                        isAppLoaded = True
-                    End Sub)
+                 visLoadTextEventTask.ResetTask()
+             End Sub)
+    End Function
 
-                visLoadTextEventTask.ResetTask()
+    Private Function ComposeLoadStage(valStart As Double, valEnd As Double, intDuration As Double,
+                                      typeEase As LoaderEasing, objLoadTask As Func(Of Task)) As osLoader_Stage
 
-            End Function)
+        Return New osLoader_Stage With {
+            .StartValue = valStart, .EndValue = valEnd,
+            .LoadTask = objLoadTask, .Easing = typeEase,
+            .Duration = TimeSpan.FromMilliseconds(intDuration)
+        }
+    End Function
+
+    Private Function ComposeLoadStage(valStart As Double, valEnd As Double, intDuration As Double,
+                                      typeEase As LoaderEasing, objLoadTask As Func(Of TaskStatusReport, Task), isn As Boolean) As osLoader_Stage
+
+        Return New osLoader_Stage With {
+            .StartValue = valStart, .EndValue = valEnd,
+            .LoadTask2 = objLoadTask, .Easing = typeEase,
+            .Duration = TimeSpan.FromMilliseconds(intDuration)
+        }
+    End Function
+
+    Private Async Function PrepPrefsCore() As Task
+        Using osPrefManager As New osHandler_Prefs()
+            With osPrefManager
+                CoreDataLib.osPrefIndex = Await .LoadPrefs()
+                Await .LoadPrefsAsync(CoreDataLib.osPrefIndex)
+            End With
+
+            Await Task.Delay(225)
+        End Using
+    End Function
+
+    Private Function PrepPrefs() As Task
+        Return Task.Run(Function() PrepPrefsCore())
+    End Function
+
+    Private Async Function BeginPrepUI(done As TaskStatusReport) As Task
+        Dim objPrepUiTask = PrepAndLoadUI(done)
     End Function
 
     Public Async Function ProvisionApp() As Task
-        Await InitializeContentLoad()
 
-        Await PerformLoadStep(LoadPrefs)
-        Await PerformLoadStep(LoadUI)
-        Await PerformLoadStep(LoadConfig)
-        Await PerformLoadStep(LoadService)
-        Await PerformLoadStep(LoadComplete)
+        Dim stages As osLoader_Stage() = {
+            ComposeLoadStage(0, 55, 420, EaseInOut, Function() PrepPrefsCore()),
+            ComposeLoadStage(60, 105, 425, EaseInOut, Function(done As TaskStatusReport) BeginPrepUI(done), True),
+            ComposeLoadStage(110, 155, 475, EaseInOut, Function() osMenu_Init()),
+            ComposeLoadStage(165, 200, 425, EaseInOut, Function() InputMonitor_Start()),
+            ComposeLoadStage(205, 250, 450, EaseInOut, Function() LoadFinalize())
+        }
+
+        Dim objProcessLoadStages As New osHandler_Loader(
+            Sub(v)
+                objLoadProgBar.Progress = v
+            End Sub, stages, initialValue:=0)
+
+        Await objProcessLoadStages.StartLoadStage(True)
+
+        'Dim a = animator.StartStageAsync(0)
+        'Await Task.Delay(375)
+
+        'Await animator.StartStageAsync(1)
+        'Await animator.StartStageAsync(2)
+
+        'Await animator.RunStageAsync(stages(0), stages(1))
+        'Await animator.RunStageAsync(stages(1), stages(2))
+        'Await animator.RunStageAsync(stages(2))
+
+        '  Await InitializeContentLoad()
+
+        'Await PerformLoadStep(LoadPrefs)
+        'Await PerformLoadStep(LoadUI)
+        'Await PerformLoadStep(LoadConfig)
+        'Await PerformLoadStep(LoadService)
+        'Await PerformLoadStep(LoadComplete)
     End Function
 
     Public Async Function InputMonitor_Start() As Task
@@ -173,6 +225,7 @@ Public Class osInMon
                 InitTriggerMonitor()
                 CoreDataLib.InputMonSvc.LaunchTriggerMonitor()
             End Sub)
+        Await Task.Delay(125)
     End Function
 
     Private Sub InitTriggerMonitor()
@@ -189,11 +242,11 @@ Public Class osInMon
 
 End Class
 
-Partial Class osInMon
+Partial Class osLoader_UI
 
-    Public Event osLoadComplete(sender As Object, e As EventArgs)
+    Public Event osLoaderComplete(sender As Object, e As EventArgs)
 
-    Private evtLoadCompleter As EventHandler = AddressOf TriggerCompleteEvent
+    Private evtLoaderComplete As EventHandler = AddressOf TriggerCompleteEvent
 
     Private isTaskValid As Boolean
     Private objValidTask As Task
@@ -228,9 +281,9 @@ Partial Class osInMon
         End Get
     End Property
 
-    Public ReadOnly Property objLoadProg As osProgLoad
+    Public ReadOnly Property objLoadProgBar As osProgLoad
         Get
-            Return Me.LoadingProgressBar
+            Return Me.uiLoad_ProgressBar
         End Get
     End Property
 
@@ -309,8 +362,8 @@ Partial Class osInMon
     End Function
 
     Private Sub TriggerCompleteEvent(s As Object, e As EventArgs)
-        RaiseEvent osLoadComplete(s, e)
-        RemoveHandler objLoadProg.LoadProgComplete, evtLoadCompleter
+        RaiseEvent osLoaderComplete(s, e)
+        RemoveHandler objLoadProgBar.LoadProgComplete, evtLoaderComplete
     End Sub
 
     Private Sub ApplyLoadText(txtLoad As String)

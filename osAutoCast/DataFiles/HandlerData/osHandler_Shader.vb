@@ -27,6 +27,8 @@ Public Module osHandler_Shader
         {"osShader_TextGlow.ps"}, {"osShader_TextStroke.ps"}
     }
 
+
+
     Public ShaderDataIdx As New Dictionary(Of String, Byte())
 
     Private ShaderDataNames() As String = {"Px", "Vx", "TxG", "TxS"}
@@ -48,6 +50,13 @@ Public Module osHandler_Shader
 
     Private Function FetchAsm() As Reflection.Assembly
         Return osAsm.GetExecutingAssembly()
+    End Function
+
+    Public Function GetTestShader(isStroke As Boolean) As pxShader_Text
+        Return New pxShader_Text() With {
+            .UriSource = New Uri("/osAutoCast;component/DataFiles/VisualData/EffectsLib/" &
+                $"EffectResources/osTestShader_{If(isStroke, "TextStroke",
+                "TextGlow")}.ps", UriKind.Relative)}
     End Function
 
     Public Async Function StreamToBytesAsync(stream As Stream) As Task(Of Byte())
@@ -182,7 +191,6 @@ Public Module osHandler_Shader
 
             End Function)
     End Function
-
 
     Public Async Function PreloadShaderCatalog(objShaderTask As Task(Of Dictionary(Of String, Byte()))) As Task
         Await Task.Run(

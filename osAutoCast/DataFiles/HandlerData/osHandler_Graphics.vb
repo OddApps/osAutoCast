@@ -59,6 +59,29 @@ Public NotInheritable Class osHandler_Graphics
     Private Sub New()
     End Sub
 
+    Public Shared Sub EnsureCreated(isTask As Boolean)
+        If _progDevice IsNot Nothing Then Return
+        SyncLock _initLock
+            If _progDevice IsNot Nothing Then Return
+
+            Dim deviceFlags = DeviceCreationFlags.BgraSupport
+
+            _progDevice = New osProgDevice(DriverType.Hardware, deviceFlags)
+            _progContext = _progDevice.ImmediateContext
+
+            Using dxgiDev = _progDevice.QueryInterface(Of osProgDxgiDevice)()
+                Using adapter = dxgiDev.Adapter
+                    _progDxgiFactory = adapter.GetParent(Of osProgDxgiFactory)()
+                End Using
+            End Using
+
+            _progD2dFactory = New osProgFactoryD2D(osFactoryType.MultiThreaded)
+            _progDwFactory = New FactoryDW(osDwFactoryType.Shared)
+        End SyncLock
+
+        ' We need to create the D3D device / factories on the dispatcher.
+    End Sub
+
     Public Shared Async Function EnsureCreated() As Task
         If _progDevice IsNot Nothing Then Return
         Await PrepDispatcher().InvokeAsync(

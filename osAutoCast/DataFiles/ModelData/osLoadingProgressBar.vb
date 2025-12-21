@@ -96,7 +96,7 @@ Namespace osLoadingElements
         Public Shared ReadOnly ProgressProperty As DependencyProperty = DependencyProperty.
             Register(NameOf(Progress), GetType(Double), GetType(osLoadingProgressBar),
                      New FrameworkPropertyMetadata(0.0, FrameworkPropertyMetadataOptions.AffectsRender,
-                                                   AddressOf OnProgressChanged, AddressOf CoerceProgress))
+                                                   AddressOf OnValueChanged, AddressOf CoerceProgress))
 
         Private Shared Function CoerceProgress(d As DependencyObject, baseValue As Object) As Object
             Dim ctrl = DirectCast(d, osLoadingProgressBar)
@@ -114,6 +114,10 @@ Namespace osLoadingElements
             Dim newVal As Double = CDbl(e.NewValue)
             Dim percent = If(max - min = 0, 0, (newVal - min) / (max - min) * 100.0)
             ctrl.StartProgress(percent)
+        End Sub
+
+        Private Shared Sub OnValueChanged(d As DependencyObject, e As DependencyPropertyChangedEventArgs)
+
         End Sub
 
         Public Property Progress As Double
@@ -800,6 +804,8 @@ Namespace osLoadingElements
             Dim w = Me.RenderSize.Width
             Dim h = Me.RenderSize.Height
 
+            Dim pMax = Me.Maximum
+
             If w <= 0 OrElse h <= 0 Then Return
 
             Dim progTrack_Rect As New Rect(0, 0, w, h)
@@ -811,7 +817,14 @@ Namespace osLoadingElements
             EstablishProgFreeze(TryCast(progTrack_Geometry, Freezable))
             dc.PushClip(progTrack_Geometry)
 
-            Dim fillWidth = (AnimatedProgress / 100.0) * w
+            Dim progressRatio =
+            (Progress - Minimum) / (Maximum - Minimum)
+
+            progressRatio = Math.Max(0.0, Math.Min(1.0, progressRatio))
+
+            Dim fillWidth = ActualWidth * progressRatio
+
+            ' Dim fillWidth = (Progress / 100.0) * w
 
             If fillWidth > 0.0001 Then
                 Dim progFill_Rect As New Rect(0, 0, fillWidth, h)

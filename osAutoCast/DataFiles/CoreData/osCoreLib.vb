@@ -1184,23 +1184,49 @@ Public Module osFuncLib_TrayMenu
     '    Await osHandler_UI.PrepTrayMenuDisp()
     'End Function
 
-    Public Function osMenu_Init() As Task
-        Return Task.Run(
-             Function()
-                 Dim objTask_InitTrayMenu =
-                    PrepDispatcher().InvokeAsync(
-                        Async Function()
-                            Dim oo = osHandler_UI.PrepTrayMenuDisp()
-
-                            Do While osHandler_UI.osTrayMenu Is Nothing
-                                Await Task.Delay(1)
-                            Loop
-                            osHandler_UI.osTrayMenu.PrepTrayMenuInit()
-                        End Function)
-
-                 Return objTask_InitTrayMenu.Task.Unwrap()
-             End Function)
+    Public Async Function osMenu_Init() As Task
+        Await osHandler_UI.PrepTrayMenuDispr
+        osHandler_UI.osTrayMenu.PrepTrayMenuInit()
     End Function
+
+    'Public Async Function osMenu_Init() As Task
+    '    '  Await osHandler_UI.PrepTrayMenuDispr
+
+
+
+    '    Await Task.Run(
+    '    Async Function()
+    '        Dim objTask_InitTrayMenu =
+    '            PrepDispatcher().InvokeAsync(
+    '                Async Function()
+    '                    Await osHandler_UI.PrepTrayMenuDispr()
+
+
+    '                End Function)
+
+    '        Await objTask_InitTrayMenu.Task.Unwrap()
+    '        osHandler_UI.osTrayMenu.PrepTrayMenuInit()
+    '    End Function)
+
+    'End Function
+
+    'Public Function osMenu_Init() As Task
+    '    Return Task.Run(
+    '        Async Function()
+    '            Dim objTask_InitTrayMenu =
+    '                PrepDispatcher().InvokeAsync(
+    '                    Async Function()
+    '                        Dim oo = osHandler_UI.PrepTrayMenuDisp()
+
+    '                        Do While osHandler_UI.osTrayMenu Is Nothing
+    '                            Await Task.Delay(10)
+    '                        Loop
+    '                        osHandler_UI.osTrayMenu.PrepTrayMenuInit()
+    '                    End Function)
+
+    '            Await objTask_InitTrayMenu.Task.Unwrap()
+    '        End Function)
+    'End Function
 
 End Module
 

@@ -170,10 +170,14 @@
       <SubType>Designer</SubType>
     </ApplicationDefinition>
     <Compile Include="DataFiles\HandlerData\osHandler_Graphics.vb" />
+    <Compile Include="DataFiles\HandlerData\osHandler_Loader.vb" />
     <Compile Include="DataFiles\HandlerData\osHandler_Shader.vb" />
     <Compile Include="DataFiles\HandlerData\osHandler_UI.vb" />
     <Compile Include="DataFiles\InputMonData\osInMon.xaml.vb">
       <DependentUpon>osInMon.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="DataFiles\InterfaceData\LoaderUI\osLoader_UI.xaml.vb">
+      <DependentUpon>osLoader_UI.xaml</DependentUpon>
     </Compile>
     <Compile Include="DataFiles\InterfaceData\MenuUI\osPopupMenu_GUI.xaml.vb">
       <DependentUpon>osPopupMenu_GUI.xaml</DependentUpon>
@@ -199,6 +203,10 @@
     <Compile Include="DataFiles\InterfaceData\PrefsUI\osPrefs.vb">
       <SubType>Form</SubType>
     </Compile>
+    <Page Include="DataFiles\InterfaceData\LoaderUI\osLoader_UI.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="DataFiles\InterfaceData\MenuUI\osPopupMenu_GUI.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -328,8 +336,8 @@
       <Link>.editorconfig</Link>
     </None>
     <EmbeddedResource Include="DataFiles\VisualData\EffectsLib\EffectResources\osEffect_Shaders.csd" />
-    <Resource Include="DataFiles\VisualData\EffectsLib\EffectResources\osShader_TextGlow.ps" />
-    <Resource Include="DataFiles\VisualData\EffectsLib\EffectResources\osShader_TextStroke.ps" />
+    <Resource Include="DataFiles\VisualData\EffectsLib\EffectResources\osTestShader_TextGlow.ps" />
+    <Resource Include="DataFiles\VisualData\EffectsLib\EffectResources\osTestShader_TextStroke.ps" />
     <None Include="My Project\app.manifest" />
     <None Include="My Project\DataSources\osPrefStore.ProgVisualQualityData.datasource" />
     <None Include="My Project\Settings.settings">
@@ -362,5 +370,6 @@
   <ItemGroup>
     <Resource Include="ResourceLib\osSplashLoader.png" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.VisualBasic.targets" />
 </Project>

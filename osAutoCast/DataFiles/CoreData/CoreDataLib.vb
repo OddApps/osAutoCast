@@ -160,12 +160,12 @@ Public NotInheritable Class CoreDataLib
                              RegexOptions.IgnoreCase).Groups(1).Value
     End Function
 
-    Private Shared Async Function GenerateShaderList() As Task(Of List(Of osShaderDetails))
-        Return Await Task.Run(
-            Function()
-                Return osShaderNameList.Select(
+    Private Shared Function GenerateShaderList() As List(Of osShaderDetails) 'Task(Of List(Of osShaderDetails))
+        '
+        Return osShaderNameList.Select(
                     Function(shaderRes) CreateShaderRecord(shaderRes)).ToList()
-            End Function)
+        '  End Function)
+
     End Function
 
     Private Shared Function CreateShaderRecord(objShaderRes As String) As osShaderDetails
@@ -173,7 +173,11 @@ Public NotInheritable Class CoreDataLib
     End Function
 
     Public Shared Async Function ComposeShaderIdx() As Task
-        ShaderDetailsIdx = Await GenerateShaderList()
+        Await Task.Run(
+            Sub()
+                ShaderDetailsIdx = GenerateShaderList()
+            End Sub)
+
     End Function
 
     Public Shared Function GetShaderDevice() As osProgDevice

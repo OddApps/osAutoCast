@@ -7,22 +7,16 @@ Imports osAutoCast.DataTypeLib.VisualEasing
 Imports System.Windows.Media.Animation
 Imports System.ComponentModel
 
-Public Class osEffectManager
 
-End Class
-
-Namespace osEffectLibs
+Namespace osEffectManager
 
     Public Class osEffect_Stroke
         Inherits ShaderEffect
 
-        Private Shared ReadOnly _shader As New PixelShader() With {
-        .UriSource = New Uri("/osAutoCast;component/DataFiles/VisualData/EffectsLib/EffectResources/osShader_TextStroke.ps", UriKind.Relative)
-    }
-
         Public Sub New()
             With Me
-                .PixelShader = _shader 'FetchShader(sTypeText_S).sText_S
+                ' .PixelShader = GetTestShader(True)
+                .PixelShader = FetchShader(sTypeText_S).sText_S
 
                 .PaddingLeft = 6
                 .PaddingRight = 6
@@ -139,13 +133,11 @@ Namespace osEffectLibs
 
     Public Class osEffect_Glow
         Inherits ShaderEffect
-        Private Shared ReadOnly _shader As New PixelShader() With {
-        .UriSource = New Uri("/osAutoCast;component/DataFiles/VisualData/EffectsLib/EffectResources/osShader_TextGlow.ps", UriKind.Relative)
-    }
 
         Public Sub New()
             With Me
-                .PixelShader = _shader 'FetchShader(sTypeText_G).sText_G
+                ' .PixelShader = GetTestShader(False)
+                .PixelShader = FetchShader(sTypeText_G).sText_G
 
                 .PaddingLeft = 6
                 .PaddingRight = 6
@@ -164,7 +156,7 @@ Namespace osEffectLibs
         End Sub
 
         Public Shared ReadOnly InputProperty =
-            RegisterPixelShaderSamplerProperty("Input", GetType(osEffect_Glow), 0)
+                RegisterPixelShaderSamplerProperty("Input", GetType(osEffect_Glow), 0)
 
         Public Property Input As Brush
             Get
@@ -239,25 +231,53 @@ Namespace osEffectLibs
             Select Case menuProp
                 Case propTexel
                     Return DependencyProperty.Register("TexelSize", GetType(Point), GetType(osEffect_Glow),
-                                                       New UIPropertyMetadata(New Point(1, 1), PixelShaderConstantCallback(0)))
+                                                           New UIPropertyMetadata(New Point(1, 1), PixelShaderConstantCallback(0)))
                 Case propThickness
                     Return DependencyProperty.Register("Thickness", GetType(Double), GetType(osEffect_Glow),
-                                                       New UIPropertyMetadata(2.0, PixelShaderConstantCallback(1)))
+                                                           New UIPropertyMetadata(2.0, PixelShaderConstantCallback(1)))
                 Case propFade
                     Return DependencyProperty.Register("Fade", GetType(Double), GetType(osEffect_Glow),
-                                                       New UIPropertyMetadata(0.0, PixelShaderConstantCallback(2)))
+                                                           New UIPropertyMetadata(0.0, PixelShaderConstantCallback(2)))
                 Case propGlowColor
                     Return DependencyProperty.Register("GlowColor", GetType(Color), GetType(osEffect_Glow),
-                                                       New UIPropertyMetadata(Color.FromArgb(&HCC, &HFF, &HBF, &H0),
-                                                                              PixelShaderConstantCallback(3)))
+                                                           New UIPropertyMetadata(Color.FromArgb(&HCC, &HFF, &HBF, &H0),
+                                                                                  PixelShaderConstantCallback(3)))
                 Case propGlow
                     Return DependencyProperty.Register("GlowStrength", GetType(Double), GetType(osEffect_Glow),
-                                                       New UIPropertyMetadata(1.0, PixelShaderConstantCallback(4)))
+                                                           New UIPropertyMetadata(1.0, PixelShaderConstantCallback(4)))
                 Case propVerticalGlow
                     Return DependencyProperty.Register("VerticalGlow", GetType(Double), GetType(osEffect_Glow),
-                                                       New UIPropertyMetadata(1.0, PixelShaderConstantCallback(5)))
+                                                           New UIPropertyMetadata(1.0, PixelShaderConstantCallback(5)))
             End Select
         End Function
+
+    End Class
+
+    Public Class TexelSizeConverter
+        Implements IMultiValueConverter
+
+        Public Function Convert(values() As Object, targetType As Type,
+                                parameter As Object, culture As CultureInfo) As Object Implements IMultiValueConverter.Convert
+            Dim w As Double = 0.0
+            Dim h As Double = 0.0
+
+            If values IsNot Nothing AndAlso values.Length >= 2 Then
+                If values(0) IsNot Nothing Then Double.TryParse(values(0).ToString(), w)
+                If values(1) IsNot Nothing Then Double.TryParse(values(1).ToString(), h)
+            End If
+
+            If w <= 0 OrElse h <= 0 Then
+                Return New Point(0.01, 0.01)
+            End If
+
+            Return New Point(1.0 / w, 1.0 / h)
+        End Function
+
+        Public Function ConvertBack(value As Object, targetTypes() As Type, parameter As Object,
+                                    culture As CultureInfo) As Object() Implements IMultiValueConverter.ConvertBack
+            Throw New NotSupportedException()
+        End Function
+
     End Class
 
 End Namespace
@@ -294,37 +314,6 @@ Namespace osVisConfigSettings
 
         Public Overrides Function ProvideValue(serviceProvider As IServiceProvider) As Object
             Return GetVisualEase(visEasing)
-        End Function
-
-    End Class
-
-End Namespace
-
-Namespace osEffectConv
-
-    Public Class TexelSizeConverter
-        Implements IMultiValueConverter
-
-        Public Function Convert(values() As Object, targetType As Type,
-                                parameter As Object, culture As CultureInfo) As Object Implements IMultiValueConverter.Convert
-            Dim w As Double = 0.0
-            Dim h As Double = 0.0
-
-            If values IsNot Nothing AndAlso values.Length >= 2 Then
-                If values(0) IsNot Nothing Then Double.TryParse(values(0).ToString(), w)
-                If values(1) IsNot Nothing Then Double.TryParse(values(1).ToString(), h)
-            End If
-
-            If w <= 0 OrElse h <= 0 Then
-                Return New Point(0.01, 0.01)
-            End If
-
-            Return New Point(1.0 / w, 1.0 / h)
-        End Function
-
-        Public Function ConvertBack(value As Object, targetTypes() As Type, parameter As Object,
-                                    culture As CultureInfo) As Object() Implements IMultiValueConverter.ConvertBack
-            Throw New NotSupportedException()
         End Function
 
     End Class

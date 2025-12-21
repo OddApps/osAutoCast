@@ -11,6 +11,8 @@ Imports osAutoCast.DataTypeLib.VisualEasing
 Imports osAutoCast.DataTypeLib.TriggerAction
 Imports osAutoCast.DataTypeLib.TrayMenuVisuals
 Imports osAutoCast.DataTypeLib.LoadTextVisualType
+Imports osAutoCast.DataTypeLib.LoadTaskStatus
+Imports System.Threading.Tasks.TaskCreationOptions
 Imports osAutoCast.osShaderDataLib
 Imports osDraw = System.Drawing
 Imports osForms = System.Windows.Forms
@@ -367,6 +369,19 @@ Public Module DataTypeLib
         LoadEv_Complete
     End Enum
 
+    Public Enum LoaderEasing
+        Linear
+        EaseIn
+        EaseOut
+        EaseInOut
+        SmoothStep
+    End Enum
+
+    Public Enum LoadTaskStatus
+        TaskRunning
+        TaskComplete
+    End Enum
+
     Public Structure LoadTextVisual
         Const LoadTxt_In = "LoadTextVisuals_FadeIn"
         Const LoadTxt_Out = "LoadTextVisuals_FadeOut"
@@ -387,6 +402,56 @@ Public Module DataTypeLib
 #End Region
 
 End Module
+
+Public NotInheritable Class TaskStatusReport
+
+    Private ReadOnly _objTaskStatus As New TaskCompletionSource(
+        Of LoadTaskStatus)(RunContinuationsAsynchronously)
+
+    Public ReadOnly Property GetStatus As LoadTaskStatus
+        Get
+            Return If(_objTaskStatus.Task.IsCompleted,
+                TaskComplete, TaskRunning)
+        End Get
+    End Property
+
+    Public ReadOnly Property Completed As Task
+        Get
+            Return _objTaskStatus.Task
+        End Get
+    End Property
+
+    Public ReadOnly Property IsCompleted As LoadTaskStatus
+        Get
+            Return If(_objTaskStatus.Task.IsCompleted, TaskComplete, TaskRunning)
+        End Get
+    End Property
+
+    Public ReadOnly Property IsRunning As LoadTaskStatus
+        Get
+            Return If(Not _objTaskStatus.Task.IsCompleted, TaskRunning, TaskComplete)
+        End Get
+    End Property
+
+    Friend Sub SetTaskComplete()
+        _objTaskStatus.TrySetResult(TaskComplete)
+    End Sub
+
+    Friend Sub Cancel()
+        _objTaskStatus.TrySetCanceled()
+    End Sub
+
+End Class
+
+Public Class osLoader_Stage
+    Public Property StartValue As Double
+    Public Property EndValue As Double
+    Public Property Duration As TimeSpan
+    Public Property Easing As LoaderEasing = LoaderEasing.Linear
+
+    Public Property LoadTask As Func(Of Task)
+    Public Property LoadTask2 As Func(Of TaskStatusReport, Task)
+End Class
 
 
 Public Class GameMenuVisData

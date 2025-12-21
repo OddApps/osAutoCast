@@ -1,12 +1,11 @@
 ﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:sys="clr-namespace:System;assembly=mscorlib"
-                    xmlns:oseffect="clr-namespace:osAutoCast.osEffectConv"
-                    xmlns:osEffects="clr-namespace:osAutoCast.osEffectLibs"
+                    xmlns:osEffects="clr-namespace:osAutoCast.osEffectManager"
                     xmlns:osStyle="clr-namespace:osAutoCast.osStyle"
                     xmlns:local="clr-namespace:osAutoCast">
     
-    <oseffect:TexelSizeConverter x:Key="TexelSizeConverter" />
+    <osEffects:TexelSizeConverter x:Key="TexelSizeConverter" />
 
     <DataTemplate x:Key="osEffectText" DataType="{x:Type sys:String}">
         <Border><Border.Effect>
@@ -153,8 +152,8 @@
             <Grid VerticalAlignment="Stretch">
                 <TextBlock x:Name="traymenuToggleContent" Text="{Binding}" Padding="0,2"
                            HorizontalAlignment="Stretch" VerticalAlignment="Center" 
-                           LineHeight="18" LineStackingStrategy="BlockLineHeight" 
-                           TextAlignment="Center" FontSize="16" FontWeight="Bold"                            
+                           LineHeight="20" LineStackingStrategy="BlockLineHeight" 
+                           TextAlignment="Center" FontSize="18" FontWeight="Bold"                            
                            local:TextBlockExtensions.CharacterSpacing="1.20" SnapsToDevicePixels="True"
                            Foreground="{Binding RelativeSource={RelativeSource AncestorType=ToggleButton}, Path=Foreground}">
                 <TextBlock.Effect>
@@ -221,8 +220,8 @@
             <Grid VerticalAlignment="Stretch">
                 <TextBlock x:Name="traymenuContent" Text="{Binding}" Padding="0,2"
                            HorizontalAlignment="Stretch" VerticalAlignment="Center" 
-                           LineHeight="18" LineStackingStrategy="BlockLineHeight" 
-                           TextAlignment="Center" FontSize="16" FontWeight="Bold"                            
+                           LineHeight="20" LineStackingStrategy="BlockLineHeight" 
+                           TextAlignment="Center" FontSize="18" FontWeight="Bold"                            
                            local:TextBlockExtensions.CharacterSpacing="1.20" SnapsToDevicePixels="True"
                            Foreground="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}">
                     <TextBlock.Effect>

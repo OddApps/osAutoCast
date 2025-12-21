@@ -1,7 +1,7 @@
 ﻿Imports System.Windows.Media.Animation
 Imports osAutoCast.DataTypeLib.LoadContentData
 Imports osAutoCast.DataTypeLib.LoadEventType
-Imports osAutoCast.osInMon
+Imports osAutoCast.osLoader_UI
 Imports osAutoCast.osShaderDataLib
 Imports SharpDX.D3DCompiler
 Imports SharpDX.Direct3D11
@@ -16,12 +16,13 @@ Imports System.IO
 #Disable Warning BC42353
 Class Application
 
-    Private objLoaderScreen As osInMon
+    Private objLoaderScreen As osLoader_UI
 
     Private objTask_LoadComplete As TaskCompletionSource(Of Boolean) = Nothing
     Private objTask_VisualComplete As TaskCompletionSource(Of Boolean) = Nothing
 
-    Private evLoad_LoadComplete As osLoadCompleteEventHandler
+    Private evLoad_LoadComplete As osLoaderCompleteEventHandler
+    Private evLoad1_LoadComplete
 
     Private evLoad_ShowWin As EventHandler
     Private evLoad_HideWin As EventHandler
@@ -67,7 +68,8 @@ Class Application
     End Function
 
     Private Sub InitLoadVisual()
-        objLoaderScreen = New osInMon
+        'objLoaderScreen = New osInMon
+        objLoaderScreen = New osLoader_UI
 
         objLoaderScreen.Opacity = 0
         objLoaderScreen.Show()
@@ -138,7 +140,7 @@ Class Application
             Case LoadEv_Complete
                 evLoad_LoadComplete =
                     Async Sub()
-                        RemoveHandler objLoaderScreen.osLoadComplete, evLoad_LoadComplete
+                        RemoveHandler objLoaderScreen.osLoaderComplete, evLoad_LoadComplete
 
                         Await Task.Delay(750)
 
@@ -151,7 +153,7 @@ Class Application
                         osHandler_UI.RecaptureResources()
                     End Sub
 
-                AddHandler objLoaderScreen.osLoadComplete, evLoad_LoadComplete
+                AddHandler objLoaderScreen.osLoaderComplete, evLoad_LoadComplete
         End Select
     End Sub
 

@@ -1,11 +1,11 @@
 ﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:sys="clr-namespace:System;assembly=mscorlib"
-                    xmlns:oseffect="clr-namespace:osAutoCast.osEffectConv"
+                    xmlns:osEffects="clr-namespace:osAutoCast.osEffectManager"
                     xmlns:osStyle="clr-namespace:osAutoCast.osStyle"
                     xmlns:local="clr-namespace:osAutoCast">
 
-    <oseffect:TexelSizeConverter x:Key="TexelSizeConverter" />
+    <osEffects:TexelSizeConverter x:Key="TexelSizeConverter" />
 
     <ControlTemplate x:Key="ToggleView_EnabledStatus" TargetType="{x:Type ToggleButton}">
         <Border x:Name="enView_Border" Background="{TemplateBinding Background}" 
