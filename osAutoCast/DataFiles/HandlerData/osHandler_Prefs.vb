@@ -27,7 +27,13 @@ Public Class osPrefStore
         {GO_VisualQuality, New PrefBindData("SelectedValue", "GenOpts_VisualQuality")}
     }
 
+    Public ReadOnly Property PrefTables As New osPref_DataTabl()
 
+    Public osDT As DataTable
+
+    Public Sub New()
+
+    End Sub
 
     Public Event PropertyChanged As PropertyChangedEventHandler Implements INotifyPropertyChanged.PropertyChanged
 
@@ -213,6 +219,45 @@ Public Class osPrefStore
         End Set
     End Property
 
+
+    Public Class osPref_DataTabl
+        Implements INotifyPropertyChanged
+
+        Private _osPrefVQ_DT As DataTable
+        Public Property osPrefVQ_DT As DataTable
+            Get
+                Return _osPrefVQ_DT
+            End Get
+            Set(value As DataTable)
+                _osPrefVQ_DT = value
+                OnPropertyChanged()
+            End Set
+        End Property
+
+        Public Sub New()
+            osPrefVQ_DT = New DataTable()
+            PopulateVQ_Cols()
+            PopulateDataVQ()
+        End Sub
+
+        Public Sub PopulateVQ_Cols()
+            osPrefVQ_DT.Columns.Add("vqIdx", GetType(Integer))
+            osPrefVQ_DT.Columns.Add("vqName", GetType(String))
+        End Sub
+
+        Private Sub PopulateDataVQ()
+            osPrefVQ_DT.Rows.Add(0, "Performance")
+            osPrefVQ_DT.Rows.Add(1, "Quality")
+        End Sub
+
+        Public Event PropertyChanged As PropertyChangedEventHandler _
+        Implements INotifyPropertyChanged.PropertyChanged
+
+        Protected Sub OnPropertyChanged(<Runtime.CompilerServices.CallerMemberName> Optional name As String = Nothing)
+            RaiseEvent PropertyChanged(Me, New PropertyChangedEventArgs(name))
+        End Sub
+    End Class
+
     Public Class PrefBindingDef
         Public Property ControlProp As String
         Public Property DataProp As String
@@ -311,7 +356,7 @@ Public Class osPrefTracker(Of T As {Class, INotifyPropertyChanged})
 
 End Class
 
-Class osHandler_Prefs
+Public Class osHandler_Prefs
     Implements IDisposable
 
     Public Property objPrefIndex As PrefRecordIndex
@@ -319,11 +364,18 @@ Class osHandler_Prefs
     Public Sub New()
     End Sub
 
-    Public Async Function LoadPrefs() As Task(Of PrefRecordIndex)
-        If Not DoPrefsExist() Then CreateDefaultPrefs()
+    Public Function LoadPrefs(done As TaskStatusReport) As Task
+        Return Task.Run(Async Function()
+                            If Not DoPrefsExist() Then CreateDefaultPrefs()
 
-        CoreDataLib.osPrefStoreData = New osPrefStore
-        Return Await PopulatePrefData()
+                            CoreDataLib.osPrefStoreData = New osPrefStore
+                            CoreDataLib.osPrefIndex = Await PopulatePrefData()
+
+                            '      osPreferences.idxPrefRecords = Await PopulatePrefData()
+
+                            Await Task.Delay(125)
+                            done.SetTaskComplete()
+                        End Function)
     End Function
 
     Private Function DoPrefsExist() As Boolean
@@ -389,19 +441,19 @@ Class osHandler_Prefs
             End Function)
     End Function
 
-    Public Async Function LoadPrefsAsync(prefRecIdx As PrefRecordIndex) As Task
+    Public Async Function ApplyPrefs(prefRecIdx As PrefRecordIndex, done As TaskStatusReport) As Task
         If prefRecIdx Is Nothing Then Return
 
         Dim objPrefData = Await Task.
             WhenAll(prefRecIdx.RecIdx.SelectMany(
-            Function(pRec) pRec.PrefRecord,
-            Function(pRec, pRecData)
-                Dim objPropInfo = Me.PrefStoreProp(pRec, pRecData)
+                Function(pRec) pRec.PrefRecord,
+                    Function(pRec, pRecData)
+                        Dim objPropInfo = Me.PrefStoreProp(pRec, pRecData)
 
-                Return Task.Run(
-                    Function() (objPropInfo,
-                        Me.PrepPref(pRecData, objPropInfo.PropertyType)))
-            End Function))
+                        Return Task.Run(
+                            Function() (objPropInfo,
+                                Me.PrepPref(pRecData, objPropInfo.PropertyType)))
+                    End Function))
 
         Await PrepDispatcher.InvokeAsync(
             Sub()
@@ -409,11 +461,15 @@ Class osHandler_Prefs
 
                 For Each objPref In objPrefData
                     objPref.Item1.SetValue(objPrefStore, objPref.Item2, Nothing)
+                    '   objPref.Item1.SetValue(osPreferences.Data, objPref.Item2, Nothing)
                 Next
 
                 objPrefStore.GenPrefBinds()
             End Sub)
 
+        Await Task.Delay(175)
+
+        done.SetTaskComplete()
     End Function
 
     Private Function PrepPref(pRecData As PrefRecordData, valType As Type) As Object

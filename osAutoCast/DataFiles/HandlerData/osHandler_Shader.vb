@@ -72,17 +72,56 @@ Public Module osHandler_Shader
         End Using
     End Function
 
-    Public Async Function BuildShaderCatalog() As Task(Of Dictionary(Of String, Byte()))
-        Return Await Task.Run(
-            Async Function()
-                Dim objShaderPrep = Await InitShaderPrep()
+    'Public Function BuildShaderCatalog() As Task(Of Dictionary(Of String, Byte()))
+    '    Return Task.Run(
+    '        Async Function()
+    '            Dim objShaderPrep = Await InitShaderPrep()
 
-                Return objShaderPrep.Select(
-                    Function(shaderB, idx) ShaderDataRecord(ShaderDataNames(idx), shaderB.Data)).
-                        ToDictionary(Function(shaderRecord) shaderRecord.Key,
-                                     Function(shaderRecord) shaderRecord.Value)
-            End Function)
+    '            Return objShaderPrep.Select(
+    '                Function(shaderB, idx) ShaderDataRecord(ShaderDataNames(idx), shaderB.Data)).
+    '                    ToDictionary(Function(shaderRecord) shaderRecord.Key,
+    '                                 Function(shaderRecord) shaderRecord.Value)
+    '        End Function)
+    'End Function
+
+    Public Function BuildShaderCatalog() As Task(Of Dictionary(Of String, Byte()))
+        Return Task.Run(
+        Function()
+            Dim shaderBytes = InitShaderPrep_Sync()
+
+            Return shaderBytes.
+                Select(Function(shaderB, idx)
+                           Return ShaderDataRecord(
+                               ShaderDataNames(idx),
+                               shaderB.Data)
+                       End Function).
+                ToDictionary(Function(r) r.Key,
+                             Function(r) r.Value)
+        End Function)
     End Function
+
+    Private Function InitShaderPrep_Sync() As ShaderBytecode()
+        Dim objShaderBytes = DecompressFromBytes_Sync()
+        Return PrepShaderData_Sync(objShaderBytes)
+    End Function
+
+    Private Function PrepShaderData_Sync(objShaderBytes As Byte()) As ShaderBytecode()
+        Using objShaderMemory = New MemoryStream(objShaderBytes)
+            Using objShaderCompressed = ShaderBytecode.FromStream(objShaderMemory)
+                Return objShaderCompressed.Decompress()
+            End Using
+        End Using
+    End Function
+
+    Private Function DecompressFromBytes_Sync() As Byte()
+        Using objShaderStream = GetShaderDataStream()
+            Using ms As New MemoryStream()
+                objShaderStream.CopyTo(ms)
+                Return ms.ToArray()
+            End Using
+        End Using
+    End Function
+
 
     Private Function ShaderDataRecord(shaderN As String, shaderB As Byte()) As KeyValuePair(Of String, Byte())
         Return New KeyValuePair(Of String, Byte())(shaderN, shaderB)
@@ -112,85 +151,139 @@ Public Module osHandler_Shader
     End Function
 
     Public Async Function DecompressFromBytes() As Task(Of Byte())
-        Return Await Task.Run(
-            Async Function()
-                Using objShaderStream = GetShaderDataStream()
-                    Return Await StreamToBytesAsync(objShaderStream)
-                End Using
-            End Function)
+        Using objShaderStream = GetShaderDataStream()
+            Return Await StreamToBytesAsync(objShaderStream)
+        End Using
     End Function
 
-    Public Async Function PreloadShaderCatalog(objShaderLst As Dictionary(Of String, Byte())) As Task
-        Await Task.Run(
-            Async Function()
+    'Public Async Function DecompressFromBytes() As Task(Of Byte())
+    '    Return Await Task.Run(
+    '        Async Function()
+    '            Using objShaderStream = GetShaderDataStream()
+    '                Return Await StreamToBytesAsync(objShaderStream)
+    '            End Using
+    '        End Function)
+    'End Function
 
-                ShaderDataIdx = objShaderLst
+    Public Async Function PreloadShaderCatalog() As Task
 
-                Dim objShaderTask_Px = Task.Run(
-                    Sub()
-                        PrepDispatcher().Invoke(
-                            Sub()
-                                Dim pxShaderObj As pxShader_Pixel
+        ShaderDataIdx = Await BuildShaderCatalog()
 
-                                Using objShaderStream As New MemoryStream(ShaderDataIdx("Px"))
-                                    Using objShaderByte = ShaderBytecode.FromStream(objShaderStream)
-                                        pxShaderObj = New PixelShader(ShaderDevice, objShaderByte)
-                                    End Using
-                                End Using
+        ' Load bytecode in background
+        Dim pxTask = Task.Run(Function()
+                                  Using ms As New MemoryStream(ShaderDataIdx("Px"))
+                                      Return ShaderBytecode.FromStream(ms)
+                                  End Using
+                              End Function)
 
-                                pxShaderData_Pixel = New pxShaderPixel(pxShaderObj)
-                            End Sub)
-                    End Sub)
+        Dim vxTask = Task.Run(Function()
+                                  Using ms As New MemoryStream(ShaderDataIdx("Vx"))
+                                      Return ShaderBytecode.FromStream(ms)
+                                  End Using
+                              End Function)
 
-                Dim objShaderTask_TxG = Task.Run(
-                    Sub()
-                        PrepDispatcher().Invoke(
-                            Sub()
-                                Dim pxShaderObj As New pxShader_Text
+        Dim txGBytes = ShaderDataIdx("TxG")
+        Dim txSBytes = ShaderDataIdx("TxS")
 
-                                Using objShaderStream As New MemoryStream(ShaderDataIdx("TxG"))
-                                    pxShaderObj.SetStreamSource(objShaderStream)
-                                End Using
+        Await Task.WhenAll(pxTask, vxTask)
+        Await PrepDispatcher().InvokeAsync(
+        Sub()
+            ' Pixel
+            Using pxByte = pxTask.Result
+                Dim pxShader = New PixelShader(ShaderDevice, pxByte)
+                pxShaderData_Pixel = New pxShaderPixel(pxShader)
+            End Using
 
-                                pxShaderData_Text_G = New pxShaderText_G(pxShaderObj)
-                            End Sub)
-                    End Sub)
+            ' Vertex
+            Using vxByte = vxTask.Result
+                Dim vxShader = New VertexShader(ShaderDevice, vxByte)
+                pxShaderData_Vertex = New pxShaderVertex(vxShader)
+            End Using
 
-                Dim objShaderTask_TxS = Task.Run(
-                    Sub()
-                        PrepDispatcher().Invoke(
-                            Sub()
-                                Dim pxShaderObj As New pxShader_Text
+            ' Text shaders
+            Dim txG As New pxShader_Text
+            txG.SetStreamSource(New MemoryStream(txGBytes))
+            pxShaderData_Text_G = New pxShaderText_G(txG)
 
-                                Using objShaderStream As New MemoryStream(ShaderDataIdx("TxS"))
-                                    pxShaderObj.SetStreamSource(objShaderStream)
-                                End Using
-
-                                pxShaderData_Text_S = New pxShaderText_S(pxShaderObj)
-                            End Sub)
-                    End Sub)
-
-                Dim objShaderTask_Vx = Task.Run(
-                    Sub()
-                        PrepDispatcher().Invoke(
-                            Sub()
-                                Dim pxShaderObj As pxShader_Vertex
-
-                                Using objShaderStream As New MemoryStream(ShaderDataIdx("Vx"))
-                                    Using objShaderByte = ShaderBytecode.FromStream(objShaderStream)
-                                        pxShaderObj = New VertexShader(ShaderDevice, objShaderByte)
-                                    End Using
-                                End Using
-
-                                pxShaderData_Vertex = New pxShaderVertex(pxShaderObj)
-                            End Sub)
-                    End Sub)
-
-                Await Task.WhenAll(objShaderTask_Px, objShaderTask_Vx,
-                                   objShaderTask_TxG, objShaderTask_TxS)
-
-            End Function)
+            Dim txS As New pxShader_Text
+            txS.SetStreamSource(New MemoryStream(txSBytes))
+            pxShaderData_Text_S = New pxShaderText_S(txS)
+        End Sub)
     End Function
+
+
+    'Public Function PreloadShaderCatalog(objShaderLst As Dictionary(Of String, Byte())) As Task
+    '    Return Task.Run(
+    '        Async Function()
+
+    '            ShaderDataIdx = objShaderLst
+
+    '            Dim objShaderTask_Px = Task.Run(
+    '                Sub()
+    '                    PrepDispatcher().Invoke(
+    '                        Sub()
+    '                            Dim pxShaderObj As pxShader_Pixel
+
+    '                            Using objShaderStream As New MemoryStream(ShaderDataIdx("Px"))
+    '                                Using objShaderByte = ShaderBytecode.FromStream(objShaderStream)
+    '                                    pxShaderObj = New PixelShader(ShaderDevice, objShaderByte)
+    '                                End Using
+    '                            End Using
+
+    '                            pxShaderData_Pixel = New pxShaderPixel(pxShaderObj)
+    '                        End Sub)
+    '                End Sub)
+
+    '            Dim objShaderTask_TxG = Task.Run(
+    '                Sub()
+    '                    PrepDispatcher().Invoke(
+    '                        Sub()
+    '                            Dim pxShaderObj As New pxShader_Text
+
+    '                            Using objShaderStream As New MemoryStream(ShaderDataIdx("TxG"))
+    '                                pxShaderObj.SetStreamSource(objShaderStream)
+    '                            End Using
+
+    '                            pxShaderData_Text_G = New pxShaderText_G(pxShaderObj)
+    '                        End Sub)
+    '                End Sub)
+
+    '            Dim objShaderTask_TxS = Task.Run(
+    '                Sub()
+    '                    PrepDispatcher().Invoke(
+    '                        Sub()
+    '                            Dim pxShaderObj As New pxShader_Text
+
+    '                            Using objShaderStream As New MemoryStream(ShaderDataIdx("TxS"))
+    '                                pxShaderObj.SetStreamSource(objShaderStream)
+    '                            End Using
+
+    '                            pxShaderData_Text_S = New pxShaderText_S(pxShaderObj)
+    '                        End Sub)
+    '                End Sub)
+
+    '            Dim objShaderTask_Vx = Task.Run(
+    '                Sub()
+    '                    PrepDispatcher().Invoke(
+    '                        Sub()
+    '                            Dim pxShaderObj As pxShader_Vertex
+
+    '                            Using objShaderStream As New MemoryStream(ShaderDataIdx("Vx"))
+    '                                Using objShaderByte = ShaderBytecode.FromStream(objShaderStream)
+
+    '                                    pxShaderObj = New VertexShader(ShaderDevice, objShaderByte)
+    '                                End Using
+    '                            End Using
+
+    '                            pxShaderData_Vertex = New pxShaderVertex(pxShaderObj)
+    '                        End Sub)
+    '                End Sub)
+
+    '            Await Task.WhenAll(objShaderTask_Px, objShaderTask_Vx,
+    '                               objShaderTask_TxG, objShaderTask_TxS)
+
+    '        End Function)
+    'End Function
 
     Public Async Function PreloadShaderCatalog(objShaderTask As Task(Of Dictionary(Of String, Byte()))) As Task
         Await Task.Run(
@@ -264,26 +357,29 @@ Public Module osHandler_Shader
             End Function)
     End Function
 
-    Public Async Function AddShaderToIdx(objShaderDetails As osShaderDetails) As Task
-        Await PrepDispatcher.InvokeAsync(
-            Sub()
-                Dim idxID = BuildIdxKey(objShaderDetails.ShaderName)
+    Public Function AddShaderToIdx(objShaderDetails As osShaderDetails) As Task
+        Return Task.Run(
+            Async Function()
+                Await PrepDispatcher().InvokeAsync(
+                    Sub()
+                        Dim idxID = BuildIdxKey(objShaderDetails.ShaderName)
 
-                Select Case objShaderDetails.ShaderType
-                    Case sTypePixel
-                        osShaderIdx.Add(New idxShaderRecord(
+                        Select Case objShaderDetails.ShaderType
+                            Case sTypePixel
+                                osShaderIdx.Add(New idxShaderRecord(
                                         idxID, pxShaderData_Pixel))
-                    Case sTypeText_G
-                        osShaderIdx.Add(New idxShaderRecord(
+                            Case sTypeText_G
+                                osShaderIdx.Add(New idxShaderRecord(
                                         idxID, pxShaderData_Text_G))
-                    Case sTypeText_S
-                        osShaderIdx.Add(New idxShaderRecord(
+                            Case sTypeText_S
+                                osShaderIdx.Add(New idxShaderRecord(
                                         idxID, pxShaderData_Text_S))
-                    Case sTypeVertex
-                        osShaderIdx.Add(New idxShaderRecord(
+                            Case sTypeVertex
+                                osShaderIdx.Add(New idxShaderRecord(
                                         idxID, pxShaderData_Vertex))
-                End Select
-            End Sub, DispatcherPriority.Normal)
+                        End Select
+                    End Sub, DispatcherPriority.Background)
+            End Function)
     End Function
 
     Public Function FetchShader(objShaderType As osShaderType) As iPxShader

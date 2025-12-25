@@ -1,6 +1,12 @@
-﻿
+﻿Imports System.Windows.Threading
+Imports osAutoCast.DataTypeLib.LoadTextVisualType
 
 Public Class osHandler_Loader
+
+    Private ReadOnly _triggerLoadTextVis As Func(Of LoadTextVisualType, String, Task)
+
+    Private ReadOnly _fadeTextOut As Func(Of LoadTextVisualType, Task)
+    Private ReadOnly _fadeTextIn As Func(Of LoadTextVisualType, Task)
 
     Private ReadOnly _setValue As Action(Of Double)
     Private _currentValue As Double
@@ -15,39 +21,48 @@ Public Class osHandler_Loader
     Private _renderToken As CancellationToken
     Private _renderTcs As TaskCompletionSource(Of Boolean)
 
-    Private Const DriftSpeed As Double = 5.0
-
-    Public Sub New(setValueAction As Action(Of Double), initialValue As Double)
-        _setValue = setValueAction
-        _currentValue = initialValue
-        _smoothedValue = initialValue
-
-        _setValue(_currentValue)
-    End Sub
+    Private Const DriftSpeed As Double = 9.5
 
     Private ReadOnly _stages As IReadOnlyList(Of osLoader_Stage)
+
+    Private _stageCnt As Integer
+    Private _stageLast As Integer
 
     Private _cts As CancellationTokenSource
     Private _currentStageIndex As Integer = -1
 
     Private _smoothedValue As Double
-    Private Const SmoothingFactor As Double = 0.35
+    Private Const SmoothingFactor As Double = 0.275
 
-    Public Sub New(setValueAction As Action(Of Double),
-                   stages As IReadOnlyList(Of osLoader_Stage), initialValue As Double)
+    Private ProgMax As Double
 
+    Public Sub New(objLoadStages As osLoaderStageIdx, pMax As Double, setValueAction As Action(Of Double),
+                   objTextVis_Out As Func(Of LoadTextVisualType, Task), objTextVis_In As Func(Of LoadTextVisualType, Task))
+
+        ProgMax = pMax
         _setValue = setValueAction
-        _stages = stages
-        _currentValue = initialValue
-        _smoothedValue = initialValue
 
+        _fadeTextOut = objTextVis_Out
+        _fadeTextIn = objTextVis_In
+        _stages = objLoadStages.LoadStages
+
+        _stageCnt = _stages.Count
+        _stageLast = _stages.Count - 1
+
+        _currentValue = 0
+        _smoothedValue = 0
         _setValue(_currentValue)
     End Sub
 
-    Private Sub UpdateSmoothedValue(targetValue As Double)
+    Private Sub UpdateSmoothedValue(targetValue As Double, Optional setForce As Boolean = False)
         _currentValue = targetValue
-        _smoothedValue += (targetValue - _smoothedValue) * SmoothingFactor
-        _setValue(_smoothedValue)
+
+        If targetValue > (ProgMax * 0.975) Then
+            _setValue(targetValue)
+        Else
+            _smoothedValue += (targetValue - _smoothedValue) * SmoothingFactor
+            _setValue(_smoothedValue)
+        End If
     End Sub
 
     Private Function AnimateAsync(fromValue As Double, toValue As Double, duration As TimeSpan,
@@ -63,7 +78,10 @@ Public Class osHandler_Loader
 
         _renderHandler =
             Sub(sender As Object, e As EventArgs)
-                OnRenderFrame()
+                PrepDispatcher().Invoke(
+                    Sub()
+                        OnRenderFrame()
+                    End Sub, DispatcherPriority.Render)
             End Sub
 
         AddHandler CompositionTarget.Rendering, _renderHandler
@@ -83,7 +101,7 @@ Public Class osHandler_Loader
         Dim rawT = elapsed.TotalMilliseconds / _renderDuration.TotalMilliseconds
 
         If rawT >= 1.0 Then
-            UpdateSmoothedValue(_renderTo)
+            UpdateSmoothedValue(_renderTo, True)
             StopRendering()
             Return
         End If
@@ -107,7 +125,6 @@ Public Class osHandler_Loader
     End Sub
 
     Private Function DriftTowardAsync(targetValue As Double, token As CancellationToken) As Task
-
         _renderFrom = _currentValue
         _renderTo = targetValue
         _renderDuration = TimeSpan.FromSeconds(Math.Abs(targetValue - _currentValue) / DriftSpeed)
@@ -120,13 +137,24 @@ Public Class osHandler_Loader
 
         _renderHandler =
             Sub(sender As Object, e As EventArgs)
-                OnRenderFrame()
+                PrepDispatcher().Invoke(
+                Sub()
+                    OnRenderFrame()
+                End Sub, DispatcherPriority.Render)
             End Sub
 
         AddHandler CompositionTarget.Rendering, _renderHandler
         token.Register(Sub() StopRendering())
 
         Return _renderTcs.Task
+    End Function
+
+    Private Function VerifyLastStage(idxStage As Integer) As Boolean
+        Return (idxStage = _stageLast)
+    End Function
+
+    Private Function VerifyTextVis(txtMsg As String) As Boolean
+        Return Not txtMsg = "skip"
     End Function
 
     Public Async Function BeginLoadStage(initLoad As Boolean, Optional stageIndex As Integer = 0) As Task
@@ -142,130 +170,77 @@ Public Class osHandler_Loader
         Dim token = _cts.Token
 
         _currentStageIndex = stageIndex
-        Dim stage = _stages(stageIndex)
 
-        Dim effectiveStartValue = _currentValue
-        Dim effectiveEndValue = Math.Max(stage.EndValue, _currentValue)
+        With _stages(stageIndex)
+            Dim objTask_VisOut = _fadeTextOut(.LoadTaskData.LoadType)
 
-        Dim animationTask = AnimateAsync(fromValue:=effectiveStartValue, toValue:=effectiveEndValue,
-                                         duration:=stage.Duration, easing:=stage.Easing, token:=token)
+            Dim effectiveStartValue = _currentValue
+            Dim effectiveEndValue = Math.Max(.LoadStageData.EndValue, _currentValue)
 
-        Dim workTask As Task = Nothing
+            Dim objTask_Visual = AnimateAsync(effectiveStartValue, effectiveEndValue,
+                                              .LoadStageData.Duration, .LoadStageData.Easing, token)
 
-        If stage.LoadTask2 IsNot Nothing Then
-            Dim done As New TaskStatusReport()
+            Await _fadeTextIn(.LoadTaskData.LoadType)
 
-            workTask = stage.LoadTask2(done)
-        End If
+            Dim objTaskReport As New TaskStatusReport
+            Dim workTask As Task = Nothing
 
-        Dim isLastStage As Boolean = (stageIndex = _stages.Count - 1)
+            If .LoadTaskData.LoadTask IsNot Nothing Then
+                workTask = .LoadTaskData.
+                    LoadTask.Invoke(objTaskReport)
+            End If
 
-        If workTask IsNot Nothing Then
-            If isLastStage Then
-                Await animationTask
-                Await workTask
+            If workTask IsNot Nothing Then
+                If VerifyLastStage(stageIndex) Then
+                    Await objTask_Visual
+                    Await workTask
+                Else
+                    Await Task.WhenAny(objTask_Visual, objTaskReport.Completed)
+
+                    If objTask_Visual.IsCompleted Then
+                        Await objTask_Visual
+                    End If
+
+                    CancelRenderingOnly()
+                End If
             Else
-                Await Task.WhenAny(animationTask, workTask)
-                CancelRenderingOnly()
-            End If
-        Else
-            Await animationTask
-        End If
-
-        Dim nextIndex = stageIndex + 1
-
-        If nextIndex < _stages.Count AndAlso Not token.IsCancellationRequested Then
-            Dim nextStartValue = _stages(nextIndex).StartValue
-
-            If _currentValue < nextStartValue Then
-                Await DriftTowardAsync(nextStartValue, token)
+                Await objTask_Visual
             End If
 
-            Await BeginLoadStage(False, nextIndex)
-        End If
-    End Function
+            Dim nextIndex = stageIndex + 1
+            If nextIndex < _stageCnt AndAlso Not token.IsCancellationRequested Then
+                Dim nextStartValue = _stages(nextIndex).LoadStageData.StartValue
 
-    Public Async Function StartLoadStage(initLoad As Boolean, Optional stageIndex As Integer = 0) As Task
-        If initLoad Then stageIndex = 0
+                If _currentValue < nextStartValue Then
+                    Await DriftTowardAsync(nextStartValue, token)
+                End If
 
-        If stageIndex < 0 OrElse stageIndex >= _stages.Count Then
-            Throw New ArgumentOutOfRangeException(NameOf(stageIndex))
-        End If
-
-        CancelCurrent()
-
-        _cts = New CancellationTokenSource()
-        Dim token = _cts.Token
-
-        _currentStageIndex = stageIndex
-        Dim stage = _stages(stageIndex)
-
-        Dim effectiveStartValue = _currentValue
-        Dim effectiveEndValue = Math.Max(stage.EndValue, _currentValue)
-
-        Dim animationTask = AnimateAsync(fromValue:=effectiveStartValue, toValue:=effectiveEndValue,
-                                         duration:=stage.Duration, easing:=stage.Easing, token:=token)
-
-        Dim workTask As Task = Nothing
-        If stage.LoadTask IsNot Nothing Then
-            workTask = stage.LoadTask.Invoke()
-        End If
-
-        Dim isLastStage As Boolean = (stageIndex = _stages.Count - 1)
-
-        If workTask IsNot Nothing Then
-            If isLastStage Then
-                Await animationTask
-                Await workTask
-            Else
-                Await Task.WhenAny(animationTask, workTask)
-                CancelRenderingOnly()
+                Await BeginLoadStage(False, nextIndex)
             End If
-        Else
-            Await animationTask
-        End If
-
-        Dim nextIndex = stageIndex + 1
-
-        If nextIndex < _stages.Count AndAlso Not token.IsCancellationRequested Then
-            Dim nextStartValue = _stages(nextIndex).StartValue
-
-            If _currentValue < nextStartValue Then
-                Await DriftTowardAsync(nextStartValue, token)
-            End If
-
-            Await StartLoadStage(False, nextIndex)
-        End If
+        End With
     End Function
 
     Private Sub CancelRenderingOnly()
         StopRendering()
     End Sub
 
-    Private Shared Function ApplyEasing(
-        t As Double,
-        easing As LoaderEasing) As Double
-
+    Private Shared Function ApplyEasing(t As Double, easing As LoaderEasing) As Double
         t = Math.Max(0, Math.Min(1, t))
 
         Select Case easing
             Case LoaderEasing.EaseIn
                 Return t * t
-
             Case LoaderEasing.EaseOut
                 Return t * (2 - t)
-
             Case LoaderEasing.EaseInOut
-                If t < 0.5 Then
-                    Return 2 * t * t
+                If t >= 0.5 Then
+                    Return 1.0 - Math.Pow(-2 * t + 2, 3) / 2.0
                 Else
-                    Return 1 - Math.Pow(-2 * t + 2, 2) / 2
+                    Return 4 * t * t * t
                 End If
-
             Case LoaderEasing.SmoothStep
                 Return t * t * (3 - 2 * t)
-
-            Case Else ' Linear
+            Case Else
                 Return t
         End Select
     End Function
@@ -291,4 +266,3 @@ Public Class osHandler_Loader
     End Function
 
 End Class
-

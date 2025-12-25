@@ -39,7 +39,7 @@ Namespace osLoadingElements
         Public Event LoadProgComplete As EventHandler
         Private idxLoadAniTasks As New List(Of TaskCompletionSource(Of Boolean))
 
-        Private onLastTask As Boolean = False
+        Public Property onLastTask As Boolean = False
 
         Private ReadOnly idxProgLoadNextValues As New Dictionary(Of LoadingProgStatus, osLoadProgData) From
             {
@@ -729,7 +729,12 @@ Namespace osLoadingElements
             Dim w = Me.RenderSize.Width
             If w <= 0 Then Return
 
-            Dim fillWidth = (AnimatedProgress / 100.0) * w
+            Dim progressRatio =
+            (Progress - Minimum) / (Maximum - Minimum)
+
+            progressRatio = Math.Max(0.0, Math.Min(1.0, progressRatio))
+
+            Dim fillWidth = ActualWidth * progressRatio
             Dim tolerance = Math.Max(0.0, FillPixelTolerance)
 
             Dim isNowFull As Boolean = (fillWidth >= (w - tolerance))
@@ -741,15 +746,6 @@ Namespace osLoadingElements
                     RaiseEvent LoadProgComplete(Me, EventArgs.Empty)
                 Catch ex As Exception : End Try
 
-                SyncLock idxLoadAniTasks
-                    For Each tcs In idxLoadAniTasks
-                        Try
-                            tcs.TrySetResult(True)
-                        Catch : End Try
-                    Next
-
-                    idxLoadAniTasks.Clear()
-                End SyncLock
             ElseIf Not isNowFull AndAlso _filledSignaled Then
                 _filledSignaled = False
             End If
@@ -823,7 +819,7 @@ Namespace osLoadingElements
             progressRatio = Math.Max(0.0, Math.Min(1.0, progressRatio))
 
             Dim fillWidth = ActualWidth * progressRatio
-
+            Dim fillP = progressRatio * 100
             ' Dim fillWidth = (Progress / 100.0) * w
 
             If fillWidth > 0.0001 Then
@@ -831,7 +827,7 @@ Namespace osLoadingElements
 
                 Dim progFill_CornerRadius As CornerRadius
 
-                If AnimatedProgress >= 100.0 - 2.5 Then
+                If fillP >= 100.0 - 2.5 Then
                     progFill_CornerRadius = GetClampedCornerRadius(Me.FillCornerRadius, fillWidth, h)
                 Else
                     progFill_CornerRadius = New CornerRadius(Me.FillCornerRadius.TopLeft, Me.FillCornerRadius.TopRight,

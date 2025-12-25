@@ -382,6 +382,19 @@ Public Module DataTypeLib
         TaskComplete
     End Enum
 
+    Public Enum LoadTaskType
+        Load_StartUp
+        Load_Init
+        Load_PrefPrep
+        Load_PrefApply
+        Load_Opts
+        Load_Shaders
+        Load_PopupMenu
+        Load_ApplyConfig
+        Load_StartingSvc
+        Load_Starting
+    End Enum
+
     Public Structure LoadTextVisual
         Const LoadTxt_In = "LoadTextVisuals_FadeIn"
         Const LoadTxt_Out = "LoadTextVisuals_FadeOut"
@@ -397,6 +410,13 @@ Public Module DataTypeLib
         sTypeVertex
         sTypeText_G
         sTypeText_S
+    End Enum
+
+    Public Enum PrefType
+        Pref_AutoCast
+        Pref_AutoPass
+        Pref_MainOpts
+        Pref_GenOpts
     End Enum
 
 #End Region
@@ -444,15 +464,66 @@ Public NotInheritable Class TaskStatusReport
 End Class
 
 Public Class osLoader_Stage
+
+    Public Property LoadStageData As osLoadStageData
+    Public Property LoadTaskData As osLoadTaskData
+
+    Public Sub New()
+    End Sub
+
+    Public Sub New(objStageData As osLoadStageData, objTaskData As osLoadTaskData)
+        LoadStageData = objStageData
+        LoadTaskData = objTaskData
+    End Sub
+
+End Class
+
+Public Class osLoaderStageIdx
+
+    Public Property LoadStages As osLoader_Stage()
+
+    Public Sub New()
+    End Sub
+
+    Public Sub New(objStageData As osLoader_Stage())
+        LoadStages = objStageData
+    End Sub
+
+End Class
+
+Public Class osLoadTaskData
+
+    Public Property LoadType As LoadTaskType
+    Public Property LoadTask As Func(Of TaskStatusReport, Task)
+
+    Public Sub New()
+    End Sub
+
+    Public Sub New(taskType As LoadTaskType, taskLoad As Func(Of TaskStatusReport, Task))
+        LoadType = taskType
+        LoadTask = taskLoad
+    End Sub
+
+End Class
+
+Public Class osLoadStageData
+
     Public Property StartValue As Double
     Public Property EndValue As Double
     Public Property Duration As TimeSpan
-    Public Property Easing As LoaderEasing = LoaderEasing.Linear
+    Public Property Easing As LoaderEasing
 
-    Public Property LoadTask As Func(Of Task)
-    Public Property LoadTask2 As Func(Of TaskStatusReport, Task)
+    Public Sub New()
+    End Sub
+
+    Public Sub New(sVal As Double, eVal As Double, pDur As Double)
+        StartValue = sVal
+        EndValue = eVal
+        Duration = TimeSpan.FromMilliseconds(pDur)
+        Easing = LoaderEasing.EaseInOut
+    End Sub
+
 End Class
-
 
 Public Class GameMenuVisData
 
@@ -786,6 +857,10 @@ Public Class idxShaderRecord
 
 End Class
 
+Public Module CoreDataLibe
+    Public ReadOnly Property PrefTables As New osPref_DataTable()
+End Module
+
 Public Class osShaderDetails
 
     Public Property ShaderName As String
@@ -814,20 +889,20 @@ Public Class osPref_DataTable
     End Property
 
     Public Sub New()
-        _osPrefVQ_DT = New DataTable()
+        osPrefVQ_DT = New DataTable()
 
         PopulateVQ_Cols()
         PopulateDataVQ()
     End Sub
 
     Public Sub PopulateVQ_Cols()
-        _osPrefVQ_DT.Columns.Add("vqIdx", GetType(Integer))
-        _osPrefVQ_DT.Columns.Add("vqName", GetType(String))
+        osPrefVQ_DT.Columns.Add("vqIdx", GetType(Integer))
+        osPrefVQ_DT.Columns.Add("vqName", GetType(String))
     End Sub
 
     Private Sub PopulateDataVQ()
-        _osPrefVQ_DT.Rows.Add(0, "Performance")
-        _osPrefVQ_DT.Rows.Add(1, "Quality")
+        osPrefVQ_DT.Rows.Add(0, "Performance")
+        osPrefVQ_DT.Rows.Add(1, "Quality")
     End Sub
 
 End Class
@@ -1217,6 +1292,19 @@ Public Module osPopupMenuLib
                End Function
     End Function
 
+    Public Async Function GeneratePopupMenuGUIAsync() As Task(Of osPopupMenu_GUI)
+        Return Await PrepDispatcher().InvokeAsync(
+        Function()
+            Dim objWin_PopupMenu = New osPopupMenu_GUI()
+            AddHandler objWin_PopupMenu.Closed,
+                       AddressOf osHandler_UI.PrepDispatch
+            Return objWin_PopupMenu
+        End Function,
+        DispatcherPriority.Background
+    )
+    End Function
+
+
     Public Function GeneratePopupMenuOverlayGUI(Optional isFromTray As Boolean = False) As Func(Of MenuOverlayWindow)
         Return Function()
                    Return PrepDispatcher().Invoke(
@@ -1226,6 +1314,19 @@ Public Module osPopupMenuLib
                End Function
     End Function
 
+    Public Async Function GeneratePopupMenuOverlayGUIAsync(
+    Optional isFromTray As Boolean = False
+) As Task(Of MenuOverlayWindow)
+
+        Return Await PrepDispatcher().InvokeAsync(
+        Function()
+            Return New MenuOverlayWindow(isFromTray)
+        End Function,
+        DispatcherPriority.Background
+    )
+    End Function
+
+
     Public Function GenerateTrayMenuGUI() As Func(Of osTrayMenu_GUI)
         Return Function()
                    Return PrepDispatcher().Invoke(
@@ -1234,6 +1335,16 @@ Public Module osPopupMenuLib
                        End Function)
                End Function
     End Function
+
+    Public Async Function GenerateTrayMenuGUIAsync() As Task(Of osTrayMenu_GUI)
+        Return Await PrepDispatcher().InvokeAsync(
+        Function()
+            Return New osTrayMenu_GUI()
+        End Function,
+        DispatcherPriority.Background
+    )
+    End Function
+
 
     Public DisplayUI_TrayOverlay As Action(Of MenuOverlayWindow) = AddressOf ExecPrepUI_TrayMenuOverlay
 

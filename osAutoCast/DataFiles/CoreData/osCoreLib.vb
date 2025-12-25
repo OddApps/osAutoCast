@@ -40,6 +40,7 @@ Imports osSize = System.Windows.Size
 Imports pxShader_Pixel = SharpDX.Direct3D11.PixelShader
 Imports pxShader_Vertex = SharpDX.Direct3D11.VertexShader
 Imports osSweep = System.Windows.Media.SweepDirection
+Imports System.Data
 
 #Disable Warning IDE0060 ' Remove unused parameter
 #Disable Warning IDE1006 ' Remove unused parameter
@@ -1184,10 +1185,14 @@ Public Module osFuncLib_TrayMenu
     '    Await osHandler_UI.PrepTrayMenuDisp()
     'End Function
 
-    Public Async Function osMenu_Init() As Task
-        Await osHandler_UI.PrepTrayMenuDispr
-        osHandler_UI.osTrayMenu.PrepTrayMenuInit()
-    End Function
+    'Public Async Function osMenu_Init(doner As TaskStatusReport) As Task
+    '    Await Task.Run(Sub()
+    '                       PrepDispatcher().InvokeAsync(
+    '                           Sub()
+    '                               Dim a = osHandler_UI.PrepTrayMenuDisp(done:=doner)
+    '                           End Sub, DispatcherPriority.Render)
+    '                   End Sub)
+    'End Function
 
     'Public Async Function osMenu_Init() As Task
     '    '  Await osHandler_UI.PrepTrayMenuDispr
@@ -1527,6 +1532,33 @@ Public Class isEnabledConverter
 
 End Class
 
+Public Class VisQualityConverter
+    Implements IValueConverter
+
+    Public Function Convert(value As Object, targetType As Type, parameter As Object, culture As Globalization.CultureInfo) As Object Implements IValueConverter.Convert
+
+        If value Is Nothing Then Return Nothing
+
+        Select Case CInt(value)
+            Case 0 : Return "Performance"
+            Case 1 : Return "Quality"
+            Case Else : Return "Unknown"
+        End Select
+    End Function
+
+    Public Function ConvertBack(value As Object, targetType As Type, parameter As Object, culture As Globalization.CultureInfo) As Object Implements IValueConverter.ConvertBack
+
+        If value Is Nothing Then Return 0
+
+        Select Case value.ToString()
+            Case 0 : Return "Performance"
+            Case 1 : Return "Quality"
+            Case Else : Return 0
+        End Select
+    End Function
+
+End Class
+
 Public Class MenuFuncAdapter
     Implements INotifyPropertyChanged
 
@@ -1590,6 +1622,9 @@ Public Class TrayIconBridge
 
     End Sub
 End Class
+
+
+
 
 Public Class osEnabledStatusConfig
     Implements INotifyPropertyChanged
@@ -1999,7 +2034,7 @@ Public Module osRunCmd
 
     Public Sub RunCmd(cmd As String, Optional arguments As String = "",
                            Optional timeoutMs As Integer = 30000, Optional workingDir As String = Nothing,
-                           Optional forceUtf8 As Boolean = True) 
+                           Optional forceUtf8 As Boolean = True)
 
         Dim inner As New StringBuilder()
 

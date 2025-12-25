@@ -92,8 +92,7 @@ Public Class osInMon
 
             Dim objTask_Load = PrepDispatcher().InvokeAsync(
                 Async Function()
-                    Dim objTask_VisOut =
-                            TriggerLoadTextVis(LoadTextFade_Out)
+                    Dim objTask_VisOut = TriggerLoadTextVis(LoadTextFade_Out)
 
                     objTask_UpProg = PrepDispatcher().InvokeAsync(
                         Sub()
@@ -130,8 +129,8 @@ Public Class osInMon
         Return Task.Run(
             Async Function()
                 Using osPrefManager As New osHandler_Prefs()
-                    CoreDataLib.osPrefIndex = Await osPrefManager.LoadPrefs()
-                    Await osPrefManager.LoadPrefsAsync(CoreDataLib.osPrefIndex)
+                    '     CoreDataLib.osPrefIndex = Await osPrefManager.LoadPrefs()
+                    '  Await osPrefManager.LoadPrefsAsync(CoreDataLib.osPrefIndex)
                 End Using
             End Function)
     End Function
@@ -209,16 +208,16 @@ Partial Class osInMon
 
     Private Const ContentBorder_Radius As Double = 12
 
-    Private ReadOnly LoadDataIdx As New List(Of osLoadData) From
-        {
-            {New osLoadData(LoadStart, isLoading, LoadStatus_StartUp, 500, "Launching", objPreLoadDuration:=125)},
-            {New osLoadData(LoadInit, isInit, LoadStatus_Init, 500, "Initializing Data", objPreLoadDuration:=150)},
-            {New osLoadData(LoadPrefs, isPrefPrep, LoadStatus_PrefPrep, 500, "Loading Preferences", Function() PrepPrefs(), 275)},
-            {New osLoadData(LoadUI, isLoadingUI, LoadStatus_LoadingUI, 450, "Loading Interface", Function() PrepPrefs(), 350)},
-            {New osLoadData(LoadConfig, isApplyConfig, LoadStatus_ApplyConfig, 475, "Applying Configuration", Function() osMenu_Init(), 275)},
-            {New osLoadData(LoadService, isStartingSvc, LoadStatus_StartingSvc, 450, "Activating Service", Function() InputMonitor_Start(), 220)},
-            {New osLoadData(LoadComplete, isStarting, LoadStatus_Starting, 450, "Starting osAutoCast", Function() LoadFinalize(), 500)}
-        }
+    Private ReadOnly LoadDataIdx As New List(Of osLoadData) 'From
+    '    {
+    '        {New osLoadData(LoadStart, isLoading, LoadStatus_StartUp, 500, "Launching", objPreLoadDuration:=125)},
+    '        {New osLoadData(LoadInit, isInit, LoadStatus_Init, 500, "Initializing Data", objPreLoadDuration:=150)},
+    '        {New osLoadData(LoadPrefs, isPrefPrep, LoadStatus_PrefPrep, 500, "Loading Preferences", Function() PrepPrefs(), 275)},
+    '        {New osLoadData(LoadUI, isLoadingUI, LoadStatus_LoadingUI, 450, "Loading Interface", Function() PrepPrefs(), 350)},
+    '        {New osLoadData(LoadConfig, isApplyConfig, LoadStatus_ApplyConfig, 475, "Applying Configuration", Function() osMenu_Init(), 275)},
+    '        {New osLoadData(LoadService, isStartingSvc, LoadStatus_StartingSvc, 450, "Activating Service", Function() InputMonitor_Start(), 220)},
+    '        {New osLoadData(LoadComplete, isStarting, LoadStatus_Starting, 450, "Starting osAutoCast", Function() LoadFinalize(), 500)}
+    '    }
 
     Public Property osAutoCastVersion As String = "Ver 3.0"
 

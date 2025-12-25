@@ -11,6 +11,7 @@ Imports osAutoCast.DataTypeLib.TriggerAction
 Imports osProgDevice = SharpDX.Direct3D11.Device
 Imports osRegEx = System.Text.RegularExpressions.Regex
 Imports osStatus = osAutoCast.osEnabledStatusConfig
+Imports osPref = osAutoCast.osPreferences
 
 #Disable Warning IDE0060 ' Remove unused parameter
 #Disable Warning BC42353
@@ -202,8 +203,6 @@ Public NotInheritable Class CoreDataLib
     End Function
 
     Public Shared Function VerifyRunStatus() As Boolean
-        Dim m = osStatus.Instance.osChkEnabledStatus_IsDisabled()
-
         If osStatus.Instance.osChkEnabledStatus_IsDisabled() Then
             Return False
         Else
@@ -226,7 +225,7 @@ Public NotInheritable Class CoreDataLib
     End Function
 
     Private Shared Sub ResolveAction()
-        objCancelTask = Nothing
+
         If Not osFuncLib_InputScan.isActionComplete Then Return
         osFuncLib_InputScan.isActionComplete = False
     End Sub
@@ -259,6 +258,7 @@ Public NotInheritable Class CoreDataLib
         Dim objTriggerVal = ValidateTrigger(tType)
 
         If ProcessTrigger(objTriggerVal) Then
+
             InputMonSvc.SelectState(MonitorStatus.InCmd)
 
             objHandlerEvent = TriggerHandlers.
@@ -290,7 +290,6 @@ Public NotInheritable Class CoreDataLib
         If isUtilityTrigger(pType) Then Return TriggerValidation.ValidUtility
 
         If VerifyRunStatus() Then
-
             InitAbortMonitor(pType)
 
             Return TriggerValidation.ValidTrigger
@@ -301,9 +300,7 @@ Public NotInheritable Class CoreDataLib
 
     Private Shared Function StartCancelMonitor(cts As CancellationTokenSource,
                                                   Optional chkType As TriggerType = AutoCast) As Task
-        Return Task.Run(Sub()
-                            MonitorForCancel(cts, chkType)
-                        End Sub)
+        Return MonitorForCancel(cts, chkType)
     End Function
 
     Private Shared Sub InitAbortMonitor(Optional chkType As TriggerType = AutoCast)
@@ -313,6 +310,11 @@ Public NotInheritable Class CoreDataLib
 
     Private Shared Sub PrepAbortMonitor()
         If chkActionAbort IsNot Nothing Then
+            chkActionAbort.Cancel()
+
+
+            objCancelTask = Nothing
+
             chkActionAbort.Dispose()
             chkActionAbort = Nothing
         End If
@@ -320,27 +322,36 @@ Public NotInheritable Class CoreDataLib
         objCancelState = Nothing
     End Sub
 
-    Private Shared Async Sub MonitorForCancel(cts As CancellationTokenSource,
-                                                 Optional pType As TriggerType = AutoCast)
-        While Not cts.Token.IsCancellationRequested
-            Select Case pType
-                Case AutoCast
-                    If Not InputMonSvc.DetectTrigger(MonitorMouse) Then
-                        cts.Cancel()
-                        Exit While
-                    End If
-                Case AutoPass
-                    If InputMonSvc.DetectTrigger(MonitorAutoPassAbort) Then
-                        Await PrepDispatcher(True).InvokeAsync(Sub()
-                                                                   cts.Cancel()
-                                                               End Sub)
-                        Exit While
-                    End If
-            End Select
+    Private Shared Async Function MonitorForCancel(cts As CancellationTokenSource,
+                                                 Optional pType As TriggerType = AutoCast) As Task
+        '   If Not cts.Token = Nothing Then
+        ' Dim token = cts.Token
+        Dim token = cts.Token
+        Try
+            While Not token.IsCancellationRequested
+                Select Case pType
+                    Case AutoCast
+                        If Not InputMonSvc.DetectTrigger(MonitorMouse) Then
+                            cts.Cancel()
+                            Exit While
+                        End If
+                    Case AutoPass
+                        If InputMonSvc.DetectTrigger(MonitorAutoPassAbort) Then
+                            Await PrepDispatcher(True).InvokeAsync(Sub()
+                                                                       cts.Cancel()
+                                                                   End Sub)
+                            Exit While
+                        End If
+                End Select
 
-            Await Task.Delay(5)
-        End While
-    End Sub
+                Await Task.Delay(5, cts.Token)
+            End While
+        Catch ex As OperationCanceledException
+
+        End Try
+
+        '     End If
+    End Function
 
     Private Shared Sub CreateAbortMonitor(ByRef cts As CancellationTokenSource,
                                                   Optional chkType As TriggerType = AutoCast)

@@ -1,4 +1,4 @@
-﻿<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -111,65 +111,8 @@
     <TargetZone>LocalIntranet</TargetZone>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Microsoft.Bcl.AsyncInterfaces, Version=10.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>..\packages\Microsoft.Bcl.AsyncInterfaces.10.0.0-rc.1.25451.107\lib\net462\Microsoft.Bcl.AsyncInterfaces.dll</HintPath>
-    </Reference>
-    <Reference Include="PresentationCore" />
-    <Reference Include="SharpDX, Version=4.2.0.0, Culture=neutral, PublicKeyToken=b4dcf0f35e5521f1, processorArchitecture=MSIL">
-      <HintPath>..\packages\SharpDX.4.2.0\lib\net45\SharpDX.dll</HintPath>
-    </Reference>
-    <Reference Include="SharpDX.D3DCompiler, Version=4.2.0.0, Culture=neutral, PublicKeyToken=b4dcf0f35e5521f1, processorArchitecture=MSIL">
-      <HintPath>..\packages\SharpDX.D3DCompiler.4.2.0\lib\net45\SharpDX.D3DCompiler.dll</HintPath>
-    </Reference>
-    <Reference Include="SharpDX.Direct2D1, Version=4.2.0.0, Culture=neutral, PublicKeyToken=b4dcf0f35e5521f1, processorArchitecture=MSIL">
-      <HintPath>..\packages\SharpDX.Direct2D1.4.2.0\lib\net45\SharpDX.Direct2D1.dll</HintPath>
-    </Reference>
-    <Reference Include="SharpDX.Direct3D11, Version=4.2.0.0, Culture=neutral, PublicKeyToken=b4dcf0f35e5521f1, processorArchitecture=MSIL">
-      <HintPath>..\packages\SharpDX.Direct3D11.4.2.0\lib\net45\SharpDX.Direct3D11.dll</HintPath>
-    </Reference>
-    <Reference Include="SharpDX.Direct3D9, Version=4.2.0.0, Culture=neutral, PublicKeyToken=b4dcf0f35e5521f1, processorArchitecture=MSIL">
-      <HintPath>..\packages\SharpDX.Direct3D9.4.2.0\lib\net45\SharpDX.Direct3D9.dll</HintPath>
-    </Reference>
-    <Reference Include="SharpDX.DXGI, Version=4.2.0.0, Culture=neutral, PublicKeyToken=b4dcf0f35e5521f1, processorArchitecture=MSIL">
-      <HintPath>..\packages\SharpDX.DXGI.4.2.0\lib\net45\SharpDX.DXGI.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Core" />
-    <Reference Include="System.Drawing" />
-    <Reference Include="System.Reactive, Version=6.1.0.0, Culture=neutral, PublicKeyToken=94bc3704cddfc263, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Reactive.6.1.0\lib\net472\System.Reactive.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Reactive.Async, Version=6.0.0.0, Culture=neutral, PublicKeyToken=94bc3704cddfc263, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Reactive.Async.6.0.0-alpha.18\lib\netstandard2.0\System.Reactive.Async.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Reactive.Linq, Version=3.0.6000.0, Culture=neutral, PublicKeyToken=94bc3704cddfc263, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Reactive.Linq.6.1.0\lib\net472\System.Reactive.Linq.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Runtime.CompilerServices.Unsafe, Version=6.0.3.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Runtime.CompilerServices.Unsafe.6.1.2\lib\net462\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Threading.Tasks.Extensions, Version=4.2.4.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Threading.Tasks.Extensions.4.6.3\lib\net462\System.Threading.Tasks.Extensions.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Windows" />
-    <Reference Include="System.Windows.Forms" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
-    <Reference Include="System" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Xml" />
-    <Reference Include="System.Xaml">
-      <RequiredTargetFramework>4.0</RequiredTargetFramework>
-    </Reference>
-    <Reference Include="WindowsBase" />
-    <Reference Include="PresentationFramework" />
-    <Reference Include="System.Net.Http" />
   </ItemGroup>
   <ItemGroup>
-    <ApplicationDefinition Include="Application.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </ApplicationDefinition>
-    <Compile Include="DataFiles\CoreData\osLoadTaskLib.vb" />
     <Compile Include="DataFiles\HandlerData\osHandler_Graphics.vb" />
     <Compile Include="DataFiles\HandlerData\osHandler_Loader.vb" />
     <Compile Include="DataFiles\HandlerData\osHandler_Shader.vb" />
@@ -186,9 +129,6 @@
     <Compile Include="DataFiles\InterfaceData\MenuUI\osTrayMenu_GUI.xaml.vb">
       <DependentUpon>osTrayMenu_GUI.xaml</DependentUpon>
     </Compile>
-    <Compile Include="DataFiles\InterfaceData\PrefsUI\osPrefs_GUI.xaml.vb">
-      <DependentUpon>osPrefs_GUI.xaml</DependentUpon>
-    </Compile>
     <Compile Include="DataFiles\InterfaceData\ProgressUI\ProgBarGui_AutoCast.Designer.vb">
       <DependentUpon>ProgBarGui_AutoCast.vb</DependentUpon>
     </Compile>
@@ -197,8 +137,6 @@
     </Compile>
     <Compile Include="DataFiles\ModelData\osLoadingProgressBar.vb" />
     <Compile Include="DataFiles\ModelData\osTextDisplay.vb" />
-    <Compile Include="DataFiles\ModelData\osUpDownTextBox.vb" />
-    <Compile Include="DataFiles\ObjectData\osPreferenceData.vb" />
     <Compile Include="DataFiles\VisualData\StyleLib\osStyleManager.vb" />
     <Compile Include="DataFiles\VisualData\EffectsLib\osEffectManager.vb" />
     <Compile Include="GlobalSuppressions.vb" />
@@ -209,30 +147,6 @@
     <Compile Include="DataFiles\InterfaceData\PrefsUI\osPrefs.vb">
       <SubType>Form</SubType>
     </Compile>
-    <Page Include="DataFiles\InterfaceData\LoaderUI\osLoader_UI.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="DataFiles\InterfaceData\MenuUI\osPopupMenu_GUI.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="DataFiles\InterfaceData\MenuUI\osTrayMenu_GUI.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="DataFiles\InterfaceData\PrefsUI\osPrefs_GUI.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="DataFiles\InterfaceData\ProgressUI\progGui_AutoPass.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <Page Include="DataFiles\InputMonData\osInMon.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
     <Compile Include="Application.xaml.vb">
       <DependentUpon>Application.xaml</DependentUpon>
       <SubType>Code</SubType>
@@ -247,55 +161,7 @@
     </Compile>
     <Compile Include="DataFiles\ModelData\EasingModel.vb" />
     <Compile Include="DataFiles\ModelData\OddLibProgressBar.vb" />
-    <Compile Include="DataFiles\ObjectData\DataTypeLib.vb" />
-    <Page Include="DataFiles\VisualData\StyleLib\StyleResources\StyleConfigs\osUI_StyleEffects.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="DataFiles\VisualData\StyleLib\StyleResources\StyleConfigs\osUI_StyleIndex.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="DataFiles\VisualData\StyleLib\StyleResources\StyleConfigs\osUI_StyleBase.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="DataFiles\VisualData\StyleLib\StyleResources\StyleConfigs\osUI_StyleSettings.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="DataFiles\VisualData\StyleLib\StyleResources\StyleConfigs\osUI_StyleViews.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="DataFiles\VisualData\StyleLib\StyleResources\StyleConfigs\osUI_StyleVisuals.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="DataFiles\VisualData\StyleLib\StyleResources\StyleProfiles\osUI_Style-Container.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="DataFiles\VisualData\StyleLib\StyleResources\StyleProfiles\osUI_Style-Border.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="DataFiles\VisualData\StyleLib\StyleResources\StyleProfiles\osUI_Style-Button.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="DataFiles\VisualData\StyleLib\StyleResources\StyleProfiles\osUI_Style-LoadScreen.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="DataFiles\VisualData\StyleLib\StyleResources\StyleProfiles\osUI_Style-Toggle.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="DataFiles\VisualData\StyleLib\StyleResources\StyleProfiles\osUI_Style-TrayMenu.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
+    <Compile Include="DataFiles\TypeData\DataTypeLib.vb" />
   </ItemGroup>
   <ItemGroup>
     <Import Include="System.Threading" />
@@ -346,8 +212,6 @@
       <Link>.editorconfig</Link>
     </None>
     <EmbeddedResource Include="DataFiles\VisualData\EffectsLib\EffectResources\osEffect_Shaders.csd" />
-    <Resource Include="DataFiles\VisualData\EffectsLib\EffectResources\osTestShader_TextGlow.ps" />
-    <Resource Include="DataFiles\VisualData\EffectsLib\EffectResources\osTestShader_TextStroke.ps" />
     <None Include="My Project\app.manifest" />
     <None Include="My Project\DataSources\osPrefStore.ProgVisualQualityData.datasource" />
     <None Include="My Project\Settings.settings">
@@ -378,8 +242,45 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
-    <Resource Include="ResourceLib\osSplashLoader.png" />
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.VisualBasic.targets" />
+  <ItemGroup>
+    <ReferencePath Include="C:\Users\OddAdmin\source\repos\osAutoCast\packages\Microsoft.Bcl.AsyncInterfaces.10.0.0-rc.1.25451.107\lib\net462\Microsoft.Bcl.AsyncInterfaces.dll" />
+    <ReferencePath Include="C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.8\PresentationCore.dll" />
+    <ReferencePath Include="C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.8\PresentationFramework.dll" />
+    <ReferencePath Include="C:\Users\OddAdmin\source\repos\osAutoCast\packages\SharpDX.D3DCompiler.4.2.0\lib\net45\SharpDX.D3DCompiler.dll" />
+    <ReferencePath Include="C:\Users\OddAdmin\source\repos\osAutoCast\packages\SharpDX.Direct2D1.4.2.0\lib\net45\SharpDX.Direct2D1.dll" />
+    <ReferencePath Include="C:\Users\OddAdmin\source\repos\osAutoCast\packages\SharpDX.Direct3D11.4.2.0\lib\net45\SharpDX.Direct3D11.dll" />
+    <ReferencePath Include="C:\Users\OddAdmin\source\repos\osAutoCast\packages\SharpDX.Direct3D9.4.2.0\lib\net45\SharpDX.Direct3D9.dll" />
+    <ReferencePath Include="C:\Users\OddAdmin\source\repos\osAutoCast\packages\SharpDX.4.2.0\lib\net45\SharpDX.dll" />
+    <ReferencePath Include="C:\Users\OddAdmin\source\repos\osAutoCast\packages\SharpDX.DXGI.4.2.0\lib\net45\SharpDX.DXGI.dll" />
+    <ReferencePath Include="C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.8\System.Core.dll" />
+    <ReferencePath Include="C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.8\System.Data.DataSetExtensions.dll" />
+    <ReferencePath Include="C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.8\System.Data.dll" />
+    <ReferencePath Include="C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.8\System.dll" />
+    <ReferencePath Include="C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.8\System.Drawing.dll" />
+    <ReferencePath Include="C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.8\System.Net.Http.dll" />
+    <ReferencePath Include="C:\Users\OddAdmin\source\repos\osAutoCast\packages\System.Reactive.Async.6.0.0-alpha.18\lib\netstandard2.0\System.Reactive.Async.dll" />
+    <ReferencePath Include="C:\Users\OddAdmin\source\repos\osAutoCast\packages\System.Reactive.6.1.0\lib\net472\System.Reactive.dll" />
+    <ReferencePath Include="C:\Users\OddAdmin\source\repos\osAutoCast\packages\System.Reactive.Linq.6.1.0\lib\net472\System.Reactive.Linq.dll" />
+    <ReferencePath Include="C:\Users\OddAdmin\source\repos\osAutoCast\packages\System.Runtime.CompilerServices.Unsafe.6.1.2\lib\net462\System.Runtime.CompilerServices.Unsafe.dll" />
+    <ReferencePath Include="C:\Users\OddAdmin\source\repos\osAutoCast\packages\System.Threading.Tasks.Extensions.4.6.3\lib\net462\System.Threading.Tasks.Extensions.dll" />
+    <ReferencePath Include="C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.8\System.Windows.dll" />
+    <ReferencePath Include="C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.8\System.Windows.Forms.dll" />
+    <ReferencePath Include="C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.8\System.Xaml.dll" />
+    <ReferencePath Include="C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.8\System.Xml.dll" />
+    <ReferencePath Include="C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.8\System.Xml.Linq.dll" />
+    <ReferencePath Include="C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.8\WindowsBase.dll" />
+    <ReferencePath Include="C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.8\Facades\netstandard.dll" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="C:\Users\OddAdmin\source\repos\osAutoCast\osAutoCast\obj\x64\Debug\DataFiles\InterfaceData\LoaderUI\osLoader_UI.g.vb" />
+    <Compile Include="C:\Users\OddAdmin\source\repos\osAutoCast\osAutoCast\obj\x64\Debug\DataFiles\InterfaceData\MenuUI\osPopupMenu_GUI.g.vb" />
+    <Compile Include="C:\Users\OddAdmin\source\repos\osAutoCast\osAutoCast\obj\x64\Debug\DataFiles\InterfaceData\MenuUI\osTrayMenu_GUI.g.vb" />
+    <Compile Include="C:\Users\OddAdmin\source\repos\osAutoCast\osAutoCast\obj\x64\Debug\DataFiles\InterfaceData\ProgressUI\progGui_AutoPass.g.vb" />
+    <Compile Include="C:\Users\OddAdmin\source\repos\osAutoCast\osAutoCast\obj\x64\Debug\DataFiles\InputMonData\osInMon.g.vb" />
+    <Compile Include="C:\Users\OddAdmin\source\repos\osAutoCast\osAutoCast\obj\x64\Debug\Application.g.vb" />
+    <Compile Include="C:\Users\OddAdmin\source\repos\osAutoCast\osAutoCast\obj\x64\Debug\GeneratedInternalTypeHelper.g.vb" />
+  </ItemGroup>
 </Project>

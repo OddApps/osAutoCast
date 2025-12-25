@@ -5,6 +5,7 @@ Imports osAutoCast.DataTypeLib.MenuProperty
 Imports osAutoCast.DataTypeLib.osShaderType
 Imports osAutoCast.DataTypeLib.VisualEasing
 Imports System.Windows.Media.Animation
+Imports System.Windows.Controls.Primitives
 
 Namespace osStyle
 
@@ -395,5 +396,176 @@ Namespace osStyle
         End Function
 
     End Class
+
+    Public NotInheritable Class osUpDownTextBoxCmds
+        Public Shared ReadOnly Increase As New RoutedCommand()
+        Public Shared ReadOnly Decrease As New RoutedCommand()
+    End Class
+
+    Public Class osUpDownTextBox
+        Inherits TextBox
+
+
+        Shared Sub New()
+            DefaultStyleKeyProperty.OverrideMetadata(
+            GetType(osUpDownTextBox),
+            New FrameworkPropertyMetadata(GetType(osUpDownTextBox)))
+        End Sub
+
+        Protected Overrides Sub OnInitialized(e As EventArgs)
+            MyBase.OnInitialized(e)
+
+            CommandBindings.Add(
+            New CommandBinding(
+                osStyle.osUpDownTextBoxCmds.Increase,
+                Sub() ChangeValue(+Increment)))
+
+            CommandBindings.Add(
+            New CommandBinding(
+                osStyle.osUpDownTextBoxCmds.Decrease,
+                Sub() ChangeValue(-Increment)))
+        End Sub
+
+        '========================
+        ' Dependency Properties
+        '========================
+
+        Public Shared ReadOnly ValueProperty As DependencyProperty =
+        DependencyProperty.Register(
+            NameOf(Value),
+            GetType(Double),
+            GetType(osUpDownTextBox),
+            New FrameworkPropertyMetadata(
+                0.0,
+                FrameworkPropertyMetadataOptions.BindsTwoWayByDefault,
+                AddressOf OnValueChanged))
+
+        Public Property Value As Double
+            Get
+                Return CDbl(GetValue(ValueProperty))
+            End Get
+            Set(value As Double)
+                SetValue(ValueProperty, value)
+            End Set
+        End Property
+
+        Public Shared ReadOnly MinimumProperty As DependencyProperty =
+        DependencyProperty.Register(
+            NameOf(Minimum),
+            GetType(Double),
+            GetType(osUpDownTextBox),
+            New PropertyMetadata(0.0))
+
+        Public Property Minimum As Double
+            Get
+                Return CDbl(GetValue(MinimumProperty))
+            End Get
+            Set(value As Double)
+                SetValue(MinimumProperty, value)
+            End Set
+        End Property
+
+        Public Shared ReadOnly MaximumProperty As DependencyProperty =
+        DependencyProperty.Register(
+            NameOf(Maximum),
+            GetType(Double),
+            GetType(osUpDownTextBox),
+            New PropertyMetadata(100.0))
+
+        Public Property Maximum As Double
+            Get
+                Return CDbl(GetValue(MaximumProperty))
+            End Get
+            Set(value As Double)
+                SetValue(MaximumProperty, value)
+            End Set
+        End Property
+
+        Public Shared ReadOnly IncrementProperty As DependencyProperty =
+        DependencyProperty.Register(
+            NameOf(Increment),
+            GetType(Double),
+            GetType(osUpDownTextBox),
+            New PropertyMetadata(1.0))
+
+        Public Property Increment As Double
+            Get
+                Return CDbl(GetValue(IncrementProperty))
+            End Get
+            Set(value As Double)
+                SetValue(IncrementProperty, value)
+            End Set
+        End Property
+
+        '========================
+        ' Value Sync
+        '========================
+
+        Private Shared Sub OnValueChanged(d As DependencyObject, e As DependencyPropertyChangedEventArgs)
+            Dim ctrl = CType(d, osUpDownTextBox)
+            ctrl.Text = ctrl.Value.ToString(CultureInfo.CurrentCulture)
+        End Sub
+
+        '========================
+        ' Input Handling
+        '========================
+
+        Protected Overrides Sub OnPreviewTextInput(e As Input.TextCompositionEventArgs)
+            If Not IsNumericInput(e.Text) Then
+                e.Handled = True
+            End If
+            MyBase.OnPreviewTextInput(e)
+        End Sub
+
+        Protected Overrides Sub OnLostFocus(e As RoutedEventArgs)
+            ParseText()
+            MyBase.OnLostFocus(e)
+        End Sub
+
+        Protected Overrides Sub OnMouseWheel(e As Input.MouseWheelEventArgs)
+            If e.Delta > 0 Then
+                ChangeValue(+Increment)
+            Else
+                ChangeValue(-Increment)
+            End If
+            e.Handled = True
+        End Sub
+
+        Protected Overrides Sub OnPreviewKeyDown(e As Input.KeyEventArgs)
+            Select Case e.Key
+                Case Input.Key.Up
+                    ChangeValue(+Increment)
+                    e.Handled = True
+                Case Input.Key.Down
+                    ChangeValue(-Increment)
+                    e.Handled = True
+            End Select
+
+            MyBase.OnPreviewKeyDown(e)
+        End Sub
+
+        Private Sub ParseText()
+            Dim val As Double
+            If Double.TryParse(Text, val) Then
+                Value = Coerce(val)
+            Else
+                Text = Value.ToString()
+            End If
+        End Sub
+
+        Private Sub ChangeValue(delta As Double)
+            Value = Coerce(Value + delta)
+            CaretIndex = Text.Length
+        End Sub
+
+        Private Function Coerce(val As Double) As Double
+            Return Math.Max(Minimum, Math.Min(Maximum, val))
+        End Function
+
+        Private Function IsNumericInput(input As String) As Boolean
+            Return Double.TryParse(input, Nothing)
+        End Function
+    End Class
+
 
 End Namespace

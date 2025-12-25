@@ -1,0 +1,104 @@
+﻿<Window x:Class="osPrefs_GUI" x:Name="winOpts" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" 
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:local="clr-namespace:osAutoCast" 
+        mc:Ignorable="d" Title="Settings" Width="225" Background="#FF2A2A2A" WindowStyle="None" ResizeMode="NoResize" 
+        ShowInTaskbar="False" Topmost="True" WindowStartupLocation="CenterScreen" VerticalAlignment="Top" SizeToContent="Height"
+        xmlns:osStyle="clr-namespace:osAutoCast.osStyle" d:DataContext="{d:DesignInstance Type=local:osPreferences}" ShowActivated="False">
+    <Window.Resources>
+        <local:VisQualityConverter x:Key="VisQualityConverter1"/>
+        <local:VisQualityConverter x:Key="VisQualityConverter"/>
+    </Window.Resources>
+    <Window.DataContext>
+        <local:osPreferences/>
+    </Window.DataContext>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="28"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <Grid Grid.Row="0" Background="#FF181818" x:Name="osPrefs_TitleBar" >
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="24"/>
+            </Grid.ColumnDefinitions>
+            <Label Background="#FF181818" Grid.Column="0"  VerticalAlignment="Stretch" >
+                <Label.Content>
+                    <TextBlock Text="Options" Background="#FF181818" FontSize="18" LineStackingStrategy="BlockLineHeight" LineHeight="18" FontWeight="Normal"/>
+                </Label.Content>
+            </Label>
+            <Button Grid.Column="1" Background="#FF181818" BorderThickness="0" FontSize="24" VerticalAlignment="Center" VerticalContentAlignment="Top" Padding="0">
+                <Button.Content>
+                    <TextBlock Text="X" Background="#FF181818" LineStackingStrategy="BlockLineHeight" LineHeight="26" FontWeight="Bold"/>
+                </Button.Content>
+            </Button>
+        </Grid>
+        <Grid Grid.Row="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <GroupBox Header="AutoCast" BorderThickness="0,1,0,1" Margin="0,2,0,4" 
+                  FontFamily="Trebuchet MS" FontSize="16" FontWeight="Bold" Padding="0,2">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition/>
+                        <ColumnDefinition/>
+                    </Grid.ColumnDefinitions>
+                    <Label Content="Fuse" FontWeight="Normal" FontSize="14" HorizontalContentAlignment="Left" Grid.Column="0" Padding="0" VerticalAlignment="Center" HorizontalAlignment="Left"/>
+                    <osStyle:osUpDownTextBox  TextWrapping="NoWrap" Grid.Column="1" FontWeight="Normal" Height="30" VerticalContentAlignment="Center" FontSize="14" HorizontalContentAlignment="Center"
+                         Value="{Binding AutoCast_Fuse, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" UseLayoutRounding="True" Minimum="10" Maximum="1200" Increment="5"/>
+                    <Grid Grid.Row="1"  Grid.ColumnSpan="2" Grid.Column="0" Margin="0,4,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Text="Release To Cast" FontSize="14" FontWeight="Regular"
+               VerticalAlignment="Bottom"/>
+
+                        <CheckBox Grid.Column="1" FontSize="14" FontWeight="Regular" IsChecked="{Binding AutoCast_RTC, Mode=TwoWay}" Height="18"
+              VerticalAlignment="Center" VerticalContentAlignment="Bottom"/>
+                    </Grid>
+                </Grid>
+            </GroupBox>
+            <GroupBox Header="AutoPass" Grid.Row="1" BorderThickness="0,1,0,1" Margin="0,0,0,4" FontFamily="Trebuchet MS" FontSize="16" FontWeight="Bold" Padding="0,2">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition/>
+                        <ColumnDefinition/>
+                    </Grid.ColumnDefinitions>
+                    <Label Content="Safety Timer" FontWeight="Normal" Grid.Column="0" Padding="0" VerticalAlignment="Center" HorizontalAlignment="Left" FontSize="14" />
+                    <osStyle:osUpDownTextBox  TextWrapping="NoWrap" Grid.Column="1" Height="30" VerticalContentAlignment="Center" FontSize="14" FontWeight="Regular"
+                         Value="{Binding AutoPass_SafetyTimer, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" HorizontalContentAlignment="Center" Minimum="100" Maximum="3000" Increment="5" />
+                </Grid>
+            </GroupBox>
+            <GroupBox Header="General" Grid.Row="2" BorderThickness="0,1,0,1" Margin="0,2,0,6" FontFamily="Trebuchet MS" FontSize="16" FontWeight="Bold" Padding="0,2">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition/>
+                        <ColumnDefinition/>
+                    </Grid.ColumnDefinitions>
+                    <Label Content="Visual Quality" FontWeight="Normal" Grid.Column="0" Padding="0" VerticalAlignment="Center" HorizontalAlignment="Left" FontSize="14" />
+                    <ComboBox Grid.Column="1" ItemsSource="{Binding PrefTables.osPrefVQ_DT, Converter={StaticResource VisQualityConverter1}, Mode=TwoWay}"  SelectedItem="{Binding GenOpts_VisualQuality}" IsEditable="False"
+    DisplayMemberPath="vqName" Height="30" FontSize="14"  FontWeight="Normal"  
+    SelectedValuePath="vqIdx"  Background="#FF575757" OverridesDefaultStyle="True" />
+
+                </Grid>
+            </GroupBox>
+            <Button Content="Save" Height="38" Grid.Row="3" Margin="4,0,4,4" Click="Button_Click"/>
+
+        </Grid>
+    </Grid>
+</Window>

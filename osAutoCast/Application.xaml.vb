@@ -22,7 +22,6 @@ Class Application
     Private objTask_VisualComplete As TaskCompletionSource(Of Boolean) = Nothing
 
     Private evLoad_LoadComplete As osLoaderCompleteEventHandler
-    Private evLoad1_LoadComplete
 
     Private evLoad_ShowWin As EventHandler
     Private evLoad_HideWin As EventHandler
@@ -68,7 +67,6 @@ Class Application
     End Function
 
     Private Sub InitLoadVisual()
-        'objLoaderScreen = New osInMon
         objLoaderScreen = New osLoader_UI
 
         objLoaderScreen.Opacity = 0
@@ -151,6 +149,9 @@ Class Application
 
                         objLoaderScreen.Close()
                         osHandler_UI.RecaptureResources()
+
+                        Dim aa As New osPrefs_GUI
+                        aa.Show()
                     End Sub
 
                 AddHandler objLoaderScreen.osLoaderComplete, evLoad_LoadComplete
