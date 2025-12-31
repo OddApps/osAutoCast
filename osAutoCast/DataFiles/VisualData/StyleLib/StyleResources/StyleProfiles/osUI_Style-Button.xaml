@@ -38,7 +38,7 @@
             </DataTrigger>
         </Style.Triggers>
     </Style>
-    
+
     <Style x:Key="GameMenu_ShowClose" TargetType="{x:Type Button}"
            BasedOn="{StaticResource pmBtnGameMenuItemStyle}">
         <Setter Property="Visibility" Value="Collapsed" />
@@ -61,6 +61,23 @@
                 <Setter Property="Visibility" Value="Visible" />
             </DataTrigger>
         </Style.Triggers>
+    </Style>
+
+    <Style x:Key="GameMenu_ShowRestart" TargetType="{x:Type Button}"
+           BasedOn="{StaticResource pmBtnGameMenuItemStyle}">
+        <Setter Property="osStyle:osStyles.CornerRadius" Value="0,0,0,0"/>
+        <Setter Property="osStyle:osStyles.BorderThickness" Value="0,2,0,0"/>
+        <Setter Property="osStyle:osStyles.BorderBrush">
+            <Setter.Value>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                    <GradientStop Color="#00000000" Offset="0.0"/>
+                    <GradientStop Color="#A1060606" Offset="0.3"/>
+                    <GradientStop Color="#A1060606" Offset="0.7"/>
+                    <GradientStop Color="#00000000" Offset="1.0"/>
+                </LinearGradientBrush>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="osStyle:osStyles.Background" Value="#C4363636"/>
     </Style>
 
     <Style x:Key="pmBtnMainStyle" TargetType="{x:Type Button}"

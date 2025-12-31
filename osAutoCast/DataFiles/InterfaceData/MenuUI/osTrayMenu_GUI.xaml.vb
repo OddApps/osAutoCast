@@ -74,7 +74,7 @@ Public Class osTrayMenu_GUI
         Else
             PrepDispatcher().Invoke(
                 AddressOf ShowTrayMenuCore,
-                DispatcherPriority.Send)
+                DispatcherPriority.Render)
         End If
     End Sub
 
@@ -230,8 +230,8 @@ Partial Public Class osTrayMenu_GUI
 
         Select Case visMenuType
             Case GameMenuVis_Height
-                visValStart = If(valState, 0, 32)
-                visValEnd = If(valState, 32, 0)
+                visValStart = If(valState, 0, 64)
+                visValEnd = If(valState, 64, 0)
             Case GameMenuVis_Opacity
                 visValStart = If(valState, 0, 1)
                 visValEnd = If(valState, 1, 0)
@@ -241,7 +241,7 @@ Partial Public Class osTrayMenu_GUI
             Case GameMenuVis_Position
                 visValStart = Me.Top
                 visValEnd = If(valState,
-                    Me.Top - 32, Me.Top + 32)
+                    Me.Top - 64, Me.Top + 64)
         End Select
 
         Return New GameMenuVisData(visValStart, visValEnd, visValVisibility)
@@ -508,6 +508,35 @@ Partial Public Class osTrayMenu_GUI
                         osRunCmd.RunCmd(.First(), .Last())
                     End With
                 End Sub)
+        Else
+            PromptResponseState.ExitPromptResponse()
+            SetTrayMenuActive()
+        End If
+    End Sub
+
+    Private Async Sub TrayMenuBtn_RestartGame_Click(sender As Object, e As RoutedEventArgs) Handles TrayMenuBtn_RestartGame.Click
+        PromptResponseState.EnterPromptResponse()
+
+        Dim chkRestartGameTrigger = GetResponse(PromptType.GameMenu_Restart, True)
+
+        If chkRestartGameTrigger Then
+            Await RunTrayMenuCloseTask(
+                Async Function()
+                    With cmd_KillGame
+                        osRunCmd.RunCmd(.First(), .Last())
+                    End With
+
+                    While IsGameRunning()
+                        Await Task.Delay(500)
+                        If Not IsGameRunning() Then Exit While
+                    End While
+
+                    Process.Start(New ProcessStartInfo With {
+                              .FileName = dirMtgaExe, .WorkingDirectory = dirMtga,
+                              .WindowStyle = ProcessWindowStyle.Maximized
+                          })
+
+                End Function)
         Else
             PromptResponseState.ExitPromptResponse()
             SetTrayMenuActive()

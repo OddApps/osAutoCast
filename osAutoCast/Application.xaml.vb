@@ -149,9 +149,6 @@ Class Application
 
                         objLoaderScreen.Close()
                         osHandler_UI.RecaptureResources()
-
-                        Dim aa As New osPrefs_GUI
-                        aa.Show()
                     End Sub
 
                 AddHandler objLoaderScreen.osLoaderComplete, evLoad_LoadComplete

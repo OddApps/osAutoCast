@@ -27,6 +27,8 @@
                                 Style="{StaticResource GameMenu_ShowStart}" />
                         <Button x:Name="pmBtn_CloseGame" Content="Close MTGA"
                                 Style="{StaticResource GameMenu_ShowClose}"/>
+                        <Button x:Name="pmBtn_RestartGame" Content="Restart MTGA"
+                                Style="{StaticResource GameMenu_ShowRestart}"/>
                     </StackPanel>
                 </Border>
             </StackPanel>

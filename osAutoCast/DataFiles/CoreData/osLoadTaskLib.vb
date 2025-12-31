@@ -17,13 +17,9 @@ Imports System.Runtime.InteropServices
 Imports System.Windows.Interop
 Imports osColor = System.Windows.Media.Color
 Imports repTS = osAutoCast.TaskStatusReport
+Imports osPefs = osAutoCast.osPrefLib.osPreferenceLib
 
 Public Module osLoadTaskLib
-
-    Private objTask_PreloadShaders As New List(Of Task)
-    Private objTask_ListShaders As New List(Of Task)
-
-    Public objBuildShader As Task(Of Dictionary(Of String, Byte())) = Nothing
 
     Public Property objLoadUI As osLoader_UI
 
@@ -55,44 +51,33 @@ Public Module osLoadTaskLib
     End Property
 
     Public Async Function LoadTask_Init(objTaskStatus As TaskStatusReport) As Task
-        AddHandler uiLoadProgBar.LoadProgComplete, objLoadUI.evtLoaderComplete
+        AddHandler uiLoadProgBar.LoadProgComplete,
+            objLoadUI.evtLoaderComplete
 
         objLoadUI.InitHandlerPref()
-        Await Task.Delay(250)
+        Await Task.Delay(125)
+
         objTaskStatus.SetTaskComplete()
     End Function
 
-    Public Function LoadTask_PrefsLoad(objTaskStatus As TaskStatusReport) As Task
-        Return Task.Run(
-            Sub()
-                Dim objTask_LoadPrefs = uiPrefHandler.LoadPrefs(objTaskStatus)
-            End Sub)
+    Public Async Function LoadTask_PrefsLoad(objTaskStatus As TaskStatusReport) As Task
+        Await osPefs.Data.PreparePrefData()
+        objTaskStatus.SetTaskComplete()
     End Function
 
-    'Public Async Function LoadTask_PrefsLoad(objTaskStatus As TaskStatusReport) As Task
-    '    Await osPrefLib.osPreferenceLib.Data.PrepLoadPrefs()
-    '    Return Task.Run(
-    '        Async Function()
-    '            '     Dim objTask_LoadPrefs = uiPrefHandler.LoadPrefs(objTaskStatus)
-    '            Await osPrefLib.osPreferenceLib.Data.PrepLoadPrefs()
-    '        End Function)
-    'End Function
-
-    Public Function LoadTask_PrefsApply(objTaskStatus As TaskStatusReport) As Task
-        Return Task.Run(
-            Sub()
-                Dim objTask_ApplyPrefs = uiPrefHandler.ApplyPrefs(CoreDataLib.osPrefIndex, objTaskStatus)
-            End Sub)
+    Public Async Function LoadTask_PrefsApply(objTaskStatus As TaskStatusReport) As Task
+        Await osPefs.Data.ApplyPrefs()
+        objTaskStatus.SetTaskComplete()
     End Function
 
-    Public Function LoadOptsUI() As Task
-        Return Task.Run(Async Function()
-                            Await CreateOptsUI()
+    Public Async Function LoadOptsUI(objTaskStatus As TaskStatusReport) As Task
+        Await CreateOptsUI()
+        objTaskStatus.SetTaskComplete()
+    End Function
 
-                            Dim objPrefLst = osGui_Prefs.BuildPrefBindingInfoAsync()
-
-                            Await osGui_Prefs.osPrefsPrepAsync(objPrefLst)
-                        End Function)
+    Public Async Function PrepPopupMenuUI(objTaskStatus As TaskStatusReport) As Task
+        Await Task.WhenAll(PrepUI_PopupMenuN2(), PrepUI_TrayMenuN2(), PrepUI_PopupMenuOverlayN2())
+        objTaskStatus.SetTaskComplete()
     End Function
 
     Public Async Function PrepShaderData() As Task
@@ -100,53 +85,17 @@ Public Module osLoadTaskLib
                            CoreDataLib.ComposeShaderIdx())
     End Function
 
-    Public Function PrepPopupMenuUI(objTaskStatus As TaskStatusReport) As Task
-        Return Task.Run(
-            Sub()
-                Dim objTask_InitMenus = PrepDispatcher().InvokeAsync(
-                    Sub()
-                        Dim objTask_LoadOverlay = EnsurePopupMenuOverlayAsync()
-                        Dim objTask_LoadPopupMenu = EnsurePopupMenuAsync()
-                        Dim objTask_LoadTrayMenu = EnsureTrayMenuAsync()
-
-                        objTaskStatus.SetTaskComplete()
-                    End Sub, DispatcherPriority.Normal)
-            End Sub)
+    Public Async Function InitShaderDevices(objTaskStatus As TaskStatusReport) As Task
+        Await osHandler_Graphics.EnsureCreatedw()
+        objTaskStatus.SetTaskComplete()
     End Function
 
-    Public Function LoadTask_PrepUI(objTaskStatus As TaskStatusReport) As Task
-        Return Task.Run(
-            Sub()
-                Dim objTask_LoadPrefs = LoadOptsUI()
-            End Sub)
-    End Function
+    Public Async Function LoadAllShaders(objTaskStatus As TaskStatusReport) As Task
+        Await BuildShaderCatalog(True)
+        Await PreloadShaderCatalog()
 
-    Public Function LoadAllShaders(objTaskStatus As TaskStatusReport) As Task
-        Return Task.Run(
-            Async Function()
-                Await PrepShaderData()
-
-                Debug.WriteLine("before")
-                '   Dim objLoadedShaders = Await BuildShaderCatalog()
-                Await PreloadShaderCatalog()
-                Debug.WriteLine("after")
-
-
-                Await Task.Run(Sub()
-                                   objTask_ListShaders.Clear()
-                                   For Each objShader In ShaderDetailsIdx
-                                       objTask_ListShaders.Add(AddShaderToIdx(objShader))
-                                   Next
-
-                                   Dim objTask_LoadShaders = Task.
-                    WhenAll(objTask_ListShaders).ContinueWith(
-                        Sub()
-                            objTaskStatus.SetTaskComplete()
-                        End Sub)
-                               End Sub)
-
-
-            End Function)
+        Await CoreDataLib.ComposeShaderIdx(objTaskStatus)
+        objTaskStatus.SetTaskComplete()
     End Function
 
     Public Async Function LoadTask_StartInMon(objTaskStatus As TaskStatusReport) As Task

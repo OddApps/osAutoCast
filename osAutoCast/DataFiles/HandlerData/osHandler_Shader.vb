@@ -84,6 +84,20 @@ Public Module osHandler_Shader
     '        End Function)
     'End Function
 
+    Public Async Function BuildShaderCatalog(isNew As Boolean) As Task
+        Dim shaderBytes = Await InitShaderPrep()
+        Await Task.Run(
+            Sub()
+                ShaderDataIdx = shaderBytes.
+                    Select(Function(shaderB, idx)
+                               Return ShaderDataRecord(
+                                    ShaderDataNames(idx), shaderB.Data)
+                           End Function).ToDictionary(
+                                Function(r) r.Key,
+                                Function(r) r.Value)
+            End Sub)
+    End Function
+
     Public Function BuildShaderCatalog() As Task(Of Dictionary(Of String, Byte()))
         Return Task.Run(
         Function()
@@ -167,7 +181,7 @@ Public Module osHandler_Shader
 
     Public Async Function PreloadShaderCatalog() As Task
 
-        ShaderDataIdx = Await BuildShaderCatalog()
+        ' ShaderDataIdx = Await BuildShaderCatalog()
 
         ' Load bytecode in background
         Dim pxTask = Task.Run(Function()
@@ -208,7 +222,7 @@ Public Module osHandler_Shader
             Dim txS As New pxShader_Text
             txS.SetStreamSource(New MemoryStream(txSBytes))
             pxShaderData_Text_S = New pxShaderText_S(txS)
-        End Sub)
+        End Sub, DispatcherPriority.Background)
     End Function
 
 
@@ -357,10 +371,9 @@ Public Module osHandler_Shader
             End Function)
     End Function
 
-    Public Function AddShaderToIdx(objShaderDetails As osShaderDetails) As Task
-        Return Task.Run(
-            Async Function()
-                Await PrepDispatcher().InvokeAsync(
+    Public Async Function AddShaderToIdx(objShaderDetails As osShaderDetails) As Task
+
+        Await PrepDispatcher().InvokeAsync(
                     Sub()
                         Dim idxID = BuildIdxKey(objShaderDetails.ShaderName)
 
@@ -379,7 +392,6 @@ Public Module osHandler_Shader
                                         idxID, pxShaderData_Vertex))
                         End Select
                     End Sub, DispatcherPriority.Background)
-            End Function)
     End Function
 
     Public Function FetchShader(objShaderType As osShaderType) As iPxShader

@@ -65,6 +65,12 @@ Public Class osPrefs
     End Function
 
 
+    Private _prefControlMap As New Dictionary(Of String, Control) From {
+    {"acFuse", txtAutoCastFuse},
+    {"acRTC", chkAutoCastRTC},
+    {"apSafetyTimer", txtAutoPassSafetyTimer},
+    {"goVisualQuality", lstVisualQuality}
+}
     Public Async Function osPrefsPrepAsync(
     prefNamesTask As Task(Of List(Of String))
 ) As Task
@@ -91,12 +97,6 @@ Public Class osPrefs
         Return tcs.Task
     End Function
 
-    Private _prefControlMap As New Dictionary(Of String, Control) From {
-    {"acFuse", txtAutoCastFuse},
-    {"acRTC", chkAutoCastRTC},
-    {"apSafetyTimer", txtAutoPassSafetyTimer},
-    {"goVisualQuality", lstVisualQuality}
-}
     Private Async Function osPrefsPrepAsync_UI(prefNames As List(Of String)) As Task
 
         Me.SuspendLayout()
@@ -148,35 +148,35 @@ Public Class osPrefs
         }
     End Function
 
-    'Public Async Function osPrefsPrepAsync(objTask_BindPrefLst As Task(Of List(Of BindingDef))) As Task
-    '    Dim objBindPrefLst = Await objTask_BindPrefLst
-    '    Me.SuspendLayout()
+    Public Async Function osPrefsPrepAsync2(objTask_BindPrefLst As Task(Of List(Of BindingDef))) As Task
+        Dim objBindPrefLst = Await objTask_BindPrefLst
+        Me.SuspendLayout()
 
-    '    Try
+        Try
 
-    '        Dim lstPrefVQ As New osPref_DataTable
+            Dim lstPrefVQ As New osPref_DataTable
 
-    '        With lstVisualQuality
-    '            .DisplayMember = "vqName"
-    '            .ValueMember = "vqIdx"
-    '            .DataSource = lstPrefVQ.osPrefVQ_DT
-    '        End With
+            With lstVisualQuality
+                .DisplayMember = "vqName"
+                .ValueMember = "vqIdx"
+                .DataSource = lstPrefVQ.osPrefVQ_DT
+            End With
 
-    '        For Each prefDef In objBindPrefLst
-    '            With prefDef
-    '                .Control.DataBindings.Add(
-    '                    New Binding(.ControlProp, .DataSource, .DataProp,
-    '                                False, DataSourceUpdateMode.OnPropertyChanged))
-    '            End With
-    '        Next
+            For Each prefDef In objBindPrefLst
+                With prefDef
+                    .Control.DataBindings.Add(
+                        New Binding(.ControlProp, .DataSource, .DataProp,
+                                    False, DataSourceUpdateMode.OnPropertyChanged))
+                End With
+            Next
 
-    '        objPrefTracker = New osPrefTracker(Of
-    '            osPrefStore)(CoreDataLib.osPrefStoreData)
-    '    Finally
-    '        Me.ResumeLayout()
-    '    End Try
+            objPrefTracker = New osPrefTracker(Of
+                osPrefStore)(CoreDataLib.osPrefStoreData)
+        Finally
+            Me.ResumeLayout()
+        End Try
 
-    'End Function
+    End Function
 
     Private Sub SavePrefs(sender As Object, e As EventArgs) Handles btnSavePrefs.Click
         If objPrefTracker.HasChanges Then

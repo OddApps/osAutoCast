@@ -1,28 +1,91 @@
 ﻿Imports System.IO
 Imports osAutoCast.DataTypeLib.PrefType
+Imports osAutoCast.DataTypeLib.PrefBinder
+Imports osAutoCast.DataTypeLib.PrefSetting
 Imports System.Text
 Imports System.Reflection
 Imports System.ComponentModel
-
+Imports osPrefBind = System.Windows.Data.Binding
 Namespace osPrefLib
 
+#Disable Warning BC42353
 
     Public Class osPreferenceLib
         Implements INotifyPropertyChanged
 
-        Private Shared _Data As osPreferenceLib
-        Public Shared ReadOnly Property Data As osPreferenceLib
-            Get
-                If _Data Is Nothing Then
-                    _Data = New osPreferenceLib()
-                End If
-                Return _Data
-            End Get
-        End Property
+        Public ReadOnly Property PrefTables As New osPref_DataTable()
 
-        Public ReadOnly Property PrefTables As New osPrefStore.osPref_DataTabl()
+        Public Property vqList As New List(Of osPref_DataVQ) From {
+            New osPref_DataVQ(0, "Performance"),
+            New osPref_DataVQ(1, "Quality")
+        }
+
+        Public osPrefBindPrefIdx As Dictionary(Of PrefBinder, osPref_BindDef)
+
+
+        Public osPrefDataBindings As Dictionary(Of String, Binding)
+
+        Public Sub osPref_GenBinding()
+            osPrefDataBindings = New Dictionary(Of String, Binding) From {
+            {"acFuse", PopulateBinding(AC_Fuse)},
+            {"apSafetyTimer", PopulateBinding(AP_SafetyTimer)},
+            {"acRTC", PopulateBinding(AC_RTC)},
+            {"goVisualQuality", PopulateBinding(GO_VisualQuality)}
+        }
+        End Sub
+
+        Public idxPrefBindDeps As New Dictionary(Of String, DependencyProperty) From {
+                {"acFuse", osStyle.osUpDownTextBox.ValueProperty},
+                {"acRTC", CheckBox.IsCheckedProperty},
+                {"apSafetyTimer", osStyle.osUpDownTextBox.ValueProperty},
+                {"goVisualQuality", ComboBox.SelectedValueProperty}
+            }
+
+        Public idxPrefBindRecords As New Dictionary(Of PrefBinder, osPref_BindRecord) From {
+                {AC_Fuse, New osPref_BindRecord(osStyle.osUpDownTextBox.ValueProperty, "AutoCast_Fuse")},
+                {AC_RTC, New osPref_BindRecord(CheckBox.IsCheckedProperty, "AutoCast_RTC")},
+                {AP_SafetyTimer, New osPref_BindRecord(osStyle.osUpDownTextBox.ValueProperty, "AutoPass_SafetyTimer")},
+                {GO_VisualQuality, New osPref_BindRecord(ComboBox.SelectedValueProperty, "GenOpts_VisualQuality")}
+            }
+
+        Private Function FetchBindRecord(pBinder As PrefBinder) As osPref_BindRecord
+            Return idxPrefBindRecords.First(
+                Function(bRec)
+                    Return bRec.Key = pBinder
+                End Function).Value
+        End Function
+
+        Public Sub SetBindDef(pBinder As PrefBinder, objBindCtrl As Control)
+            With FetchBindRecord(pBinder)
+                Dim objPrefB = ComposeBinding(.BindPrefName)
+
+                osPrefBindPrefIdx.Add(pBinder, New osPref_BindDef(.BindProperty, objBindCtrl, objPrefB))
+                objBindCtrl.SetBinding(.BindProperty, objPrefB)
+            End With
+        End Sub
+
+        Private PrefBinderIdx As New Dictionary(Of PrefBinder, osPref_BindDef)
+
+        Private Function PopulateBinding(pBinder As PrefBinder) As osPrefBind
+            With idxPrefBindRecords(pBinder)
+                Return New osPrefBind(.BindPrefName) With {
+                    .Source = Me.Data,
+                    .Mode = BindingMode.TwoWay,
+                    .UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged
+                }
+            End With
+        End Function
+
+        Private Function ComposeBinding(pBindName As String) As osPrefBind
+            Return New osPrefBind() With {
+                .Source = Me.Data,
+                .Mode = BindingMode.TwoWay,
+                .UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged
+            }
+        End Function
 
         Public Shared idxPrefRecords As PrefRecordIndex
+
         Private Shared _AutoPass_SafetyTimer As Integer
         Private Shared _AutoCast_Fuse As Integer
         Private Shared _AutoCast_RTC As Boolean
@@ -34,12 +97,43 @@ Namespace osPrefLib
         Private Shared _MainOpts_acProgW As Integer
         Private Shared _GenOpts_VisualQuality As String
 
+        Private Shared _Data As osPreferenceLib
+        Public Shared ReadOnly Property Data As osPreferenceLib
+            Get
+                If _Data Is Nothing Then
+                    _Data = New osPreferenceLib()
+                End If
+                Return _Data
+            End Get
+        End Property
+
+        Private Shared _prefsSet As Boolean = False
+        Public Property prefsSet As Boolean
+            Get
+                Return _prefsSet
+            End Get
+            Set(ByVal value As Boolean)
+                _prefsSet = value
+            End Set
+        End Property
+
         Public Property AutoPass_SafetyTimer As Integer
             Get
-                Return _AutoPass_SafetyTimer
+                If prefsSet Then
+                    Return GetPrefValue(Pref_AutoPass_SafetyTimer)
+                Else
+                    Return _AutoPass_SafetyTimer
+                End If
             End Get
             Set(value As Integer)
-                If _AutoPass_SafetyTimer = value Then Return
+                If prefsSet Then
+                    If GetPrefValue(Pref_AutoPass_SafetyTimer) = value Then Return
+                    SetPrefValue(Pref_AutoPass_SafetyTimer, value)
+                Else
+                    If _AutoPass_SafetyTimer = value Then Return
+                    _AutoPass_SafetyTimer = value
+                End If
+
                 _AutoPass_SafetyTimer = value
                 OnPropertyChanged(NameOf(AutoPass_SafetyTimer))
             End Set
@@ -47,10 +141,21 @@ Namespace osPrefLib
 
         Public Property AutoCast_Fuse As Integer
             Get
-                Return _AutoCast_Fuse
+                If prefsSet Then
+                    Return GetPrefValue(Pref_AutoCast_Fuse)
+                Else
+                    Return _AutoCast_Fuse
+                End If
             End Get
             Set(value As Integer)
-                If _AutoCast_Fuse = value Then Return
+                If prefsSet Then
+                    If GetPrefValue(Pref_AutoCast_Fuse) = value Then Return
+                    SetPrefValue(Pref_AutoCast_Fuse, value)
+                Else
+                    If _AutoCast_Fuse = value Then Return
+                    _AutoCast_Fuse = value
+                End If
+
                 _AutoCast_Fuse = value
                 OnPropertyChanged(NameOf(AutoCast_Fuse))
             End Set
@@ -58,10 +163,21 @@ Namespace osPrefLib
 
         Public Property AutoCast_RTC As Boolean
             Get
-                Return _AutoCast_RTC
+                If prefsSet Then
+                    Return GetPrefValue(Pref_AutoCast_RTC)
+                Else
+                    Return _AutoCast_RTC
+                End If
             End Get
             Set(value As Boolean)
-                If _AutoCast_RTC = value Then Return
+                If prefsSet Then
+                    If GetPrefValue(Pref_AutoCast_RTC) = value Then Return
+                    SetPrefValue(Pref_AutoCast_RTC, value)
+                Else
+                    If _AutoCast_RTC = value Then Return
+                    _AutoCast_RTC = value
+                End If
+
                 _AutoCast_RTC = value
                 OnPropertyChanged(NameOf(AutoCast_RTC))
             End Set
@@ -135,26 +251,98 @@ Namespace osPrefLib
 
         Public Property GenOpts_VisualQuality As String
             Get
-                Return _GenOpts_VisualQuality
+                If prefsSet Then
+                    Return GetPrefValue(Pref_GenOpts_VisualQuality)
+                Else
+                    Return _GenOpts_VisualQuality
+                End If
             End Get
             Set(value As String)
-                If _GenOpts_VisualQuality = value Then Return
+                If prefsSet Then
+                    If GetPrefValue(Pref_GenOpts_VisualQuality) = value Then Return
+                    SetPrefValue(Pref_GenOpts_VisualQuality, value)
+                Else
+                    If _GenOpts_VisualQuality = value Then Return
+                    _GenOpts_VisualQuality = value
+                End If
+
                 _GenOpts_VisualQuality = value
                 OnPropertyChanged(NameOf(GenOpts_VisualQuality))
             End Set
         End Property
 
+        Private Function FindPreference(pDetails As osPrefDetails) As String
+            With pDetails
+                Return Me.objOsPrefIdx.PrefRecords.
+                    FirstOrDefault(Function(pRec) pRec.RecordType = .prefType).
+                        RecordData.FirstOrDefault(
+                            Function(recData) recData.PrefName.ToLower() =
+                                .prefName.ToLower()).PrefVal
+            End With
+        End Function
 
+        Private Function SetPreference(pDetails As osPrefDetails, pVal As Object) As String
+            With pDetails
+                Dim objRecData = Me.objOsPrefIdx.PrefRecords.
+                    FirstOrDefault(Function(pRec) pRec.RecordType = .prefType).
+                        RecordData.FirstOrDefault(
+                            Function(recData) recData.PrefName.ToLower() =
+                                .prefName.ToLower())
 
-        Public Event PropertyChanged As PropertyChangedEventHandler Implements INotifyPropertyChanged.PropertyChanged
+                objRecData.PrefVal = pVal
+            End With
+        End Function
 
-        Private Sub OnPropertyChanged(Optional propertyName As String = Nothing)
-            RaiseEvent PropertyChanged(Me, New PropertyChangedEventArgs(propertyName))
+        Private Function GetPrefName(prefType As PrefSetting) As String
+            With Me.objOsPrefIdx
+                Select Case prefType
+                    Case Pref_AutoCast_RTC
+                        Return "RTC"
+                    Case Pref_AutoCast_Fuse
+                        Return "Fuse"
+                    Case Pref_AutoPass_SafetyTimer
+                        Return "SafetyTimer"
+                    Case Pref_GenOpts_VisualQuality
+                        Return "VisualQuality"
+                End Select
+            End With
+        End Function
+
+        Private Function GetPrefType(prefType As PrefSetting) As PrefType
+            With Me.objOsPrefIdx
+                Select Case prefType
+                    Case Pref_AutoCast_RTC
+                        Return Pref_AutoCast
+                    Case Pref_AutoCast_Fuse
+                        Return Pref_AutoCast
+                    Case Pref_AutoPass_SafetyTimer
+                        Return Pref_AutoPass
+                    Case Pref_GenOpts_VisualQuality
+                        Return Pref_GenOpts
+                End Select
+            End With
+        End Function
+
+        Private Function GetPrefDetails(prefType As PrefSetting) As osPrefDetails
+            Dim objPrefType = GetPrefType(prefType)
+            Dim objPrefName = GetPrefName(prefType)
+
+            Return New osPrefDetails(objPrefType, objPrefName)
+        End Function
+
+        Private Function GetPrefValue(prefType As PrefSetting) As Object
+            Return FindPreference(GetPrefDetails(prefType))
+        End Function
+
+        Private Sub SetPrefValue(prefType As PrefSetting, pVal As Object)
+            SetPreference(GetPrefDetails(prefType), pVal)
         End Sub
 
         Public Async Function PrepLoadPrefs() As Task
+
             Dim aa = Await LoadPrefFile()
             objOsPrefIdx = Await PrepPrefData(aa)
+
         End Function
 
         Private Shared _objOsPrefIdx As osPrefIndex
@@ -180,6 +368,79 @@ Namespace osPrefLib
             End Using
 
             Return lstPrefData
+        End Function
+
+        Public Async Function ReadPrefLinesAsync(path As String) As Task(Of List(Of String))
+            Dim result As New List(Of String)
+
+            Using fs As New FileStream(
+        path,
+        FileMode.Open,
+        FileAccess.Read,
+        FileShare.Read,
+        bufferSize:=4096,
+        options:=FileOptions.Asynchronous)
+
+                Using sr As New StreamReader(fs)
+                    While True
+                        Dim line As String = Await sr.ReadLineAsync().ConfigureAwait(False)
+                        If line Is Nothing Then Exit While
+                        result.Add(line)
+                    End While
+                End Using
+            End Using
+
+            Return result
+        End Function
+
+        Public Async Function BuildPrefIndexAsync() As Task(Of osPrefIndex)
+            Dim pRecIdxObj As New osPrefIndex()
+
+            Using fs As New FileStream(CoreDataLib.osPrefFile, FileMode.Open, FileAccess.Read,
+                                       FileShare.Read, bufferSize:=4096, options:=FileOptions.Asynchronous)
+                Using sr As New StreamReader(fs)
+                    Dim inCatalog As Boolean = False
+
+                    Dim currentData As New List(Of PrefDataRecord)()
+                    Dim currentType As String = Nothing
+
+                    Dim rawLine As String = Await sr.ReadLineAsync()
+
+                    While rawLine IsNot Nothing
+                        Dim prefLineData = rawLine.Trim()
+
+                        If isPrefHeader(prefLineData) Then
+                            inCatalog = True
+                        ElseIf prefLineData = "_PrefCatalog" Then
+                            inCatalog = False
+                        ElseIf inCatalog Then
+                            If isPrefType(prefLineData) Then
+                                currentType = FormatPrefType(prefLineData)
+                                currentData = New List(Of PrefDataRecord)()
+                            ElseIf isPrefType(prefLineData, True) Then
+                                If VerifyRecordType(currentType, prefLineData) Then
+                                    pRecIdxObj.CreateRecord(currentType, currentData.ToArray())
+                                    currentType = Nothing
+                                End If
+                            ElseIf isPrefData(currentType, prefLineData) Then
+                                currentData.Add(New PrefDataRecord(prefLineData))
+                            End If
+                        End If
+
+                        rawLine = Await sr.ReadLineAsync()
+                    End While
+                End Using
+            End Using
+
+            Return pRecIdxObj
+        End Function
+
+        Public Async Function PreparePrefData() As Task
+            objOsPrefIdx = Await Task.Run(
+                Function()
+                    Dim objTask_PrepIdx = BuildPrefIndexAsync()
+                    Return objTask_PrepIdx
+                End Function)
         End Function
 
         Public Function PrepPrefData(lstPrefData As List(Of String)) As Task(Of osPrefIndex)
@@ -221,37 +482,24 @@ Namespace osPrefLib
             Return Convert.ChangeType(pRecData.PrefVal, valType)
         End Function
 
-        Public Async Function ApplyPrefs(prefRecIdx As osPrefIndex) As Task
-            If prefRecIdx Is Nothing Then Return
+        Public Async Function ApplyPrefs() As Task
+            prefsSet = Await Task.Run(
+                Async Function()
+                    Dim objTask_ApplyPrefs =
+                        From pRec In objOsPrefIdx.PrefRecords
+                        From pRecData In pRec.RecordData
+                        Select Task.Run(Sub() ApplySetting(
+                            osPreferenceLib.Data, pRec, pRecData))
 
-            Dim objPrefData = Await Task.
-            WhenAll(prefRecIdx.PrefRecords.SelectMany(
-                Function(pRec) pRec.RecordData,
-                    Function(pRec, pRecData)
-                        Dim objPropInfo = Me.PrefStoreProp(pRec, pRecData)
-                        ApplySetting(osPreferenceLib.Data,)
-                        Return Task.Run(
-                            Function() (objPropInfo,
-                                Me.PrepPref(pRecData, objPropInfo.PropertyType)))
-                    End Function))
+                    Await Task.WhenAll(objTask_ApplyPrefs)
 
-            Await PrepDispatcher.InvokeAsync(
-            Sub()
-                Dim objPrefStore = osPreferenceLib.Data
-
-                For Each objPref In objPrefData
-                    objPref.Item1.SetValue(objPrefStore, objPref.Item2, Nothing)
-                Next
-
-            End Sub)
-
-            Await Task.Delay(175)
-
+                    Return True
+                End Function)
         End Function
 
         Private Sub ApplySetting(target As Object, pRecord As osPrefRecord, pRecData As PrefDataRecord)
 
-            Dim prop = target.GetType().GetProperty(propertyName)
+            Dim prop = target.GetType().GetProperty(FetchPrefVar(pRecord.RecordType, pRecData.PrefName), BindingFlags.Public Or BindingFlags.Instance)
             If prop Is Nothing OrElse Not prop.CanWrite Then Return
 
             Dim targetType = Nullable.GetUnderlyingType(prop.PropertyType)
@@ -259,12 +507,12 @@ Namespace osPrefLib
                 targetType = prop.PropertyType
             End If
 
-            Dim converted = Convert.ChangeType(value, targetType)
+            Dim converted = Convert.ChangeType(pRecData.PrefVal, targetType)
             prop.SetValue(target, converted)
         End Sub
 
         Private Function PrefStoreTypes() As Type
-            Return CoreDataLib.osPrefStoreData.GetType()
+            Return osPreferenceLib.Data.GetType()
         End Function
 
         Private Function PrefStoreProp(pRecord As osPrefRecord, pRecData As PrefDataRecord) As PropertyInfo
@@ -274,7 +522,7 @@ Namespace osPrefLib
         End Function
 
         Private Function FetchPrefVar(recType As PrefType, recName As String) As String
-            Return $"{recType}_{recName}"
+            Return $"{recType.ToString().Replace("Pref_", "")}_{recName}"
         End Function
 
         Private Function isPrefHeader(strPrefLine As String) As Boolean
@@ -331,6 +579,30 @@ Namespace osPrefLib
 
         Public Class osPrefIndex
 
+            Public Class osPref_StoreRecord
+                Public Property pType As String
+                Public Property pName As String
+
+                Private _pVal As Object
+                Public Property pVal As Object
+                    Get
+                        Return _pVal
+                    End Get
+                    Set(value As Object)
+                        _pVal = value
+                    End Set
+                End Property
+
+                Public Sub New()
+                End Sub
+
+                Public Sub New(pT As String, pN As String, pV As Object)
+                    Me.pType = pT
+                    Me.pName = pN
+                    Me.pVal = pV
+                End Sub
+            End Class
+
             Public Property PrefRecords As List(Of osPrefRecord)
 
             Public Sub New()
@@ -339,6 +611,141 @@ Namespace osPrefLib
 
             Public Sub CreateRecord(pRecType As PrefType, ParamArray pRecord() As PrefDataRecord)
                 Me.PrefRecords.Add(New osPrefRecord(pRecType, pRecord.ToArray()))
+            End Sub
+
+            Public Sub UpdatePrefStore()
+                Try
+                    For Each pBind As Binding In Data.osPrefDataBindings.Values
+                        With GenPrefObj(pBind)
+                            Data.objOsPrefIdx.SavePref(.pType, .pName, Convert.ToString(.pVal))
+                        End With
+                    Next
+                Catch ex As Exception
+
+                End Try
+            End Sub
+
+            Public Function GetBindingValue(pBind As osPrefBind) As Object
+                If pBind.Source Is Nothing OrElse pBind.Path Is Nothing Then
+                    Return Nothing
+                End If
+
+                Dim sourceObj As Object = pBind.Source
+                Dim propName As String = pBind.Path.Path
+
+                Dim propInfo As PropertyInfo =
+        sourceObj.GetType().GetProperty(propName,
+            BindingFlags.Public Or BindingFlags.Instance)
+
+                If propInfo Is Nothing Then Return Nothing
+
+                Return propInfo.GetValue(sourceObj)
+            End Function
+
+            Public Function GenPrefObj(pBind As Binding) As osPref_StoreRecord
+                If pBind.Path Is Nothing Then Return Nothing
+
+                Dim path As String = pBind.Path.Path
+                Dim strArray As String() = path.Split("_"c)
+
+                Return New osPref_StoreRecord(
+        strArray(0),
+        strArray(1),
+        GetBindingValue(pBind)
+    )
+            End Function
+
+            Public Function FetchPref(pRecType As PrefType, pName As String) As String
+                Return PrefRecords.
+                    FirstOrDefault(Function(pRec) pRec.RecordType =
+                    pRecType).RecordData.
+                    FirstOrDefault(Function(recData)
+                                       Return recData.PrefName.ToLower() = pName.ToLower()
+                                   End Function).PrefVal
+            End Function
+
+            Public Sub SavePref(pType As String, pName As String, pNewVal As String)
+                With GetRecordData(RetrieveRecord(pType), pName)
+                    .PrefVal = pNewVal
+                End With
+            End Sub
+
+            Private Function RetrieveRecord(pType As PrefType) As osPrefRecord
+                Return PrefRecords.
+                    FirstOrDefault(Function(r)
+                                       Return r.RecordType = pType
+                                   End Function)
+            End Function
+
+            Private Function GetRecordData(pRecord As osPrefRecord, pName As String) As PrefDataRecord
+                Return pRecord.RecordData.FirstOrDefault(
+                    Function(d)
+                        Return String.Equals(d.PrefName, pName,
+                                             StringComparison.OrdinalIgnoreCase)
+                    End Function)
+            End Function
+
+            Public Sub SavePrefsFile()
+
+                Data.objOsPrefIdx.UpdatePrefStore()
+
+                Using pWriter As New System.IO.StreamWriter(CoreDataLib.osPrefFile, False)
+                    pWriter.WriteLine("PrefCatalog_")
+
+                    For Each prefRec As osPrefRecord In Me.PrefRecords
+                        WritePrefRecords(prefRec, pWriter)
+                    Next
+
+                    pWriter.WriteLine("_PrefCatalog")
+                End Using
+            End Sub
+
+            Private Function GetPrefType(objPref As PrefType) As String
+                Return objPref.ToString().Replace("Pref_", "")
+            End Function
+
+            Private Sub WritePrefRecords(pRecord As osPrefRecord, ByRef objPrefWriter As StreamWriter)
+                objPrefWriter.WriteLine($"|{GetPrefType(pRecord.RecordType)}-")
+
+                For Each prefRec In pRecord.RecordData
+                    objPrefWriter.WriteLine(FormatPrefData(prefRec))
+                Next
+
+                objPrefWriter.WriteLine($"-{GetPrefType(pRecord.RecordType)}|")
+            End Sub
+
+            Private Function FormatPrefData(prefRec As PrefDataRecord) As String
+                Return $"{prefRec.PrefName}:{prefRec.PrefVal}"
+            End Function
+
+        End Class
+
+        Public Class osPref_BindRecord
+            Public Property BindProperty As DependencyProperty
+            Public Property BindPrefName As String
+
+            Public Sub New()
+            End Sub
+
+            Public Sub New(objBProp As DependencyProperty, objBPrefN As String)
+                BindProperty = objBProp
+                BindPrefName = objBPrefN
+            End Sub
+
+        End Class
+
+        Public Class osPref_BindDef
+            Public Property BindProperty As DependencyProperty
+            Public Property BindCtrl As Control
+            Public Property BindPref As osPrefBind
+
+            Public Sub New()
+            End Sub
+
+            Public Sub New(objBProp As DependencyProperty, objBC As Control, objBPref As osPrefBind)
+                BindProperty = objBProp
+                BindCtrl = objBC
+                BindPref = objBPref
             End Sub
 
         End Class
@@ -382,299 +789,14 @@ Namespace osPrefLib
 
         End Class
 
+        Public Event PropertyChanged As PropertyChangedEventHandler Implements INotifyPropertyChanged.PropertyChanged
+
+        Private Sub OnPropertyChanged(Optional propertyName As String = Nothing)
+            RaiseEvent PropertyChanged(Me, New PropertyChangedEventArgs(propertyName))
+        End Sub
+
     End Class
 
 End Namespace
 
 
-'    Public Class osPreferences
-'        Implements INotifyPropertyChanged
-
-'        Private Shared _Data As osPreferences
-'        Public Shared ReadOnly Property Data As osPreferences
-'            Get
-'                If _Data Is Nothing Then
-'                    _Data = New osPreferences()
-'                End If
-'                Return _Data
-'            End Get
-'        End Property
-
-'        Public ReadOnly Property PrefTables As New osPrefStore.osPref_DataTabl()
-
-'        Public idxPrefRecords As PrefRecordIndex
-'        Private Shared _AutoPass_SafetyTimer As Integer
-'        Private Shared _AutoCast_Fuse As Integer
-'        Private Shared _AutoCast_RTC As Boolean
-'        Private Shared _MainOpts_apProgH As Integer
-'        Private Shared _MainOpts_apProgW As Integer
-'        Private Shared _MainOpts_apUiH As Integer
-'        Private Shared _MainOpts_apUiW As Integer
-'        Private Shared _MainOpts_acProgH As Integer
-'        Private Shared _MainOpts_acProgW As Integer
-'        Private Shared _GenOpts_VisualQuality As String
-
-'        Public Property AutoPass_SafetyTimer As Integer
-'            Get
-'                Return _AutoPass_SafetyTimer
-'            End Get
-'            Set(value As Integer)
-'                If _AutoPass_SafetyTimer = value Then Return
-'                _AutoPass_SafetyTimer = value
-'                OnPropertyChanged(NameOf(AutoPass_SafetyTimer))
-'            End Set
-'        End Property
-
-'        Public Property AutoCast_Fuse As Integer
-'            Get
-'                Return _AutoCast_Fuse
-'            End Get
-'            Set(value As Integer)
-'                If _AutoCast_Fuse = value Then Return
-'                _AutoCast_Fuse = value
-'                OnPropertyChanged(NameOf(AutoCast_Fuse))
-'            End Set
-'        End Property
-
-'        Public Property AutoCast_RTC As Boolean
-'            Get
-'                Return _AutoCast_RTC
-'            End Get
-'            Set(value As Boolean)
-'                If _AutoCast_RTC = value Then Return
-'                _AutoCast_RTC = value
-'                OnPropertyChanged(NameOf(AutoCast_RTC))
-'            End Set
-'        End Property
-
-'        Public Property MainOpts_apProgH As Integer
-'            Get
-'                Return _MainOpts_apProgH
-'            End Get
-'            Set(value As Integer)
-'                If _MainOpts_apProgH = value Then Return
-'                _MainOpts_apProgH = value
-'                OnPropertyChanged(NameOf(MainOpts_apProgH))
-'            End Set
-'        End Property
-
-'        Public Property MainOpts_apProgW As Integer
-'            Get
-'                Return _MainOpts_apProgW
-'            End Get
-'            Set(value As Integer)
-'                If _MainOpts_apProgW = value Then Return
-'                _MainOpts_apProgW = value
-'                OnPropertyChanged(NameOf(MainOpts_apProgW))
-'            End Set
-'        End Property
-
-'        Public Property MainOpts_apUiH As Integer
-'            Get
-'                Return _MainOpts_apUiH
-'            End Get
-'            Set(value As Integer)
-'                If _MainOpts_apUiH = value Then Return
-'                _MainOpts_apUiH = value
-'                OnPropertyChanged(NameOf(MainOpts_apUiH))
-'            End Set
-'        End Property
-
-'        Public Property MainOpts_apUiW As Integer
-'            Get
-'                Return _MainOpts_apUiW
-'            End Get
-'            Set(value As Integer)
-'                If _MainOpts_apUiW = value Then Return
-'                _MainOpts_apUiW = value
-'                OnPropertyChanged(NameOf(MainOpts_apUiW))
-'            End Set
-'        End Property
-
-'        Public Property MainOpts_acProgH As Integer
-'            Get
-'                Return _MainOpts_acProgH
-'            End Get
-'            Set(value As Integer)
-'                If _MainOpts_acProgH = value Then Return
-'                _MainOpts_acProgH = value
-'                OnPropertyChanged(NameOf(MainOpts_acProgH))
-'            End Set
-'        End Property
-
-'        Public Property MainOpts_acProgW As Integer
-'            Get
-'                Return _MainOpts_acProgW
-'            End Get
-'            Set(value As Integer)
-'                If _MainOpts_acProgW = value Then Return
-'                _MainOpts_acProgW = value
-'                OnPropertyChanged(NameOf(MainOpts_acProgW))
-'            End Set
-'        End Property
-
-'        Public Property GenOpts_VisualQuality As String
-'            Get
-'                Return _GenOpts_VisualQuality
-'            End Get
-'            Set(value As String)
-'                If _GenOpts_VisualQuality = value Then Return
-'                _GenOpts_VisualQuality = value
-'                OnPropertyChanged(NameOf(GenOpts_VisualQuality))
-'            End Set
-'        End Property
-
-
-
-
-
-'        Public Event PropertyChanged As PropertyChangedEventHandler Implements INotifyPropertyChanged.PropertyChanged
-
-'        Private Sub OnPropertyChanged(Optional propertyName As String = Nothing)
-'            RaiseEvent PropertyChanged(Me, New PropertyChangedEventArgs(propertyName))
-'        End Sub
-
-'    End Class
-
-'    Public Class PrefRecordIndex
-
-'        Public Property RecIdx As List(Of PrefRecord)
-
-'        Public Sub New()
-'            RecIdx = New List(Of PrefRecord)
-'        End Sub
-
-'        Public Sub CreateRecord(pRecType As String, ParamArray pRecord() As PrefRecordData)
-'            Me.RecIdx.Add(New PrefRecord(pRecType, pRecord.ToArray()))
-'        End Sub
-
-'        Public Function FetchPref(pRecType As String, pName As String) As String
-'            Return RecIdx.
-'            FirstOrDefault(Function(pRec) pRec.PrefType.ToLower() =
-'            pRecType.ToLower()).PrefRecord.
-'            FirstOrDefault(Function(recData)
-'                               Return recData.PrefName.ToLower() = pName.ToLower()
-'                           End Function).PrefVal
-'        End Function
-
-'        Public Sub SavePref(pType As String, pName As String, pNewVal As String)
-'            With GetRecordData(RetrieveRecord(pType), pName)
-'                .PrefVal = pNewVal
-'            End With
-'        End Sub
-
-'        Private Function RetrieveRecord(pType As String) As PrefRecord
-'            Return RecIdx.
-'            FirstOrDefault(Function(r)
-'                               Return r.PrefType.ToLower() = pType.ToLower()
-'                           End Function)
-'        End Function
-
-'        Private Function GetRecordData(pRecord As PrefRecord, pName As String) As PrefRecordData
-'            Return pRecord.PrefRecord.
-'            FirstOrDefault(Function(d)
-'                               Return d.PrefName.ToLower() = pName.ToLower()
-'                           End Function)
-'        End Function
-
-'        Public Sub SavePrefsFile()
-
-'            CoreDataLib.osPrefStoreData.UpdatePrefStore()
-
-'            Using pWriter As New System.IO.StreamWriter(CoreDataLib.osPrefFile, False)
-'                pWriter.WriteLine("PrefCatalog_")
-
-'                For Each prefRec As PrefRecord In Me.RecIdx
-'                    WritePrefRecords(prefRec, pWriter)
-'                Next
-
-'                pWriter.WriteLine("_PrefCatalog")
-'            End Using
-'        End Sub
-
-'        Private Sub SavePrefsToFile()
-'            Using pWriter As New System.IO.StreamWriter(CoreDataLib.osPrefFile, False)
-'                pWriter.WriteLine("PrefCatalog_")
-
-'                For Each prefRec As PrefRecord In Me.RecIdx
-'                    WritePrefRecords(prefRec, pWriter)
-'                Next
-
-'                pWriter.WriteLine("_PrefCatalog")
-'            End Using
-'        End Sub
-
-'        Private Sub WritePrefRecords(pRecord As PrefRecord, ByRef objPrefWriter As StreamWriter)
-'            objPrefWriter.WriteLine($"|{pRecord.PrefType}-")
-
-'            For Each prefRec In pRecord.PrefRecord
-'                objPrefWriter.WriteLine(FormatPrefData(prefRec))
-'            Next
-
-'            objPrefWriter.WriteLine($"-{pRecord.PrefType}|")
-'        End Sub
-
-'        Private Function FormatPrefData(prefRec As PrefRecordData) As String
-'            Return $"{prefRec.PrefName}:{prefRec.PrefVal}"
-'        End Function
-
-'        Private Function PrepPref(pRecData As PrefRecordData, valType As Type) As Object
-'            Return Convert.ChangeType(pRecData.PrefVal, valType)
-'        End Function
-
-'        Private Function GetPrefTypes() As Type
-'            Return GetType(CoreDataLib)
-'        End Function
-
-'        Private Function FetchPrefVar(recType As String, recName As String) As String
-'            Return $"{recType}_{recName}"
-'        End Function
-
-'    End Class
-
-'    Public Class PrefRecord
-
-'        Public Property PrefType As String
-'        Public Property PrefRecord As List(Of PrefRecordData)
-
-'        Public Sub New()
-'        End Sub
-
-'        Public Sub New(pType As String)
-'            Me.PrefType = pType
-'            Me.PrefRecord = New List(Of PrefRecordData)
-'        End Sub
-
-'        Public Sub New(pType As String, ParamArray pRecord() As PrefRecordData)
-'            Me.PrefType = pType
-'            Me.PrefRecord = New List(Of PrefRecordData)(pRecord)
-'        End Sub
-
-'        Public Sub AddRecordData(pRecData As PrefRecordData)
-'            Me.PrefRecord.Add(pRecData)
-'        End Sub
-
-'    End Class
-
-'    Public Class PrefRecordData
-
-'        Public Property PrefName As String
-'        Public Property PrefVal As String
-
-'        Public Sub New()
-'        End Sub
-
-'        Public Sub New(prefLine As String)
-'            With prefLine.Split({":"c}, 2).ToList()
-'                Me.PrefName = .Item(0).Trim()
-'                Me.PrefVal = .Item(1).Trim()
-'            End With
-'        End Sub
-
-'        Public Sub New(pName As String, pVal As String)
-'            Me.PrefName = pName
-'            Me.PrefVal = pVal
-'        End Sub
-
-'    End Class
-'End Class

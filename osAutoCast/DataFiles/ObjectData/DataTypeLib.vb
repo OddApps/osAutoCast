@@ -211,6 +211,7 @@ Public Module DataTypeLib
         Prefs_Save
         Prefs_Close
         GameMenu_Leave
+        GameMenu_Restart
         CloseApp
         DisableService
     End Enum
@@ -388,6 +389,7 @@ Public Module DataTypeLib
         Load_PrefPrep
         Load_PrefApply
         Load_Opts
+        Load_InitShaders
         Load_Shaders
         Load_PopupMenu
         Load_ApplyConfig
@@ -419,9 +421,107 @@ Public Module DataTypeLib
         Pref_GenOpts
     End Enum
 
+    'Public Enum PreferenceType
+    '    Pref_AutoCast_RTC
+    '    Pref_AutoCast_Fuse
+    '    Pref_AutoPass_SafetyTimer
+    '    Pref_MainOpts_AP_W
+    '    Pref_MainOpts_AP_H
+    '    Pref_MainOpts_AP_UiW
+    '    Pref_MainOpts_AP_UiH
+    '    Pref_MainOpts_AC_W
+    '    Pref_MainOpts_AC_H
+    '    Pref_GenOpts_VisualQuality
+    'End Enum
+
+    Public Enum PrefSetting
+        Pref_AutoCast_RTC
+        Pref_AutoCast_Fuse
+        Pref_AutoPass_SafetyTimer
+        Pref_GenOpts_VisualQuality
+    End Enum
+
+    Public Enum PrefUI_State
+        PrefUI_Open
+        PrefUI_Close
+    End Enum
+
+    Public Enum PrefUI_VisStage
+        PrefUI_VisInit
+        PrefUI_VisFinish
+    End Enum
+
 #End Region
 
 End Module
+
+Public Class GridLengthAnimation
+    Inherits AnimationTimeline
+
+    Public Property From As GridLength?
+    Public Property [To] As GridLength
+    Public Property EasingFunction As IEasingFunction
+
+    Public Overrides ReadOnly Property TargetPropertyType As Type
+        Get
+            Return GetType(GridLength)
+        End Get
+    End Property
+
+    Public Overrides Function GetCurrentValue(
+        defaultOriginValue As Object,
+        defaultDestinationValue As Object,
+        animationClock As AnimationClock) As Object
+
+        Dim startVal As Double =
+            If(From.HasValue, From.Value.Value, CType(defaultOriginValue, GridLength).Value)
+
+        Dim endVal As Double = [To].Value
+
+        Dim progress = animationClock.CurrentProgress.GetValueOrDefault()
+
+        If EasingFunction IsNot Nothing Then
+            progress = EasingFunction.Ease(progress)
+        End If
+
+        Dim value = startVal + (endVal - startVal) * progress
+        Return New GridLength(value, GridUnitType.Pixel)
+    End Function
+
+    Protected Overrides Function CreateInstanceCore() As Freezable
+        Return New GridLengthAnimation()
+    End Function
+End Class
+
+Public Class osPrefVisData
+
+    Public Property VisStage As PrefUI_VisStage
+    Public Property VisData As String
+
+    Public Sub New()
+    End Sub
+
+    Public Sub New(vStage As PrefUI_VisStage, vData As String)
+        VisStage = vStage
+        VisData = vData
+    End Sub
+
+End Class
+
+Public Class osPrefDetails
+
+    Public Property prefType As PrefType
+    Public Property prefName As String
+
+    Public Sub New()
+    End Sub
+
+    Public Sub New(pType As PrefType, pName As String)
+        prefType = pType
+        prefName = pName
+    End Sub
+
+End Class
 
 Public NotInheritable Class TaskStatusReport
 
@@ -876,6 +976,20 @@ Public Class osShaderDetails
 
 End Class
 
+Public Class osPref_DataVQ
+    Public Property vqID As String
+    Public Property vqN As String
+
+    Public Sub New()
+    End Sub
+
+    Public Sub New(vID As String, vN As String)
+        vqID = vID
+        vqN = vN
+    End Sub
+
+End Class
+
 Public Class osPref_DataTable
 
     Private _osPrefVQ_DT As DataTable
@@ -903,6 +1017,8 @@ Public Class osPref_DataTable
     Private Sub PopulateDataVQ()
         osPrefVQ_DT.Rows.Add(0, "Performance")
         osPrefVQ_DT.Rows.Add(1, "Quality")
+
+
     End Sub
 
 End Class
@@ -1221,6 +1337,26 @@ Public Class osLoadData
 
 End Class
 
+Public Module osPrefsLib
+
+    Public DisposeUI_Prefs As Action(Of osPrefs_GUI) =
+        Sub(objGui_Prefs As osPrefs_GUI)
+            If objGui_Prefs IsNot Nothing Then
+                With objGui_Prefs
+                    Try
+                        If .IsLoaded Then
+                            .Opacity = 0
+                            .DataContext = Nothing
+                            .IsHitTestVisible = False
+                            .Close()
+                        End If
+                    Catch : End Try
+                End With
+            End If
+    End Sub
+
+End Module
+
 Public Module osPopupMenuLib
 
     Public DisposeUI_PopupMenu As Action(Of osPopupMenu_GUI) =
@@ -1229,10 +1365,8 @@ Public Module osPopupMenuLib
                 With objGui_PopupMenu
                     Try
                         If .IsLoaded Then
-                            .IsHitTestVisible = False
-                            .Opacity = 0
-                            .DataContext = Nothing
-                            .Close()
+                            .IsHitTestVisible = False : .ShowInTaskbar = False
+                            .DataContext = Nothing : .Opacity = 0
                         End If
                     Catch : End Try
                 End With
@@ -1982,6 +2116,10 @@ Public Class PromptData
             Case PromptType.GameMenu_Leave
                 Msg = "Are you sure you want to close MTG Arena?"
                 Title = "Exit Game"
+                MsgType = MsgBoxType.isQuestion
+            Case PromptType.GameMenu_Restart
+                Msg = "This Option Force Closes and Restarts MTGA... Continue?"
+                Title = "Restart Game"
                 MsgType = MsgBoxType.isQuestion
             Case PromptType.CloseApp
                 Msg = "Are you sure you want to exit osAutoCast?"

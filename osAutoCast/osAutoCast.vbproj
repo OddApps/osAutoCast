@@ -248,6 +248,10 @@
     <Compile Include="DataFiles\ModelData\EasingModel.vb" />
     <Compile Include="DataFiles\ModelData\OddLibProgressBar.vb" />
     <Compile Include="DataFiles\ObjectData\DataTypeLib.vb" />
+    <Page Include="DataFiles\VisualData\StyleLib\StyleResources\StyleConfigs\osUI_ControlElements.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="DataFiles\VisualData\StyleLib\StyleResources\StyleConfigs\osUI_StyleEffects.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -285,6 +289,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="DataFiles\VisualData\StyleLib\StyleResources\StyleProfiles\osUI_Style-LoadScreen.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="DataFiles\VisualData\StyleLib\StyleResources\StyleProfiles\osUI_Style-Prefs.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

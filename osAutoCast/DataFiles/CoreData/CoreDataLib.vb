@@ -11,7 +11,6 @@ Imports osAutoCast.DataTypeLib.TriggerAction
 Imports osProgDevice = SharpDX.Direct3D11.Device
 Imports osRegEx = System.Text.RegularExpressions.Regex
 Imports osStatus = osAutoCast.osEnabledStatusConfig
-Imports osPref = osAutoCast.osPreferences
 
 #Disable Warning IDE0060 ' Remove unused parameter
 #Disable Warning BC42353
@@ -91,11 +90,11 @@ Public NotInheritable Class CoreDataLib
     End Function
 
     Public Shared Function GetFuse() As Integer
-        Return osPrefStoreData.AutoCast_Fuse
+        Return osPrefLib.osPreferenceLib.Data.AutoCast_Fuse
     End Function
 
     Public Shared Function isRTC() As Boolean
-        Return osPrefStoreData.AutoCast_RTC
+        Return osPrefLib.osPreferenceLib.Data.AutoCast_RTC
     End Function
 
     Public Shared Function GetWinHwnd(objWin As Window) As IntPtr
@@ -114,9 +113,9 @@ Public NotInheritable Class CoreDataLib
     Public Shared Function GetProgSize(isProgType As TriggerType, Optional getH As Boolean = False) As Integer
         Select Case isProgType
             Case AutoCast
-                Return If(getH, osPrefStoreData.MainOpts_acProgH, osPrefStoreData.MainOpts_acProgW)
+                Return If(getH, osPrefLib.osPreferenceLib.Data.MainOpts_acProgH, osPrefLib.osPreferenceLib.Data.MainOpts_acProgW)
             Case AutoPass
-                Return If(getH, osPrefStoreData.MainOpts_apProgH, osPrefStoreData.MainOpts_apProgW)
+                Return If(getH, osPrefLib.osPreferenceLib.Data.MainOpts_apProgH, osPrefLib.osPreferenceLib.Data.MainOpts_apProgW)
         End Select
     End Function
 
@@ -124,13 +123,13 @@ Public NotInheritable Class CoreDataLib
         Select Case isProgType
             Case AutoCast
                 Return New Dictionary(Of String, Integer) From {
-                        {"pH", osPrefStoreData.MainOpts_acProgH},
-                        {"pW", osPrefStoreData.MainOpts_acProgW}
+                        {"pH", osPrefLib.osPreferenceLib.Data.MainOpts_acProgH},
+                        {"pW", osPrefLib.osPreferenceLib.Data.MainOpts_acProgW}
                     }
             Case AutoPass
                 Return New Dictionary(Of String, Integer) From {
-                        {"pH", osPrefStoreData.MainOpts_apProgH},
-                        {"pW", osPrefStoreData.MainOpts_apProgW}
+                        {"pH", osPrefLib.osPreferenceLib.Data.MainOpts_apProgH},
+                        {"pW", osPrefLib.osPreferenceLib.Data.MainOpts_apProgW}
                     }
         End Select
     End Function
@@ -138,11 +137,11 @@ Public NotInheritable Class CoreDataLib
     Public Shared Function GetProgSizeReport(isProgType As TriggerType) As ProgSizeReport
         Select Case isProgType
             Case AutoCast
-                Return New ProgSizeReport(osPrefStoreData.MainOpts_acProgW,
-                                          osPrefStoreData.MainOpts_acProgH)
+                Return New ProgSizeReport(osPrefLib.osPreferenceLib.Data.MainOpts_acProgW,
+                                          osPrefLib.osPreferenceLib.Data.MainOpts_acProgH)
             Case AutoPass
-                Return New ProgSizeReport(osPrefStoreData.MainOpts_apProgW,
-                                          osPrefStoreData.MainOpts_apProgH)
+                Return New ProgSizeReport(osPrefLib.osPreferenceLib.Data.MainOpts_apProgW,
+                                          osPrefLib.osPreferenceLib.Data.MainOpts_apProgH)
         End Select
     End Function
 
@@ -162,9 +161,20 @@ Public NotInheritable Class CoreDataLib
     End Function
 
     Private Shared Function GenerateShaderList() As List(Of osShaderDetails) 'Task(Of List(Of osShaderDetails))
-        '
         Return osShaderNameList.Select(
                     Function(shaderRes) CreateShaderRecord(shaderRes)).ToList()
+
+    End Function
+
+    Private Shared Function GenerateShaderList(isNew As Boolean) As List(Of osShaderDetails) 'Task(Of List(Of osShaderDetails))
+        '
+        Return osShaderNameList.Select(
+                    Function(shaderRes)
+                        Dim objShaderRec = CreateShaderRecord(shaderRes)
+                        Dim objTask_AddShader = AddShaderToIdx(objShaderRec)
+
+                        Return objShaderRec
+                    End Function).ToList()
         '  End Function)
 
     End Function
@@ -176,7 +186,15 @@ Public NotInheritable Class CoreDataLib
     Public Shared Async Function ComposeShaderIdx() As Task
         Await Task.Run(
             Sub()
-                ShaderDetailsIdx = GenerateShaderList()
+                ShaderDetailsIdx = GenerateShaderList(True)
+            End Sub)
+
+    End Function
+
+    Public Shared Function ComposeShaderIdx(objTaskStatus As TaskStatusReport) As Task
+        Return Task.Run(
+            Sub()
+                ShaderDetailsIdx = GenerateShaderList(True)
             End Sub)
 
     End Function
@@ -186,11 +204,11 @@ Public NotInheritable Class CoreDataLib
     End Function
 
     Public Shared Function GetSafetyTimer() As Integer
-        Return osPrefStoreData.AutoPass_SafetyTimer
+        Return osPrefLib.osPreferenceLib.Data.AutoPass_SafetyTimer
     End Function
 
     Public Shared Function GetVisualQuality() As ProgVisOpts
-        Dim objVQ = osPrefStoreData.GenOpts_VisualQuality
+        Dim objVQ = osPrefLib.osPreferenceLib.Data.GenOpts_VisualQuality
         Return If(objVQ = 0, ProgVisOpts.Performance, ProgVisOpts.Quality)
     End Function
 
@@ -324,8 +342,6 @@ Public NotInheritable Class CoreDataLib
 
     Private Shared Async Function MonitorForCancel(cts As CancellationTokenSource,
                                                  Optional pType As TriggerType = AutoCast) As Task
-        '   If Not cts.Token = Nothing Then
-        ' Dim token = cts.Token
         Dim token = cts.Token
         Try
             While Not token.IsCancellationRequested
@@ -346,11 +362,7 @@ Public NotInheritable Class CoreDataLib
 
                 Await Task.Delay(5, cts.Token)
             End While
-        Catch ex As OperationCanceledException
-
-        End Try
-
-        '     End If
+        Catch ex As OperationCanceledException : End Try
     End Function
 
     Private Shared Sub CreateAbortMonitor(ByRef cts As CancellationTokenSource,

@@ -286,6 +286,30 @@ Public Class osPopupMenu_GUI
         End If
     End Sub
 
+    Private Async Sub pmCmd_RestartGame(sender As Object, e As RoutedEventArgs) Handles pmBtn_RestartGame.Click
+        Dim chkRestartGameTrigger = GetResponse(PromptType.GameMenu_Restart)
+
+        If chkRestartGameTrigger = isYes Then
+            Await ExitPopupMenu(ClosePopup_ByBtn,
+                Async Function()
+                    With cmd_KillGame
+                        osRunCmd.RunCmd(.First(), .Last())
+                    End With
+
+                    While IsGameRunning()
+                        Await Task.Delay(500)
+                        If Not IsGameRunning() Then Exit While
+                    End While
+
+                    Process.Start(New ProcessStartInfo With {
+                            .FileName = dirMtgaExe, .WorkingDirectory = dirMtga,
+                            .WindowStyle = ProcessWindowStyle.Maximized
+                        })
+
+                End Function)
+        End If
+    End Sub
+
     Private Sub pmCmd_Exit(sender As Object, e As RoutedEventArgs) Handles pmBtn_Exit.Click
         If GetResponse(PromptType.CloseApp) = isNo Then Exit Sub
 

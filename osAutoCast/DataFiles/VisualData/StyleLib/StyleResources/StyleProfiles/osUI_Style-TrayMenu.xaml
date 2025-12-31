@@ -190,6 +190,23 @@
         </Style.Triggers>
     </Style>
 
+    <Style x:Key="GameTrayMenu_ShowRestart" TargetType="{x:Type Button}"
+           BasedOn="{StaticResource TrayMenuItemDefaultStyle}">
+        <Setter Property="osStyle:osStyles.Background" Value="#FF575757"/>
+        <Setter Property="osStyle:osStyles.CornerRadius" Value="0,0,0,0"/>
+        <Setter Property="osStyle:osStyles.BorderThickness" Value="0,1,0,0"/>
+        <Setter Property="osStyle:osStyles.BorderBrush">
+            <Setter.Value>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                    <GradientStop Color="#00000000" Offset="0.0"/>
+                    <GradientStop Color="#A1060606" Offset="0.3"/>
+                    <GradientStop Color="#A1060606" Offset="0.7"/>
+                    <GradientStop Color="#00000000" Offset="1.0"/>
+                </LinearGradientBrush>
+            </Setter.Value>
+        </Setter>       
+    </Style>
+
     <Style x:Key="TrayMenuItemBorderStyle" TargetType="{x:Type Button}"
            BasedOn="{StaticResource TrayMenuItemStyle}">
         <Setter Property="osStyle:osStyles.BorderThickness" Value="0,0,0,0"/>
@@ -219,7 +236,7 @@
         <Setter Property="BorderThickness" Value="0,0,0,0" />
         <Setter Property="Margin" Value="0"/>
         <Setter Property="Height" Value="0" />
-        <Setter Property="MaxHeight" Value="32" />
+        <Setter Property="MaxHeight" Value="64" />
         <Setter Property="Opacity" Value="0" />
         <Setter Property="Visibility" Value="Collapsed" />
         <Setter Property="ClipToBounds" Value="True" />   

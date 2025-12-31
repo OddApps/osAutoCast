@@ -35,12 +35,19 @@
                         <Border x:Name="TrayMenuGamePanel" Grid.Row="1"
                                 Style="{StaticResource HideShowGameTrayMenu}">
                             <Grid>
-                                <Button x:Name="TrayMenuBtn_StartGame"
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <Button x:Name="TrayMenuBtn_StartGame" Grid.Row="0"
                                         Content="Start MTGA" Focusable="False"
                                         Style="{StaticResource GameTrayMenu_ShowStart}" />
-                                <Button x:Name="TrayMenuBtn_CloseGame"
+                                <Button x:Name="TrayMenuBtn_CloseGame" Grid.Row="0"
                                         Content="Close MTGA" Focusable="False"
                                         Style="{StaticResource GameTrayMenu_ShowClose}" />
+                                <Button x:Name="TrayMenuBtn_RestartGame" Grid.Row="1"
+                                        Content="Restart MTGA" Focusable="False"
+                                        Style="{StaticResource GameTrayMenu_ShowRestart}" />
                             </Grid>
                         </Border>
                     </Grid>

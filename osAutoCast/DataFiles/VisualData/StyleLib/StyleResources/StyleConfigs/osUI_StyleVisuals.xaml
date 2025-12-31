@@ -104,6 +104,8 @@
 
     <Style x:Key="OverlayVisuals" TargetType="{x:Type Window}">
         <Setter Property="Opacity" Value="0" />
+        <Setter Property="CacheMode" Value="BitmapCache"/>
+        <Setter Property="RenderOptions.BitmapScalingMode" Value="LowQuality"/>
         <Style.Resources>
             <Storyboard x:Key="OverlayVisual_Open">
                 <DoubleAnimationUsingKeyFrames x:Name="visOpen_Overlay"

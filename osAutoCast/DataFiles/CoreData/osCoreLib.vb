@@ -13,39 +13,34 @@ Imports osAutoCast.CoreDataLib
 Imports osAutoCast.DataTypeLib.AnimationType
 Imports osAutoCast.DataTypeLib.AnimationVisual
 Imports osAutoCast.DataTypeLib.OverlayVisualType
-Imports osAutoCast.DataTypeLib.PopupVisualType
 Imports osAutoCast.DataTypeLib.PopupCloseAction
 Imports osAutoCast.DataTypeLib.ProgAction
 Imports osAutoCast.DataTypeLib.ProgEvent
-Imports osAutoCast.DataTypeLib.ProgStatus
 Imports osAutoCast.DataTypeLib.ProgressMode
+Imports osAutoCast.DataTypeLib.ProgStatus
 Imports osAutoCast.DataTypeLib.PromptResponse
 Imports osAutoCast.DataTypeLib.TriggerAction
-Imports osAutoCast.DataTypeLib.TrayMenuVisuals
-Imports osAutoCast.DataTypeLib.TrayMenuItemType
 Imports osAutoCast.DataTypeLib.UpdateStatusAction
 Imports osBinder = System.Windows.Data
 Imports osBrushColor = System.Windows.Media.Brushes
-Imports osBrush = System.Windows.Media.Brush
 Imports osColors = System.Windows.Media
 Imports osControls = System.Windows.Controls
-Imports osForms = System.Windows.Forms
 Imports osHorz = System.Windows.HorizontalAlignment
+Imports osPoint = System.Windows.Point
 Imports osProgColor = SharpDX.Mathematics.Interop.RawColor4
 Imports osRect = SharpDX.Mathematics.Interop
+Imports osSize = System.Windows.Size
+Imports osSweep = System.Windows.Media.SweepDirection
 Imports osUtilities = SharpDX.Utilities
 Imports osVert = System.Windows.VerticalAlignment
-Imports osPoint = System.Windows.Point
-Imports osSize = System.Windows.Size
 Imports pxShader_Pixel = SharpDX.Direct3D11.PixelShader
 Imports pxShader_Vertex = SharpDX.Direct3D11.VertexShader
-Imports osSweep = System.Windows.Media.SweepDirection
-Imports System.Data
 
 #Disable Warning IDE0060 ' Remove unused parameter
 #Disable Warning IDE1006 ' Remove unused parameter
 #Disable Warning BC42353
 #Disable Warning BC42107
+#Disable Warning BC42104
 
 Public NotInheritable Class osFuncLib_InputScan
 
@@ -533,13 +528,10 @@ Public NotInheritable Class osFuncLib_ShowOpts
     Public Shared Async Function ExecuteDispOpts() As Task
         PrepUtilityTrigger(TriggerType.ShowPrefs)
 
-        PrepDispatcher().Invoke(Sub()
-                                    With osHandler_UI.osGui_Prefs
-                                        .Show()
-                                    End With
-                                End Sub)
+        chkCloseSettings.ResetAndInitTask()
 
-        Await AnticipateExit(osHandler_UI.osGui_Prefs)
+        Await osHandler_UI.ShowPrefsUI(chkCloseSettings)
+        Await AnticipateExit()
 
         Await osHandler_UI.ResetOptsUI(True)
         osFuncLib_InputScan.isActionComplete = True
@@ -548,45 +540,17 @@ Public NotInheritable Class osFuncLib_ShowOpts
     Public Shared Async Function ExecuteDispOpts(fromTray As Boolean) As Task
         PrepUtilityTrigger(TriggerType.ShowPrefs)
 
-        PrepDispatcher().Invoke(Sub()
-                                    With osHandler_UI.osGui_Prefs
-                                        .Show()
-                                    End With
-                                End Sub)
+        chkCloseSettings.ResetAndInitTask()
 
-        Await AnticipateExit(osHandler_UI.osGui_Prefs)
+        Await osHandler_UI.ShowPrefsUI(chkCloseSettings)
+        Await AnticipateExit()
 
         Await osHandler_UI.ResetOptsUI(True)
         osFuncLib_InputScan.isActionComplete = True
     End Function
 
-    Private Shared Sub osPrefs_PrepHandlers()
-        chkCloseSettings = New TaskCompletionSource(Of Boolean)()
-
-        Dim osGuiPrefs As osPrefs = osHandler_UI.osGui_Prefs
-
-        RemoveHandler osGuiPrefs.VisibleChanged, Nothing
-        AddHandler osGuiPrefs.VisibleChanged, Sub(sender As Object, e As EventArgs)
-                                                  If osGuiPrefs.Visible Then
-                                                      Return
-                                                  End If
-                                                  chkCloseSettings.TrySetResult(True)
-                                              End Sub
-
-        AddHandler osGuiPrefs.FormClosing, Sub(sender As Object, e As EventArgs)
-                                               If osGuiPrefs.Visible Then
-                                                   Return
-                                               End If
-                                               chkCloseSettings.TrySetResult(True)
-                                           End Sub
-    End Sub
-
-    Private Shared Function AnticipateExit(guiPrefs As Form) As Task
-        Dim tcs = New TaskCompletionSource(Of Object)(TaskCreationOptions.RunContinuationsAsynchronously)
-        AddHandler guiPrefs.FormClosed, Sub(sender, e)
-                                            tcs.TrySetResult(Nothing)
-                                        End Sub
-        Return tcs.Task
+    Private Shared Function AnticipateExit() As Task
+        Return chkCloseSettings.Task
     End Function
 
 End Class
@@ -801,6 +765,23 @@ Public NotInheritable Class MenuOverlayWindow
         SetBG()
     End Sub
 
+    Private Sub SetVisualMode(objAniType As AnimationType)
+        Dim setBitMapMode As BitmapScalingMode
+        Dim setCacheMode As CacheMode
+
+        Select Case objAniType
+            Case aniOpen
+                setBitMapMode = BitmapScalingMode.HighQuality
+                setCacheMode = Nothing
+            Case aniClose
+                setBitMapMode = BitmapScalingMode.LowQuality
+                setCacheMode = New BitmapCache()
+        End Select
+
+        Me.CacheMode = setCacheMode
+        RenderOptions.SetBitmapScalingMode(Me, setBitMapMode)
+    End Sub
+
     Public Sub ApplyTrayConfig()
         With Me
             .isFromTray = True
@@ -896,6 +877,8 @@ Public NotInheritable Class MenuOverlayWindow
 
         OverlayOpenComplete(objTask_Open)
         objAnimation_Open = Nothing
+
+        SetVisualMode(aniOpen)
     End Sub
 
     Private Sub BeginClosingTask(ByRef objCloseResult As TaskCompletionSource(Of Boolean))
@@ -971,6 +954,7 @@ Public NotInheritable Class MenuOverlayWindow
             Case aniOpen
                 TriggerVisuals(Me, objAnimation_Open)
             Case aniClose
+                SetVisualMode(aniClose)
                 TriggerVisuals(Me, objAnimation_Close)
         End Select
     End Sub
@@ -1008,7 +992,7 @@ End Class
 
 Public NotInheritable Class osFuncLib_PopupMenu
 
-    Private Shared objGui_Popup As osPopupMenu_GUI = Nothing
+    ' Private Shared objGui_Popup As osPopupMenu_GUI = Nothing
 
     Private Shared objPopupTaskMonitor As Task
 
@@ -1018,18 +1002,17 @@ Public NotInheritable Class osFuncLib_PopupMenu
     Public Shared Event EvCloseByClick(sender As Object, e As EventArgs)
     Private Shared Event EvCloseByCmd(sender As Object, e As EventArgs)
 
+    Private Shared ReadOnly Property objGui_Popup As osPopupMenu_GUI
+        Get
+            Return osHandler_UI.osPopupMenuN
+        End Get
+    End Property
+
     Public Shared Async Function ShowPopupMenu() As Task
         InitCloseMonitor(objPopupTaskPending)
 
-        Dim objTask_PopupOverlay = PrepDispatcher().InvokeAsync(
-                Async Function()
-                    Await osHandler_UI.LaunchGui(TriggerShowMenu)
-                    Await osHandler_UI.PresentPopupMenu()
-
-                    Return GetPopupWin()
-                End Function)
-
-        objGui_Popup = Await objTask_PopupOverlay.Task.Unwrap
+        Await osHandler_UI.GeneratePopupMenu()
+        Await osHandler_UI.PresentPopupMenu2()
 
         Dim objPopupResult = Await PopupCloseDetect(objPopupTaskMonitor,
                                                      objPopupTaskPending)
@@ -1139,7 +1122,7 @@ Public Module osFuncLib_TrayMenu
     Public Property isAppLoaded As Boolean = False
 
     Public Sub DisplayTrayMenu()
-        With osHandler_UI.osTrayMenu
+        With osHandler_UI.osTrayMenuN
             .DisplayTrayMenu()
             .Activate()
         End With
@@ -1178,60 +1161,6 @@ Public Module osFuncLib_TrayMenu
                  DisplayTrayMenu()
              End Sub
     End Sub
-
-    'Public Async Function osMenu_Init() As Task
-
-    '    Dim aa =
-    '    Await osHandler_UI.PrepTrayMenuDisp()
-    'End Function
-
-    'Public Async Function osMenu_Init(doner As TaskStatusReport) As Task
-    '    Await Task.Run(Sub()
-    '                       PrepDispatcher().InvokeAsync(
-    '                           Sub()
-    '                               Dim a = osHandler_UI.PrepTrayMenuDisp(done:=doner)
-    '                           End Sub, DispatcherPriority.Render)
-    '                   End Sub)
-    'End Function
-
-    'Public Async Function osMenu_Init() As Task
-    '    '  Await osHandler_UI.PrepTrayMenuDispr
-
-
-
-    '    Await Task.Run(
-    '    Async Function()
-    '        Dim objTask_InitTrayMenu =
-    '            PrepDispatcher().InvokeAsync(
-    '                Async Function()
-    '                    Await osHandler_UI.PrepTrayMenuDispr()
-
-
-    '                End Function)
-
-    '        Await objTask_InitTrayMenu.Task.Unwrap()
-    '        osHandler_UI.osTrayMenu.PrepTrayMenuInit()
-    '    End Function)
-
-    'End Function
-
-    'Public Function osMenu_Init() As Task
-    '    Return Task.Run(
-    '        Async Function()
-    '            Dim objTask_InitTrayMenu =
-    '                PrepDispatcher().InvokeAsync(
-    '                    Async Function()
-    '                        Dim oo = osHandler_UI.PrepTrayMenuDisp()
-
-    '                        Do While osHandler_UI.osTrayMenu Is Nothing
-    '                            Await Task.Delay(10)
-    '                        Loop
-    '                        osHandler_UI.osTrayMenu.PrepTrayMenuInit()
-    '                    End Function)
-
-    '            Await objTask_InitTrayMenu.Task.Unwrap()
-    '        End Function)
-    'End Function
 
 End Module
 
@@ -1622,9 +1551,6 @@ Public Class TrayIconBridge
 
     End Sub
 End Class
-
-
-
 
 Public Class osEnabledStatusConfig
     Implements INotifyPropertyChanged
@@ -2031,6 +1957,7 @@ End Class
 Public Module osRunCmd
 
     Public cmd_KillGame() As String = "taskkill,/f /im MTGA.exe".Split(",")
+    Public cmd_StartGame() As String = "taskkill,/f /im MTGA.exe".Split(",")
 
     Public Sub RunCmd(cmd As String, Optional arguments As String = "",
                            Optional timeoutMs As Integer = 30000, Optional workingDir As String = Nothing,

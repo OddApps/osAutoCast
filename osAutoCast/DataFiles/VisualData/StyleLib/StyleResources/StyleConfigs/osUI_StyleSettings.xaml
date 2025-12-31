@@ -1,10 +1,11 @@
 ﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:local="clr-namespace:osAutoCast"
-                    xmlns:sys="clr-namespace:System;assembly=mscorlib"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib" xmlns:osPrefs="clr-namespace:osAutoCast.osPrefLib"
                     xmlns:VisSettings="clr-namespace:osAutoCast.osVisConfigSettings"
                     xmlns:oscolor="clr-namespace:System.Windows.Media;assembly=PresentationCore">
 
     <local:osEnabledStatusConfig x:Key="osEnabledStatusConfig"/>
+    <osPrefs:osPreferenceLib x:Key="osPrefConfig"/>
     
     <!-- ** Load Screen Settings ** -->
 
@@ -44,6 +45,24 @@
     <oscolor:Color x:Key="osTrayMenuEffect_StrokeColor">#c4060606</oscolor:Color>
     
     <oscolor:Color x:Key="osTrayMenuEffect_DisColor">#A1A1A1A1</oscolor:Color>
+
+    <!-- ** Prefs Settings ** -->
+
+    <sys:Double x:Key="osEffect_PrefGlowThickness">0.75</sys:Double>
+    <sys:Double x:Key="osEffect_PrefGlowSpread">1.5</sys:Double>
+    <sys:Double x:Key="osEffect_PrefGlowFade">0</sys:Double>
+    <sys:Double x:Key="osEffect_PrefGlowStroke">0</sys:Double>
+    <sys:Double x:Key="osEffect_PrefGlowRadius">0.25</sys:Double>
+
+    <oscolor:Color x:Key="osEffect_PrefGlowColor">#A1FFFFFF</oscolor:Color>
+
+    <sys:Double x:Key="osEffect_PrefStrokeThickness">0.85</sys:Double>
+    <sys:Double x:Key="osEffect_PrefStrokeSpread">1.5</sys:Double>
+    <sys:Double x:Key="osEffect_PrefStrokeFade">0</sys:Double>
+    <sys:Double x:Key="osEffect_PrefStroke">0.75</sys:Double>
+    <sys:Double x:Key="osEffect_PrefStrokeRadius">0.25</sys:Double>
+
+    <oscolor:Color x:Key="osEffect_PrefStrokeColor">#FFFFFFFF</oscolor:Color>
     
     <!-- ** Effect Settings ** -->
 
@@ -52,7 +71,7 @@
     <sys:Double x:Key="osEffect_GlowFade">0</sys:Double>
     <sys:Double x:Key="osEffect_GlowStroke">0</sys:Double>
     <sys:Double x:Key="osEffect_GlowRadius">0.5</sys:Double>
-    
+
     <oscolor:Color x:Key="osEffect_GlowColor">#A1421110</oscolor:Color>
 
     <sys:Double x:Key="osEffect_StrokeThickness">1.2</sys:Double>
@@ -60,12 +79,12 @@
     <sys:Double x:Key="osEffect_StrokeFade">0</sys:Double>
     <sys:Double x:Key="osEffect_Stroke">1</sys:Double>
     <sys:Double x:Key="osEffect_StrokeRadius">0.5</sys:Double>
-    
+
     <oscolor:Color x:Key="osEffect_StrokeColor">#FF421110</oscolor:Color>
 
     <!-- ** Button Settings ** -->
     
-    <sys:Double x:Key="osBtn_Height">36</sys:Double>    
+    <sys:Double x:Key="osBtn_Height">72</sys:Double>    
     <sys:Double x:Key="osBtn_FontSize">20</sys:Double>
     <FontWeight x:Key="osBtn_FontWeight">Bold</FontWeight>    
     <Thickness x:Key="osBtn_TextPadding">0,2,0,0</Thickness>

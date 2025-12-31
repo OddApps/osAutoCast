@@ -4,10 +4,476 @@ Imports System.Windows.Media.Effects
 Imports osAutoCast.DataTypeLib.MenuProperty
 Imports osAutoCast.DataTypeLib.osShaderType
 Imports osAutoCast.DataTypeLib.VisualEasing
+Imports osAutoCast.DataTypeLib.PrefUI_State
 Imports System.Windows.Media.Animation
 Imports System.Windows.Controls.Primitives
+Imports System
+Imports System.Windows
+Imports System.Windows.Data
+Imports System.Windows.Media
+Imports System.ComponentModel
 
 Namespace osStyle
+
+    Public Class osPanel
+        Inherits ContentControl
+
+        Shared Sub New()
+            DefaultStyleKeyProperty.OverrideMetadata(GetType(osPanel),
+                                                     New FrameworkPropertyMetadata(GetType(osPanel)))
+        End Sub
+
+        Public Shared ReadOnly HeaderTextProperty As DependencyProperty = DependencyProperty.
+            Register(NameOf(HeaderText), GetType(String), GetType(osPanel),
+                     New PropertyMetadata(String.Empty))
+        Public Property HeaderText As String
+            Get
+                Return CStr(GetValue(HeaderTextProperty))
+            End Get
+            Set(value As String)
+                SetValue(HeaderTextProperty, value)
+            End Set
+        End Property
+
+        Public Shared ReadOnly HeaderColorProperty As DependencyProperty = DependencyProperty.
+            Register(NameOf(HeaderColor), GetType(Brush), GetType(osPanel),
+                     New PropertyMetadata(Brushes.Black))
+        Public Property HeaderColor As Brush
+            Get
+                Return CType(GetValue(HeaderColorProperty), Brush)
+            End Get
+            Set(value As Brush)
+                SetValue(HeaderColorProperty, value)
+            End Set
+        End Property
+
+    End Class
+
+    Public Class osPrefHeader
+        Inherits Control
+
+        Shared Sub New()
+            DefaultStyleKeyProperty.OverrideMetadata(
+            GetType(osPrefHeader),
+            New FrameworkPropertyMetadata(GetType(osPrefHeader)))
+        End Sub
+
+        Public Property Text As String
+            Get
+                Return CStr(GetValue(TextProperty))
+            End Get
+            Set(value As String)
+                SetValue(TextProperty, value)
+            End Set
+        End Property
+
+        Public Shared ReadOnly TextProperty As DependencyProperty = DependencyProperty.
+            Register(NameOf(Text), GetType(String), GetType(osPrefHeader))
+
+        Public Property LineBrush As Brush
+            Get
+                Return CType(GetValue(LineBrushProperty), Brush)
+            End Get
+            Set(value As Brush)
+                SetValue(LineBrushProperty, value)
+            End Set
+        End Property
+
+        Public Shared ReadOnly LineBrushProperty As DependencyProperty = DependencyProperty.
+            Register(NameOf(LineBrush), GetType(Brush), GetType(osPrefHeader),
+                      New PropertyMetadata(New SolidColorBrush(Color.FromRgb(&H57, &H57, &H57))))
+
+        Public Property LineThickness As Double
+            Get
+                Return CDbl(GetValue(LineThicknessProperty))
+            End Get
+            Set(value As Double)
+                SetValue(LineThicknessProperty, value)
+            End Set
+        End Property
+
+        Public Shared ReadOnly LineThicknessProperty As DependencyProperty = DependencyProperty.
+            Register(NameOf(LineThickness), GetType(Double), GetType(osPrefHeader),
+                     New PropertyMetadata(1.0))
+
+        Public Property LineSpacing As Double
+            Get
+                Return CDbl(GetValue(LineSpacingProperty))
+            End Get
+            Set(value As Double)
+                SetValue(LineSpacingProperty, value)
+            End Set
+        End Property
+
+        Public Shared ReadOnly LineSpacingProperty As DependencyProperty = DependencyProperty.
+            Register(NameOf(LineSpacing), GetType(Double), GetType(osPrefHeader),
+                      New PropertyMetadata(8.0))
+    End Class
+
+    Public Class osBorder
+        Inherits Border
+
+        Private ReadOnly _clipGeometry As New RectangleGeometry()
+        Private _oldChildClip As Object
+        Private _isRenderingHooked As Boolean
+
+        ' DependencyProperty so you can tweak inflation if needed (default 0.75)
+        Public Shared ReadOnly ClipInflationProperty As DependencyProperty =
+        DependencyProperty.Register("ClipInflation", GetType(Double), GetType(osBorder),
+            New FrameworkPropertyMetadata(0.75, FrameworkPropertyMetadataOptions.AffectsRender))
+
+        Public Property ClipInflation As Double
+            Get
+                Return CDbl(GetValue(ClipInflationProperty))
+            End Get
+            Set(value As Double)
+                SetValue(ClipInflationProperty, value)
+            End Set
+        End Property
+
+        Public Sub New()
+            ' Improve pixel alignment to reduce subpixel artifacts
+            Me.SetValue(FrameworkElement.UseLayoutRoundingProperty, True)
+            Me.SetValue(UIElement.SnapsToDevicePixelsProperty, True)
+            'UseLayoutRounding = True
+            'SnapsToDevicePixels = True
+        End Sub
+
+        ' Preserve and restore child's original Clip if child changes
+        Public Overrides Property Child As UIElement
+            Get
+                Return MyBase.Child
+            End Get
+            Set(value As UIElement)
+                If Me.Child IsNot value Then
+                    ' restore old child's clip (if we replaced it)
+                    If Me.Child IsNot Nothing Then
+                        Me.Child.SetValue(UIElement.ClipProperty, _oldChildClip)
+                    End If
+
+                    If value IsNot Nothing Then
+                        _oldChildClip = value.ReadLocalValue(UIElement.ClipProperty)
+                    Else
+                        _oldChildClip = Nothing
+                    End If
+
+                    MyBase.Child = value
+                End If
+            End Set
+        End Property
+
+        Protected Overrides Sub OnVisualParentChanged(oldParent As DependencyObject)
+            MyBase.OnVisualParentChanged(oldParent)
+            If VisualParent Is Nothing Then
+                UnhookRendering()
+            Else
+                HookRendering()
+            End If
+        End Sub
+
+        Private Sub HookRendering()
+            If _isRenderingHooked Then Return
+            AddHandler CompositionTarget.Rendering, AddressOf OnRendering
+            _isRenderingHooked = True
+        End Sub
+
+        Private Sub UnhookRendering()
+            If Not _isRenderingHooked Then Return
+            RemoveHandler CompositionTarget.Rendering, AddressOf OnRendering
+            _isRenderingHooked = False
+        End Sub
+
+        Private Sub OnRendering(sender As Object, e As EventArgs)
+            UpdateChildClip()
+        End Sub
+
+        'Protected Overrides Sub OnRender(dc As DrawingContext)
+        '    MyBase.OnRender(dc)
+        '    UpdateChildClip()
+        'End Sub
+
+        'Protected Overrides Sub OnRenderSizeChanged(sizeInfo As SizeChangedInfo)
+        '    MyBase.OnRenderSizeChanged(sizeInfo)
+        '    UpdateChildClip()
+        'End Sub
+
+        Private Sub UpdateChildClip()
+            Dim child = Me.Child
+            If child Is Nothing Then Return
+
+            ' Ensure layout rounding has occurred so RenderSize is device aligned
+            Dim w As Double = Math.Max(0.0, child.RenderSize.Width)
+            Dim h As Double = Math.Max(0.0, child.RenderSize.Height)
+
+
+            Dim size = child.RenderSize
+            If size.Width <= 0 OrElse size.Height <= 0 Then Return
+            ' Clip inflation to cover anti-aliasing / stroke half-width
+            Dim inflation As Double = Math.Max(0.0, Me.ClipInflation)
+
+            ' Build rect starting at 0,0 (child coordinates). Inflate slightly.
+            Dim rect As New Rect(0, 0, w, h)
+            rect.Inflate(inflation, inflation)
+
+            _clipGeometry.Rect = rect
+
+            ' Compute radius: compensate for BorderThickness (stroke centered on edge)
+            ' and add inflation so the clip slightly 'rounds' a bit larger than inner edge.
+            Dim baseRadius As Double = 0.0
+            ' Use TopLeft radius as representative; can be extended for per-corner radii.
+            baseRadius = Me.CornerRadius.TopLeft
+
+            ' borderThickness/2 is the inward part of stroke; subtract it so clip aligns to inner edge
+            Dim halfStroke As Double = (Me.BorderThickness.Left + Me.BorderThickness.Top + Me.BorderThickness.Right + Me.BorderThickness.Bottom) / 4.0
+            ' More correct approach would consider each edge; using average is fine for most cases.
+
+            Dim radius As Double = Math.Max(0.0, baseRadius - (halfStroke / 2.0) + inflation)
+            _clipGeometry.RadiusX = radius
+            _clipGeometry.RadiusY = radius
+
+            ' Assign the same RectangleGeometry instance to child's Clip (no new allocations each frame)
+            child.Clip = _clipGeometry
+
+            ' Optional: force child to snap to pixels (helps some artefacts)
+            '   child.SetValue(UIElement.SnapsToDevicePixelsProperty, True)
+
+            ' NOTE: If you prefer crisp edges you can force aliasing (jagged) by uncommenting:
+            ' RenderOptions.SetEdgeMode(child, EdgeMode.Aliased)
+        End Sub
+    End Class
+
+    Public Class OsRoundedForm
+        Inherits ContentControl
+
+        Private _path As Path
+
+        Private ReadOnly _clipGeometry As New RectangleGeometry()
+        Private _isRenderingHooked As Boolean
+        Private _transformHost As FrameworkElement
+
+        Shared Sub New()
+            DefaultStyleKeyProperty.OverrideMetadata(
+                GetType(OsRoundedForm), New FrameworkPropertyMetadata(GetType(OsRoundedForm)))
+        End Sub
+
+        Public Sub New()
+            AddHandler Loaded, Sub()
+                                   UpdateGeometry()
+                               End Sub
+        End Sub
+
+        Public Shared ReadOnly ClipInflationProperty As DependencyProperty = DependencyProperty.
+            Register(NameOf(ClipInflation), GetType(Double), GetType(OsRoundedForm),
+                      New FrameworkPropertyMetadata(0.75, FrameworkPropertyMetadataOptions.AffectsRender))
+
+        Public Property ClipInflation As Double
+            Get
+                Return CDbl(GetValue(ClipInflationProperty))
+            End Get
+            Set(value As Double)
+                SetValue(ClipInflationProperty, value)
+            End Set
+        End Property
+
+        ' Private _LayoutScale As New ScaleTransform(0, 0.025)
+        Public ReadOnly Property LayoutScale As ScaleTransform
+            Get
+                Return DirectCast(ContentResource.LayoutTransform, ScaleTransform)
+            End Get
+        End Property
+
+        Private Shared Property _ContentResource As ContentPresenter
+        Public Property ContentResource As ContentPresenter
+            Get
+                Return _ContentResource
+            End Get
+            Set(value As ContentPresenter)
+                _ContentResource = value
+            End Set
+        End Property
+
+        Public Property CornerRadius As Double
+            Get
+                Return CDbl(GetValue(CornerRadiusProperty))
+            End Get
+            Set(value As Double)
+                SetValue(CornerRadiusProperty, value)
+            End Set
+        End Property
+
+        Public Shared ReadOnly CornerRadiusProperty As DependencyProperty = DependencyProperty.
+            Register(NameOf(CornerRadius), GetType(Double), GetType(OsRoundedForm),
+                      New PropertyMetadata(12.0, AddressOf OnVisualChanged))
+
+        Public Overloads Property BorderBrush As Brush
+            Get
+                Return CType(GetValue(BorderBrushProperty), Brush)
+            End Get
+            Set(value As Brush)
+                SetValue(BorderBrushProperty, value)
+            End Set
+        End Property
+
+        Public Shared Shadows ReadOnly BorderBrushProperty As DependencyProperty = DependencyProperty.
+            Register(NameOf(BorderBrush), GetType(Brush), GetType(OsRoundedForm),
+                      New FrameworkPropertyMetadata(Brushes.Gray,
+                                                    FrameworkPropertyMetadataOptions.AffectsRender))
+
+        Public Shared Shadows ReadOnly BorderThicknessProperty As DependencyProperty = DependencyProperty.
+            Register(NameOf(BorderThickness), GetType(Thickness), GetType(OsRoundedForm),
+                      New FrameworkPropertyMetadata(New Thickness(1),
+                                                    FrameworkPropertyMetadataOptions.AffectsRender))
+
+        Public Shadows Property BorderThickness As Thickness
+            Get
+                Return CType(GetValue(BorderThicknessProperty), Thickness)
+            End Get
+            Set(value As Thickness)
+                SetValue(BorderThicknessProperty, value)
+            End Set
+        End Property
+
+        Public Overloads Property Background As Brush
+            Get
+                Return CType(GetValue(BackgroundProperty), Brush)
+            End Get
+            Set(value As Brush)
+                SetValue(BackgroundProperty, value)
+            End Set
+        End Property
+
+        Public Shared Shadows ReadOnly BackgroundProperty As DependencyProperty = DependencyProperty.
+            Register(NameOf(Background), GetType(Brush), GetType(OsRoundedForm),
+                     New FrameworkPropertyMetadata(Brushes.LightGray,
+                                                    FrameworkPropertyMetadataOptions.AffectsRender))
+
+        Private Sub UpdateGeometry()
+
+            If _path Is Nothing Then Return
+
+            ' --- DESIGN-TIME SAFE SIZE ---
+            Dim w As Double = If(ActualWidth > 0, ActualWidth, Width)
+            Dim h As Double = If(ActualHeight > 0, ActualHeight, Height)
+
+            ' Designer still hasn't measured
+            'If Double.IsNaN(w) OrElse Double.IsNaN(h) OrElse w <= 0 OrElse h <= 0 Then
+            '    w = 300
+            '    h = 200
+            'End If
+
+            Dim r As Double = Math.Min(CornerRadius, Math.Min(w, h) / 2)
+
+            Dim geo As New StreamGeometry()
+            Using ctx = geo.Open()
+
+                ctx.BeginFigure(New Point(r, 0), True, True)
+
+                ctx.LineTo(New Point(w - r, 0), True, False)
+                ctx.ArcTo(New Point(w, r), New Size(r, r), 0, False,
+                  SweepDirection.Clockwise, True, False)
+
+                ctx.LineTo(New Point(w, h - r), True, False)
+                ctx.ArcTo(New Point(w - r, h), New Size(r, r), 0, False,
+                  SweepDirection.Clockwise, True, False)
+
+                ctx.LineTo(New Point(r, h), True, False)
+                ctx.ArcTo(New Point(0, h - r), New Size(r, r), 0, False,
+                  SweepDirection.Clockwise, True, False)
+
+                ctx.LineTo(New Point(0, r), True, False)
+                ctx.ArcTo(New Point(r, 0), New Size(r, r), 0, False,
+                  SweepDirection.Clockwise, True, False)
+            End Using
+
+            geo.Freeze()
+
+            _path.Data = geo
+            Clip = geo
+        End Sub
+
+        Private Sub UpdateInnerClip()
+
+            If _transformHost Is Nothing Then Return
+
+            Dim size = _transformHost.RenderSize
+            If size.Width <= 0 OrElse size.Height <= 0 Then Return
+
+            Dim inflation As Double = Math.Max(0.0, ClipInflation)
+
+            Dim rect As New Rect(0, 0, size.Width, size.Height)
+            rect.Inflate(inflation, inflation)
+
+            _clipGeometry.Rect = rect
+
+            ' --- radius compensation ---
+            Dim baseRadius As Double = CornerRadius
+
+            Dim avgStroke As Double =
+        (BorderThickness.Left +
+         BorderThickness.Top +
+         BorderThickness.Right +
+         BorderThickness.Bottom) / 4.0
+
+            Dim radius As Double =
+        Math.Max(0.0, baseRadius - (avgStroke / 2.0) + inflation)
+
+            _clipGeometry.RadiusX = radius
+            _clipGeometry.RadiusY = radius
+
+            _transformHost.Clip = _clipGeometry
+        End Sub
+
+        Protected Overrides Sub OnRenderSizeChanged(sizeInfo As SizeChangedInfo)
+            MyBase.OnRenderSizeChanged(sizeInfo)
+
+            UpdateGeometry()
+
+        End Sub
+
+        Public Overrides Sub OnApplyTemplate()
+            MyBase.OnApplyTemplate()
+
+            _transformHost = TryCast(GetTemplateChild("PART_TransformHost"), FrameworkElement)
+            ContentResource = TryCast(Me.GetTemplateChild("PART_TransformHost"), ContentPresenter)
+
+            UpdateInnerClip()
+        End Sub
+
+        Protected Overrides Sub OnVisualParentChanged(oldParent As DependencyObject)
+            MyBase.OnVisualParentChanged(oldParent)
+
+            If VisualParent Is Nothing Then
+                UnhookRendering()
+            Else : HookRendering() : End If
+        End Sub
+
+        Private Sub HookRendering()
+            If _isRenderingHooked Then Return
+
+            AddHandler CompositionTarget.Rendering, AddressOf OnRendering
+            _isRenderingHooked = True
+        End Sub
+
+        Private Sub UnhookRendering()
+            If Not _isRenderingHooked Then Return
+
+            RemoveHandler CompositionTarget.Rendering, AddressOf OnRendering
+            _isRenderingHooked = False
+        End Sub
+
+        Private Sub OnRendering(sender As Object, e As EventArgs)
+            UpdateInnerClip()
+        End Sub
+
+        Private Shared Sub OnVisualChanged(d As DependencyObject, e As DependencyPropertyChangedEventArgs)
+            CType(d, OsRoundedForm).UpdateGeometry()
+        End Sub
+
+        Private Sub OsRoundedForm_Loaded(sender As Object, e As RoutedEventArgs) Handles Me.Loaded
+            ApplyTemplate()
+        End Sub
+
+    End Class
 
     Public Class osStyles
         Inherits DependencyObject
@@ -542,6 +1008,18 @@ Namespace osStyle
             End Select
 
             MyBase.OnPreviewKeyDown(e)
+        End Sub
+
+        Protected Overrides Sub OnPreviewMouseWheel(e As MouseWheelEventArgs)
+            MyBase.OnPreviewMouseWheel(e)
+
+            If e.Delta > 0 Then
+                ChangeValue(+Increment)
+            Else
+                ChangeValue(-Increment)
+            End If
+
+            e.Handled = True
         End Sub
 
         Private Sub ParseText()

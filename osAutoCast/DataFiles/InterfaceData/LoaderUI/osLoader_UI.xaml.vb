@@ -196,22 +196,24 @@ Partial Class osLoader_UI
     Public osPrefManager As osHandler_Prefs
 
     Private idxLoadStageData As New Dictionary(Of LoadTaskType, osLoadStageData) From {
-        {Load_Init, CreateLoadStageData(0, 25, 500)},
-        {Load_PrefPrep, CreateLoadStageData(30, 65, 475)},
-        {Load_PrefApply, CreateLoadStageData(70, 95, 325)},
-        {Load_Opts, CreateLoadStageData(100, 130, 475)},
-        {Load_Shaders, CreateLoadStageData(140, 165, 475)},
-        {Load_PopupMenu, CreateLoadStageData(170, 195, 425)},
-        {Load_StartingSvc, CreateLoadStageData(200, 225, 425)},
-        {Load_Starting, CreateLoadStageData(230, 250, 450)}
+        {Load_Init, CreateLoadStageData(0, 25, 375)},
+        {Load_PrefPrep, CreateLoadStageData(30, 65, 375)},
+        {Load_PrefApply, CreateLoadStageData(70, 95, 375)},
+        {Load_InitShaders, CreateLoadStageData(100, 115, 350)},
+        {Load_Shaders, CreateLoadStageData(125, 135, 350)},
+        {Load_Opts, CreateLoadStageData(140, 165, 350)},
+        {Load_PopupMenu, CreateLoadStageData(170, 195, 300)},
+        {Load_StartingSvc, CreateLoadStageData(200, 225, 315)},
+        {Load_Starting, CreateLoadStageData(230, 250, 375)}
     }
 
     Private idxLoadTasks As New List(Of osLoadTaskData) From {
         {CreateLoadTaskData(Load_Init, AddressOf osLoadTaskLib.LoadTask_Init)},
         {CreateLoadTaskData(Load_PrefPrep, AddressOf osLoadTaskLib.LoadTask_PrefsLoad)},
         {CreateLoadTaskData(Load_PrefApply, AddressOf osLoadTaskLib.LoadTask_PrefsApply)},
-        {CreateLoadTaskData(Load_Opts, AddressOf osLoadTaskLib.LoadOptsUI)},
+        {CreateLoadTaskData(Load_InitShaders, AddressOf osLoadTaskLib.InitShaderDevices)},
         {CreateLoadTaskData(Load_Shaders, AddressOf osLoadTaskLib.LoadAllShaders)},
+        {CreateLoadTaskData(Load_Opts, AddressOf osLoadTaskLib.LoadOptsUI)},
         {CreateLoadTaskData(Load_PopupMenu, AddressOf osLoadTaskLib.PrepPopupMenuUI)},
         {CreateLoadTaskData(Load_StartingSvc, AddressOf osLoadTaskLib.LoadTask_StartInMon)},
         {CreateLoadTaskData(Load_Starting, AddressOf LoadFinalize)}
@@ -221,8 +223,9 @@ Partial Class osLoader_UI
         {Load_Init, "Initializing Data"},
         {Load_PrefPrep, "Loading Preferences"},
         {Load_PrefApply, "skip"},
-        {Load_Opts, "Loading Interface"},
+        {Load_InitShaders, "Loading Interface"},
         {Load_Shaders, "skip"},
+        {Load_Opts, "skip"},
         {Load_PopupMenu, "Loading Menus"},
         {Load_ApplyConfig, "Applying Configuration"},
         {Load_StartingSvc, "Activating Service"},
@@ -297,8 +300,9 @@ Partial Class osLoader_UI
             ComposeLoadStage(Load_Init),
             ComposeLoadStage(Load_PrefPrep),
             ComposeLoadStage(Load_PrefApply),
-            ComposeLoadStage(Load_Opts),
+            ComposeLoadStage(Load_InitShaders),
             ComposeLoadStage(Load_Shaders),
+            ComposeLoadStage(Load_Opts),
             ComposeLoadStage(Load_PopupMenu),
             ComposeLoadStage(Load_StartingSvc),
             ComposeLoadStage(Load_Starting)

@@ -21,7 +21,7 @@ Public Class osHandler_Loader
     Private _renderToken As CancellationToken
     Private _renderTcs As TaskCompletionSource(Of Boolean)
 
-    Private Const DriftSpeed As Double = 9.5
+    Private Const DriftSpeed As Double = 10.5
 
     Private ReadOnly _stages As IReadOnlyList(Of osLoader_Stage)
 
@@ -195,9 +195,9 @@ Public Class osHandler_Loader
                     Await objTask_Visual
                     Await workTask
                 Else
-                    Await Task.WhenAny(objTask_Visual, objTaskReport.Completed)
+                    Await Task.WhenAny(objTask_Visual, workTask)
 
-                    If objTask_Visual.IsCompleted Then
+                    If objTaskReport.IsCompleted Then
                         Await objTask_Visual
                     End If
 
