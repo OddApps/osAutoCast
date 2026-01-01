@@ -286,7 +286,10 @@ Public NotInheritable Class osHandler_UI
                 Function()
                     Return PrepDispatcher().
                         Invoke(Function()
-                                   Return New osPrefs_GUI()
+                                   Dim objPrefWin As New osPrefs_GUI()
+                                   objPrefWin.PrepPrefVis()
+
+                                   Return objPrefWin
                                End Function, DispatcherPriority.Background)
                 End Function, LazyThreadSafetyMode.ExecutionAndPublication))
     End Function
@@ -339,23 +342,23 @@ Public NotInheritable Class osHandler_UI
             End Sub)
     End Sub
 
-    Public Shared Async Function ShowPrefsUI1(objAwaitClose As TaskCompletionSource(Of Boolean)) As Task
-        Dim _objAwaitClose = objAwaitClose
+    'Public Shared Async Function ShowPrefsUI1(objAwaitClose As TaskCompletionSource(Of Boolean)) As Task
+    '    Dim _objAwaitClose = objAwaitClose
 
-        Await PrepDispatcher().InvokeAsync(
-            Async Function()
-                AddHandler osPrefsWindow.Closed,
-                    Sub(sender, e)
-                        DisposeUI_Prefs.Invoke(osPrefsWindow)
-                        _osPrefsWindow = Nothing
+    '    Await PrepDispatcher().InvokeAsync(
+    '        Async Function()
+    '            AddHandler osPrefsWindow.Closed,
+    '                Sub(sender, e)
+    '                    DisposeUI_Prefs.Invoke(osPrefsWindow)
+    '                    _osPrefsWindow = Nothing
 
-                        _objAwaitClose.TrySetResult(True)
-                        InitResourceAlloc()
-                    End Sub
+    '                    _objAwaitClose.TrySetResult(True)
+    '                    InitResourceAlloc()
+    '                End Sub
 
-                Await osPrefsWindow.ShowPrefsUICore()
-            End Function)
-    End Function
+    '            Await osPrefsWindow.ShowPrefsUICore()
+    '        End Function)
+    'End Function
 
     Public Shared Async Function PresentPopupMenu2() As Task
         Await PrepDispatcher().InvokeAsync(
@@ -724,23 +727,41 @@ Public NotInheritable Class osHandler_UI
         End Try
     End Function
 
-    Public Shared Async Function ShowPrefsUI(objAwaitClose As TaskCompletionSource(Of Boolean)) As Task
+    Public Shared Async Function ShowPrefsUI(objAwaitClose As TaskCompletionSource(Of Boolean), isNew As Boolean) As Task
         Dim _objAwaitClose = objAwaitClose
 
         Await PrepDispatcher().InvokeAsync(
-            Async Function()
+            Sub()
                 AddHandler osPrefsWindow.Closed,
-                    Sub(sender, e)
-                        DisposeUI_Prefs.Invoke(osPrefsWindow)
-                        _osPrefsWindow = Nothing
+                            Sub(sender, e)
+                                DisposeUI_Prefs.Invoke(osPrefsWindow)
+                                _osPrefsWindow = Nothing
 
-                        _objAwaitClose.TrySetResult(True)
-                        InitResourceAlloc()
-                    End Sub
+                                _objAwaitClose.TrySetResult(True)
+                                InitResourceAlloc()
+                            End Sub
 
-                Await osPrefsWindow.ShowPrefsUICore()
-            End Function)
+                osPrefsWindow.DisplayPrefsUI()
+            End Sub, DispatcherPriority.Background)
     End Function
+
+    'Public Shared Async Function ShowPrefsUI(objAwaitClose As TaskCompletionSource(Of Boolean)) As Task
+    '    Dim _objAwaitClose = objAwaitClose
+
+    '    Await PrepDispatcher().InvokeAsync(
+    '        Async Function()
+    '            AddHandler osPrefsWindow.Closed,
+    '                Sub(sender, e)
+    '                    DisposeUI_Prefs.Invoke(osPrefsWindow)
+    '                    _osPrefsWindow = Nothing
+
+    '                    _objAwaitClose.TrySetResult(True)
+    '                    InitResourceAlloc()
+    '                End Sub
+
+    '            Await osPrefsWindow.ShowPrefsUICore()
+    '        End Function)
+    'End Function
 
     Public Shared Function isOverlayActive() As Boolean
         Return If(osPopupMenuOverlay IsNot Nothing, True, False)

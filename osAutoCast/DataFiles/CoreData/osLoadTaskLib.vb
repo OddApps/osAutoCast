@@ -54,10 +54,11 @@ Public Module osLoadTaskLib
         AddHandler uiLoadProgBar.LoadProgComplete,
             objLoadUI.evtLoaderComplete
 
-        objLoadUI.InitHandlerPref()
-        Await Task.Delay(125)
+        '  objLoadUI.InitHandlerPref()
+        '   Await Task.Run(Async Function()
+        Await Task.Delay(225)
 
-        objTaskStatus.SetTaskComplete()
+        '  
     End Function
 
     Public Async Function LoadTask_PrefsLoad(objTaskStatus As TaskStatusReport) As Task

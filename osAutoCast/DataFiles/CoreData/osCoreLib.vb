@@ -530,7 +530,7 @@ Public NotInheritable Class osFuncLib_ShowOpts
 
         chkCloseSettings.ResetAndInitTask()
 
-        Await osHandler_UI.ShowPrefsUI(chkCloseSettings)
+        Await osHandler_UI.ShowPrefsUI(chkCloseSettings, True)
         Await AnticipateExit()
 
         Await osHandler_UI.ResetOptsUI(True)
@@ -542,7 +542,8 @@ Public NotInheritable Class osFuncLib_ShowOpts
 
         chkCloseSettings.ResetAndInitTask()
 
-        Await osHandler_UI.ShowPrefsUI(chkCloseSettings)
+        Await osHandler_UI.ShowPrefsUI(chkCloseSettings, True)
+        'Await osHandler_UI.ShowPrefsUI(chkCloseSettings)
         Await AnticipateExit()
 
         Await osHandler_UI.ResetOptsUI(True)

@@ -421,24 +421,17 @@ Public Module DataTypeLib
         Pref_GenOpts
     End Enum
 
-    'Public Enum PreferenceType
-    '    Pref_AutoCast_RTC
-    '    Pref_AutoCast_Fuse
-    '    Pref_AutoPass_SafetyTimer
-    '    Pref_MainOpts_AP_W
-    '    Pref_MainOpts_AP_H
-    '    Pref_MainOpts_AP_UiW
-    '    Pref_MainOpts_AP_UiH
-    '    Pref_MainOpts_AC_W
-    '    Pref_MainOpts_AC_H
-    '    Pref_GenOpts_VisualQuality
-    'End Enum
-
     Public Enum PrefSetting
         Pref_AutoCast_RTC
         Pref_AutoCast_Fuse
         Pref_AutoPass_SafetyTimer
         Pref_GenOpts_VisualQuality
+    End Enum
+
+    Public Enum PrefSaveState
+        Prefs_NotSaved
+        Prefs_Saved
+        Prefs_NoChanges
     End Enum
 
     Public Enum PrefUI_State

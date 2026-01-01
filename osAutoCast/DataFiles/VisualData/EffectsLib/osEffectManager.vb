@@ -299,6 +299,36 @@ Namespace osVisConfigSettings
 
     End Class
 
+    Public Class osPrefVisDuration
+        Inherits MarkupExtension
+
+        Public Property visDur As Integer
+
+        Public Overrides Function ProvideValue(serviceProvider As IServiceProvider) As Object
+            Return New Duration(SetDuration(visDur))
+        End Function
+
+        Private Function SetDuration(durMS As Integer) As TimeSpan
+            Return TimeSpan.FromMilliseconds(durMS)
+        End Function
+
+    End Class
+
+    Public Class osPrefVisStartTime
+        Inherits MarkupExtension
+
+        Public Property visStartTime As Integer
+
+        Public Overrides Function ProvideValue(serviceProvider As IServiceProvider) As Object
+            Return SetDuration(visStartTime)
+        End Function
+
+        Private Function SetDuration(durMS As Integer) As TimeSpan
+            Return TimeSpan.FromMilliseconds(durMS)
+        End Function
+
+    End Class
+
     Public Class osVisualEasing
         Inherits MarkupExtension
 

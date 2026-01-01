@@ -144,10 +144,32 @@
 
     <!-- [ Overlay Config ] -->
     
-    <sys:Double x:Key="OverlayAni_OpenFade">0.0</sys:Double>
-    
-    <sys:Double x:Key="OverlayAni_Loaded">0.7</sys:Double>
-    
+    <sys:Double x:Key="OverlayAni_OpenFade">0.0</sys:Double>    
+    <sys:Double x:Key="OverlayAni_Loaded">0.7</sys:Double>    
     <sys:Double x:Key="OverlayAni_CloseFade">0.0</sys:Double>
+
+    <!-- [ osPrefs Timing ] -->
+
+    <VisSettings:osPrefVisDuration x:Key="osPrefsDuration_OpenOpacity" visDur="800" />
+    <VisSettings:osPrefVisStartTime x:Key="osPrefsStartTime_OpenOpacity" visStartTime="0" />
+
+    <VisSettings:osPrefVisDuration x:Key="osPrefsDuration_OpenScaleX" visDur="650" />
+    <VisSettings:osPrefVisStartTime x:Key="osPrefsStartTime_OpenScaleX" visStartTime="150" />
+
+    <VisSettings:osPrefVisDuration x:Key="osPrefsDuration_OpenTitle" visDur="985" />
+    <VisSettings:osPrefVisStartTime x:Key="osPrefsStartTime_OpenTitle" visStartTime="850" />
+
+    <VisSettings:osPrefVisDuration x:Key="osPrefsDuration_ExpandOpacity" visDur="985" />
+    <VisSettings:osPrefVisStartTime x:Key="osPrefsStartTime_ExpandOpacity" visStartTime="850" />
+
+    <VisSettings:osPrefVisDuration x:Key="osPrefsDuration_ExpandHeight" visDur="985" />
+    <VisSettings:osPrefVisStartTime x:Key="osPrefsStartTime_ExpandHeight" visStartTime="850" />    
+
+    <!-- [ osPrefs Easings ] -->
+
+    <!--<VisSettings:osVisualEasing x:Key="OverlayEase_Open" visEasing="OverlayOpen" />
+
+    <VisSettings:osVisualEasing x:Key="OverlayEase_Close" visEasing="OverlayClose" />
+    <VisSettings:osVisualEasing x:Key="OverlayEase_CloseByBtn" visEasing="OverlayClose_ByBtn" />-->
 
 </ResourceDictionary>

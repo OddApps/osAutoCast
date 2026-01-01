@@ -6,6 +6,8 @@ Imports System.Text
 Imports System.Reflection
 Imports System.ComponentModel
 Imports osPrefBind = System.Windows.Data.Binding
+Imports System.Windows.Threading
+
 Namespace osPrefLib
 
 #Disable Warning BC42353
@@ -393,21 +395,31 @@ Namespace osPrefLib
             Return result
         End Function
 
+        Public Async Function PreparePrefData() As Task
+            ' Build index off-UI; continuation won't capture UI because of ConfigureAwait(False)
+            Dim newIndex As osPrefIndex = Await BuildPrefIndexAsync().ConfigureAwait(False)
+
+            ' Only marshal back to UI to assign the result
+            Await PrepDispatcher().InvokeAsync(Sub() objOsPrefIdx = newIndex, DispatcherPriority.Background)
+        End Function
+
         Public Async Function BuildPrefIndexAsync() As Task(Of osPrefIndex)
             Dim pRecIdxObj As New osPrefIndex()
 
-            Using fs As New FileStream(CoreDataLib.osPrefFile, FileMode.Open, FileAccess.Read,
-                                       FileShare.Read, bufferSize:=4096, options:=FileOptions.Asynchronous)
-                Using sr As New StreamReader(fs)
+            Using fs As New FileStream(CoreDataLib.osPrefFile,
+                               FileMode.Open,
+                               FileAccess.Read,
+                               FileShare.Read,
+                               bufferSize:=4096,
+                               options:=FileOptions.Asynchronous Or FileOptions.SequentialScan)
+                Using sr As New StreamReader(fs, Encoding.Default, detectEncodingFromByteOrderMarks:=True, bufferSize:=4096)
                     Dim inCatalog As Boolean = False
-
                     Dim currentData As New List(Of PrefDataRecord)()
                     Dim currentType As String = Nothing
 
                     Dim rawLine As String = Await sr.ReadLineAsync()
-
                     While rawLine IsNot Nothing
-                        Dim prefLineData = rawLine.Trim()
+                        Dim prefLineData As String = rawLine.Trim()
 
                         If isPrefHeader(prefLineData) Then
                             inCatalog = True
@@ -427,7 +439,7 @@ Namespace osPrefLib
                             End If
                         End If
 
-                        rawLine = Await sr.ReadLineAsync()
+                        rawLine = Await sr.ReadLineAsync().ConfigureAwait(False)
                     End While
                 End Using
             End Using
@@ -435,13 +447,61 @@ Namespace osPrefLib
             Return pRecIdxObj
         End Function
 
-        Public Async Function PreparePrefData() As Task
-            objOsPrefIdx = Await Task.Run(
-                Function()
-                    Dim objTask_PrepIdx = BuildPrefIndexAsync()
-                    Return objTask_PrepIdx
-                End Function)
-        End Function
+        'Public Async Function PreparePrefData() As Task
+        '    objOsPrefIdx = Await Task.Run(Function()
+        '                                      Return PrepDispatcher().Invoke(
+        '        Function()
+        '            Return BuildPrefIndexAsync()
+        '        End Function, DispatcherPriority.Background)
+        '                                  End Function)
+
+
+        'End Function
+
+        'Public Async Function BuildPrefIndexAsync() As Task(Of osPrefIndex)
+        '    Return Await Task.Run(Async Function()
+        '                              Dim pRecIdxObj As New osPrefIndex()
+
+        '                              Using fs As New FileStream(CoreDataLib.osPrefFile, FileMode.Open, FileAccess.Read,
+        '                              FileShare.Read, bufferSize:=1028, options:=FileOptions.Asynchronous)
+        '                                  Using sr As New StreamReader(fs)
+        '                                      Dim inCatalog As Boolean = False
+
+        '                                      Dim currentData As New List(Of PrefDataRecord)()
+        '                                      Dim currentType As String = Nothing
+
+        '                                      Dim rawLine As String = Await sr.ReadLineAsync()
+
+        '                                      While rawLine IsNot Nothing
+        '                                          Dim prefLineData = rawLine.Trim()
+
+        '                                          If isPrefHeader(prefLineData) Then
+        '                                              inCatalog = True
+        '                                          ElseIf prefLineData = "_PrefCatalog" Then
+        '                                              inCatalog = False
+        '                                          ElseIf inCatalog Then
+        '                                              If isPrefType(prefLineData) Then
+        '                                                  currentType = FormatPrefType(prefLineData)
+        '                                                  currentData = New List(Of PrefDataRecord)()
+        '                                              ElseIf isPrefType(prefLineData, True) Then
+        '                                                  If VerifyRecordType(currentType, prefLineData) Then
+        '                                                      pRecIdxObj.CreateRecord(currentType, currentData.ToArray())
+        '                                                      currentType = Nothing
+        '                                                  End If
+        '                                              ElseIf isPrefData(currentType, prefLineData) Then
+        '                                                  currentData.Add(New PrefDataRecord(prefLineData))
+        '                                              End If
+        '                                          End If
+
+        '                                          rawLine = Await sr.ReadLineAsync()
+        '                                      End While
+        '                                  End Using
+        '                              End Using
+
+        '                              Return pRecIdxObj
+        '                          End Function)
+
+        'End Function
 
         Public Function PrepPrefData(lstPrefData As List(Of String)) As Task(Of osPrefIndex)
             Return Task.Run(Function()

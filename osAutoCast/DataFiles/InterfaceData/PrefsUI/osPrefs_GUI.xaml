@@ -2,90 +2,97 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:local="clr-namespace:osAutoCast" 
         xmlns:osPrefs="clr-namespace:osAutoCast.osPrefLib" xmlns:osStyle="clr-namespace:osAutoCast.osStyle" AllowsTransparency="True" 
-        VerticalAlignment="Center" VerticalContentAlignment="Center" mc:Ignorable="d" Title="Settings"  WindowStyle="None" 
-        ResizeMode="NoResize" Background="Transparent"  SizeToContent="Width" Height="{Binding RenderSize.Height, ElementName=osPrefsMainContainer}" 
-        ShowInTaskbar="False" Topmost="True" Style="{StaticResource osPrefsStyle}" RenderTransformOrigin="0.5,0.5"
-        WindowStartupLocation="CenterScreen" ShowActivated="False" >
+        VerticalAlignment="Center" VerticalContentAlignment="Center" mc:Ignorable="d" Title="Settings" WindowStyle="None" 
+        ResizeMode="NoResize" Background="Transparent" SizeToContent="Width" Height="{Binding ActualHeight, ElementName=osPrefsMainContainer}" 
+        ShowInTaskbar="False" Topmost="True" Style="{StaticResource osPrefsStyle}" 
+        WindowStartupLocation="CenterScreen" ShowActivated="False">
 
     <Window.DataContext>
         <osPrefs:osPreferenceLib/>
     </Window.DataContext>
 
-    <osStyle:osBorder x:Name="osPrefsMainContainer" Style="{StaticResource osPrefsMainContainerStyle}" Opacity="0" CacheMode="BitmapCache"
-                          BorderBrush="#101010" Margin="0" ClipInflation="0.95" VerticalAlignment="Center">
+    <osStyle:osBorder x:Name="osPrefsMainContainer" Style="{StaticResource osPrefsMainContainerStyle}" 
+                      Opacity="0" BorderBrush="#101010" Margin="0" ClipInflation="0.95" VerticalAlignment="Center" 
+                      CacheMode="BitmapCache" RenderOptions.BitmapScalingMode="LowQuality">
         <osStyle:osBorder.RenderTransform>
-            <ScaleTransform x:Name="osPrefsOutlineRender" ScaleX="0" ScaleY="1" />
+            <ScaleTransform x:Name="osPrefsOutlineRender" ScaleX="0.025" ScaleY="1" />
         </osStyle:osBorder.RenderTransform>
-        <Border Background="Transparent" CornerRadius="12" Width="260" >
-            <StackPanel Orientation="Vertical" Background="Transparent" >
+        <Border Background="Transparent" CornerRadius="12" Width="260">
+            <StackPanel Orientation="Vertical" Background="Transparent">
                 <Border CornerRadius="0" BorderBrush="#FF1A1A1A" 
-                        BorderThickness="0,0,0,2"  Background="#FF282828" 
+                        BorderThickness="0,0,0,2" Background="#FF282828" 
                         SnapsToDevicePixels="True" VerticalAlignment="Center">
-                    <Grid x:Name="osPrefs_TitleBar"  ClipToBounds="True" 
+                    <Grid x:Name="osPrefs_TitleBarContainer" ClipToBounds="True" 
                           SnapsToDevicePixels="True" VerticalAlignment="Center">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="24"/>
-                        </Grid.ColumnDefinitions>
-                        <StackPanel x:Name="osPrefsTitlePanel" Grid.Column="0" Grid.ColumnSpan="2" Panel.ZIndex="999" Background="#FF282828" VerticalAlignment="Center" Opacity="1">
-                            <Label HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Padding="0">
+                        <Grid x:Name="osPrefs_TitleBar">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="24" />
+                            </Grid.ColumnDefinitions>
+                            <Label Grid.Column="0">
                                 <Label.Content>
-                                    <TextBlock Text="osAutoCast" FontSize="24"  TextAlignment="Center" local:TextBlockExtensions.CharacterSpacing="1.5"
-                                           LineStackingStrategy="BlockLineHeight" LineHeight="30"  FontWeight="Bold"/>
+                                    <TextBlock Text="Options" FontSize="18" 
+                                           LineStackingStrategy="MaxHeight" FontWeight="SemiBold" />
                                 </Label.Content>
                             </Label>
-                        </StackPanel>
-                        <Label Grid.Column="0">
-                            <Label.Content>
-                                <TextBlock Text="Options" FontSize="18" 
-                                           LineStackingStrategy="MaxHeight"  FontWeight="SemiBold"/>
-                            </Label.Content>
-                        </Label>
-                        <Button x:Name="osPrefsBtn_Close" Grid.Column="1" Style="{StaticResource osPrefsBtnCloseStyle}" Foreground="#FF000000"
-                   BorderThickness="0" FontSize="26" Background="Transparent" HorizontalContentAlignment="Center"
-                    VerticalAlignment="Center" VerticalContentAlignment="Center" Padding="0,0,2,0" />
-                        <!--<Button x:Name="osPrefsBtn_Close" Grid.Column="1" 
-                   BorderThickness="0" FontSize="26"  Background="Transparent" HorizontalContentAlignment="Center"
-                    VerticalAlignment="Center" VerticalContentAlignment="Center" Padding="0,0,2,0">
-                            <Button.Template>
-                                <ControlTemplate>
-                                    <TextBlock Text="X"  x:Name="osPrefsBtn_x" TextAlignment="Center" 
-                               LineStackingStrategy="MaxHeight" FontWeight="Bold"/>
-                                    <ControlTemplate.Triggers>
-                                        <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter Property="Foreground" 
-                                    Value="White" />
-                                        </Trigger>
-                                    </ControlTemplate.Triggers>
-                                </ControlTemplate>
-                            </Button.Template>
-                        </Button>-->
+                            <Button x:Name="osPrefsBtn_Close" Grid.Column="1" Background="Transparent"
+                                    Style="{StaticResource osPrefsBtnCloseStyle}" Foreground="#FF000000"
+                                    HorizontalContentAlignment="Center" VerticalAlignment="Center"
+                                    VerticalContentAlignment="Center" BorderThickness="0"
+                                    FontSize="26" Padding="0,0,2,0" />
+                            <!--<Button x:Name="osPrefsBtn_Close" Grid.Column="1" Background="Transparent"
+                                    HorizontalContentAlignment="Center" VerticalAlignment="Center"
+                                    VerticalContentAlignment="Center" Padding="0,0,2,0"
+                                    BorderThickness="0" FontSize="26">
+                                <Button.Template>
+                                    <ControlTemplate>
+                                        <TextBlock Text="X" x:Name="osPrefsBtn_x" TextAlignment="Center" 
+                                                   LineStackingStrategy="MaxHeight" FontWeight="Bold" />
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="Foreground" Value="White" />
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Button.Template>
+                            </Button>-->
+                        </Grid>
+                        <Border x:Name="osPrefsTitlePanel" Background="#FF282828" VerticalAlignment="Center" Opacity="1">
+                            <Label HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Padding="0">
+                                <Label.Content>
+                                    <TextBlock Text="osAutoCast" FontSize="24" TextAlignment="Center"
+                                               local:TextBlockExtensions.CharacterSpacing="1.5"
+                                               LineStackingStrategy="BlockLineHeight"
+                                               LineHeight="30" FontWeight="Bold" />
+                                </Label.Content>
+                            </Label>
+                        </Border>                       
                     </Grid>
                 </Border>
-                <StackPanel Orientation="Vertical" x:Name="BottomContainer" 
-                            VerticalAlignment="Bottom" Opacity="1" ClipToBounds="False"
-                            Background="#FF3C3C3C" Height="0">                        
-                        <osStyle:osPanel HeaderText="AutoCast" HeaderColor="#FFC4C4C4"  
-                                         Margin="0,2,0,0"  FontFamily="Trebuchet MS" FontSize="18" 
+                <StackPanel Orientation="Vertical" x:Name="BottomContainer" VerticalAlignment="Bottom"
+                            Opacity="1" ClipToBounds="False" Background="#FF3C3C3C" Height="0" 
+                            CacheMode="BitmapCache" RenderOptions.BitmapScalingMode="LowQuality">                        
+                        <osStyle:osPanel HeaderText="AutoCast" HeaderColor="#FFC4C4C4"
+                                         Margin="0,2,0,0" FontFamily="Trebuchet MS" FontSize="18" 
                                          FontWeight="Bold" Padding="6,0,6,6">
                             <Grid x:Name="grid">
                                 <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto" />
                                     <RowDefinition />
                                 </Grid.RowDefinitions>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition/>
                                     <ColumnDefinition/>
                                 </Grid.ColumnDefinitions>
-                                <Label Content="Fuse" FontWeight="Normal" FontSize="16" 
+                                <Label Content="Fuse" FontWeight="Normal" FontSize="16"
                                        HorizontalContentAlignment="Left" Grid.Column="0" 
                                        Padding="0" Grid.Row="0" VerticalAlignment="Center" 
-                                       HorizontalAlignment="Left"/>
+                                       HorizontalAlignment="Left" />
                                 <osStyle:osUpDownTextBox x:Name="osPrefsTxt_acFuse" Grid.Column="1" 
-                                                         FontWeight="Normal" Grid.Row="0" Height="30" 
-                                                         VerticalContentAlignment="Center" FontSize="16" 
-                                                         HorizontalContentAlignment="Center" Value="{Binding AutoCast_Fuse, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                         UseLayoutRounding="True" Minimum="10" Maximum="1200" Increment="5"/>
+                                                         FontWeight="Normal" Grid.Row="0" Height="30" FontSize="16"
+                                                         VerticalContentAlignment="Center" HorizontalContentAlignment="Center"
+                                                         Value="{Binding AutoCast_Fuse, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                         UseLayoutRounding="True" Minimum="10" Maximum="1200" Increment="5" />
                                 <Grid Grid.Row="1" Grid.ColumnSpan="2" Grid.Column="0" Margin="0,4,0,0">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
@@ -94,11 +101,11 @@
                                     <TextBlock Text="Release To Cast" FontSize="16" FontWeight="Regular"
                                                VerticalAlignment="Top" />
                                     <CheckBox x:Name="osPrefsChk_acRTC" Grid.Column="1" IsChecked="{Binding AutoCast_RTC, Mode=TwoWay}" 
-                                              VerticalAlignment="Bottom" VerticalContentAlignment="Center"/>
+                                              VerticalAlignment="Bottom" VerticalContentAlignment="Center" />
                                 </Grid>
                             </Grid>
                         </osStyle:osPanel>
-                        <osStyle:osPanel HeaderText="AutoPass" HeaderColor="#FFC4C4C4"  Margin="0,2,0,0" 
+                        <osStyle:osPanel HeaderText="AutoPass" HeaderColor="#FFC4C4C4" Margin="0,2,0,0" 
                                          FontFamily="Trebuchet MS" FontSize="18" FontWeight="Bold" Padding="6,0,6,6">
                             <Grid>
                                 <Grid.RowDefinitions>
@@ -129,13 +136,13 @@
                                 </Grid.ColumnDefinitions>
                                 <Label Content="Visual Quality" FontWeight="Normal" Grid.Column="0" 
                                        Padding="0" VerticalAlignment="Center" HorizontalAlignment="Left" FontSize="16" />
-                            <ComboBox x:Name="osPrefslst_VQ" Grid.Column="1"  Style="{StaticResource FixedComboBoxStyle}" 
+                            <ComboBox x:Name="osPrefslst_VQ" Grid.Column="1" Style="{StaticResource FixedComboBoxStyle}" 
                                           ItemsSource="{Binding vqList}" IsEditable="False" SelectedValue="{Binding GenOpts_VisualQuality}"
                                           DisplayMemberPath="vqN" Height="30" FontSize="14" FontWeight="Normal" Foreground="#FFFFFFFF"
-                                          SelectedValuePath="vqID" Background="#FF575757" OverridesDefaultStyle="True"  />
+                                          SelectedValuePath="vqID" Background="#FF575757" OverridesDefaultStyle="True" />
                             </Grid>
                         </osStyle:osPanel>
-                    <Button x:Name="osPrefsBtn_Save" Content="Save"  Style="{StaticResource osPrefsSaveBtnStyle}"
+                    <Button x:Name="osPrefsBtn_Save" Content="Save" Style="{StaticResource osPrefsSaveBtnStyle}"
                                 Margin="8,6,8,6" FontSize="18" Padding="0,8"
                                 FontWeight="Bold" FontFamily="Segoe UI" />
                     </StackPanel>

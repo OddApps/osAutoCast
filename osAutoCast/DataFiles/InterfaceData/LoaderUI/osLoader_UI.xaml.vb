@@ -126,38 +126,15 @@ Public Class osLoader_UI
              End Sub)
     End Function
 
-    'Private Function PrepPrefs_Load(objTaskStatus As TaskStatusReport) As Task
-    '    Return Task.Run(
-    '        Sub()
-    '            osPrefManager = New osHandler_Prefs()
-    '            Dim objTask_LoadPrefs = osPrefManager.LoadPrefs(objTaskStatus)
-    '        End Sub)
-    'End Function
-
-    'Private Function PrepPrefs_Apply(objTaskStatus As TaskStatusReport) As Task
-    '    Return Task.Run(
-    '        Sub()
-    '            Dim objTask_ApplyPrefs = osPrefManager.ApplyPrefs(CoreDataLib.osPrefIndex, objTaskStatus)
-    '        End Sub)
-    'End Function
-
     Public Async Function ProvisionApp() As Task
         osLoadTaskLib.objLoadUI = Me
 
         Dim objProcessLoadStages = InitLoadHandler()
+
+        AddHandler objLoadProgBar.LoadProgComplete,
+            evtLoaderComplete
         Await objProcessLoadStages.BeginLoadStage(True)
     End Function
-
-    'Public Async Function InputMonitor_Start(objTaskStatus As TaskStatusReport) As Task
-    '    Await Task.Run(
-    '        Sub()
-    '            InitTriggerMonitor()
-    '            CoreDataLib.InputMonSvc.LaunchTriggerMonitor()
-    '        End Sub)
-    '    Await Task.Delay(125)
-
-    '    objTaskStatus.SetTaskComplete()
-    'End Function
 
     Public Sub InitTriggerMonitor()
         DoInitTriggerMonitor()

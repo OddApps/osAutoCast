@@ -8,39 +8,47 @@
     <Style x:Key="osPrefsStyle" TargetType="{x:Type Window}">
         <Style.Resources>
             <Storyboard x:Key="osPrefsVis_Disp">
-                <DoubleAnimation Storyboard.TargetName="osPrefsMainContainer" 
-                                 Storyboard.TargetProperty="Opacity" BeginTime="00:00:00"
-                                 From="0" To="1" Duration="00:00:0.550"
-                                 FillBehavior="HoldEnd">
+                <DoubleAnimation Storyboard.TargetName="osPrefsMainContainer"
+                                 Storyboard.TargetProperty="Opacity"
+                                 BeginTime="{StaticResource osPrefsStartTime_OpenOpacity}"
+                                 Duration="{StaticResource osPrefsDuration_OpenOpacity}"
+                                 From="0" To="1" FillBehavior="HoldEnd">
+                    <DoubleAnimation.EasingFunction>
+                        <QuadraticEase EasingMode="EaseOut" />
+                    </DoubleAnimation.EasingFunction>
                 </DoubleAnimation>
                 <DoubleAnimation Storyboard.TargetName="osPrefsTitlePanel" 
-                                 Storyboard.TargetProperty="Opacity" BeginTime="00:00:0.600"
-                                 From="1" To="0" Duration="00:00:0.750"
-                                 FillBehavior="HoldEnd">
+                                 Storyboard.TargetProperty="Opacity" 
+                                 BeginTime="{StaticResource osPrefsStartTime_OpenTitle}"
+                                 Duration="{StaticResource osPrefsDuration_OpenTitle}"
+                                 From="1" To="0" FillBehavior="HoldEnd">
                 </DoubleAnimation>
                 <DoubleAnimation Storyboard.TargetName="osPrefsOutlineRender"
-                    Storyboard.TargetProperty="ScaleX" From="0" To="1" BeginTime="00:00:00"
-                    Duration="00:00:0.550" FillBehavior="HoldEnd">
+                                 Storyboard.TargetProperty="ScaleX"
+                                 BeginTime="{StaticResource osPrefsStartTime_OpenScaleX}"
+                                 Duration="{StaticResource osPrefsDuration_OpenScaleX}"
+                                 From="0.025" To="1" FillBehavior="HoldEnd">
                     <DoubleAnimation.EasingFunction>
-                        <ExponentialEase EasingMode="EaseInOut" />
+                        <QuadraticEase EasingMode="EaseOut" />
                     </DoubleAnimation.EasingFunction>
                 </DoubleAnimation>
                 <DoubleAnimation x:Name="osPrefExpandVis" 
                                  Storyboard.TargetName="BottomContainer"
-                                 Storyboard.TargetProperty="Height" From="0" 
-                                 BeginTime="00:00:0.600" Duration="00:00:0.985" 
-                                 FillBehavior="HoldEnd">
+                                 Storyboard.TargetProperty="Height" 
+                                 BeginTime="{StaticResource osPrefsStartTime_ExpandHeight}"
+                                 Duration="{StaticResource osPrefsDuration_ExpandHeight}" 
+                                 From="1" FillBehavior="HoldEnd">
                     <DoubleAnimation.EasingFunction>
-                        <BackEase EasingMode="EaseOut" Amplitude="0.38" />
+                        <BackEase  Amplitude="0.28" />
                     </DoubleAnimation.EasingFunction>
                 </DoubleAnimation>
-                <DoubleAnimation 
-                                 Storyboard.TargetName="BottomContainer"
-                                 Storyboard.TargetProperty="Opacity" From="0" To="1"
-                                 BeginTime="00:00:0.600" Duration="00:00:0.575" 
-                                 FillBehavior="HoldEnd">
+                <DoubleAnimation  Storyboard.TargetName="BottomContainer"
+                                  Storyboard.TargetProperty="Opacity"
+                                  BeginTime="{StaticResource osPrefsStartTime_ExpandOpacity}"
+                                  Duration="{StaticResource osPrefsDuration_ExpandOpacity}" 
+                                  From="0" To="1" FillBehavior="HoldEnd">
                     <DoubleAnimation.EasingFunction>
-                        <ExponentialEase EasingMode="EaseInOut" />
+                        <QuadraticEase EasingMode="EaseOut" />
                     </DoubleAnimation.EasingFunction>
                 </DoubleAnimation>
             </Storyboard>
