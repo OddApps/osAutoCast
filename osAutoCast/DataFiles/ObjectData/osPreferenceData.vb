@@ -7,6 +7,7 @@ Imports System.Reflection
 Imports System.ComponentModel
 Imports osPrefBind = System.Windows.Data.Binding
 Imports System.Windows.Threading
+Imports osAutoCast.osControls
 
 Namespace osPrefLib
 
@@ -23,8 +24,6 @@ Namespace osPrefLib
         }
 
         Public osPrefBindPrefIdx As Dictionary(Of PrefBinder, osPref_BindDef)
-
-
         Public osPrefDataBindings As Dictionary(Of String, Binding)
 
         Public Sub osPref_GenBinding()
@@ -37,16 +36,16 @@ Namespace osPrefLib
         End Sub
 
         Public idxPrefBindDeps As New Dictionary(Of String, DependencyProperty) From {
-                {"acFuse", osStyle.osUpDownTextBox.ValueProperty},
+                {"acFuse", osControls.osUpDownTextBox.ValueProperty},
                 {"acRTC", CheckBox.IsCheckedProperty},
-                {"apSafetyTimer", osStyle.osUpDownTextBox.ValueProperty},
+                {"apSafetyTimer", osControls.osUpDownTextBox.ValueProperty},
                 {"goVisualQuality", ComboBox.SelectedValueProperty}
             }
 
         Public idxPrefBindRecords As New Dictionary(Of PrefBinder, osPref_BindRecord) From {
-                {AC_Fuse, New osPref_BindRecord(osStyle.osUpDownTextBox.ValueProperty, "AutoCast_Fuse")},
+                {AC_Fuse, New osPref_BindRecord(osControls.osUpDownTextBox.ValueProperty, "AutoCast_Fuse")},
                 {AC_RTC, New osPref_BindRecord(CheckBox.IsCheckedProperty, "AutoCast_RTC")},
-                {AP_SafetyTimer, New osPref_BindRecord(osStyle.osUpDownTextBox.ValueProperty, "AutoPass_SafetyTimer")},
+                {AP_SafetyTimer, New osPref_BindRecord(osControls.osUpDownTextBox.ValueProperty, "AutoPass_SafetyTimer")},
                 {GO_VisualQuality, New osPref_BindRecord(ComboBox.SelectedValueProperty, "GenOpts_VisualQuality")}
             }
 
@@ -88,16 +87,6 @@ Namespace osPrefLib
 
         Public Shared idxPrefRecords As PrefRecordIndex
 
-        Private Shared _AutoPass_SafetyTimer As Integer
-        Private Shared _AutoCast_Fuse As Integer
-        Private Shared _AutoCast_RTC As Boolean
-        Private Shared _MainOpts_apProgH As Integer
-        Private Shared _MainOpts_apProgW As Integer
-        Private Shared _MainOpts_apUiH As Integer
-        Private Shared _MainOpts_apUiW As Integer
-        Private Shared _MainOpts_acProgH As Integer
-        Private Shared _MainOpts_acProgW As Integer
-        Private Shared _GenOpts_VisualQuality As String
 
         Private Shared _Data As osPreferenceLib
         Public Shared ReadOnly Property Data As osPreferenceLib
@@ -119,6 +108,7 @@ Namespace osPrefLib
             End Set
         End Property
 
+        Private Shared _AutoPass_SafetyTimer As Integer
         Public Property AutoPass_SafetyTimer As Integer
             Get
                 If prefsSet Then
@@ -141,6 +131,7 @@ Namespace osPrefLib
             End Set
         End Property
 
+        Private Shared _AutoCast_Fuse As Integer
         Public Property AutoCast_Fuse As Integer
             Get
                 If prefsSet Then
@@ -163,6 +154,7 @@ Namespace osPrefLib
             End Set
         End Property
 
+        Private Shared _AutoCast_RTC As Boolean
         Public Property AutoCast_RTC As Boolean
             Get
                 If prefsSet Then
@@ -185,6 +177,7 @@ Namespace osPrefLib
             End Set
         End Property
 
+        Private Shared _MainOpts_apProgH As Integer = 28
         Public Property MainOpts_apProgH As Integer
             Get
                 Return _MainOpts_apProgH
@@ -196,6 +189,7 @@ Namespace osPrefLib
             End Set
         End Property
 
+        Private Shared _MainOpts_apProgW As Integer = 280
         Public Property MainOpts_apProgW As Integer
             Get
                 Return _MainOpts_apProgW
@@ -207,6 +201,7 @@ Namespace osPrefLib
             End Set
         End Property
 
+        Private Shared _MainOpts_apUiH As Integer = 28
         Public Property MainOpts_apUiH As Integer
             Get
                 Return _MainOpts_apUiH
@@ -218,6 +213,7 @@ Namespace osPrefLib
             End Set
         End Property
 
+        Private Shared _MainOpts_apUiW As Integer = 288
         Public Property MainOpts_apUiW As Integer
             Get
                 Return _MainOpts_apUiW
@@ -229,6 +225,7 @@ Namespace osPrefLib
             End Set
         End Property
 
+        Private Shared _MainOpts_acProgH As Integer
         Public Property MainOpts_acProgH As Integer
             Get
                 Return _MainOpts_acProgH
@@ -240,6 +237,7 @@ Namespace osPrefLib
             End Set
         End Property
 
+        Private Shared _MainOpts_acProgW As Integer
         Public Property MainOpts_acProgW As Integer
             Get
                 Return _MainOpts_acProgW
@@ -251,6 +249,7 @@ Namespace osPrefLib
             End Set
         End Property
 
+        Private Shared _GenOpts_VisualQuality As String
         Public Property GenOpts_VisualQuality As String
             Get
                 If prefsSet Then
@@ -340,13 +339,6 @@ Namespace osPrefLib
             SetPreference(GetPrefDetails(prefType), pVal)
         End Sub
 
-        Public Async Function PrepLoadPrefs() As Task
-
-            Dim aa = Await LoadPrefFile()
-            objOsPrefIdx = Await PrepPrefData(aa)
-
-        End Function
-
         Private Shared _objOsPrefIdx As osPrefIndex
         Public Property objOsPrefIdx As osPrefIndex
             Get
@@ -357,67 +349,29 @@ Namespace osPrefLib
             End Set
         End Property
 
-        Public Async Function LoadPrefFile() As Task(Of List(Of String))
-            Dim lstPrefData As New List(Of String)
-
-            Using objPrefReader As New StreamReader(CoreDataLib.osPrefFile)
-                While Not objPrefReader.EndOfStream
-                    Dim prefLine = Await objPrefReader.ReadLineAsync()
-                    If prefLine IsNot Nothing Then
-                        lstPrefData.Add(prefLine)
-                    End If
-                End While
-            End Using
-
-            Return lstPrefData
-        End Function
-
-        Public Async Function ReadPrefLinesAsync(path As String) As Task(Of List(Of String))
-            Dim result As New List(Of String)
-
-            Using fs As New FileStream(
-        path,
-        FileMode.Open,
-        FileAccess.Read,
-        FileShare.Read,
-        bufferSize:=4096,
-        options:=FileOptions.Asynchronous)
-
-                Using sr As New StreamReader(fs)
-                    While True
-                        Dim line As String = Await sr.ReadLineAsync().ConfigureAwait(False)
-                        If line Is Nothing Then Exit While
-                        result.Add(line)
-                    End While
-                End Using
-            End Using
-
-            Return result
-        End Function
-
         Public Async Function PreparePrefData() As Task
-            ' Build index off-UI; continuation won't capture UI because of ConfigureAwait(False)
-            Dim newIndex As osPrefIndex = Await BuildPrefIndexAsync().ConfigureAwait(False)
+            objOsPrefIdx = Await Task.Run(
+                Async Function()
+                    Dim objTask_BuildPrefIdx = BuildPrefIndexAsync()
+                    Return Await objTask_BuildPrefIdx
 
-            ' Only marshal back to UI to assign the result
-            Await PrepDispatcher().InvokeAsync(Sub() objOsPrefIdx = newIndex, DispatcherPriority.Background)
+                    '  Return objTask_PrefIdx
+                End Function)
         End Function
 
         Public Async Function BuildPrefIndexAsync() As Task(Of osPrefIndex)
             Dim pRecIdxObj As New osPrefIndex()
 
-            Using fs As New FileStream(CoreDataLib.osPrefFile,
-                               FileMode.Open,
-                               FileAccess.Read,
-                               FileShare.Read,
-                               bufferSize:=4096,
-                               options:=FileOptions.Asynchronous Or FileOptions.SequentialScan)
-                Using sr As New StreamReader(fs, Encoding.Default, detectEncodingFromByteOrderMarks:=True, bufferSize:=4096)
+            Using fs As New FileStream(CoreDataLib.osPrefFile, FileMode.Open,
+                                       FileAccess.Read, FileShare.Read, 1028, True)
+                Using sr As New StreamReader(fs, True)
+
                     Dim inCatalog As Boolean = False
                     Dim currentData As New List(Of PrefDataRecord)()
                     Dim currentType As String = Nothing
 
                     Dim rawLine As String = Await sr.ReadLineAsync()
+
                     While rawLine IsNot Nothing
                         Dim prefLineData As String = rawLine.Trim()
 
@@ -439,103 +393,12 @@ Namespace osPrefLib
                             End If
                         End If
 
-                        rawLine = Await sr.ReadLineAsync().ConfigureAwait(False)
+                        rawLine = Await sr.ReadLineAsync()
                     End While
                 End Using
             End Using
 
             Return pRecIdxObj
-        End Function
-
-        'Public Async Function PreparePrefData() As Task
-        '    objOsPrefIdx = Await Task.Run(Function()
-        '                                      Return PrepDispatcher().Invoke(
-        '        Function()
-        '            Return BuildPrefIndexAsync()
-        '        End Function, DispatcherPriority.Background)
-        '                                  End Function)
-
-
-        'End Function
-
-        'Public Async Function BuildPrefIndexAsync() As Task(Of osPrefIndex)
-        '    Return Await Task.Run(Async Function()
-        '                              Dim pRecIdxObj As New osPrefIndex()
-
-        '                              Using fs As New FileStream(CoreDataLib.osPrefFile, FileMode.Open, FileAccess.Read,
-        '                              FileShare.Read, bufferSize:=1028, options:=FileOptions.Asynchronous)
-        '                                  Using sr As New StreamReader(fs)
-        '                                      Dim inCatalog As Boolean = False
-
-        '                                      Dim currentData As New List(Of PrefDataRecord)()
-        '                                      Dim currentType As String = Nothing
-
-        '                                      Dim rawLine As String = Await sr.ReadLineAsync()
-
-        '                                      While rawLine IsNot Nothing
-        '                                          Dim prefLineData = rawLine.Trim()
-
-        '                                          If isPrefHeader(prefLineData) Then
-        '                                              inCatalog = True
-        '                                          ElseIf prefLineData = "_PrefCatalog" Then
-        '                                              inCatalog = False
-        '                                          ElseIf inCatalog Then
-        '                                              If isPrefType(prefLineData) Then
-        '                                                  currentType = FormatPrefType(prefLineData)
-        '                                                  currentData = New List(Of PrefDataRecord)()
-        '                                              ElseIf isPrefType(prefLineData, True) Then
-        '                                                  If VerifyRecordType(currentType, prefLineData) Then
-        '                                                      pRecIdxObj.CreateRecord(currentType, currentData.ToArray())
-        '                                                      currentType = Nothing
-        '                                                  End If
-        '                                              ElseIf isPrefData(currentType, prefLineData) Then
-        '                                                  currentData.Add(New PrefDataRecord(prefLineData))
-        '                                              End If
-        '                                          End If
-
-        '                                          rawLine = Await sr.ReadLineAsync()
-        '                                      End While
-        '                                  End Using
-        '                              End Using
-
-        '                              Return pRecIdxObj
-        '                          End Function)
-
-        'End Function
-
-        Public Function PrepPrefData(lstPrefData As List(Of String)) As Task(Of osPrefIndex)
-            Return Task.Run(Function()
-                                Dim pRecIdxObj As New osPrefIndex
-
-                                Dim inCatalog As Boolean = False
-
-                                Dim currentData As New List(Of PrefDataRecord)
-                                Dim currentType As String = Nothing
-
-
-                                For Each prefLineData In lstPrefData.Select(Function(l) l.Trim())
-                                    If isPrefHeader(prefLineData) Then
-                                        inCatalog = True
-                                    ElseIf prefLineData = "_PrefCatalog" Then
-                                        inCatalog = False
-                                    ElseIf inCatalog Then
-                                        If isPrefType(prefLineData) Then
-                                            currentType = FormatPrefType(prefLineData)
-                                            currentData = New List(Of PrefDataRecord)
-                                        ElseIf isPrefType(prefLineData, True) Then
-                                            If VerifyRecordType(currentType, prefLineData) Then
-                                                pRecIdxObj.CreateRecord(currentType, currentData.ToArray())
-                                                currentType = Nothing
-                                            End If
-                                        ElseIf isPrefData(currentType, prefLineData) Then
-                                            currentData.Add(New PrefDataRecord(prefLineData))
-                                        End If
-                                    End If
-                                Next
-
-                                Return pRecIdxObj
-                            End Function)
-
         End Function
 
         Private Function PrepPref(pRecData As PrefDataRecord, valType As Type) As Object

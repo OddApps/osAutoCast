@@ -1,6 +1,6 @@
 osAutoCastReplace()
 {
-	A_Clipboard := "^\s*'.*"
+	A_Clipboard := "^\s*'.*\r\n"
 }
 
 osAutoCastReplace()

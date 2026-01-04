@@ -10,6 +10,7 @@ Public Class osHandler_Loader
 
     Private ReadOnly _setValue As Action(Of Double)
     Private _currentValue As Double
+
     Private _animationCts As CancellationTokenSource
 
     Private _renderHandler As EventHandler
@@ -32,7 +33,7 @@ Public Class osHandler_Loader
     Private _currentStageIndex As Integer = -1
 
     Private _smoothedValue As Double
-    Private Const SmoothingFactor As Double = 0.275
+    Private Const SmoothingFactor As Double = 0.175
 
     Private ProgMax As Double
 
@@ -54,13 +55,17 @@ Public Class osHandler_Loader
         _setValue(_currentValue)
     End Sub
 
+    Private Sub CalcProgressValue(targetValue As Double)
+        _smoothedValue += (targetValue - _smoothedValue) * SmoothingFactor
+    End Sub
+
     Private Sub UpdateSmoothedValue(targetValue As Double, Optional setForce As Boolean = False)
         _currentValue = targetValue
 
-        If targetValue > (ProgMax * 0.975) Then
+        If targetValue > (ProgMax * 0.985) Then
             _setValue(targetValue)
         Else
-            _smoothedValue += (targetValue - _smoothedValue) * SmoothingFactor
+            CalcProgressValue(targetValue)
             _setValue(_smoothedValue)
         End If
     End Sub
@@ -172,7 +177,10 @@ Public Class osHandler_Loader
         _currentStageIndex = stageIndex
 
         With _stages(stageIndex)
-            Dim objTask_VisOut = _fadeTextOut(.LoadTaskData.LoadType)
+
+            Dim objStage_TaskType = .LoadTaskData.LoadType
+
+            Dim objTask_VisOut = _fadeTextOut(objStage_TaskType)
 
             Dim effectiveStartValue = _currentValue
             Dim effectiveEndValue = Math.Max(.LoadStageData.EndValue, _currentValue)
@@ -180,7 +188,7 @@ Public Class osHandler_Loader
             Dim objTask_Visual = AnimateAsync(effectiveStartValue, effectiveEndValue,
                                               .LoadStageData.Duration, .LoadStageData.Easing, token)
 
-            Await _fadeTextIn(.LoadTaskData.LoadType)
+            Dim objTask_VisIn = _fadeTextIn(objStage_TaskType)
 
             Dim objTaskReport As New TaskStatusReport
             Dim workTask As Task = Nothing

@@ -12,6 +12,7 @@ Imports osAutoCast.DataTypeLib.TriggerAction
 Imports osAutoCast.DataTypeLib.TrayMenuVisuals
 Imports osAutoCast.DataTypeLib.LoadTextVisualType
 Imports osAutoCast.DataTypeLib.LoadTaskStatus
+Imports osAutoCast.DataTypeLib.VisRenderMode
 Imports System.Threading.Tasks.TaskCreationOptions
 Imports osAutoCast.osShaderDataLib
 Imports osDraw = System.Drawing
@@ -26,6 +27,7 @@ Imports pxShader_Text = System.Windows.Media.Effects.PixelShader
 Imports pxShader_Vertex = SharpDX.Direct3D11.VertexShader
 Imports osColor = System.Windows.Media.Color
 Imports osVisibility = System.Windows.Visibility
+Imports osAutoCast.osControls
 
 #Disable Warning BC42353
 
@@ -444,46 +446,77 @@ Public Module DataTypeLib
         PrefUI_VisFinish
     End Enum
 
+    Public Enum VisRenderMode
+        VisMode_Open
+        VisMode_Close
+    End Enum
+
+    Public Enum RenderStateAction
+        HookRender
+        UnhookRender
+    End Enum
+
 #End Region
 
 End Module
 
-Public Class GridLengthAnimation
-    Inherits AnimationTimeline
+Public Class osBorderEdge
 
-    Public Property From As GridLength?
-    Public Property [To] As GridLength
-    Public Property EasingFunction As IEasingFunction
+    Public Property TopLeft As Double
+    Public Property TopRight As Double
+    Public Property BottomRight As Double
+    Public Property BottomLeft As Double
 
-    Public Overrides ReadOnly Property TargetPropertyType As Type
-        Get
-            Return GetType(GridLength)
-        End Get
-    End Property
+    Public Sub New()
+    End Sub
 
-    Public Overrides Function GetCurrentValue(
-        defaultOriginValue As Object,
-        defaultDestinationValue As Object,
-        animationClock As AnimationClock) As Object
+    Public Sub New(objCornerRad As CornerRadius, objBorderWidth As Double, objBorderInflate As Double)
+        With objCornerRad
+            TopLeft = .TopLeft - objBorderWidth / 2 + objBorderInflate
+            TopRight = .TopRight - objBorderWidth / 2 + objBorderInflate
+            BottomRight = .BottomRight - objBorderWidth / 2 + objBorderInflate
+            BottomLeft = .BottomLeft - objBorderWidth / 2 + objBorderInflate
+        End With
+    End Sub
 
-        Dim startVal As Double =
-            If(From.HasValue, From.Value.Value, CType(defaultOriginValue, GridLength).Value)
+    Public Function CalcByRect(objRect As Rect) As osBorderEdge
+        Dim maxRadiusX = objRect.Width / 2
+        Dim maxRadiusY = objRect.Height / 2
 
-        Dim endVal As Double = [To].Value
-
-        Dim progress = animationClock.CurrentProgress.GetValueOrDefault()
-
-        If EasingFunction IsNot Nothing Then
-            progress = EasingFunction.Ease(progress)
-        End If
-
-        Dim value = startVal + (endVal - startVal) * progress
-        Return New GridLength(value, GridUnitType.Pixel)
+        Return New osBorderEdge With {
+            .TopLeft = Math.Min(Me.TopLeft, Math.Min(maxRadiusX, maxRadiusY)),
+            .TopRight = Math.Min(Me.TopRight, Math.Min(maxRadiusX, maxRadiusY)),
+            .BottomRight = Math.Min(Me.BottomRight, Math.Min(maxRadiusX, maxRadiusY)),
+            .BottomLeft = Math.Min(Me.BottomLeft, Math.Min(maxRadiusX, maxRadiusY))
+        }
     End Function
 
-    Protected Overrides Function CreateInstanceCore() As Freezable
-        Return New GridLengthAnimation()
-    End Function
+End Class
+
+Public Class osVisRenderMode
+
+    Public Property visBitMap As BitmapScalingMode
+    Public Property visCache As CacheMode
+
+    Public Sub New()
+    End Sub
+
+    Public Sub New(vBitMap As BitmapScalingMode, vCache As CacheMode)
+        visBitMap = vBitMap
+        visCache = vCache
+    End Sub
+
+    Public Sub New(vMode As VisRenderMode)
+        Select Case vMode
+            Case VisMode_Open
+                visBitMap = BitmapScalingMode.HighQuality
+                visCache = Nothing
+            Case VisMode_Close
+                visBitMap = BitmapScalingMode.LowQuality
+                visCache = New BitmapCache()
+        End Select
+    End Sub
+
 End Class
 
 Public Class osPrefVisData
@@ -1164,6 +1197,17 @@ Public Class ProgMsg
         End With
     End Sub
 
+    Public Sub New(txtMsg As String, pType As TriggerType)
+        Dim isAP As Boolean = pType = TriggerType.AutoPass
+
+        txtComposed = GenFormattedText(txtMsg, isAP)
+
+        With CoreDataLib.FetchProgSizeReport(pType)
+            txtLocation = New Point((.Item("pW") - txtComposed.Width) \ 2,
+                                    (.Item("pH") - txtComposed.Height) \ 2)
+        End With
+    End Sub
+
     Private Function GenFormattedText(txtMsg As String, Optional isAP As Boolean = False) As FormattedText
         Return New FormattedText(txtMsg, Globalization.CultureInfo.CurrentCulture,
                                  FlowDirection.LeftToRight, ComposeTypeFace(isAP),
@@ -1346,7 +1390,7 @@ Public Module osPrefsLib
                     Catch : End Try
                 End With
             End If
-    End Sub
+        End Sub
 
 End Module
 
@@ -1610,7 +1654,7 @@ Public Class ProgressEvent
     Public Property evDispatch As Dispatcher
     Public evAction As Action(Of ProgressEventData)
 
-    Public Sub New(pEventElement As OddLib_ProgressBar)
+    Public Sub New(pEventElement As osProgressBar)
         Me.evDispatch = pEventElement.Parent.Dispatcher
         Me.evAction = AddressOf pEventElement.PerformProgressEvent
     End Sub

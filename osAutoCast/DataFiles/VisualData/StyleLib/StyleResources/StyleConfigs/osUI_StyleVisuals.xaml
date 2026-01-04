@@ -11,7 +11,7 @@
                                           Value="{StaticResource PopupAni_StartScale}" />
                     <EasingDoubleKeyFrame KeyTime="{StaticResource PopupAni_OpenDuration}"
                                           Value="{StaticResource PopupAni_OpenScale}"
-                                          EasingFunction="{StaticResource PopupEase_OpenScale}"/>
+                                          EasingFunction="{StaticResource PopupEase_OpenScale}" />
                     <EasingDoubleKeyFrame KeyTime="{StaticResource PopupAni_OpenDurationPrimary}"
                                           Value="{StaticResource PopupAni_Loaded}"
                                           EasingFunction="{StaticResource PopupEase_OpenScalePrimary}" />
@@ -104,8 +104,9 @@
 
     <Style x:Key="OverlayVisuals" TargetType="{x:Type Window}">
         <Setter Property="Opacity" Value="0" />
-        <Setter Property="CacheMode" Value="BitmapCache"/>
-        <Setter Property="RenderOptions.BitmapScalingMode" Value="LowQuality"/>
+        <Setter Property="CacheMode" Value="BitmapCache" />
+        <Setter Property="RenderOptions.BitmapScalingMode" Value="LowQuality" />
+        <Setter Property="RenderOptions.EdgeMode" Value="Aliased" />
         <Style.Resources>
             <Storyboard x:Key="OverlayVisual_Open">
                 <DoubleAnimationUsingKeyFrames x:Name="visOpen_Overlay"

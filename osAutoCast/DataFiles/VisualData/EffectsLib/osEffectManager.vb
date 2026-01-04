@@ -348,6 +348,25 @@ Namespace osVisConfigSettings
 
     End Class
 
+    Public Class osPrefVisEase
+        Inherits MarkupExtension
+
+        Public Property visEasing As VisualEasing
+        Public Property visEaseMode As EasingMode? = Nothing
+
+        Public Sub New()
+        End Sub
+
+        Public Sub New(objVisEasing As VisualEasing)
+            Me.visEasing = objVisEasing
+        End Sub
+
+        Public Overrides Function ProvideValue(serviceProvider As IServiceProvider) As Object
+            Return GetVisualEase(visEasing)
+        End Function
+
+    End Class
+
 End Namespace
 
 Namespace osLoaderConv

@@ -6,7 +6,9 @@ Imports System.Windows.Threading
 Imports osAutoCast.DataTypeLib.PrefUI_State
 Imports osAutoCast.DataTypeLib.PromptResponse
 Imports osAutoCast.DataTypeLib.PrefSaveState
+Imports osAutoCast.DataTypeLib.VisRenderMode
 Imports osAutoCast.osStyle
+Imports osAutoCast.osControls
 Imports osPrefData = osAutoCast.osPrefLib.osPreferenceLib
 
 #Disable Warning BC42353
@@ -15,7 +17,6 @@ Imports osPrefData = osAutoCast.osPrefLib.osPreferenceLib
 
 Public Class osPrefs_GUI
 
-
     Private Function GetVisualState(objVisType As PrefUI_State) As String
         Return idxOsPrefVisuals.First(
             Function(visKey)
@@ -23,45 +24,60 @@ Public Class osPrefs_GUI
             End Function).Value
     End Function
 
-    Private Function FetchPrefVis(objVisResource As Style, objVisType As PrefUI_State) As Storyboard
-        Return TryCast(objVisResource.
-            Resources(GetVisualState(objVisType)), Storyboard)
+    Private Function AllocVis(visObject As Object) As Storyboard
+        Return TryCast(visObject, Storyboard)
     End Function
 
-    Private Function EstablishVisual(objVisType As PrefUI_State) As Storyboard
-        Dim objLoadVis = FetchPrefVis(osPrefRes, objVisType)
-        Return objLoadVis.Clone()
+    Private Function FetchPrefVis(objVisResource As Style, objVisType As PrefUI_State) As Storyboard
+        Return AllocVis(objVisResource.
+                        Resources(GetVisualState(objVisType)))
     End Function
+
+    'Private Function EstablishVisual(objVisType As PrefUI_State) As Storyboard
+    '    Dim objLoadVis = FetchPrefVis(osPrefRes, objVisType)
+    '    Return objLoadVis.Clone()
+    'End Function
+
+    Private Function SetVisual(objVisType As PrefUI_State) As Storyboard
+        Return If(objVisType = PrefUI_Open,
+            visPrefUI_Open, visPrefUI_Close)
+    End Function
+
+    Private Sub EstablishVisual(objVisType As PrefUI_State, ByRef objVis As Storyboard)
+        Dim objLoadVis = FetchPrefVis(osPrefRes, objVisType)
+        objVis = objLoadVis.Clone()
+    End Sub
+
+    Private Sub InitVisual(objVisType As PrefUI_State)
+        Select Case objVisType
+            Case PrefUI_Open
+                EstablishVisual(PrefUI_Open, visPrefUI_Open)
+
+                ApplyExpanderSize()
+                SetOpenEvents()
+                BufferPrefWin()
+            Case PrefUI_Close
+                EstablishVisual(PrefUI_Close, visPrefUI_Close)
+        End Select
+    End Sub
 
     Private Sub BufferPrefWin()
         Me.Show()
         Me.Hide()
     End Sub
 
-    Public Sub PrepPrefVis()
-        visPrefUI_Open = EstablishVisual(PrefUI_Open)
-        visPrefUI_Close = EstablishVisual(PrefUI_Close)
-
+    Private Sub ActivatePrefTracker()
         objOsPrefTracker = New osPrefTracker(Of osPrefData)(osPrefData.Data)
-        BufferPrefWin()
+    End Sub
 
-        Dim objExpandVis = FetchExpandVisual()
-
-        osContentContainer.Height = Double.NaN
-        osContentContainer.Measure(New Size(osContentContainer.ActualWidth, Double.PositiveInfinity))
-
-        objExpandVis.To = osContentContainer.DesiredSize.Height
-        osContentContainer.Height = 0
+    Public Sub PrepPrefVis()
+        InitVisual(PrefUI_Open)
+        ActivatePrefTracker()
     End Sub
 
     Public Sub DisplayPrefsUI()
-        If PrepDispatcher().CheckAccess() Then
-            ShowPrefsUICore()
-        Else
-            PrepDispatcher().Invoke(
-                AddressOf ShowPrefsUICore,
-                DispatcherPriority.Background)
-        End If
+        Dim a = PrepDispatcher().BeginInvoke(DispatcherPriority.Render,
+            Sub() ShowPrefsUICore())
     End Sub
 
     Private Function FetchExpandVisual() As DoubleAnimation
@@ -71,53 +87,83 @@ Public Class osPrefs_GUI
             End Function), DoubleAnimation)
     End Function
 
+    Private Sub ApplyExpanderSize()
+        Dim objExpandVis = FetchExpandVisual()
+
+        With osContentContainer
+            .Height = Double.NaN
+            .Measure(New Size(.ActualWidth, Double.PositiveInfinity))
+
+            objExpandVis.To = .DesiredSize.Height
+            .Height = 0
+        End With
+    End Sub
+
     Public Sub ShowPrefsUICore()
         With Me
             osPrefsIU_Present()
             .Topmost = True
         End With
 
-        AddHandler visPrefUI_Open.Completed, Sub()
-                                                 osTitleCover.Visibility = Visibility.Collapsed
-                                                 SetVisualMode(PrefUI_Open)
-                                             End Sub
-
         visPrefUI_Open.Begin(prefContainer)
     End Sub
 
+    Private Sub SetOpenEvents()
+        evtComplete_Open =
+                    Sub()
+                        RemoveHandler visPrefUI_Open.Completed,
+                                                                evtComplete_Open
+
+
+                        SetVisualMode(PrefUI_Open)
+
+                        visPrefUI_Open.Stop()
+                        visPrefUI_Open = Nothing
+                    End Sub
+
+        AddHandler visPrefUI_Open.Completed,
+                                            evtComplete_Open
+    End Sub
+
     Private Sub SetCloseEvents()
-        evtCloseCompleteEvent =
+        InitVisual(PrefUI_Close)
+
+        evtComplete_Close =
             Sub()
                 RemoveHandler visPrefUI_Close.Completed,
-                                                        evtCloseCompleteEvent
+                                                        evtComplete_Close
                 Me.Close()
             End Sub
 
         AddHandler visPrefUI_Close.Completed,
-                                            evtCloseCompleteEvent
+                                            evtComplete_Close
 
         SetVisualMode(PrefUI_Close)
-        osTitleCover.Visibility = Visibility.Visible
     End Sub
 
-    Private Sub SetVisualMode(objAniType As PrefUI_State)
-        Dim setBitMapMode As BitmapScalingMode
-        Dim setCacheMode As CacheMode
+    Private Sub SetVisualQuality(objVMode As VisRenderMode)
+        With New osVisRenderMode(objVMode)
+            prefContainer.CacheMode = .visCache
+            osContentContainer.CacheMode = .visCache
 
-        Select Case objAniType
+            RenderOptions.SetBitmapScalingMode(osContentContainer, .visBitMap)
+            RenderOptions.SetBitmapScalingMode(prefContainer, .visBitMap)
+        End With
+    End Sub
+
+    Private Sub SetVisualMode(valPrefState As PrefUI_State)
+        Select Case valPrefState
             Case PrefUI_Open
-                setBitMapMode = BitmapScalingMode.HighQuality
-                setCacheMode = Nothing
+                osTitleCover.Visibility = Visibility.Collapsed
+                RenderOptions.SetEdgeMode(prefContainer, EdgeMode.Unspecified)
+
+                SetVisualQuality(VisMode_Open)
             Case PrefUI_Close
-                setBitMapMode = BitmapScalingMode.LowQuality
-                setCacheMode = New BitmapCache()
+                osTitleCover.Visibility = Visibility.Visible
+                RenderOptions.SetEdgeMode(prefContainer, EdgeMode.Aliased)
+
+                SetVisualQuality(VisMode_Close)
         End Select
-
-        prefContainer.CacheMode = setCacheMode
-        RenderOptions.SetBitmapScalingMode(prefContainer, setBitMapMode)
-
-        osContentContainer.CacheMode = setCacheMode
-        RenderOptions.SetBitmapScalingMode(osContentContainer, setBitMapMode)
     End Sub
 
     Public Sub osPrefsIU_Present()
@@ -213,7 +259,8 @@ End Class
 
 Partial Public Class osPrefs_GUI
 
-    Private evtCloseCompleteEvent As EventHandler
+    Private evtComplete_Open As EventHandler
+    Private evtComplete_Close As EventHandler
 
     Private isSaved As Boolean = False
     Private objOsPrefTracker As osPrefTracker(Of osPrefData)

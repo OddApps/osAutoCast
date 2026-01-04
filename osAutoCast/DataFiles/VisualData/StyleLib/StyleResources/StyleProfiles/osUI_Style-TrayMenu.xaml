@@ -7,10 +7,10 @@
     <osEffects:TexelSizeConverter x:Key="TexelSizeConverter" />
 
     <Style x:Key="TrayMenuStyle" TargetType="{x:Type Window}">
-        <Setter Property="HorizontalAlignment" Value="Center"/>
-        <Setter Property="VerticalAlignment" Value="Stretch"/>
-        <Setter Property="HorizontalContentAlignment" Value="Center"/>
-        <Setter Property="VerticalContentAlignment" Value="Stretch"/>
+        <Setter Property="HorizontalAlignment" Value="Center" />
+        <Setter Property="VerticalAlignment" Value="Stretch" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Stretch" />
         <Style.Resources>
             <Storyboard x:Key="TrayMenuVis_Display">
                 <DoubleAnimation Storyboard.TargetName="TrayMenuOutlineRender"
@@ -68,12 +68,12 @@
     <Style x:Key="TrayMenuContainerOutlineStyle" TargetType="{x:Type Grid}">
         <Setter Property="Background" Value="{StaticResource osTrayMenu_BG}" />
         <Setter Property="Width" Value="196" />
-        <Setter Property="VerticalAlignment" Value="Center"/>
-        <Setter Property="Margin" Value="0,3"/>
-        <Setter Property="Opacity" Value="0"/>
-        <Setter Property="CacheMode" Value="BitmapCache"/>
-        <Setter Property="RenderOptions.BitmapScalingMode" Value="LowQuality"/>
-        <Setter Property="RenderTransformOrigin" Value="1,1"/>
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="Margin" Value="0,3" />
+        <Setter Property="Opacity" Value="0" />
+        <Setter Property="CacheMode" Value="BitmapCache" />
+        <Setter Property="RenderOptions.BitmapScalingMode" Value="LowQuality" />
+        <Setter Property="RenderTransformOrigin" Value="1,1" />
     </Style>
 
     <Style x:Key="TrayMenuContentContainerStyle" TargetType="{x:Type Grid}">
@@ -83,14 +83,14 @@
         <Setter Property="osStyle:osContainerLayout.SeparatorBrush">
             <Setter.Value>
                 <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                    <GradientStop Color="#00000000" Offset="0.0"/>
-                    <GradientStop Color="#A1060606" Offset="0.3"/>
-                    <GradientStop Color="#A1060606" Offset="0.7"/>
-                    <GradientStop Color="#00000000" Offset="1.0"/>
+                    <GradientStop Color="#00000000" Offset="0.0" />
+                    <GradientStop Color="#A1060606" Offset="0.3" />
+                    <GradientStop Color="#A1060606" Offset="0.7" />
+                    <GradientStop Color="#00000000" Offset="1.0" />
                 </LinearGradientBrush>
             </Setter.Value>
         </Setter>
-        <Setter Property="osStyle:osContainerLayout.SeparatorThickness" Value="2"/>
+        <Setter Property="osStyle:osContainerLayout.SeparatorThickness" Value="2" />
     </Style>
 
     <Style x:Key="TrayMenuContainerBorderStyle" TargetType="{x:Type Border}">
@@ -99,36 +99,36 @@
         <Setter Property="BorderThickness" Value="6" />
         <Setter Property="CornerRadius" Value="5" />
         <Setter Property="Width" Value="196" />
-        <Setter Property="VerticalAlignment" Value="Stretch"/>
+        <Setter Property="VerticalAlignment" Value="Stretch" />
     </Style>
 
     <Style x:Key="TrayMenuItemStyle" TargetType="{x:Type Button}">
-        <Setter Property="Background" Value="Transparent"/>
-        <Setter Property="Foreground" Value="#FF8f8f8f"/>
-        <Setter Property="Padding" Value="0"/>
-        <Setter Property="Height" Value="32"/>
-        <Setter Property="HorizontalAlignment" Value="Stretch"/>
-        <Setter Property="HorizontalContentAlignment" Value="Center"/>
-        <Setter Property="VerticalContentAlignment" Value="Center"/>
-        <Setter Property="osStyle:osStyles.BorderBrush" Value="#FF2B2828"/>
-        <Setter Property="osStyle:osStyles.Background" Value="#FF575757"/>
-        <Setter Property="UseLayoutRounding" Value="True"/>
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Foreground" Value="#FF8f8f8f" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="Height" Value="32" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="osStyle:osStyles.BorderBrush" Value="#FF2B2828" />
+        <Setter Property="osStyle:osStyles.Background" Value="#FF575757" />
+        <Setter Property="UseLayoutRounding" Value="True" />
         <Setter Property="ContentTemplate" Value="{StaticResource osTrayBtnText}" />
         <Setter Property="Template" Value="{StaticResource TrayMenuLayout_Btn}" />
     </Style>    
 
     <Style x:Key="TrayMenuItemToggleStyle" TargetType="{x:Type ToggleButton}">
-        <Setter Property="Background" Value="Transparent"/>
-        <Setter Property="Foreground" Value="#FF8f8f8f"/>
-        <Setter Property="Padding" Value="0"/>
-        <Setter Property="Height" Value="32"/>
-        <Setter Property="HorizontalAlignment" Value="Stretch"/>
-        <Setter Property="HorizontalContentAlignment" Value="Center"/>
-        <Setter Property="VerticalContentAlignment" Value="Center"/>
-        <Setter Property="UseLayoutRounding" Value="True"/>
-        <Setter Property="osStyle:osStyles.BorderBrush" Value="#FF2B2828"/>
-        <Setter Property="osStyle:osStyles.Background" Value="#FF575757"/>
-        <Setter Property="osStyle:osStyles.DefaultBackground" Value="#FF363636"/>
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Foreground" Value="#FF8f8f8f" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="Height" Value="32" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="UseLayoutRounding" Value="True" />
+        <Setter Property="osStyle:osStyles.BorderBrush" Value="#FF2B2828" />
+        <Setter Property="osStyle:osStyles.Background" Value="#FF575757" />
+        <Setter Property="osStyle:osStyles.DefaultBackground" Value="#FF363636" />
         <Setter Property="ContentTemplate" Value="{StaticResource osTrayTogBtnText}" />
         <Setter Property="Template" Value="{Binding RelativeSource={RelativeSource TemplatedParent},
             Path=(osStyle:osStyles.Template)}" />
@@ -136,25 +136,25 @@
 
     <Style x:Key="TrayMenuItemDefaultStyle" TargetType="{x:Type Button}"
            BasedOn="{StaticResource TrayMenuItemStyle}">
-        <Setter Property="osStyle:osStyles.CornerRadius" Value="0,0,0,0"/>
-        <Setter Property="osStyle:osStyles.BorderThickness" Value="0,0,0,0"/>
-        <Setter Property="osStyle:osStyles.BorderBrush" Value="#FF222222"/>
-        <Setter Property="osStyle:osStyles.Background" Value="#FF575757"/>
+        <Setter Property="osStyle:osStyles.CornerRadius" Value="0,0,0,0" />
+        <Setter Property="osStyle:osStyles.BorderThickness" Value="0,0,0,0" />
+        <Setter Property="osStyle:osStyles.BorderBrush" Value="#FF222222" />
+        <Setter Property="osStyle:osStyles.Background" Value="#FF575757" />
     </Style>
 
     <Style x:Key="GameTrayMenu_ShowStart" TargetType="{x:Type Button}"
            BasedOn="{StaticResource TrayMenuItemDefaultStyle}">
         <Setter Property="Visibility" Value="Collapsed" />
-        <Setter Property="osStyle:osStyles.Background" Value="#FF575757"/>
-        <Setter Property="osStyle:osStyles.CornerRadius" Value="0,0,0,0"/>
-        <Setter Property="osStyle:osStyles.BorderThickness" Value="0,1,0,0"/>
+        <Setter Property="osStyle:osStyles.Background" Value="#FF575757" />
+        <Setter Property="osStyle:osStyles.CornerRadius" Value="0,0,0,0" />
+        <Setter Property="osStyle:osStyles.BorderThickness" Value="0,1,0,0" />
         <Setter Property="osStyle:osStyles.BorderBrush">
             <Setter.Value>
                 <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                    <GradientStop Color="#00000000" Offset="0.0"/>
-                    <GradientStop Color="#F1AAAAAA" Offset="0.3"/>
-                    <GradientStop Color="#F1AAAAAA" Offset="0.7"/>
-                    <GradientStop Color="#00000000" Offset="1.0"/>
+                    <GradientStop Color="#00000000" Offset="0.0" />
+                    <GradientStop Color="#F1AAAAAA" Offset="0.3" />
+                    <GradientStop Color="#F1AAAAAA" Offset="0.7" />
+                    <GradientStop Color="#00000000" Offset="1.0" />
                 </LinearGradientBrush>
             </Setter.Value>
         </Setter>
@@ -169,16 +169,16 @@
     <Style x:Key="GameTrayMenu_ShowClose" TargetType="{x:Type Button}"
            BasedOn="{StaticResource TrayMenuItemDefaultStyle}">
         <Setter Property="Visibility" Value="Collapsed" />
-        <Setter Property="osStyle:osStyles.Background" Value="#FF575757"/>
-        <Setter Property="osStyle:osStyles.CornerRadius" Value="0,0,0,0"/>
-        <Setter Property="osStyle:osStyles.BorderThickness" Value="0,1,0,0"/>
+        <Setter Property="osStyle:osStyles.Background" Value="#FF575757" />
+        <Setter Property="osStyle:osStyles.CornerRadius" Value="0,0,0,0" />
+        <Setter Property="osStyle:osStyles.BorderThickness" Value="0,1,0,0" />
         <Setter Property="osStyle:osStyles.BorderBrush">
             <Setter.Value>
                 <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                    <GradientStop Color="#00000000" Offset="0.0"/>
-                    <GradientStop Color="#F1AAAAAA" Offset="0.3"/>
-                    <GradientStop Color="#F1AAAAAA" Offset="0.7"/>
-                    <GradientStop Color="#00000000" Offset="1.0"/>
+                    <GradientStop Color="#00000000" Offset="0.0" />
+                    <GradientStop Color="#F1AAAAAA" Offset="0.3" />
+                    <GradientStop Color="#F1AAAAAA" Offset="0.7" />
+                    <GradientStop Color="#00000000" Offset="1.0" />
                 </LinearGradientBrush>
             </Setter.Value>
         </Setter>
@@ -192,16 +192,16 @@
 
     <Style x:Key="GameTrayMenu_ShowRestart" TargetType="{x:Type Button}"
            BasedOn="{StaticResource TrayMenuItemDefaultStyle}">
-        <Setter Property="osStyle:osStyles.Background" Value="#FF575757"/>
-        <Setter Property="osStyle:osStyles.CornerRadius" Value="0,0,0,0"/>
-        <Setter Property="osStyle:osStyles.BorderThickness" Value="0,1,0,0"/>
+        <Setter Property="osStyle:osStyles.Background" Value="#FF575757" />
+        <Setter Property="osStyle:osStyles.CornerRadius" Value="0,0,0,0" />
+        <Setter Property="osStyle:osStyles.BorderThickness" Value="0,1,0,0" />
         <Setter Property="osStyle:osStyles.BorderBrush">
             <Setter.Value>
                 <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                    <GradientStop Color="#00000000" Offset="0.0"/>
-                    <GradientStop Color="#A1060606" Offset="0.3"/>
-                    <GradientStop Color="#A1060606" Offset="0.7"/>
-                    <GradientStop Color="#00000000" Offset="1.0"/>
+                    <GradientStop Color="#00000000" Offset="0.0" />
+                    <GradientStop Color="#A1060606" Offset="0.3" />
+                    <GradientStop Color="#A1060606" Offset="0.7" />
+                    <GradientStop Color="#00000000" Offset="1.0" />
                 </LinearGradientBrush>
             </Setter.Value>
         </Setter>       
@@ -209,32 +209,32 @@
 
     <Style x:Key="TrayMenuItemBorderStyle" TargetType="{x:Type Button}"
            BasedOn="{StaticResource TrayMenuItemStyle}">
-        <Setter Property="osStyle:osStyles.BorderThickness" Value="0,0,0,0"/>
-        <Setter Property="osStyle:osStyles.CornerRadius" Value="0,0,2,2"/>
-        <Setter Property="osStyle:osStyles.BorderBrush" Value="#FF222222"/>
-        <Setter Property="osStyle:osStyles.Background" Value="#FF575757"/>
+        <Setter Property="osStyle:osStyles.BorderThickness" Value="0,0,0,0" />
+        <Setter Property="osStyle:osStyles.CornerRadius" Value="0,0,2,2" />
+        <Setter Property="osStyle:osStyles.BorderBrush" Value="#FF222222" />
+        <Setter Property="osStyle:osStyles.Background" Value="#FF575757" />
     </Style>
 
     <Style x:Key="TrayMenuItemEnDisStyle" TargetType="{x:Type ToggleButton}"
            BasedOn="{StaticResource TrayMenuItemToggleStyle}">
-        <Setter Property="osStyle:osStyles.BorderThickness" Value="0,0,0,0"/>
-        <Setter Property="osStyle:osStyles.CornerRadius" Value="2,2,0,0"/>
+        <Setter Property="osStyle:osStyles.BorderThickness" Value="0,0,0,0" />
+        <Setter Property="osStyle:osStyles.CornerRadius" Value="2,2,0,0" />
         <Setter Property="IsChecked" Value="{Binding osEnabledStatus, Source={StaticResource osEnabledStatusConfig}, Mode=TwoWay,UpdateSourceTrigger=PropertyChanged}" />
         <Setter Property="osStyle:osStyles.Template" Value="{StaticResource TrayMenuToggleLayout_EnStatus}" />
     </Style>
 
     <Style x:Key="TrayMenuItemGameMenuStyle" BasedOn="{StaticResource TrayMenuItemToggleStyle}" TargetType="{x:Type ToggleButton}">
-        <Setter Property="osStyle:osStyles.CornerRadius" Value="0,0,0,0"/>
-        <Setter Property="osStyle:osStyles.BorderThickness" Value="0,0,0,0"/>
-        <Setter Property="osStyle:osStyles.BorderBrush" Value="#FF222222"/>
-        <Setter Property="osStyle:osStyles.Background" Value="#FF575757"/>
+        <Setter Property="osStyle:osStyles.CornerRadius" Value="0,0,0,0" />
+        <Setter Property="osStyle:osStyles.BorderThickness" Value="0,0,0,0" />
+        <Setter Property="osStyle:osStyles.BorderBrush" Value="#FF222222" />
+        <Setter Property="osStyle:osStyles.Background" Value="#FF575757" />
         <Setter Property="osStyle:osStyles.Template" Value="{StaticResource TrayMenuToggleLayout_GameMenu}" />
     </Style>
 
     <Style x:Key="HideShowGameTrayMenu" TargetType="{x:Type Border}">
         <Setter Property="BorderBrush" Value="Transparent" />
         <Setter Property="BorderThickness" Value="0,0,0,0" />
-        <Setter Property="Margin" Value="0"/>
+        <Setter Property="Margin" Value="0" />
         <Setter Property="Height" Value="0" />
         <Setter Property="MaxHeight" Value="64" />
         <Setter Property="Opacity" Value="0" />

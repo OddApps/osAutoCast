@@ -24,12 +24,12 @@ Imports osAutoCast.DataTypeLib.UpdateStatusAction
 Imports osBinder = System.Windows.Data
 Imports osBrushColor = System.Windows.Media.Brushes
 Imports osColors = System.Windows.Media
-Imports osControls = System.Windows.Controls
+Imports osWinControls = System.Windows.Controls
 Imports osHorz = System.Windows.HorizontalAlignment
 Imports osPoint = System.Windows.Point
+Imports osSize = System.Windows.Size
 Imports osProgColor = SharpDX.Mathematics.Interop.RawColor4
 Imports osRect = SharpDX.Mathematics.Interop
-Imports osSize = System.Windows.Size
 Imports osSweep = System.Windows.Media.SweepDirection
 Imports osUtilities = SharpDX.Utilities
 Imports osVert = System.Windows.VerticalAlignment
@@ -299,14 +299,14 @@ Public NotInheritable Class osFuncLib_Progress
                             osHandler_UI.osGui_AutoCastProgress.SetProgColor(progColorData, pUpdate)
                         End Sub)
             Case TriggerType.AutoPass
-                osHandler_UI.osGui_AutoPass.
+                osHandler_UI.osGui_AutoPass2.
                     Dispatcher.Invoke(
                     Sub()
                         If pStatus = StartAP Then
-                            osHandler_UI.osGui_AutoPass.OddProgBar_AP.SetProgress(1)
+                            osHandler_UI.osGui_AutoPass2.apHandler._UpdateProgress(0)
                         End If
 
-                        osHandler_UI.osGui_AutoPass.OddProgBar_AP.SetProgColor(progColorData)
+                        osHandler_UI.osGui_AutoPass2.apHandler._UpdateColorFunc(progColorData)
                     End Sub)
         End Select
     End Sub
@@ -574,6 +574,25 @@ Public NotInheritable Class osFuncLib_AutoPass
                                        Dim retAP = Await osHandler_UI.osGui_AutoPass.LaunchAutoPass()
                                        Return retAP
                                    End Function)
+
+        Dim retProgResult = Await isTask_AutoPass.Task.Unwrap()
+
+        Await ProcessResult(retProgResult)
+        osFuncLib_InputScan.isActionComplete = True
+    End Function
+
+    Public Shared Async Function ExecuteAutoPass(isNew As Boolean) As Task
+        Dim isTask_AutoPass = osHandler_UI.
+            osGui_AutoPass2.Dispatcher.InvokeAsync(
+                Async Function()
+
+                    osHandler_UI.DisplayGUI(TriggerType.AutoPass)
+                    osFuncLib_Progress.SetProgBlockData(TriggerType.AutoPass)
+                    Await Task.Delay(50)
+
+                    Dim retAP = Await osHandler_UI.osGui_AutoPass2.LaunchAutoPass()
+                    Return retAP
+                End Function)
 
         Dim retProgResult = Await isTask_AutoPass.Task.Unwrap()
 
@@ -1023,10 +1042,6 @@ Public NotInheritable Class osFuncLib_PopupMenu
                           objPopupTaskPending)
     End Function
 
-    Private Shared Function GetPopupWin() As osPopupMenu_GUI
-        Return osHandler_UI.FetchPopupMenu()
-    End Function
-
     Private Shared Sub ProcessCloseEvent(objPopRes As Boolean)
         If objPopRes Then
             InvokeCloseByCmd()
@@ -1224,7 +1239,7 @@ Module osFuncLib_UI
     Private dirSweep As osSweep = osSweep.Clockwise
 
     Public Function PrepDispatcher(Optional IsAutoPass As Boolean = False) As Dispatcher
-        Return If(IsAutoPass, osHandler_UI.osGui_AutoPass.Dispatcher,
+        Return If(IsAutoPass, osHandler_UI.osGui_AutoPass2.Dispatcher,
             Application.Current.Dispatcher)
     End Function
 
@@ -1446,6 +1461,93 @@ Module osFuncLib_UI
     End Function
 
 End Module
+
+
+
+Public Class osPrefExpandEase
+    Inherits EasingFunctionBase
+
+    Public Property X1 As Double = 0.64
+    Public Property Y1 As Double = 0.37
+    Public Property X2 As Double = 0.34
+    Public Property Y2 As Double = 1.44
+
+    Protected Overrides Function CreateInstanceCore() As Freezable
+        Return New osPrefExpandEase With {
+                .X1 = X1,
+                .Y1 = Y1,
+                .X2 = X2,
+                .Y2 = Y2
+            }
+    End Function
+
+    Protected Overrides Function EaseInCore(normalizedTime As Double) As Double
+        ' If both control x's are the trivial curve, return linear
+        If X1 = X2 AndAlso Y1 = Y2 AndAlso X1 = 0 AndAlso Y1 = 0 Then
+            Return normalizedTime
+        End If
+
+        ' Precompute polynomial coefficients for x and y
+        Dim cx As Double = 3.0 * X1
+        Dim bx As Double = 3.0 * (X2 - X1) - cx
+        Dim ax As Double = 1.0 - cx - bx
+
+        Dim cy As Double = 3.0 * Y1
+        Dim by As Double = 3.0 * (Y2 - Y1) - cy
+        Dim ay As Double = 1.0 - cy - by
+
+        ' Solve for parameter t such that x(t) == normalizedTime
+        Dim t As Double = SolveForT(normalizedTime, ax, bx, cx)
+
+        ' Evaluate y(t)
+        Dim result As Double = ((ay * t + by) * t + cy) * t
+        Return result
+    End Function
+
+    ' Evaluate x(t) polynomial
+    Private Function SampleCurveX(t As Double, ax As Double, bx As Double, cx As Double) As Double
+        Return ((ax * t + bx) * t + cx) * t
+    End Function
+
+    ' Evaluate derivative dx/dt
+    Private Function SampleCurveDerivativeX(t As Double, ax As Double, bx As Double, cx As Double) As Double
+        Return (3.0 * ax * t * t) + (2.0 * bx * t) + cx
+    End Function
+
+    ' Solve x(t) = x for t using Newton-Raphson with binary fallback
+    Private Function SolveForT(x As Double, ax As Double, bx As Double, cx As Double) As Double
+        Dim t As Double = x ' good initial guess
+        Const NEWTON_ITERATIONS As Integer = 8
+        Const EPS As Double = 0.0000001
+
+        For i As Integer = 0 To NEWTON_ITERATIONS - 1
+            Dim xAtT As Double = SampleCurveX(t, ax, bx, cx) - x
+            Dim dx As Double = SampleCurveDerivativeX(t, ax, bx, cx)
+            If Math.Abs(dx) < 0.000001 Then Exit For
+            Dim tNext As Double = t - xAtT / dx
+            If Double.IsNaN(tNext) OrElse tNext < 0 OrElse tNext > 1 Then Exit For
+            t = tNext
+        Next
+
+        ' If Newton didn't converge, use binary search
+        Dim lo As Double = 0.0
+        Dim hi As Double = 1.0
+        t = x
+        For i As Integer = 0 To 30
+            Dim xAtT As Double = SampleCurveX(t, ax, bx, cx)
+            If Math.Abs(xAtT - x) < EPS Then Exit For
+            If x > xAtT Then
+                lo = t
+                t = (t + hi) / 2.0
+            Else
+                hi = t
+                t = (t + lo) / 2.0
+            End If
+        Next
+
+        Return Math.Min(1.0, Math.Max(0.0, t))
+    End Function
+End Class
 
 Public Class isEnabledConverter
     Implements IValueConverter
@@ -1671,7 +1773,7 @@ Public NotInheritable Class osMenuFuncBinder
             Case MenuBinderType.isChk
                 BindingOperations.
                     SetBinding(MenuItemObj,
-                               osControls.MenuItem.IsCheckedProperty,
+                               osWinControls.MenuItem.IsCheckedProperty,
                                MenuItemBinder)
             Case MenuBinderType.isMenu
                 BindingOperations.
@@ -1711,7 +1813,7 @@ Public NotInheritable Class osMenuFuncBinder
         BindingOperations.SetBinding(TrayMenuObj, TrayIconBridge.IsEnabledProperty, TrayMenuBinder)
     End Sub
 
-    Public Shared Async Function BindChecked_Popup(objMenuItem As osControls.MenuItem,
+    Public Shared Async Function BindChecked_Popup(objMenuItem As osWinControls.MenuItem,
                                         DoFunc_FetchStatus As Func(Of Boolean),
                                         DoFunc_ConfirmStatus As Action(Of Boolean)) As Task
         Await Task.Run(
@@ -1824,11 +1926,15 @@ Public Module ControlExtensions
 
     <Runtime.CompilerServices.Extension>
     Public Sub ResetAndInitTask(ByRef objTask As TaskCompletionSource(Of Boolean))
+        PrepTask(objTask)
+
+        objTask = New TaskCompletionSource(Of Boolean)(
+            TaskCreationOptions.RunContinuationsAsynchronously)
+    End Sub
+
+    Private Sub PrepTask(ByRef objTask As TaskCompletionSource(Of Boolean))
         If objTask IsNot Nothing Then
             objTask = Nothing : End If
-
-        objTask = New TaskCompletionSource(Of Boolean)(TaskCreationOptions.
-                                                    RunContinuationsAsynchronously)
     End Sub
 
     <Runtime.CompilerServices.Extension>

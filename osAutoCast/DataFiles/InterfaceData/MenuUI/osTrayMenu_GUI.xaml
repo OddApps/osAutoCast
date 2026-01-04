@@ -10,7 +10,7 @@
     <Grid x:Name="TrayMenuOutline" Style="{StaticResource TrayMenuContainerOutlineStyle}">
         <Grid.RenderTransform>
             <ScaleTransform x:Name="TrayMenuOutlineRender"
-                            ScaleX="0" ScaleY="0"/>
+                            ScaleX="0" ScaleY="0" />
         </Grid.RenderTransform>
         <Border x:Name="TrayMainContainer"
                 Style="{StaticResource TrayMenuContainerBorderStyle}">
@@ -26,8 +26,8 @@
                     <Grid Grid.Row="1" Grid.Column="0" 
                           DataContext="{Binding RelativeSource={RelativeSource AncestorType=Window}}">
                         <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
                         <ToggleButton x:Name="TrayMenuBtn_ToggleGameMenu"
                                       Grid.Row="0" Content="Game Menu"
@@ -36,8 +36,8 @@
                                 Style="{StaticResource HideShowGameTrayMenu}">
                             <Grid>
                                 <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>
                                 <Button x:Name="TrayMenuBtn_StartGame" Grid.Row="0"
                                         Content="Start MTGA" Focusable="False"

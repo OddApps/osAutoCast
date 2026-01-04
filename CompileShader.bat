@@ -15,4 +15,4 @@
 
 @echo Compiling %~nx1
 
-@"D:\Windows Kits\10\bin\10.0.20348.0\x86\fxc.exe" /T %stype%s_%version%_0 /E %entrypoint% /Fo "C:\Users\OddAdmin\source\repos\osAutoCast\osEffectCompiles\%~n1.ps" "%~1"
+@"D:\Windows Kits\10\bin\10.0.22000.0\x64\fxc.exe" /T %stype%s_%version%_0 /E %entrypoint% /O3 /Gis /Gfp /Fo "C:\Users\OddAdmin\source\repos\osAutoCast\osEffectCompiles\%~n1.ps" "%~1"

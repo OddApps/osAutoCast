@@ -51,14 +51,15 @@ Public Module osLoadTaskLib
     End Property
 
     Public Async Function LoadTask_Init(objTaskStatus As TaskStatusReport) As Task
-        AddHandler uiLoadProgBar.LoadProgComplete,
-            objLoadUI.evtLoaderComplete
+        Dim objTask_Init As Boolean
 
-        '  objLoadUI.InitHandlerPref()
-        '   Await Task.Run(Async Function()
-        Await Task.Delay(225)
+        objTask_Init = Await Task.Run(
+            Async Function()
+                Await Task.Delay(420)
+                Return True
+            End Function)
 
-        '  
+        objTaskStatus.SetTaskComplete()
     End Function
 
     Public Async Function LoadTask_PrefsLoad(objTaskStatus As TaskStatusReport) As Task
@@ -81,13 +82,8 @@ Public Module osLoadTaskLib
         objTaskStatus.SetTaskComplete()
     End Function
 
-    Public Async Function PrepShaderData() As Task
-        Await Task.WhenAll(osHandler_Graphics.EnsureCreated(),
-                           CoreDataLib.ComposeShaderIdx())
-    End Function
-
     Public Async Function InitShaderDevices(objTaskStatus As TaskStatusReport) As Task
-        Await osHandler_Graphics.EnsureCreatedw()
+        Await osHandler_Graphics.EnsureCreated()
         objTaskStatus.SetTaskComplete()
     End Function
 
@@ -107,6 +103,23 @@ Public Module osLoadTaskLib
             End Sub)
 
         Await Task.Delay(125)
+
+        objTaskStatus.SetTaskComplete()
+    End Function
+
+    Public Async Function LoadTask_Finalize(objTaskStatus As TaskStatusReport) As Task
+        Await Task.Run(
+             Sub()
+                 uiLoadProgBar.onLastTask = True
+
+                 PrepDispatcher().Invoke(
+                     Sub()
+                         PrepTrayMenu()
+                         isAppLoaded = True
+                     End Sub)
+
+                 uiTextEvtTask.ResetTask()
+             End Sub)
 
         objTaskStatus.SetTaskComplete()
     End Function

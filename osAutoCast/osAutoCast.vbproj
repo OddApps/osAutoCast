@@ -169,7 +169,9 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="DataFiles\ControlData\osControlLib.vb" />
     <Compile Include="DataFiles\CoreData\osLoadTaskLib.vb" />
+    <Compile Include="DataFiles\HandlerData\osHandler_ProgressBar.vb" />
     <Compile Include="DataFiles\HandlerData\osHandler_Graphics.vb" />
     <Compile Include="DataFiles\HandlerData\osHandler_Loader.vb" />
     <Compile Include="DataFiles\HandlerData\osHandler_Shader.vb" />
@@ -194,6 +196,9 @@
     </Compile>
     <Compile Include="DataFiles\InterfaceData\ProgressUI\ProgBarGui_AutoCast.vb">
       <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="DataFiles\InterfaceData\ProgressUI\progUI_AutoPass.xaml.vb">
+      <DependentUpon>progUI_AutoPass.xaml</DependentUpon>
     </Compile>
     <Compile Include="DataFiles\ModelData\osLoadingProgressBar.vb" />
     <Compile Include="DataFiles\ModelData\osTextDisplay.vb" />
@@ -248,6 +253,10 @@
     <Compile Include="DataFiles\ModelData\EasingModel.vb" />
     <Compile Include="DataFiles\ModelData\OddLibProgressBar.vb" />
     <Compile Include="DataFiles\ObjectData\DataTypeLib.vb" />
+    <Page Include="DataFiles\InterfaceData\ProgressUI\progUI_AutoPass.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="DataFiles\VisualData\StyleLib\StyleResources\StyleConfigs\osUI_ControlElements.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -353,9 +362,9 @@
     <None Include="..\.editorconfig">
       <Link>.editorconfig</Link>
     </None>
-    <EmbeddedResource Include="DataFiles\VisualData\EffectsLib\EffectResources\osEffect_Shaders.csd" />
     <Resource Include="DataFiles\VisualData\EffectsLib\EffectResources\osTestShader_TextGlow.ps" />
     <Resource Include="DataFiles\VisualData\EffectsLib\EffectResources\osTestShader_TextStroke.ps" />
+    <EmbeddedResource Include="DataFiles\VisualData\EffectsLib\EffectResources\osEffect_Shaders.csd" />
     <None Include="My Project\app.manifest" />
     <None Include="My Project\DataSources\osPrefStore.ProgVisualQualityData.datasource" />
     <None Include="My Project\Settings.settings">

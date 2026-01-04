@@ -1,29 +1,47 @@
 ﻿Imports osAutoCast.DataTypeLib.ProgressMode
 Imports osAutoCast.DataTypeLib.TriggerAction
+Imports osPrefData = osAutoCast.osPrefLib.osPreferenceLib
+Imports osColors = System.Windows.Media
+Imports osAutoCast.osControls
 
-Public Class progGui_AutoPass
+Public Class progUI_AutoPass
 
     Private chkAutoPassResult As TaskCompletionSource(Of Boolean)
     Private apProgressHandler As EventHandler = Nothing
-
-    Private pHeight As Integer
-    Private pWidth As Integer
 
     Private Async Function AutoPass_Prep() As Task
 
         Await CoreDataLib.InputMonSvc.AnticipateInput(InputAction.AP_Start)
         Await Task.Delay(100)
 
-        CoreDataLib.ProcessProgressEvent(ProgMode_AutoPass, ProgEvent.DispMsg, "Release Shift or Press C To Cancel")
-        InitiateAutoPass(chkAutoPassResult)
+        osHandler_UI.osGui_AutoPass2.apHandler._DisplayTextFunc("Release Shift or Press C To Cancel")
+        chkAutoPassResult.ResetAndInitTask()
     End Function
 
-    Private Sub InitiateAutoPass(ByRef objChkResult As TaskCompletionSource(Of Boolean))
-        If objChkResult IsNot Nothing Then objChkResult = Nothing
-
-        objChkResult = New TaskCompletionSource(Of Boolean)(TaskCreationOptions.
-                                                    RunContinuationsAsynchronously)
+    Private Sub progUI_AutoPass_Loaded(sender As Object, e As RoutedEventArgs) Handles Me.Loaded
+        Me.DataContext = osPrefData.Data
     End Sub
+
+    Public Sub PrepAutoPass()
+        apHandler = New osHandler_ProgressBar(GetSafetyTimer(), objProgBar.Maximum,
+                                              AddressOf SetProgress, AddressOf SetColor, AddressOf SetDisplayText)
+    End Sub
+
+    Private Sub SetProgress(pVal As Double)
+        objProgBar.Progress = pVal
+    End Sub
+
+    Private Sub SetColor(pColor As osColors.Color)
+        objProgBar.FillColor = New SolidColorBrush(pColor)
+    End Sub
+
+    Private Sub SetDisplayText(pText As String)
+        objProgBar.DisplayText = pText
+    End Sub
+
+    Private Function GetSafetyTimer() As Integer
+        Return osPrefLib.osPreferenceLib.Data.AutoPass_SafetyTimer
+    End Function
 
     Public Async Function LaunchAutoPass() As Task(Of ProgResult)
 
@@ -76,8 +94,8 @@ Public Class progGui_AutoPass
 
     Public Sub BeginPrep()
         With CoreDataLib.FetchProgSizeReport(TriggerType.AutoPass)
-            pHeight = .Item("pH")
-            pWidth = .Item("pW")
+            'pHeight = .Item("pH")
+            'pWidth = .Item("pW")
         End With
 
         '   Me.OddProgBar_AP.ProgressFlow = ProgFlow.Descending
@@ -95,6 +113,22 @@ Public Class progGui_AutoPass
 
     Private Sub TerminateAutoPass(apComplete As Boolean)
         chkAutoPassResult.TrySetResult(apComplete)
+    End Sub
+
+End Class
+
+Partial Public Class progUI_AutoPass
+
+    Public Property apHandler As osHandler_ProgressBar = Nothing
+
+    Public ReadOnly Property objProgBar As osProgressBar
+        Get
+            Return Me.OddProgBar_AP
+        End Get
+    End Property
+
+    Public Sub New()
+        InitializeComponent()
     End Sub
 
 End Class

@@ -23,19 +23,6 @@ Imports repTS = osAutoCast.TaskStatusReport
 
 Public Class osLoader_UI
 
-    Private Async Function InitializeContentLoad(objTaskStatus As TaskStatusReport) As Task
-        AddHandler objLoadProgBar.LoadProgComplete, evtLoaderComplete
-
-        osPrefManager = New osHandler_Prefs()
-        Await Task.Delay(250)
-
-        objTaskStatus.SetTaskComplete()
-    End Function
-
-    Public Sub InitHandlerPref()
-        osPrefManager = New osHandler_Prefs()
-    End Sub
-
     Private Sub ImplementLoadVisEvents(ByRef objVisTask As TaskCompletionSource(Of Boolean))
         Dim _objVisTask = objVisTask
 
@@ -72,7 +59,7 @@ Public Class osLoader_UI
         Return Not txtMsg = "skip"
     End Function
 
-    Private Async Function FadeLoadTextIn(valTaskType As LoadTaskType) As Task
+    Public Async Function FadeLoadTextIn(valTaskType As LoadTaskType) As Task
         Dim txtMsg As String = ""
 
         If VerifyTextUpdate(valTaskType, txtMsg) Then
@@ -81,18 +68,18 @@ Public Class osLoader_UI
 
                 ImplementLoadVisEvents(visLoadTextEventTask)
 
-                Await PrepDispatcher().InvokeAsync(
-            Sub()
-                ApplyLoadText(txtMsg)
-                .BeginAnimation(objVisTxtColor, objVis_TextFadeIn)
-            End Sub)
+                Dim baa = PrepDispatcher().InvokeAsync(
+                    Sub()
+                        ApplyLoadText(txtMsg)
+                        .BeginAnimation(objVisTxtColor, objVis_TextFadeIn)
+                    End Sub, DispatcherPriority.Render)
 
                 Await visLoadTextEventTask.Task
             End With
         End If
     End Function
 
-    Private Async Function FadeLoadTextOut(valTaskType As LoadTaskType) As Task
+    Public Async Function FadeLoadTextOut(valTaskType As LoadTaskType) As Task
         Dim txtMsg As String = ""
 
         If VerifyTextUpdate(valTaskType, txtMsg) Then
@@ -100,9 +87,9 @@ Public Class osLoader_UI
                 ImplementLoadVisEvents()
 
                 Await PrepDispatcher().InvokeAsync(
-            Sub()
-                .BeginAnimation(objVisTxtColor, objVis_TextFadeOut)
-            End Sub)
+                    Sub()
+                        .BeginAnimation(objVisTxtColor, objVis_TextFadeOut)
+                    End Sub, DispatcherPriority.Render)
             End With
         End If
     End Function
@@ -111,19 +98,17 @@ Public Class osLoader_UI
         Await Task.Run(
              Sub()
                  objLoadProgBar.onLastTask = True
+
                  PrepDispatcher().Invoke(
                      Sub()
-                         objAnimation_LoadTextVis.Children.Clear()
-                         objAnimation_LoadTextVis = Nothing
-
-                         objTextBrush = Nothing
-
                          PrepTrayMenu()
                          isAppLoaded = True
                      End Sub)
 
                  visLoadTextEventTask.ResetTask()
              End Sub)
+
+        objTaskStatus.SetTaskComplete()
     End Function
 
     Public Async Function ProvisionApp() As Task
@@ -133,6 +118,7 @@ Public Class osLoader_UI
 
         AddHandler objLoadProgBar.LoadProgComplete,
             evtLoaderComplete
+
         Await objProcessLoadStages.BeginLoadStage(True)
     End Function
 
@@ -156,32 +142,28 @@ Partial Class osLoader_UI
 
     Public evtLoaderComplete As EventHandler = AddressOf TriggerCompleteEvent
 
-    Private isTaskValid As Boolean
-    Private objValidTask As Task
-
     Public objAnimation_LoadTextVis As Storyboard = Nothing
-
     Public visLoadTextEventTask As TaskCompletionSource(Of Boolean)
 
     Private evtLoadText_FadeIn As EventHandler
     Private evtLoadText_FadeOutComplete As EventHandler
 
-    Private objTextBrush As SolidColorBrush
+    Public objTextBrush As SolidColorBrush
 
-    Private Const ContentBorder_Radius As Double = 12
+    Private Const ContentBorder_Radius As Double = 11
 
     Public osPrefManager As osHandler_Prefs
 
     Private idxLoadStageData As New Dictionary(Of LoadTaskType, osLoadStageData) From {
-        {Load_Init, CreateLoadStageData(0, 25, 375)},
-        {Load_PrefPrep, CreateLoadStageData(30, 65, 375)},
-        {Load_PrefApply, CreateLoadStageData(70, 95, 375)},
-        {Load_InitShaders, CreateLoadStageData(100, 115, 350)},
-        {Load_Shaders, CreateLoadStageData(125, 135, 350)},
-        {Load_Opts, CreateLoadStageData(140, 165, 350)},
-        {Load_PopupMenu, CreateLoadStageData(170, 195, 300)},
-        {Load_StartingSvc, CreateLoadStageData(200, 225, 315)},
-        {Load_Starting, CreateLoadStageData(230, 250, 375)}
+        {Load_Init, CreateLoadStageData(0, 30, 400)},
+        {Load_PrefPrep, CreateLoadStageData(35, 65, 415)},
+        {Load_PrefApply, CreateLoadStageData(70, 105, 475)},
+        {Load_InitShaders, CreateLoadStageData(110, 130, 375)},
+        {Load_Shaders, CreateLoadStageData(135, 165, 350)},
+        {Load_Opts, CreateLoadStageData(170, 190, 350)},
+        {Load_PopupMenu, CreateLoadStageData(195, 220, 300)},
+        {Load_StartingSvc, CreateLoadStageData(225, 235, 315)},
+        {Load_Starting, CreateLoadStageData(240, 250, 375)}
     }
 
     Private idxLoadTasks As New List(Of osLoadTaskData) From {
@@ -193,7 +175,7 @@ Partial Class osLoader_UI
         {CreateLoadTaskData(Load_Opts, AddressOf osLoadTaskLib.LoadOptsUI)},
         {CreateLoadTaskData(Load_PopupMenu, AddressOf osLoadTaskLib.PrepPopupMenuUI)},
         {CreateLoadTaskData(Load_StartingSvc, AddressOf osLoadTaskLib.LoadTask_StartInMon)},
-        {CreateLoadTaskData(Load_Starting, AddressOf LoadFinalize)}
+        {CreateLoadTaskData(Load_Starting, AddressOf osLoadTaskLib.LoadTask_Finalize)}
     }
 
     Private idxLoadStageMsg As New Dictionary(Of LoadTaskType, String) From {

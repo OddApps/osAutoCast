@@ -1,24 +1,23 @@
 ﻿<Window x:Class="osPrefs_GUI" x:Name="winOpts" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" 
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:local="clr-namespace:osAutoCast" 
-        xmlns:osPrefs="clr-namespace:osAutoCast.osPrefLib" xmlns:osStyle="clr-namespace:osAutoCast.osStyle" AllowsTransparency="True" 
-        VerticalAlignment="Center" VerticalContentAlignment="Center" mc:Ignorable="d" Title="Settings" WindowStyle="None" 
-        ResizeMode="NoResize" Background="Transparent" SizeToContent="Width" Height="{Binding ActualHeight, ElementName=osPrefsMainContainer}" 
-        ShowInTaskbar="False" Topmost="True" Style="{StaticResource osPrefsStyle}" 
-        WindowStartupLocation="CenterScreen" ShowActivated="False">
+        xmlns:osCtrl="clr-namespace:osAutoCast.osControls" xmlns:osPrefs="clr-namespace:osAutoCast.osPrefLib" Height="365"
+        Topmost="True" mc:Ignorable="d" Title="Settings" WindowStyle="None" WindowStartupLocation="CenterScreen"
+        Style="{StaticResource osPrefsStyle}" AllowsTransparency="True" ShowInTaskbar="False">
 
     <Window.DataContext>
         <osPrefs:osPreferenceLib/>
     </Window.DataContext>
 
-    <osStyle:osBorder x:Name="osPrefsMainContainer" Style="{StaticResource osPrefsMainContainerStyle}" 
-                      Opacity="0" BorderBrush="#101010" Margin="0" ClipInflation="0.95" VerticalAlignment="Center" 
-                      CacheMode="BitmapCache" RenderOptions.BitmapScalingMode="LowQuality">
-        <osStyle:osBorder.RenderTransform>
+    <osCtrl:osBorder x:Name="osPrefsMainContainer" Style="{StaticResource osPrefsMainContainerStyle}" CornerRadius="12"
+                     Opacity="0" BorderBrush="#101010" Margin="0" ClipInflation="1" VerticalAlignment="Center" 
+                     CacheMode="BitmapCache" RenderOptions.BitmapScalingMode="LowQuality"
+                     RenderOptions.EdgeMode="Aliased" >
+        <osCtrl:osBorder.RenderTransform>
             <ScaleTransform x:Name="osPrefsOutlineRender" ScaleX="0.025" ScaleY="1" />
-        </osStyle:osBorder.RenderTransform>
-        <Border Background="Transparent" CornerRadius="12" Width="260">
-            <StackPanel Orientation="Vertical" Background="Transparent">
+        </osCtrl:osBorder.RenderTransform>
+        <Border Background="#FF3C3C3C" Width="NaN">
+            <StackPanel Orientation="Vertical" Background="#FF3C3C3C">
                 <Border CornerRadius="0" BorderBrush="#FF1A1A1A" 
                         BorderThickness="0,0,0,2" Background="#FF282828" 
                         SnapsToDevicePixels="True" VerticalAlignment="Center">
@@ -70,9 +69,9 @@
                     </Grid>
                 </Border>
                 <StackPanel Orientation="Vertical" x:Name="BottomContainer" VerticalAlignment="Bottom"
-                            Opacity="1" ClipToBounds="False" Background="#FF3C3C3C" Height="0" 
-                            CacheMode="BitmapCache" RenderOptions.BitmapScalingMode="LowQuality">                        
-                        <osStyle:osPanel HeaderText="AutoCast" HeaderColor="#FFC4C4C4"
+                            RenderOptions.BitmapScalingMode="LowQuality" CacheMode="BitmapCache"
+                            Opacity="0" ClipToBounds="False" Background="#FF3C3C3C" Height="0">                        
+                        <osCtrl:osPanel HeaderText="AutoCast" HeaderColor="#FFC4C4C4"
                                          Margin="0,2,0,0" FontFamily="Trebuchet MS" FontSize="18" 
                                          FontWeight="Bold" Padding="6,0,6,6">
                             <Grid x:Name="grid">
@@ -88,7 +87,7 @@
                                        HorizontalContentAlignment="Left" Grid.Column="0" 
                                        Padding="0" Grid.Row="0" VerticalAlignment="Center" 
                                        HorizontalAlignment="Left" />
-                                <osStyle:osUpDownTextBox x:Name="osPrefsTxt_acFuse" Grid.Column="1" 
+                                <osCtrl:osUpDownTextBox x:Name="osPrefsTxt_acFuse" Grid.Column="1" 
                                                          FontWeight="Normal" Grid.Row="0" Height="30" FontSize="16"
                                                          VerticalContentAlignment="Center" HorizontalContentAlignment="Center"
                                                          Value="{Binding AutoCast_Fuse, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
@@ -104,8 +103,8 @@
                                               VerticalAlignment="Bottom" VerticalContentAlignment="Center" />
                                 </Grid>
                             </Grid>
-                        </osStyle:osPanel>
-                        <osStyle:osPanel HeaderText="AutoPass" HeaderColor="#FFC4C4C4" Margin="0,2,0,0" 
+                        </osCtrl:osPanel>
+                        <osCtrl:osPanel HeaderText="AutoPass" HeaderColor="#FFC4C4C4" Margin="0,2,0,0" 
                                          FontFamily="Trebuchet MS" FontSize="18" FontWeight="Bold" Padding="6,0,6,6">
                             <Grid>
                                 <Grid.RowDefinitions>
@@ -117,14 +116,14 @@
                                 </Grid.ColumnDefinitions>
                                 <Label Content="Safety Timer" FontWeight="Normal" Grid.Column="0" 
                                        Padding="0" VerticalAlignment="Center" HorizontalAlignment="Left" FontSize="16" />
-                                <osStyle:osUpDownTextBox x:Name="osPrefsTxt_apSafetyTimer" TextWrapping="NoWrap" 
+                                <osCtrl:osUpDownTextBox x:Name="osPrefsTxt_apSafetyTimer" TextWrapping="NoWrap" 
                                                          Grid.Column="1" Height="30" VerticalContentAlignment="Center" 
                                                          FontSize="16" FontWeight="Regular" HorizontalContentAlignment="Center"
                                                          Value="{Binding AutoPass_SafetyTimer, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
                                                          Minimum="100" Maximum="3000" Increment="5" />
                             </Grid>
-                        </osStyle:osPanel>
-                        <osStyle:osPanel HeaderText="General" HeaderColor="#FFC4C4C4" Margin="0,2,0,0" 
+                        </osCtrl:osPanel>
+                        <osCtrl:osPanel HeaderText="General" HeaderColor="#FFC4C4C4" Margin="0,2,0,0" 
                                          FontFamily="Trebuchet MS" FontSize="18" FontWeight="Bold" Padding="6,0,6,6">
                             <Grid>
                                 <Grid.RowDefinitions>
@@ -136,12 +135,12 @@
                                 </Grid.ColumnDefinitions>
                                 <Label Content="Visual Quality" FontWeight="Normal" Grid.Column="0" 
                                        Padding="0" VerticalAlignment="Center" HorizontalAlignment="Left" FontSize="16" />
-                            <ComboBox x:Name="osPrefslst_VQ" Grid.Column="1" Style="{StaticResource FixedComboBoxStyle}" 
+                            <ComboBox x:Name="osPrefslst_VQ" Grid.Column="1" Style="{StaticResource osPrefsVisQ_DropDownStyle}" 
                                           ItemsSource="{Binding vqList}" IsEditable="False" SelectedValue="{Binding GenOpts_VisualQuality}"
                                           DisplayMemberPath="vqN" Height="30" FontSize="14" FontWeight="Normal" Foreground="#FFFFFFFF"
                                           SelectedValuePath="vqID" Background="#FF575757" OverridesDefaultStyle="True" />
                             </Grid>
-                        </osStyle:osPanel>
+                        </osCtrl:osPanel>
                     <Button x:Name="osPrefsBtn_Save" Content="Save" Style="{StaticResource osPrefsSaveBtnStyle}"
                                 Margin="8,6,8,6" FontSize="18" Padding="0,8"
                                 FontWeight="Bold" FontFamily="Segoe UI" />
@@ -150,5 +149,5 @@
             </StackPanel>
          
         </Border>
-    </osStyle:osBorder>
+    </osCtrl:osBorder>
 </Window>

@@ -1,4 +1,6 @@
-﻿Imports System.Windows.Media.Animation
+﻿Imports System.Collections.Concurrent
+Imports System.IO
+Imports System.Windows.Media.Animation
 Imports osAutoCast.DataTypeLib.LoadContentData
 Imports osAutoCast.DataTypeLib.LoadEventType
 Imports osAutoCast.osLoader_UI
@@ -10,8 +12,6 @@ Imports osProgDevice = SharpDX.Direct3D11.Device
 Imports pxShader_Pixel = SharpDX.Direct3D11.PixelShader
 Imports pxShader_Text = System.Windows.Media.Effects.PixelShader
 Imports pxShader_Vertex = SharpDX.Direct3D11.VertexShader
-Imports System.Collections.Concurrent
-Imports System.IO
 
 #Disable Warning BC42353
 Class Application
@@ -112,9 +112,11 @@ Class Application
                     Async Sub()
                         RemoveHandler objAni_LoadScreenFadeIn.Completed, evLoad_ShowWin
 
-                        Await Task.Delay(350)
-                        objLoaderScreen.objLoadText.Text = ""
-                        Await Task.Delay(150)
+                        'Await Task.Delay(350)
+                        'objLoaderScreen.objLoadText.Text = ""
+                        'Await Task.Delay(150)
+
+                        Await Task.Delay(500)
 
                         ApplyEvents(LoadEv_Complete)
 
@@ -146,6 +148,11 @@ Class Application
 
                         Await objTask_VisualComplete.Task
                         objTask_VisualComplete = Nothing
+
+                        objLoaderScreen.objAnimation_LoadTextVis.Children.Clear()
+                        objLoaderScreen.objAnimation_LoadTextVis = Nothing
+
+                        objLoaderScreen.objTextBrush = Nothing
 
                         objLoaderScreen.Close()
                         osHandler_UI.RecaptureResources()

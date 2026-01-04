@@ -171,7 +171,7 @@
                             BorderThickness="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=(osStyle:osStyles.BorderThickness)}"
                             BorderBrush="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=(osStyle:osStyles.BorderBrush)}">
             <ContentPresenter x:Name="mnuGameContent" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"
-                                          VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,2"/>
+                                          VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,2" />
         </Border>
         <ControlTemplate.Triggers>
             <Trigger Property="IsMouseOver" Value="True">

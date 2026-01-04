@@ -11,6 +11,7 @@ Imports osAutoCast.DataTypeLib.TriggerAction
 Imports osProgDevice = SharpDX.Direct3D11.Device
 Imports osRegEx = System.Text.RegularExpressions.Regex
 Imports osStatus = osAutoCast.osEnabledStatusConfig
+Imports osAutoCast.osControls
 
 #Disable Warning IDE0060 ' Remove unused parameter
 #Disable Warning BC42353
@@ -76,7 +77,7 @@ Public NotInheritable Class CoreDataLib
 
     Private Shared ReadOnly TriggerHandlers As (HandleAction As TriggerAction, HandleEvent As Func(Of Task))() = {
         (TriggerAutoCast, Function() osFuncLib_AutoCast.ExecuteAutoCast()),
-        (TriggerAutoPass, Function() osFuncLib_AutoPass.ExecuteAutoPass()),
+        (TriggerAutoPass, Function() osFuncLib_AutoPass.ExecuteAutoPass(True)),
         (TriggerShowOpts, Function() osFuncLib_ShowOpts.ExecuteDispOpts()),
         (TriggerShowMenu, Function() osFuncLib_PopupMenu.ShowPopupMenu())
     }
@@ -397,7 +398,7 @@ Public NotInheritable Class CoreDataLib
                     End Sub)
             End With
         Else
-            Dim osProgElement = osHandler_UI.osGui_AutoPass.OddProgBar_AP
+            Dim osProgElement = osHandler_UI.osGui_AutoPass2.OddProgBar_AP
 
             If pEventData.Length > 0 Then
                 strEventData = pEventData(0).ToString()
@@ -419,7 +420,7 @@ Public NotInheritable Class CoreDataLib
         Return New ProgressEventData(pEvent, pType, pDispText)
     End Function
 
-    Private Shared Function PrepareProgEvent(pEventElement As OddLib_ProgressBar) As ProgressEvent
+    Private Shared Function PrepareProgEvent(pEventElement As osProgressBar) As ProgressEvent
         Return New ProgressEvent(pEventElement)
     End Function
 

@@ -15,8 +15,8 @@
                     <Grid x:Name="LoadContentAreaLayout"
 					    Style="{StaticResource LoadingContentAreaLayoutStyle}">
                         <Grid.RowDefinitions>
-                            <RowDefinition Height="*"/>
-                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
                         <Border x:Name="LoadContentContainer"
 						    Style="{StaticResource LoadingContentContainerStyle}">

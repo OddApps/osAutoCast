@@ -3,12 +3,12 @@
                     xmlns:sys="clr-namespace:System;assembly=mscorlib"
                     xmlns:local="clr-namespace:osAutoCast">
     <ResourceDictionary.MergedDictionaries>
-        <ResourceDictionary Source="/DataFiles/VisualData/StyleLib/StyleResources/StyleProfiles/osUI_Style-LoadScreen.xaml"/>
-        <ResourceDictionary Source="/DataFiles/VisualData/StyleLib/StyleResources/StyleProfiles/osUI_Style-Border.xaml"/>
-        <ResourceDictionary Source="/DataFiles/VisualData/StyleLib/StyleResources/StyleProfiles/osUI_Style-Button.xaml"/>
-        <ResourceDictionary Source="/DataFiles/VisualData/StyleLib/StyleResources/StyleProfiles/osUI_Style-Container.xaml"/>
-        <ResourceDictionary Source="/DataFiles/VisualData/StyleLib/StyleResources/StyleProfiles/osUI_Style-Toggle.xaml"/>
-        <ResourceDictionary Source="/DataFiles/VisualData/StyleLib/StyleResources/StyleProfiles/osUI_Style-TrayMenu.xaml"/>
-        <ResourceDictionary Source="/DataFiles/VisualData/StyleLib/StyleResources/StyleProfiles/osUI_Style-Prefs.xaml"/>
+        <ResourceDictionary Source="/DataFiles/VisualData/StyleLib/StyleResources/StyleProfiles/osUI_Style-LoadScreen.xaml" />
+        <ResourceDictionary Source="/DataFiles/VisualData/StyleLib/StyleResources/StyleProfiles/osUI_Style-Border.xaml" />
+        <ResourceDictionary Source="/DataFiles/VisualData/StyleLib/StyleResources/StyleProfiles/osUI_Style-Button.xaml" />
+        <ResourceDictionary Source="/DataFiles/VisualData/StyleLib/StyleResources/StyleProfiles/osUI_Style-Container.xaml" />
+        <ResourceDictionary Source="/DataFiles/VisualData/StyleLib/StyleResources/StyleProfiles/osUI_Style-Toggle.xaml" />
+        <ResourceDictionary Source="/DataFiles/VisualData/StyleLib/StyleResources/StyleProfiles/osUI_Style-TrayMenu.xaml" />
+        <ResourceDictionary Source="/DataFiles/VisualData/StyleLib/StyleResources/StyleProfiles/osUI_Style-Prefs.xaml" />
     </ResourceDictionary.MergedDictionaries>
 </ResourceDictionary>

@@ -294,8 +294,6 @@ Public Class ProgBarGui_AutoCast
     End Sub
 
     Private Async Sub CreateShadersAndPipeline()
-        Dim objProgDevice = progDevice
-        Dim objProgContext = progContext
 
         Dim objTask_LoadShaders = Await Task.
             WhenAll(Task.Run(Function() As Object
@@ -308,27 +306,29 @@ Public Class ProgBarGui_AutoCast
         pVS = objTask_LoadShaders.ToShaderVer(0)
         pPS = objTask_LoadShaders.ToShaderPx(1)
 
-        pCB?.SafeDispose()
-        pCB = New osProgBuffer(progDevice, New BufferDescription With {
-                                   .SizeInBytes = Utilities.SizeOf(Of ProgBarCB)(),
-                                   .Usage = ResourceUsage.Dynamic,
-                                   .BindFlags = BindFlags.ConstantBuffer,
-                                   .CpuAccessFlags = CpuAccessFlags.Write,
-                                   .OptionFlags = ResourceOptionFlags.None,
-                                   .StructureByteStride = 0
-                               })
+        pCB = New osProgBuffer(progDevice,
+            New BufferDescription With {
+                .SizeInBytes = Utilities.SizeOf(Of ProgBarCB)(),
+                .Usage = ResourceUsage.Dynamic,
+                .BindFlags = BindFlags.ConstantBuffer,
+                .CpuAccessFlags = CpuAccessFlags.Write
+            })
 
-        With objProgContext
+        With progContext
             .InputAssembler.PrimitiveTopology = PrimitiveTopology.TriangleList
 
+            ' ✔ SHADERS SET **ONCE**
             .VertexShader.Set(pVS)
             .PixelShader.Set(pPS)
+
+            .VertexShader.SetConstantBuffer(0, pCB)
             .PixelShader.SetConstantBuffer(0, pCB)
 
             .OutputMerger.SetTargets(progRTV)
         End With
 
         SetViewportToBar()
+
     End Sub
 
     Private Sub InitProgressStates()
@@ -454,44 +454,68 @@ Public Class ProgBarGui_AutoCast
     End Function
 
     Private Sub RasterizeProgress(progVal As Single)
+
         Dim tPrev = lastProgress
         Dim tCurr = Math.Max(0.0F, Math.Min(1.0F, progVal))
-
-        Dim chkProgTrack = VerifyProgressTrack()
-
-        If tPrev = tCurr OrElse chkProgTrack.pFail Then Return
-
-        SetRasterizerState()
+        If tPrev = tCurr Then Return
 
         With progContext
 
             .OutputMerger.SetDepthStencilState(dsOff)
-
-            .OutputMerger.SetBlendState(progSettingsVQ.BlendState)
-
+            .OutputMerger.SetBlendState(bsOpaque)
             .OutputMerger.SetTargets(accumRTV)
 
-            Dim objMapRes = .MapSubresource(pCB, 0, MapMode.WriteDiscard,
-                                             Direct3D11.MapFlags.None)
-            Utilities.Write(objMapRes.DataPointer,
-                        GetProgCB(tPrev, tCurr))
-
+            ' ✔ NO SHADER REBIND HERE
+            Dim map = .MapSubresource(pCB, 0, MapMode.WriteDiscard,
+                                      Direct3D11.MapFlags.None)
+            Utilities.Write(map.DataPointer, GetProgCB(tPrev, tCurr))
             .UnmapSubresource(pCB, 0)
-
-            .VertexShader.Set(pVS)
-            .PixelShader.Set(pPS)
-
-            .VertexShader.SetConstantBuffer(0, pCB)
-            .PixelShader.SetConstantBuffer(0, pCB)
-
-            .InputAssembler.PrimitiveTopology = PrimitiveTopology.TriangleList
 
             .Draw(3, 0)
         End With
 
-        SetRasterizerState(True)
         lastProgress = tCurr
     End Sub
+
+    'Private Sub RasterizeProgress(progVal As Single)
+    '    Dim tPrev = lastProgress
+    '    Dim tCurr = Math.Max(0.0F, Math.Min(1.0F, progVal))
+
+    '    Dim chkProgTrack = VerifyProgressTrack()
+
+    '    If tPrev = tCurr OrElse chkProgTrack.pFail Then Return
+
+    '    SetRasterizerState()
+
+    '    With progContext
+
+    '        .OutputMerger.SetDepthStencilState(dsOff)
+
+    '        .OutputMerger.SetBlendState(progSettingsVQ.BlendState)
+
+    '        .OutputMerger.SetTargets(accumRTV)
+
+    '        Dim objMapRes = .MapSubresource(pCB, 0, MapMode.WriteDiscard,
+    '                                         Direct3D11.MapFlags.None)
+    '        Utilities.Write(objMapRes.DataPointer,
+    '                    GetProgCB(tPrev, tCurr))
+
+    '        .UnmapSubresource(pCB, 0)
+
+    '        .VertexShader.Set(pVS)
+    '        .PixelShader.Set(pPS)
+
+    '        .VertexShader.SetConstantBuffer(0, pCB)
+    '        .PixelShader.SetConstantBuffer(0, pCB)
+
+    '        .InputAssembler.PrimitiveTopology = PrimitiveTopology.TriangleList
+
+    '        .Draw(3, 0)
+    '    End With
+
+    '    SetRasterizerState(True)
+    '    lastProgress = tCurr
+    'End Sub
 
     Private Sub RasterizeProgressFull()
         With progContext
@@ -541,13 +565,85 @@ Public Class ProgBarGui_AutoCast
         PrepAbortToken()
         InitiateProgress()
 
-        ProgressTask = StartProgression()
-        Dim objProgStatus = Await ProgressTask
+        ProgressTask = StartProgression(True)
 
-        SetProgressResult(objProgStatus)
+        Using CancelStateReg As CancellationTokenRegistration = CoreDataLib.objCancelState.Register(
+            Sub()
+                ProgressStatus = ProgStatus.Fail
+            End Sub)
 
-        Return True
+            Dim objProgStatus = Await ProgressTask
+
+            SetProgressResult(objProgStatus)
+            Return True
+
+        End Using
+
+
+
     End Function
+
+    Private Function InvokeOnUiAsync(action As Action) As Task
+        Dim tcs As New TaskCompletionSource(Of Boolean)()
+
+        If Me.IsHandleCreated Then
+            Try
+                ' queue on UI thread
+                Me.BeginInvoke(New MethodInvoker(Sub()
+                                                     Try
+                                                         action()
+                                                         tcs.TrySetResult(True)
+                                                     Catch ex As Exception
+                                                         tcs.TrySetException(ex)
+                                                     End Try
+                                                 End Sub))
+            Catch ex As Exception
+                tcs.TrySetException(ex)
+            End Try
+        Else
+            tcs.TrySetCanceled()
+        End If
+
+        Return tcs.Task
+    End Function
+
+    ' --- StartProgression: run the loop on a background thread and marshal GPU work to UI thread ---
+    Private Async Function StartProgression(isN As Boolean) As Task(Of ProgStatus)
+        ResetProgressTimer()
+        ClearAccumToBackground()
+
+        ' Run the progression loop on the thread pool so it doesn't capture UI context
+        Dim finalStatus As ProgStatus = Await Task.Run(Function() As ProgStatus
+                                                           ' We run an async-style loop here but inside Task.Run we must block-safely await via .GetAwaiter().GetResult()
+                                                           ' Use a local async runner - keep it simple: run synchronous loop but await async ops with .GetAwaiter().GetResult()
+                                                           Do
+                                                               ' await the async ValidateProgress (we can't use Await inside this lambda easily),
+                                                               ' so call GetAwaiter().GetResult() to block this thread-pool thread (NOT the UI) while the wait completes.
+                                                               Dim ok As Boolean = ValidateProgress().GetAwaiter().GetResult()
+                                                               If Not ok Then Exit Do
+
+                                                               ' CPU-only: compute progress off UI thread
+                                                               CalculateProgress()
+
+                                                               ' GPU actions must run on the UI thread (RasterizeProgress / CaptureTexture / RenderFrame)
+                                                               ' Marshal a minimal action to the UI and wait for it to complete
+                                                               InvokeOnUiAsync(Sub()
+                                                                                   ' keep the UI work minimal and synchronous
+                                                                                   RasterizeProgress(CSng(ProgressValue))
+                                                                                   CaptureTexture()
+                                                                                   RenderFrame(True, True)
+                                                                               End Sub).GetAwaiter().GetResult()
+
+                                                               ' small cooperative delay to avoid tight spin on the thread-pool thread
+                                                               Threading.Thread.Sleep(1)
+                                                           Loop
+
+                                                           Return ProgressStatus
+                                                       End Function).ConfigureAwait(False)
+
+        Return finalStatus
+    End Function
+
 
     Private Async Function StartProgression() As Task(Of ProgStatus)
         ResetProgressTimer()
@@ -570,20 +666,37 @@ Public Class ProgBarGui_AutoCast
     End Sub
 
     Private Async Function ValidateProgress() As Task(Of Boolean)
+
         Dim objCheckResult As Boolean = True
 
         If evLatency <> IntPtr.Zero Then
             Dim signaled = (WaitForSingleObjectEx(evLatency, 0, False) = WAIT_OBJECT_0)
             If Not signaled Then
                 Await evLatency.AwaitSignalAsync().ConfigureAwait(False)
+
             End If
         Else
-            Await Task.Yield()
+            ' DO NOT use Task.Yield here
+            Await ProgressDelay(1).ConfigureAwait(False)
         End If
 
         ProgStatusCheck(objCheckResult)
-
         Return objCheckResult
+
+        'Dim objCheckResult As Boolean = True
+
+        'If evLatency <> IntPtr.Zero Then
+        '    Dim signaled = (WaitForSingleObjectEx(evLatency, 0, False) = WAIT_OBJECT_0)
+        '    If Not signaled Then
+        '        Await evLatency.AwaitSignalAsync()
+        '    End If
+        'Else
+        '    Await Task.Yield()
+        'End If
+
+        'ProgStatusCheck(objCheckResult)
+
+        'Return objCheckResult
     End Function
 
     Private Sub InitiateProgress()
@@ -623,7 +736,7 @@ Public Class ProgBarGui_AutoCast
 
     Private Sub TerminateProgressTask()
         If ProgressTask IsNot Nothing Then
-            ProgressTask.Wait()
+            'ProgressTask.Wait()
             ProgressTask = Nothing
         End If
     End Sub
@@ -679,14 +792,13 @@ Public Class ProgBarGui_AutoCast
         If VerifyProgStatus() Then
             chkResult = True
         Else
-            If _extToken.IsCancellationRequested Then ProgressStatus = ProgStatus.Fail
+            '   If _extToken.IsCancellationRequested Then ProgressStatus = ProgStatus.Fail
             chkResult = False
         End If
     End Sub
 
     Private Function VerifyProgStatus() As Boolean
-        If ProgressStatus <> ProgStatus.Running OrElse
-            _extToken.IsCancellationRequested OrElse ProgressCompleteEvent.IsSet Then
+        If ProgressStatus <> ProgStatus.Running OrElse ProgressCompleteEvent.IsSet Then
             Return False
         Else
             Return True
@@ -831,12 +943,13 @@ Public Class ProgBarGui_AutoCast
     End Sub
 
     Private Sub SetViewportToBar()
-        progContext.Rasterizer.SetViewport(New osViewPort With {
-                                               .X = ProgressTrack.Left, .Y = 0,
-                                               .Width = Math.Max(1, ProgressTrack.GetWidth()),
-                                               .Height = Math.Max(1, ProgressTrack.Bottom),
-                                               .MinDepth = 0.0F, .MaxDepth = 1.0F
-                                           })
+        progContext.Rasterizer.
+            SetViewport(New osViewPort With {
+                .X = ProgressTrack.Left, .Y = 0,
+                .Width = Math.Max(1, ProgressTrack.GetWidth()),
+                .Height = Math.Max(1, ProgressTrack.Bottom),
+                .MinDepth = 0.0F, .MaxDepth = 1.0F
+            })
 
         SetRasterizerState()
     End Sub
@@ -854,14 +967,16 @@ Public Class ProgBarGui_AutoCast
 
     Private Sub SetRasterizerState(Optional doClear As Boolean = False)
         Dim pFeather As Integer = 1
+        Dim pT = ProgressTrack
 
-        With ProgressTrack
+        With progContext.Rasterizer
             If doClear Then
-                progContext.Rasterizer.State = Nothing
+                .State = Nothing
             Else
-                progContext.Rasterizer.State = osProgScissorState
-                progContext.Rasterizer.SetScissorRectangle(.Left - pFeather, .Top - pFeather,
-                                                           .Right + pFeather, .Bottom + pFeather)
+                .State = osProgScissorState
+
+                .SetScissorRectangle(pT.Left - pFeather, pT.Top - pFeather,
+                                     pT.Right + pFeather, pT.Bottom + pFeather)
             End If
         End With
     End Sub
@@ -904,7 +1019,7 @@ Public Class ProgBarGui_AutoCast
 
     Private Function GenerateSwapChainDesc() As SwapChainDescription1
         Return New SwapChainDescription1 With {
-            .Width = Math.Max(1, ProgressWidth), .Height = Math.Max(1, ProgressHeight), .BufferCount = 2,
+            .Width = Math.Max(1, ProgressWidth), .Height = Math.Max(1, ProgressHeight), .BufferCount = 3,
             .Format = osFormat.B8G8R8A8_UNorm, .Usage = Usage.RenderTargetOutput, .Scaling = Scaling.None,
             .SampleDescription = New SampleDescription(1, 0), .SwapEffect = SwapEffect.FlipSequential,
             .AlphaMode = AlphaMode.Ignore, .Flags = SwapChainFlags.FrameLatencyWaitAbleObject
@@ -990,58 +1105,80 @@ Public Class ProgBarGui_AutoCast
     End Sub
 
     Private Sub ObjectDump(Optional fullDump As Boolean = False)
-        progMsg_Config.SafeDispose()
-        progBrush_Text.SafeDispose()
-        progBrush_BG.SafeDispose()
-        progBrush_Active.SafeDispose()
-        progTarget.SafeDispose()
 
-        'pCB.SafeDispose()
-        'pVS.SafeDispose()
+        progTarget?.Dispose()
+        accumRTV?.Dispose()
+        accumTex?.Dispose()
+        progRTV?.Dispose()
 
-        If progContext IsNot Nothing Then
-            progContext.OutputMerger.SetTargets(CType(Nothing, RenderTargetView))
-        End If
+        progSwapChain2?.Dispose()
+        progSwapChain1?.Dispose()
 
-        progRTV.SafeDispose()
-
-        If fullDump Then
-            If progSwapChain2 IsNot Nothing Then
-                evLatency = IntPtr.Zero
-                progSwapChain2.SafeDispose()
-            End If
-
-            If progSwapChain1 IsNot Nothing Then
-                progSwapChain1.SafeDispose()
-            End If
-
-            progSwapChain.SafeDispose()
-        End If
-
-        If progContext IsNot Nothing Then
-            progContext.ClearState()
-            progContext.Flush()
-        End If
-
-        bsPremul?.Dispose()
-        bsOpaqueRGB?.Dispose()
         bsOpaque?.Dispose()
         dsOff?.Dispose()
-        rsScissor?.Dispose()
+        osProgScissorState?.Dispose()
 
-        progSettingsVQ = Nothing
-
-        Try
-            Using dxgiDev3 = progDevice.QueryInterface(Of SharpDX.DXGI.Device3)()
-                dxgiDev3.Trim()
-            End Using
-        Catch ex As Exception
-            Debug.WriteLine($"[ObjectDump2] {ex.Source}")
-        End Try
+        ' ❌ REMOVED — THESE CAUSED GPU STALLS
+        ' progContext.ClearState()
+        ' progContext.Flush()
 
         GC.Collect()
         GC.WaitForPendingFinalizers()
     End Sub
+
+    'Private Sub ObjectDump(Optional fullDump As Boolean = False)
+    '    progMsg_Config.SafeDispose()
+    '    progBrush_Text.SafeDispose()
+    '    progBrush_BG.SafeDispose()
+    '    progBrush_Active.SafeDispose()
+    '    progTarget.SafeDispose()
+
+    '    'pCB.SafeDispose()
+    '    'pVS.SafeDispose()
+
+    '    If progContext IsNot Nothing Then
+    '        progContext.OutputMerger.SetTargets(CType(Nothing, RenderTargetView))
+    '    End If
+
+    '    progRTV.SafeDispose()
+
+    '    If fullDump Then
+    '        If progSwapChain2 IsNot Nothing Then
+    '            evLatency = IntPtr.Zero
+    '            progSwapChain2.SafeDispose()
+    '        End If
+
+    '        If progSwapChain1 IsNot Nothing Then
+    '            progSwapChain1.SafeDispose()
+    '        End If
+
+    '        progSwapChain.SafeDispose()
+    '    End If
+
+    '    If progContext IsNot Nothing Then
+    '        progContext.ClearState()
+    '        progContext.Flush()
+    '    End If
+
+    '    bsPremul?.Dispose()
+    '    bsOpaqueRGB?.Dispose()
+    '    bsOpaque?.Dispose()
+    '    dsOff?.Dispose()
+    '    rsScissor?.Dispose()
+
+    '    progSettingsVQ = Nothing
+
+    '    Try
+    '        Using dxgiDev3 = progDevice.QueryInterface(Of SharpDX.DXGI.Device3)()
+    '            dxgiDev3.Trim()
+    '        End Using
+    '    Catch ex As Exception
+    '        Debug.WriteLine($"[ObjectDump2] {ex.Source}")
+    '    End Try
+
+    '    GC.Collect()
+    '    GC.WaitForPendingFinalizers()
+    'End Sub
 
     Protected Overrides Sub OnShown(e As EventArgs)
         MyBase.OnShown(e)

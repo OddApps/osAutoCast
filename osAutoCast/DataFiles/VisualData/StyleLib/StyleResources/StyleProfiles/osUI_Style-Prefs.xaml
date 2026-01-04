@@ -1,11 +1,17 @@
 ﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:local="clr-namespace:osAutoCast" 
-                    xmlns:osPrefs="clr-namespace:osAutoCast.osPrefLib" xmlns:osStyle="clr-namespace:osAutoCast.osStyle"
-                    xmlns:osEffects="clr-namespace:osAutoCast.osEffectManager" xmlns:sys="clr-namespace:System;assembly=mscorlib">
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:osEffects="clr-namespace:osAutoCast.osEffectManager"
+                    xmlns:osCtrl="clr-namespace:osAutoCast.osControls" xmlns:local="clr-namespace:osAutoCast" 
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
     
     <osEffects:TexelSizeConverter x:Key="TexelSizeConverter" />
 
     <Style x:Key="osPrefsStyle" TargetType="{x:Type Window}">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="ResizeMode" Value="NoResize" />
+        <Setter Property="ShowActivated" Value="False" />
+        <Setter Property="SizeToContent" Value="Width" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
         <Style.Resources>
             <Storyboard x:Key="osPrefsVis_Disp">
                 <DoubleAnimation Storyboard.TargetName="osPrefsMainContainer"
@@ -14,7 +20,7 @@
                                  Duration="{StaticResource osPrefsDuration_OpenOpacity}"
                                  From="0" To="1" FillBehavior="HoldEnd">
                     <DoubleAnimation.EasingFunction>
-                        <QuadraticEase EasingMode="EaseOut" />
+                        <QuadraticEase EasingMode="EaseIn" />
                     </DoubleAnimation.EasingFunction>
                 </DoubleAnimation>
                 <DoubleAnimation Storyboard.TargetName="osPrefsTitlePanel" 
@@ -29,7 +35,7 @@
                                  Duration="{StaticResource osPrefsDuration_OpenScaleX}"
                                  From="0.025" To="1" FillBehavior="HoldEnd">
                     <DoubleAnimation.EasingFunction>
-                        <QuadraticEase EasingMode="EaseOut" />
+                        <QuadraticEase EasingMode="EaseInOut" />
                     </DoubleAnimation.EasingFunction>
                 </DoubleAnimation>
                 <DoubleAnimation x:Name="osPrefExpandVis" 
@@ -37,9 +43,9 @@
                                  Storyboard.TargetProperty="Height" 
                                  BeginTime="{StaticResource osPrefsStartTime_ExpandHeight}"
                                  Duration="{StaticResource osPrefsDuration_ExpandHeight}" 
-                                 From="1" FillBehavior="HoldEnd">
+                                 From="0" FillBehavior="HoldEnd">
                     <DoubleAnimation.EasingFunction>
-                        <BackEase  Amplitude="0.28" />
+                        <local:osPrefExpandEase EasingMode="EaseIn" />
                     </DoubleAnimation.EasingFunction>
                 </DoubleAnimation>
                 <DoubleAnimation  Storyboard.TargetName="BottomContainer"
@@ -54,8 +60,8 @@
             </Storyboard>
             <Storyboard x:Key="osPrefsVis_Close">
                 <DoubleAnimation Storyboard.TargetName="osPrefsMainContainer" 
-                                 Storyboard.TargetProperty="Opacity" BeginTime="00:00:0.750"
-                                 From="1" To="0" Duration="0:0:0.525"
+                                 Storyboard.TargetProperty="Opacity" BeginTime="00:00:0.850"
+                                 From="1" To="0" Duration="0:0:0.575"
                                  FillBehavior="HoldEnd">
                     <DoubleAnimation.EasingFunction>
                         <QuadraticEase EasingMode="EaseOut" />
@@ -63,21 +69,21 @@
                 </DoubleAnimation>
                 <DoubleAnimation Storyboard.TargetName="osPrefsTitlePanel" 
                                  Storyboard.TargetProperty="Opacity" BeginTime="00:00:0.00"
-                                 From="0" To="1" Duration="00:00:0.750"
+                                 From="0" To="1" Duration="00:00:0.550"
                                  FillBehavior="HoldEnd">
                 </DoubleAnimation>
                 <DoubleAnimation 
                                  Storyboard.TargetName="BottomContainer"
                                  Storyboard.TargetProperty="Height" To="0"
-                                 BeginTime="00:00:00" Duration="00:00:0.725" 
+                                 BeginTime="00:00:00" Duration="00:00:0.750" 
                                  FillBehavior="HoldEnd">
                     <DoubleAnimation.EasingFunction>
                         <QuadraticEase EasingMode="EaseInOut" />
                     </DoubleAnimation.EasingFunction>
                 </DoubleAnimation>
                 <DoubleAnimation Storyboard.TargetName="osPrefsOutlineRender" 
-                                 Storyboard.TargetProperty="ScaleX"  BeginTime="00:00:0.750" 
-                                 From="1" To="0" Duration="0:0:0.525"
+                                 Storyboard.TargetProperty="ScaleX"  BeginTime="00:00:0.850" 
+                                 From="1" To="0" Duration="0:0:0.575"
                                  FillBehavior="HoldEnd">
                     <DoubleAnimation.EasingFunction>
                         <QuadraticEase EasingMode="EaseOut" />
@@ -87,48 +93,31 @@
         </Style.Resources>
     </Style>
 
-    <Style x:Key="osPrefsContentContainerStyle" TargetType="{x:Type Border}">
-        <Setter Property="Background" Value="#FF3C3C3C" />
-        <Setter Property="ClipToBounds" Value="False"/>
-        <Setter Property="CacheMode" Value="BitmapCache"/>
-        <Setter Property="RenderOptions.BitmapScalingMode" Value="LowQuality"/>
-    </Style>
-
-    <Style x:Key="osPrefsContainerOutlineStyle" TargetType="{x:Type Grid}">
-        <Setter Property="Background" Value="#FF3C3C3C" />
-        <Setter Property="Opacity" Value="1"/>
-        <Setter Property="Margin" Value="2"/>
-        <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
-        <Setter Property="CacheMode" Value="BitmapCache"/>
-        <Setter Property="RenderOptions.BitmapScalingMode" Value="LowQuality"/>
-    </Style>
-
-    <Style x:Key="osPrefsMainContainerStyle" TargetType="{x:Type osStyle:osBorder}">
-        <Setter Property="Width" Value="272" />
-        <Setter Property="HorizontalAlignment" Value="Center"/>
-        <Setter Property="VerticalAlignment" Value="Center"/>    
+    <Style x:Key="osPrefsMainContainerStyle" TargetType="{x:Type osCtrl:osBorder}">
+        <Setter Property="Width" Value="268" />
+        <Setter Property="HorizontalAlignment" Value="Center" />
+        <Setter Property="VerticalAlignment" Value="Center" />    
         <Setter Property="BorderBrush" Value="#FF0A0A0A" />
         <Setter Property="Background" Value="#FF3C3C3C" />
-        <Setter Property="BorderThickness" Value="6" />
+        <Setter Property="BorderThickness" Value="8" />
         <Setter Property="CornerRadius" Value="12" />
-        <Setter Property="Opacity" Value="0"/>
-        <Setter Property="Margin" Value="2"/>
-        <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>    
-        <Setter Property="CacheMode" Value="BitmapCache"/>
-        <Setter Property="RenderOptions.BitmapScalingMode" Value="LowQuality"/>
+        <Setter Property="Opacity" Value="0" />
+        <Setter Property="Margin" Value="2" />
+        <Setter Property="RenderTransformOrigin" Value="0.5,0.5" />    
+        <Setter Property="CacheMode" Value="BitmapCache" />
+        <Setter Property="RenderOptions.BitmapScalingMode" Value="LowQuality" />
     </Style>
 
     <DataTemplate x:Key="osEffectPrefsText" DataType="{x:Type sys:String}">
         <Border>
             <Border.Effect>
                 <osEffects:osEffect_Stroke x:Name="btnPrefsStroke" Thickness="{StaticResource osEffect_PrefStrokeThickness}"
-                Spread="{StaticResource osEffect_PrefStrokeSpread}" Fade="{StaticResource osEffect_PrefStrokeFade}"
-                StrokeColor="{StaticResource osEffect_PrefStrokeColor}"
-                StrokeStrength="{StaticResource osEffect_PrefStroke}">
+                                           Spread="{StaticResource osEffect_PrefStrokeSpread}" Fade="{StaticResource osEffect_PrefStrokeFade}"
+                                           StrokeColor="{StaticResource osEffect_PrefStrokeColor}" StrokeStrength="{StaticResource osEffect_PrefStroke}">
                     <osEffects:osEffect_Stroke.TexelSize>
                         <MultiBinding Converter="{StaticResource TexelSizeConverter}">
-                            <Binding ElementName="btnPrefsContent" Path="ActualWidth"/>
-                            <Binding ElementName="btnPrefsContent" Path="ActualHeight"/>
+                            <Binding ElementName="btnPrefsContent" Path="ActualWidth" />
+                            <Binding ElementName="btnPrefsContent" Path="ActualHeight" />
                         </MultiBinding>
                     </osEffects:osEffect_Stroke.TexelSize>
                 </osEffects:osEffect_Stroke>
@@ -137,12 +126,12 @@
                        TextOptions.TextRenderingMode="ClearType" Foreground="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}">
                 <TextBlock.Effect>
                     <osEffects:osEffect_Glow x:Name="btnPrefsGlow" Thickness="{StaticResource osEffect_PrefGlowThickness}"
-                        Fade="{StaticResource osEffect_PrefGlowFade}"
-                        GlowColor="{StaticResource osEffect_PrefGlowColor}" GlowStrength="{StaticResource osEffect_PrefGlowRadius}">
+                                             Fade="{StaticResource osEffect_PrefGlowFade}" GlowColor="{StaticResource osEffect_PrefGlowColor}"
+                                             GlowStrength="{StaticResource osEffect_PrefGlowRadius}">
                         <osEffects:osEffect_Glow.TexelSize>
                             <MultiBinding Converter="{StaticResource TexelSizeConverter}">
-                                <Binding ElementName="btnPrefsContent" Path="ActualWidth"/>
-                                <Binding ElementName="btnPrefsContent" Path="ActualHeight"/>
+                                <Binding ElementName="btnPrefsContent" Path="ActualWidth" />
+                                <Binding ElementName="btnPrefsContent" Path="ActualHeight" />
                             </MultiBinding>
                         </osEffects:osEffect_Glow.TexelSize>
                     </osEffects:osEffect_Glow>
@@ -157,10 +146,10 @@
                         <Storyboard>
                             <DoubleAnimation Storyboard.TargetName="btnPrefsGlow"
                                              Storyboard.TargetProperty="Fade"
-                                             To="1" Duration="0:0:0.15"/>
+                                             To="1" Duration="0:0:0.1" />
                             <DoubleAnimation Storyboard.TargetName="btnPrefsStroke"
                                              Storyboard.TargetProperty="Fade"
-                                             To="1" Duration="0:0:0.15"/>
+                                             To="1" Duration="0:0:0.1" />
                         </Storyboard>
                     </BeginStoryboard>
                 </DataTrigger.EnterActions>
@@ -169,10 +158,10 @@
                         <Storyboard>
                             <DoubleAnimation Storyboard.TargetName="btnPrefsGlow"
                                              Storyboard.TargetProperty="Fade"
-                                             To="0" Duration="0:0:0.15"/>
+                                             To="0" Duration="0:0:0.15" />
                             <DoubleAnimation Storyboard.TargetName="btnPrefsStroke"
                                              Storyboard.TargetProperty="Fade"
-                                             To="0" Duration="0:0:0.15"/>
+                                             To="0" Duration="0:0:0.15" />
                         </Storyboard>
                     </BeginStoryboard>
                 </DataTrigger.ExitActions>
@@ -186,8 +175,8 @@
         <Setter Property="Padding" Value="4" />
         <Setter Property="FontSize" Value="20" />
         <Setter Property="FontWeight" Value="Bold" />
-        <Setter Property="VerticalAlignment" Value="Center"/>
-        <Setter Property="VerticalContentAlignment" Value="Top"/>
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Top" />
         <Setter Property="ContentTemplate" Value="{StaticResource osEffectPrefsText}" />
         <Setter Property="Template">
             <Setter.Value>
@@ -203,10 +192,10 @@
 
     <LinearGradientBrush x:Key="GroupBoxFadeBorderBrush"
                          StartPoint="0,0" EndPoint="1,0">
-        <GradientStop Color="#00000000" Offset="0.0"/>
-        <GradientStop Color="#57060606" Offset="0.3"/>
-        <GradientStop Color="#57060606" Offset="0.7"/>
-        <GradientStop Color="#00000000" Offset="1.0"/>
+        <GradientStop Color="#00000000" Offset="0.0" />
+        <GradientStop Color="#57060606" Offset="0.3" />
+        <GradientStop Color="#57060606" Offset="0.7" />
+        <GradientStop Color="#00000000" Offset="1.0" />
     </LinearGradientBrush>
 
     <Style x:Key="osPrefsSettingsContainerStyle" TargetType="{x:Type Grid}">
@@ -214,27 +203,52 @@
     </Style>
 
     <Style x:Key="UpDownRepeatButtonStyle" TargetType="RepeatButton">
-        <Setter Property="Background" Value="#FFA1A1A1"/>
-        <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="Focusable" Value="False"/>
-        <Setter Property="IsTabStop" Value="False"/>
-        <Setter Property="FontSize" Value="9"/>
+        <Setter Property="Background" Value="#FFA1A1A1" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Focusable" Value="False" />
+        <Setter Property="IsTabStop" Value="False" />
+        <Setter Property="FontSize" Value="9" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="RepeatButton">
                     <Border x:Name="Border" Background="{TemplateBinding Background}">
-                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                     </Border>
                     <ControlTemplate.Triggers>
                         <!-- Mouse Over -->
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="Border" Property="Background"
-                                    Value="#FF575757"/>
+                                    Value="#FF575757" />
                         </Trigger>
                         <!-- PRESSED -->
                         <Trigger Property="IsPressed" Value="True">
                             <Setter TargetName="Border" Property="Background"
-                                    Value="#FFc4c4c4"/>
+                                    Value="#FFc4c4c4" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="VisQDropDownBtnStyle" TargetType="{x:Type ToggleButton}">
+        <Setter Property="Background" Value="#FFa1a1a1" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type ToggleButton}">
+                    <Border x:Name="Border" Background="{TemplateBinding Background}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <!-- Mouse Over -->
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Border" Property="Background"
+                                    Value="#FF575757" />
+                        </Trigger>
+                        <!-- PRESSED -->
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Border" Property="Background"
+                                    Value="#FFc4c4c4" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -248,8 +262,8 @@
         <Setter Property="Margin" Value="8,6,8,6" />
         <Setter Property="FontSize" Value="18" />
         <Setter Property="FontWeight" Value="Bold" />
-        <Setter Property="Padding" Value="0,8"/>
-        <Setter Property="UseLayoutRounding" Value="True"/>
+        <Setter Property="Padding" Value="0,8" />
+        <Setter Property="UseLayoutRounding" Value="True" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type Button}">

@@ -6,12 +6,12 @@
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="/DataFiles/VisualData/StyleLib/StyleResources/StyleConfigs/osUI_StyleSettings.xaml"/>
-                <ResourceDictionary Source="/DataFiles/VisualData/StyleLib/StyleResources/StyleConfigs/osUI_StyleEffects.xaml"/>
-                <ResourceDictionary Source="/DataFiles/VisualData/StyleLib/StyleResources/StyleConfigs/osUI_StyleBase.xaml"/>
-                <ResourceDictionary Source="/DataFiles/VisualData/StyleLib/StyleResources/StyleConfigs/osUI_StyleViews.xaml"/>
-                <ResourceDictionary Source="/DataFiles/VisualData/StyleLib/StyleResources/StyleConfigs/osUI_StyleIndex.xaml"/>
-                <ResourceDictionary Source="/DataFiles/VisualData/StyleLib/StyleResources/StyleConfigs/osUI_ControlElements.xaml"/>
+                <ResourceDictionary Source="/DataFiles/VisualData/StyleLib/StyleResources/StyleConfigs/osUI_StyleSettings.xaml" />
+                <ResourceDictionary Source="/DataFiles/VisualData/StyleLib/StyleResources/StyleConfigs/osUI_StyleEffects.xaml" />
+                <ResourceDictionary Source="/DataFiles/VisualData/StyleLib/StyleResources/StyleConfigs/osUI_StyleBase.xaml" />
+                <ResourceDictionary Source="/DataFiles/VisualData/StyleLib/StyleResources/StyleConfigs/osUI_StyleViews.xaml" />
+                <ResourceDictionary Source="/DataFiles/VisualData/StyleLib/StyleResources/StyleConfigs/osUI_StyleIndex.xaml" />
+                <ResourceDictionary Source="/DataFiles/VisualData/StyleLib/StyleResources/StyleConfigs/osUI_ControlElements.xaml" />
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Application.Resources>

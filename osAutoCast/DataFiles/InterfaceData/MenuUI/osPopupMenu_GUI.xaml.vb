@@ -151,9 +151,13 @@ Public Class osPopupMenu_GUI
             Case aniOpen
                 setBitMapMode = BitmapScalingMode.HighQuality
                 setCacheMode = Nothing
+
+                RenderOptions.SetEdgeMode(objContainer, EdgeMode.Unspecified)
             Case aniClose
                 setBitMapMode = BitmapScalingMode.LowQuality
                 setCacheMode = New BitmapCache()
+
+                RenderOptions.SetEdgeMode(objContainer, EdgeMode.Aliased)
         End Select
 
         objContainer.CacheMode = setCacheMode

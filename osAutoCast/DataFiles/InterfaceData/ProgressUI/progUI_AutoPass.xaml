@@ -1,0 +1,33 @@
+﻿<Window x:Class="progUI_AutoPass" x:Name="progUIAutoPass" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" Topmost="True"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" SizeToContent="WidthAndHeight" SnapsToDevicePixels="True"
+        xmlns:osCtrl="clr-namespace:osAutoCast.osControls" xmlns:ospreflib="clr-namespace:osAutoCast.osPrefLib"
+        d:DataContext="{d:DesignInstance Type=ospreflib:osPreferenceLib}" mc:Ignorable="d" Background="Transparent" Title="" WindowStyle="None"
+        WindowStartupLocation="CenterScreen" UseLayoutRounding="True" ResizeMode="NoResize" AllowsTransparency="True">
+    
+    <Window.DataContext>
+        <ospreflib:osPreferenceLib/>
+    </Window.DataContext>
+
+    <osCtrl:osBorder x:Name="osPrefsMainContainer2" CornerRadius="12" BorderThickness="4" MinWidth="288" Height="{Binding MainOpts_apUiH}"
+                     Opacity="1" BorderBrush="#101010" Margin="0" Width="{Binding MainOpts_apUiW}" MinHeight="70"
+                     ClipInflation="1" VerticalAlignment="Center">
+        <Border Background="#FF9E9E9E" Width="NaN" Height="NaN">
+            <Grid x:Name="grid">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="28" />
+                </Grid.RowDefinitions>
+                <Label Content="AutoPass"  FontFamily="Trebuchet MS" Grid.Row="0" TextBlock.LineStackingStrategy="BlockLineHeight"
+                       FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" TextBlock.LineHeight="22"
+                       VerticalContentAlignment="Center" HorizontalContentAlignment="Center" />
+                <osCtrl:osProgressBar x:Name="OddProgBar_AP" Minimum="0" Maximum="100" MinHeight="28" MinWidth="280"
+                                      Height="{Binding MainOpts_apProgH}" IsAutoPass="True" TrackBrush="#FF393939" Progress="0"
+                                      VerticalAlignment="Bottom" SnapsToDevicePixels="True"  Grid.Row="1"
+                                      BorderBrush="#FF060606" BorderThickness="0,2,0,0" Width="{Binding MainOpts_apProgW}"
+                                      UseLayoutRounding="True" RenderOptions.BitmapScalingMode="LowQuality" />
+            </Grid>
+        </Border>
+    </osCtrl:osBorder>
+    
+</Window>

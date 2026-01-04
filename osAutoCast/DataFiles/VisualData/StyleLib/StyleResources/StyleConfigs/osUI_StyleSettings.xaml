@@ -4,8 +4,8 @@
                     xmlns:VisSettings="clr-namespace:osAutoCast.osVisConfigSettings"
                     xmlns:oscolor="clr-namespace:System.Windows.Media;assembly=PresentationCore">
 
-    <local:osEnabledStatusConfig x:Key="osEnabledStatusConfig"/>
-    <osPrefs:osPreferenceLib x:Key="osPrefConfig"/>
+    <local:osEnabledStatusConfig x:Key="osEnabledStatusConfig" />
+    <osPrefs:osPreferenceLib x:Key="osPrefConfig" />
     
     <!-- ** Load Screen Settings ** -->
 
@@ -150,20 +150,20 @@
 
     <!-- [ osPrefs Timing ] -->
 
-    <VisSettings:osPrefVisDuration x:Key="osPrefsDuration_OpenOpacity" visDur="800" />
+    <VisSettings:osPrefVisDuration x:Key="osPrefsDuration_OpenOpacity" visDur="700" />
     <VisSettings:osPrefVisStartTime x:Key="osPrefsStartTime_OpenOpacity" visStartTime="0" />
 
-    <VisSettings:osPrefVisDuration x:Key="osPrefsDuration_OpenScaleX" visDur="650" />
-    <VisSettings:osPrefVisStartTime x:Key="osPrefsStartTime_OpenScaleX" visStartTime="150" />
+    <VisSettings:osPrefVisDuration x:Key="osPrefsDuration_OpenScaleX" visDur="600" />
+    <VisSettings:osPrefVisStartTime x:Key="osPrefsStartTime_OpenScaleX" visStartTime="100" />
 
-    <VisSettings:osPrefVisDuration x:Key="osPrefsDuration_OpenTitle" visDur="985" />
-    <VisSettings:osPrefVisStartTime x:Key="osPrefsStartTime_OpenTitle" visStartTime="850" />
+    <VisSettings:osPrefVisDuration x:Key="osPrefsDuration_OpenTitle" visDur="400" />
+    <VisSettings:osPrefVisStartTime x:Key="osPrefsStartTime_OpenTitle" visStartTime="1200" />
 
-    <VisSettings:osPrefVisDuration x:Key="osPrefsDuration_ExpandOpacity" visDur="985" />
-    <VisSettings:osPrefVisStartTime x:Key="osPrefsStartTime_ExpandOpacity" visStartTime="850" />
+    <VisSettings:osPrefVisDuration x:Key="osPrefsDuration_ExpandOpacity" visDur="800" />
+    <VisSettings:osPrefVisStartTime x:Key="osPrefsStartTime_ExpandOpacity" visStartTime="800" />
 
-    <VisSettings:osPrefVisDuration x:Key="osPrefsDuration_ExpandHeight" visDur="985" />
-    <VisSettings:osPrefVisStartTime x:Key="osPrefsStartTime_ExpandHeight" visStartTime="850" />    
+    <VisSettings:osPrefVisDuration x:Key="osPrefsDuration_ExpandHeight" visDur="800" />
+    <VisSettings:osPrefVisStartTime x:Key="osPrefsStartTime_ExpandHeight" visStartTime="800" />    
 
     <!-- [ osPrefs Easings ] -->
 

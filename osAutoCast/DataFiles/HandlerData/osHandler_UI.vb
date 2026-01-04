@@ -133,6 +133,13 @@ Public NotInheritable Class osHandler_UI
         End Get
     End Property
 
+    Private Shared _autoPass2 As Lazy(Of progUI_AutoPass)
+    Public Shared ReadOnly Property osGui_AutoPass2 As progUI_AutoPass
+        Get
+            Return _autoPass2.Value
+        End Get
+    End Property
+
     Private Shared _autoCastProgress As ProgBarGui_AutoCast
     Public Shared ReadOnly Property osGui_AutoCastProgress As ProgBarGui_AutoCast
         Get
@@ -250,13 +257,13 @@ Public NotInheritable Class osHandler_UI
     End Sub
 
     Public Shared Sub PrepDispatch(sender As Object, e As EventArgs)
-        Dim osPopupMenu = TryCast(sender, osPopupMenu_GUI)
+        Dim objOsPopupMenu = TryCast(sender, osPopupMenu_GUI)
         Dim osPopupMenuOverlay = osPopupMenuOverlayN
 
-        DisposeUI_PopupMenu.Invoke(osPopupMenu)
+        DisposeUI_PopupMenu.Invoke(objOsPopupMenu)
         DisposeUI_PopupMenuOverlay.Invoke(osPopupMenuOverlay)
 
-        ClearHandlers(osPopupMenu, osPopupMenuOverlay)
+        ClearHandlers(objOsPopupMenu, osPopupMenuOverlay)
 
         _osPopupMenuN = Nothing
         _osPopupMenuOverlayN = Nothing
@@ -294,19 +301,26 @@ Public NotInheritable Class osHandler_UI
                 End Function, LazyThreadSafetyMode.ExecutionAndPublication))
     End Function
 
+    Public Shared Async Function CreateUI_AutoPass() As Task
+        _autoPass2 = Await Task.Run(
+            Function() New Lazy(Of progUI_AutoPass)(
+                Function()
+                    Return PrepDispatcher().
+                        Invoke(Function()
+                                   Dim objPrefWin As New progUI_AutoPass()
+                                   objPrefWin.PrepAutoPass()
+
+                                   Return objPrefWin
+                               End Function, DispatcherPriority.Background)
+                End Function, LazyThreadSafetyMode.ExecutionAndPublication))
+    End Function
+
     Public Shared Async Function LaunchGui(progGui As TriggerAction) As Task
         Select Case progGui
             Case TriggerAutoCast
                 GenerateGUI(progGui)
             Case TriggerAutoPass
-                Dim guiTask = PrepDispatcher().InvokeAsync(
-                    Sub()
-                        GenerateGUI(progGui)
-                        Dim guiReset = _autoPass.Value
-
-                        guiReset.BeginPrep()
-                    End Sub)
-                Await guiTask
+                Await CreateUI_AutoPass()
             Case TriggerShowMenu
                 Await GeneratePopupMenu()
             Case TriggerShowTrayMenu
@@ -322,12 +336,13 @@ Public NotInheritable Class osHandler_UI
                         osGui_AutoCastProgress.InitiateAutoCast()
                     End Sub)
             Case TriggerType.AutoPass
-                osGui_AutoPass.Dispatcher.Invoke(
+                osGui_AutoPass2.Dispatcher.Invoke(
                     Sub()
                         osFuncLib_Progress.UpdateProgStatus(TriggerAutoPass, ProgAction.Activate)
-                        CoreDataLib.ProcessProgressEvent(ProgMode_AutoPass, ProgEvent.DispMsg, "Release Mouse To Begin")
+                        '   CoreDataLib.ProcessProgressEvent(ProgMode_AutoPass, ProgEvent.DispMsg, "Release Mouse To Begin")
 
-                        osGui_AutoPass.Show()
+                        osHandler_UI.osGui_AutoPass2.apHandler._DisplayTextFunc("Release Mouse To Begin")
+                        osGui_AutoPass2.Show()
                     End Sub)
             Case TriggerType.ShowMenu
             Case TriggerType.ShowTrayMenu
@@ -461,7 +476,7 @@ Public NotInheritable Class osHandler_UI
         osPopupMenuN.Topmost = True
 
         If KillOwner Then
-            osPopupMenu.Owner = Nothing : End If
+            osPopupMenuN.Owner = Nothing : End If
     End Sub
 
     Private Shared Async Function DisposePopupMenu() As Task
@@ -538,12 +553,12 @@ Public NotInheritable Class osHandler_UI
 
     Public Shared Sub TerminateTrayMenu()
         Try
-            osTrayMenu.Close()
+            osTrayMenuN.Close()
         Catch : End Try
 
-        _osTrayMenu = Nothing
+        _osTrayMenuN = Nothing
 
-        Dim objTask_GenTrayMenu = GenerateTrayMenu(True)
+        Dim objTask_GenTrayMenu = PrepUI_TrayMenuN2()
     End Sub
 
     Public Shared Async Function GeneratePopupMenu() As Task

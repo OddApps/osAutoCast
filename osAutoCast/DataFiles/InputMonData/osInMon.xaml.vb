@@ -86,37 +86,37 @@ Public Class osInMon
     End Function
 
     Private Async Function PerformLoadStep(objLoadStep As LoadStep) As Task
-        With FetchLoadData(objLoadStep)
+        'With FetchLoadData(objLoadStep)
 
-            Dim objTask_UpProg As DispatcherOperation
+        '    Dim objTask_UpProg As DispatcherOperation
 
-            Dim objTask_Load = PrepDispatcher().InvokeAsync(
-                Async Function()
-                    Dim objTask_VisOut = TriggerLoadTextVis(LoadTextFade_Out)
+        '    Dim objTask_Load = PrepDispatcher().InvokeAsync(
+        '        Async Function()
+        '            Dim objTask_VisOut = TriggerLoadTextVis(LoadTextFade_Out)
 
-                    objTask_UpProg = PrepDispatcher().InvokeAsync(
-                        Sub()
-                            objLoadProg.UpdateLoadProgress(.LoadProgStatus)
-                        End Sub, DispatcherPriority.Render)
+        '            objTask_UpProg = PrepDispatcher().InvokeAsync(
+        '                Sub()
+        '                    objLoadProg.UpdateLoadProgress(.LoadProgStatus)
+        '                End Sub, DispatcherPriority.Render)
 
-                    Await TriggerLoadTextVis(LoadTextFade_In, .LoadMsg)
-                End Function, DispatcherPriority.Render)
+        '            Await TriggerLoadTextVis(LoadTextFade_In, .LoadMsg)
+        '        End Function, DispatcherPriority.Render)
 
-            Await EvalDelay(.PreLoadDuration)
+        '    Await EvalDelay(.PreLoadDuration)
 
-            If ChkFinalTask(.LoadProgStatus) Then
-                Await objLoadProg.MonitorLoadProgress() : End If
+        '    If ChkFinalTask(.LoadProgStatus) Then
+        '        Await objLoadProg.MonitorLoadProgress() : End If
 
-            ValidateTaskAndRun(.LoadProcess, objValidTask,
-                               isTaskValid)
+        '    ValidateTaskAndRun(.LoadProcess, objValidTask,
+        '                       isTaskValid)
 
-            If isTaskValid Then
-                Await objValidTask : End If
+        '    If isTaskValid Then
+        '        Await objValidTask : End If
 
-            Await Task.Delay(.LoadDuration)
-            Await objTask_UpProg.Task
+        '    Await Task.Delay(.LoadDuration)
+        '    Await objTask_UpProg.Task
 
-        End With
+        'End With
     End Function
 
     Private Async Function EvalDelay(preDelay As Integer) As Task

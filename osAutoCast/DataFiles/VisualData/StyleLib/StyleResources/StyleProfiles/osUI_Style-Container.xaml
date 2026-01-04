@@ -8,23 +8,23 @@
         <Setter Property="osStyle:osContainerLayout.SeparatorBrush">
                 <Setter.Value>
                 <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                    <GradientStop Color="#00000000" Offset="0.0"/>
-                    <GradientStop Color="#A1060606" Offset="0.3"/>
-                    <GradientStop Color="#A1060606" Offset="0.7"/>
-                    <GradientStop Color="#00000000" Offset="1.0"/>
+                    <GradientStop Color="#00000000" Offset="0.0" />
+                    <GradientStop Color="#A1060606" Offset="0.3" />
+                    <GradientStop Color="#A1060606" Offset="0.7" />
+                    <GradientStop Color="#00000000" Offset="1.0" />
                 </LinearGradientBrush>
             </Setter.Value>
         </Setter>
-        <Setter Property="osStyle:osContainerLayout.SeparatorThickness" Value="2"/>
+        <Setter Property="osStyle:osContainerLayout.SeparatorThickness" Value="2" />
     </Style>
 
     <Style x:Key="MainContentContainerStyle" TargetType="{x:Type Window}">
-        <Setter Property="MinHeight" Value="{Binding popupBoundHeight, Mode=OneTime, ElementName=winPopupMenu}"/>
-        <Setter Property="MinWidth" Value="{Binding popupBoundWidth, Mode=OneTime, ElementName=winPopupMenu}"/>
-        <Setter Property="HorizontalAlignment" Value="Center"/>
-        <Setter Property="VerticalAlignment" Value="Center"/>
-        <Setter Property="HorizontalContentAlignment" Value="Center"/>
-        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="MinHeight" Value="{Binding popupBoundHeight, Mode=OneTime, ElementName=winPopupMenu}" />
+        <Setter Property="MinWidth" Value="{Binding popupBoundWidth, Mode=OneTime, ElementName=winPopupMenu}" />
+        <Setter Property="HorizontalAlignment" Value="Center" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
     </Style>
 
 </ResourceDictionary>

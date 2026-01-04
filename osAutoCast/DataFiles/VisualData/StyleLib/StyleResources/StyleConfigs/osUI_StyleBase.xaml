@@ -12,11 +12,11 @@
         <Setter Property="MinHeight" Value="34" />
         <Setter Property="FontSize" Value="20" />
         <Setter Property="FontWeight" Value="Bold" />
-        <Setter Property="Padding" Value="0,2"/>
-        <Setter Property="HorizontalAlignment" Value="Center"/>
-        <Setter Property="HorizontalContentAlignment" Value="Center"/>
-        <Setter Property="VerticalContentAlignment" Value="Center"/>
-        <Setter Property="UseLayoutRounding" Value="True"/>
+        <Setter Property="Padding" Value="0,2" />
+        <Setter Property="HorizontalAlignment" Value="Center" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="UseLayoutRounding" Value="True" />
         <Setter Property="ContentTemplate" Value="{StaticResource osEffectText}" />
         <Setter Property="Template">
             <Setter.Value>
@@ -47,12 +47,12 @@
         <Setter Property="MinHeight" Value="34" />
         <Setter Property="FontSize" Value="20" />
         <Setter Property="FontWeight" Value="Bold" />
-        <Setter Property="Padding" Value="0,2"/>
-        <Setter Property="BorderThickness" Value="0,0,0,0"/>
-        <Setter Property="HorizontalAlignment" Value="Center"/>
-        <Setter Property="HorizontalContentAlignment" Value="Center"/>
-        <Setter Property="VerticalContentAlignment" Value="Center"/>
-        <Setter Property="UseLayoutRounding" Value="True"/>
+        <Setter Property="Padding" Value="0,2" />
+        <Setter Property="BorderThickness" Value="0,0,0,0" />
+        <Setter Property="HorizontalAlignment" Value="Center" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="UseLayoutRounding" Value="True" />
         <Setter Property="ContentTemplate" Value="{StaticResource osEffectTextToggle}" />
         <Setter Property="Template" Value="{Binding RelativeSource={RelativeSource TemplatedParent},
             Path=(osStyle:osStyles.Template)}" />
@@ -61,7 +61,7 @@
     <Style x:Key="StyleBase_Border" TargetType="{x:Type Border}">
         <Setter Property="BorderBrush" Value="#A1222222" />
         <Setter Property="BorderThickness" Value="0,0,0,0" />
-        <Setter Property="Margin" Value="0"/>
+        <Setter Property="Margin" Value="0" />
     </Style>
 
 </ResourceDictionary>

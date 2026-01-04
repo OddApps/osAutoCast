@@ -15,8 +15,8 @@
                 StrokeStrength="{StaticResource osEffect_Stroke}">
                 <osEffects:osEffect_Stroke.TexelSize>
                     <MultiBinding Converter="{StaticResource TexelSizeConverter}">
-                            <Binding ElementName="btnContent" Path="ActualWidth"/>
-                            <Binding ElementName="btnContent" Path="ActualHeight"/>
+                            <Binding ElementName="btnContent" Path="ActualWidth" />
+                            <Binding ElementName="btnContent" Path="ActualHeight" />
                     </MultiBinding>
                 </osEffects:osEffect_Stroke.TexelSize>
             </osEffects:osEffect_Stroke></Border.Effect>
@@ -31,8 +31,8 @@
                         GlowColor="{StaticResource osEffect_GlowColor}" GlowStrength="{StaticResource osEffect_GlowRadius}">
                         <osEffects:osEffect_Glow.TexelSize>
                             <MultiBinding Converter="{StaticResource TexelSizeConverter}">
-                                <Binding ElementName="btnContent" Path="ActualWidth"/>
-                                <Binding ElementName="btnContent" Path="ActualHeight"/>
+                                <Binding ElementName="btnContent" Path="ActualWidth" />
+                                <Binding ElementName="btnContent" Path="ActualHeight" />
                             </MultiBinding>
                         </osEffects:osEffect_Glow.TexelSize>
                     </osEffects:osEffect_Glow>                    
@@ -46,10 +46,10 @@
                         <Storyboard>
                             <DoubleAnimation Storyboard.TargetName="btnGlow"
                                              Storyboard.TargetProperty="Fade"
-                                             To="1" Duration="0:0:0.25"/>
+                                             To="1" Duration="0:0:0.25" />
                             <DoubleAnimation Storyboard.TargetName="btnStroke"
                                              Storyboard.TargetProperty="Fade"
-                                             To="1" Duration="0:0:0.25"/>
+                                             To="1" Duration="0:0:0.25" />
                         </Storyboard>
                     </BeginStoryboard>
                 </DataTrigger.EnterActions>
@@ -58,10 +58,10 @@
                         <Storyboard>
                             <DoubleAnimation Storyboard.TargetName="btnGlow"
                                              Storyboard.TargetProperty="Fade"
-                                             To="0" Duration="0:0:0.35"/>
+                                             To="0" Duration="0:0:0.35" />
                             <DoubleAnimation Storyboard.TargetName="btnStroke"
                                              Storyboard.TargetProperty="Fade"
-                                             To="0" Duration="0:0:0.35"/>
+                                             To="0" Duration="0:0:0.35" />
                         </Storyboard>
                     </BeginStoryboard>
                 </DataTrigger.ExitActions>
@@ -78,8 +78,8 @@
                 StrokeStrength="{StaticResource osEffect_Stroke}">
                     <osEffects:osEffect_Stroke.TexelSize>
                         <MultiBinding Converter="{StaticResource TexelSizeConverter}">
-                            <Binding ElementName="toggleTxtContent" Path="ActualWidth"/>
-                            <Binding ElementName="toggleTxtContent" Path="ActualHeight"/>
+                            <Binding ElementName="toggleTxtContent" Path="ActualWidth" />
+                            <Binding ElementName="toggleTxtContent" Path="ActualHeight" />
                         </MultiBinding>
                     </osEffects:osEffect_Stroke.TexelSize>
                 </osEffects:osEffect_Stroke>
@@ -96,8 +96,8 @@
                                 GlowStrength="{StaticResource osEffect_GlowRadius}">
                         <osEffects:osEffect_Glow.TexelSize>
                             <MultiBinding Converter="{StaticResource TexelSizeConverter}">
-                                <Binding ElementName="toggleTxtContent" Path="ActualWidth"/>
-                                <Binding ElementName="toggleTxtContent" Path="ActualHeight"/>
+                                <Binding ElementName="toggleTxtContent" Path="ActualWidth" />
+                                <Binding ElementName="toggleTxtContent" Path="ActualHeight" />
                             </MultiBinding>
                         </osEffects:osEffect_Glow.TexelSize>
                     </osEffects:osEffect_Glow>
@@ -111,10 +111,10 @@
                         <Storyboard>
                             <DoubleAnimation Storyboard.TargetName="toggleGlow"
                                              Storyboard.TargetProperty="Fade"
-                                             To="1" Duration="0:0:0.25"/>
+                                             To="1" Duration="0:0:0.25" />
                             <DoubleAnimation Storyboard.TargetName="toggleStroke"
                                              Storyboard.TargetProperty="Fade"
-                                             To="1" Duration="0:0:0.25"/>
+                                             To="1" Duration="0:0:0.25" />
                         </Storyboard>
                     </BeginStoryboard>
                 </DataTrigger.EnterActions>
@@ -123,10 +123,10 @@
                         <Storyboard>
                             <DoubleAnimation Storyboard.TargetName="toggleGlow"
                                              Storyboard.TargetProperty="Fade"
-                                             To="0" Duration="0:0:0.35"/>
+                                             To="0" Duration="0:0:0.35" />
                             <DoubleAnimation Storyboard.TargetName="toggleStroke"
                                              Storyboard.TargetProperty="Fade"
-                                             To="0" Duration="0:0:0.35"/>
+                                             To="0" Duration="0:0:0.35" />
                         </Storyboard>
                     </BeginStoryboard>
                 </DataTrigger.ExitActions>
@@ -143,8 +143,8 @@
                 StrokeStrength="{StaticResource osTrayMenuEffect_Stroke}">
                     <osEffects:osEffect_Stroke.TexelSize>
                         <MultiBinding Converter="{StaticResource TexelSizeConverter}">
-                            <Binding ElementName="traymenuToggleContent" Path="ActualWidth"/>
-                            <Binding ElementName="traymenuToggleContent" Path="ActualHeight"/>
+                            <Binding ElementName="traymenuToggleContent" Path="ActualWidth" />
+                            <Binding ElementName="traymenuToggleContent" Path="ActualHeight" />
                         </MultiBinding>
                     </osEffects:osEffect_Stroke.TexelSize>
                 </osEffects:osEffect_Stroke>
@@ -163,8 +163,8 @@
                                                  GlowStrength="4">
                             <osEffects:osEffect_Glow.TexelSize>
                             <MultiBinding Converter="{StaticResource TexelSizeConverter}">
-                                <Binding ElementName="traymenuToggleContent" Path="ActualWidth"/>
-                                <Binding ElementName="traymenuToggleContent" Path="ActualHeight"/>
+                                <Binding ElementName="traymenuToggleContent" Path="ActualWidth" />
+                                <Binding ElementName="traymenuToggleContent" Path="ActualHeight" />
                             </MultiBinding>
                         </osEffects:osEffect_Glow.TexelSize>
                     </osEffects:osEffect_Glow>
@@ -179,10 +179,10 @@
                         <Storyboard>
                             <DoubleAnimation Storyboard.TargetName="traymenuToggleGlow"
                                              Storyboard.TargetProperty="Fade"
-                                             To="1" Duration="0:0:0.25"/>
+                                             To="1" Duration="0:0:0.25" />
                             <DoubleAnimation Storyboard.TargetName="traymenuToggleStroke"
                                              Storyboard.TargetProperty="Fade"
-                                             To="1" Duration="0:0:0.25"/>
+                                             To="1" Duration="0:0:0.25" />
                         </Storyboard>
                     </BeginStoryboard>
                 </DataTrigger.EnterActions>
@@ -191,10 +191,10 @@
                         <Storyboard>
                             <DoubleAnimation Storyboard.TargetName="traymenuToggleGlow"
                                              Storyboard.TargetProperty="Fade"
-                                             To="0" Duration="0:0:0.35"/>
+                                             To="0" Duration="0:0:0.35" />
                             <DoubleAnimation Storyboard.TargetName="traymenuToggleStroke"
                                              Storyboard.TargetProperty="Fade"
-                                             To="0" Duration="0:0:0.35"/>
+                                             To="0" Duration="0:0:0.35" />
                         </Storyboard>
                     </BeginStoryboard>
                 </DataTrigger.ExitActions>
@@ -211,8 +211,8 @@
                 StrokeStrength="{StaticResource osTrayMenuEffect_Stroke}">
                     <osEffects:osEffect_Stroke.TexelSize>
                         <MultiBinding Converter="{StaticResource TexelSizeConverter}">
-                            <Binding ElementName="traymenuContent" Path="ActualWidth"/>
-                            <Binding ElementName="traymenuContent" Path="ActualHeight"/>
+                            <Binding ElementName="traymenuContent" Path="ActualWidth" />
+                            <Binding ElementName="traymenuContent" Path="ActualHeight" />
                         </MultiBinding>
                     </osEffects:osEffect_Stroke.TexelSize>
                 </osEffects:osEffect_Stroke>
@@ -231,8 +231,8 @@
                                                  GlowStrength="4" >
                             <osEffects:osEffect_Glow.TexelSize>
                                 <MultiBinding Converter="{StaticResource TexelSizeConverter}">
-                                    <Binding ElementName="traymenuContent" Path="ActualWidth"/>
-                                    <Binding ElementName="traymenuContent" Path="ActualHeight"/>
+                                    <Binding ElementName="traymenuContent" Path="ActualWidth" />
+                                    <Binding ElementName="traymenuContent" Path="ActualHeight" />
                                 </MultiBinding>
                             </osEffects:osEffect_Glow.TexelSize>
                         </osEffects:osEffect_Glow>
@@ -247,10 +247,10 @@
                         <Storyboard>
                             <DoubleAnimation Storyboard.TargetName="traymenuGlow"
                                              Storyboard.TargetProperty="Fade"
-                                             To="1" Duration="0:0:0.25"/>
+                                             To="1" Duration="0:0:0.25" />
                             <DoubleAnimation Storyboard.TargetName="traymenuStroke"
                                              Storyboard.TargetProperty="Fade"
-                                             To="1" Duration="0:0:0.25"/>
+                                             To="1" Duration="0:0:0.25" />
                         </Storyboard>
                     </BeginStoryboard>
                 </DataTrigger.EnterActions>
@@ -259,10 +259,10 @@
                         <Storyboard>
                             <DoubleAnimation Storyboard.TargetName="traymenuGlow"
                                              Storyboard.TargetProperty="Fade"
-                                             To="0" Duration="0:0:0.35"/>
+                                             To="0" Duration="0:0:0.35" />
                             <DoubleAnimation Storyboard.TargetName="traymenuStroke"
                                              Storyboard.TargetProperty="Fade"
-                                             To="0" Duration="0:0:0.35"/>
+                                             To="0" Duration="0:0:0.35" />
                         </Storyboard>
                     </BeginStoryboard>
                 </DataTrigger.ExitActions>
