@@ -1225,7 +1225,7 @@ Public Class ProgMsg
     Private Function CalculateFontSize(txtLength As Integer) As Double
         Select Case txtLength
             Case < 40 : Return 15
-            Case >= 40 : Return 12
+            Case >= 40 : Return 13
         End Select
     End Function
 

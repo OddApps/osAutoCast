@@ -299,14 +299,13 @@ Public NotInheritable Class osFuncLib_Progress
                             osHandler_UI.osGui_AutoCastProgress.SetProgColor(progColorData, pUpdate)
                         End Sub)
             Case TriggerType.AutoPass
-                osHandler_UI.osGui_AutoPass2.
-                    Dispatcher.Invoke(
+                PrepDispatcher(True).Invoke(
                     Sub()
                         If pStatus = StartAP Then
-                            osHandler_UI.osGui_AutoPass2.apHandler._UpdateProgress(0)
+                            apHandler._UpdateProgress(0)
                         End If
 
-                        osHandler_UI.osGui_AutoPass2.apHandler._UpdateColorFunc(progColorData)
+                        apHandler._UpdateColorFunc(progColorData)
                     End Sub)
         End Select
     End Sub
@@ -565,38 +564,72 @@ Public NotInheritable Class osFuncLib_AutoPass
     End Sub
 
     Public Shared Async Function ExecuteAutoPass() As Task
-        Dim isTask_AutoPass = osHandler_UI.osGui_AutoPass.
-            Dispatcher.InvokeAsync(Async Function()
-                                       osHandler_UI.DisplayGUI(TriggerType.AutoPass)
-                                       osFuncLib_Progress.SetProgBlockData(TriggerType.AutoPass)
-                                       Await Task.Delay(50)
+        'Dim objTask_AutoPass = Task.Run(
+        '    Async Function()
+        '        uiWin_AutoPass.PresentAutoPassUI()
 
-                                       Dim retAP = Await osHandler_UI.osGui_AutoPass.LaunchAutoPass()
-                                       Return retAP
-                                   End Function)
+        '        Dim retAP = Await PrepDispatcher(True).Invoke(
+        '            Function()
+        '                Return uiWin_AutoPass.LaunchAutoPass()
+        '            End Function, DispatcherPriority.Background)
 
-        Dim retProgResult = Await isTask_AutoPass.Task.Unwrap()
+        '        Return retAP
+        '    End Function)
+        PrepDispatcher(True).Invoke(
+            Sub()
+                uiWin_AutoPass.PresentAutoPassUI()
+            End Sub, DispatcherPriority.Input)
+
+        Dim objTask_AutoPass = PrepDispatcher(True).Invoke(
+            Function()
+                Return uiWin_AutoPass.LaunchAutoPass()
+            End Function, DispatcherPriority.Input)
+
+        ' Dim objTask_ProgResult = Await objTask_AutoPass
+        Dim retProgResult = Await objTask_AutoPass
 
         Await ProcessResult(retProgResult)
         osFuncLib_InputScan.isActionComplete = True
     End Function
 
-    Public Shared Async Function ExecuteAutoPass(isNew As Boolean) As Task
-        Dim isTask_AutoPass = osHandler_UI.
-            osGui_AutoPass2.Dispatcher.InvokeAsync(
-                Async Function()
+    Public Shared Async Function ExecuteAutoPass(isN As Boolean) As Task
+        Await PrepDispatcher(True).InvokeAsync(
+        Sub()
+            uiWin_AutoPass.PresentAutoPassUI()
+            osFuncLib_Progress.UpdateProgStatus(TriggerAutoPass, ProgAction.Activate)
 
-                    osHandler_UI.DisplayGUI(TriggerType.AutoPass)
-                    osFuncLib_Progress.SetProgBlockData(TriggerType.AutoPass)
-                    Await Task.Delay(50)
+            apHandler._DisplayTextFunc("Release Mouse To Begin")
 
-                    Dim retAP = Await osHandler_UI.osGui_AutoPass2.LaunchAutoPass()
-                    Return retAP
-                End Function)
+            osFuncLib_Progress.SetProgBlockData(TriggerType.AutoPass)
+        End Sub,
+        DispatcherPriority.Background
+    ).Task
 
-        Dim retProgResult = Await isTask_AutoPass.Task.Unwrap()
+        ' Yield to the UI thread and let layout/render run (replaces Task.Delay hack).
+        ' This is a no-op invoked at Render priority — it gives WPF a chance to finish layout/measure/render.
+        Await PrepDispatcher(True).InvokeAsync(
+        Sub()
+            ' no-op
+        End Sub,
+        DispatcherPriority.Render
+    ).Task
 
+        ' Call LaunchAutoPass on the UI thread and await its result.
+        ' If LaunchAutoPass returns a Task(Of T), the DispatcherOperation.Task will complete with that Task,
+        ' so we first await the DispatcherOperation.Task to get the inner task, then await the inner task.
+        Dim launchOp = PrepDispatcher(True).InvokeAsync(
+        Function()
+            Return uiWin_AutoPass.LaunchAutoPass()
+        End Function,
+        DispatcherPriority.Background
+    )
+
+        Dim innerTask = Await launchOp.Task      ' innerTask is Task(Of T) if LaunchAutoPass returns Task(Of T)
+        Dim retProgResult = Await innerTask      ' await the actual result
+
+        ' Post-processing (can be background if ProcessResult is CPU-bound; keep it awaited here)
         Await ProcessResult(retProgResult)
+
         osFuncLib_InputScan.isActionComplete = True
     End Function
 
@@ -605,30 +638,42 @@ Public NotInheritable Class osFuncLib_AutoPass
         Return chkExecAP
     End Function
 
-    Private Shared Async Function ProcessResult(acResult As ProgResult) As Task
+    Private Shared Async Function ProcessResult(apResult As ProgResult) As Task
         Try
-            Select Case acResult
+            Select Case apResult
                 Case ProgResult.Completed
-                    ProcessProgressEvent(ProgMode_AutoPass, ProgEvent.DispMsg, "Release Shift To AutoPass | Press C To Cancel")
-                    ProcessProgressEvent(ProgMode_AutoPass, ProgEvent.MaxFill)
+                    PrepDispatcher().Invoke(
+                        Sub()
+                            'osHandler_UI.apHandler._DisplayTextFunc("Release Shift To AutoPass | Press C To Cancel")
+                            apHandler._DisplayTextFunc("Release Shift - AutoPass | Press C - Cancel")
+                        End Sub)
 
                     Dim chkLaunchAP = Await AnticipateLaunchAP()
 
                     If chkLaunchAP Then
-                        ProcessProgressEvent(ProgMode_AutoPass, ProgEvent.DispMsg, "AutoPassing")
+                        PrepDispatcher().Invoke(
+                            Sub()
+                                apHandler._DisplayTextFunc("AutoPassing")
+                            End Sub)
+
                         InvokeAutoPass()
                     Else
                         osFuncLib_Progress.UpdateProgStatus(TriggerAutoPass, Abort)
 
-                        ProcessProgressEvent(ProgMode_AutoPass, ProgEvent.MaxFill)
-                        ProcessProgressEvent(ProgMode_AutoPass, ProgEvent.DispMsg, "AutoPass Cancelled")
+
+                        PrepDispatcher().Invoke(
+                            Sub()
+                                apHandler._DisplayTextFunc("AutoPass Cancelled")
+                            End Sub)
                     End If
 
                 Case ProgResult.Cancelled
                     osFuncLib_Progress.UpdateProgStatus(TriggerAutoPass, Abort)
 
-                    ProcessProgressEvent(ProgMode_AutoPass, ProgEvent.MaxFill)
-                    ProcessProgressEvent(ProgMode_AutoPass, ProgEvent.DispMsg, "AutoPass Cancelled")
+                    PrepDispatcher().Invoke(
+                            Sub()
+                                apHandler._DisplayTextFunc("AutoPass Cancelled")
+                            End Sub)
             End Select
 
             Await FinalizeAutoPass()
@@ -638,7 +683,7 @@ Public NotInheritable Class osFuncLib_AutoPass
 
     Private Shared Async Function FinalizeAutoPass() As Task
         Await Task.Delay(750)
-        osHandler_UI.osGui_AutoPass.Dispatcher.
+        PrepDispatcher(True).
             Invoke(Sub()
                        osHandler_UI.ResetUI(TriggerAutoPass, True)
                    End Sub)
@@ -1024,7 +1069,7 @@ Public NotInheritable Class osFuncLib_PopupMenu
 
     Private Shared ReadOnly Property objGui_Popup As osPopupMenu_GUI
         Get
-            Return osHandler_UI.osPopupMenuN
+            Return osHandler_UI.osPopupMenu
         End Get
     End Property
 
@@ -1032,7 +1077,7 @@ Public NotInheritable Class osFuncLib_PopupMenu
         InitCloseMonitor(objPopupTaskPending)
 
         Await osHandler_UI.GeneratePopupMenu()
-        Await osHandler_UI.PresentPopupMenu2()
+        Await osHandler_UI.PresentPopupMenu()
 
         Dim objPopupResult = Await PopupCloseDetect(objPopupTaskMonitor,
                                                      objPopupTaskPending)
@@ -1138,7 +1183,7 @@ Public Module osFuncLib_TrayMenu
     Public Property isAppLoaded As Boolean = False
 
     Public Sub DisplayTrayMenu()
-        With osHandler_UI.osTrayMenuN
+        With osHandler_UI.osTrayMenu
             .DisplayTrayMenu()
             .Activate()
         End With
@@ -1238,10 +1283,23 @@ Module osFuncLib_UI
 
     Private dirSweep As osSweep = osSweep.Clockwise
 
+    Public ReadOnly Property uiWin_AutoPass As progUI_AutoPass
+        Get
+            Return osHandler_UI.osGui_AutoPass2
+        End Get
+    End Property
+
+    Public ReadOnly Property apHandler As osHandler_ProgressBar
+        Get
+            Return osHandler_UI.osGui_AutoPass2.objHandlerAP
+        End Get
+    End Property
+
     Public Function PrepDispatcher(Optional IsAutoPass As Boolean = False) As Dispatcher
         Return If(IsAutoPass, osHandler_UI.osGui_AutoPass2.Dispatcher,
             Application.Current.Dispatcher)
     End Function
+
 
     Public Function GetResponse(pType As PromptType) As PromptResponse
         With New PromptData(pType)

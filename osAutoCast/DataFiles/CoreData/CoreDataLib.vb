@@ -8,6 +8,7 @@ Imports osAutoCast.DataTypeLib.DetectOpts
 Imports osAutoCast.DataTypeLib.TriggerType
 Imports osAutoCast.DataTypeLib.ProgressMode
 Imports osAutoCast.DataTypeLib.TriggerAction
+Imports osAutoCast.DataTypeLib.TriggerValidation
 Imports osProgDevice = SharpDX.Direct3D11.Device
 Imports osRegEx = System.Text.RegularExpressions.Regex
 Imports osStatus = osAutoCast.osEnabledStatusConfig
@@ -77,7 +78,7 @@ Public NotInheritable Class CoreDataLib
 
     Private Shared ReadOnly TriggerHandlers As (HandleAction As TriggerAction, HandleEvent As Func(Of Task))() = {
         (TriggerAutoCast, Function() osFuncLib_AutoCast.ExecuteAutoCast()),
-        (TriggerAutoPass, Function() osFuncLib_AutoPass.ExecuteAutoPass(True)),
+        (TriggerAutoPass, Function() osFuncLib_AutoPass.ExecuteAutoPass()),
         (TriggerShowOpts, Function() osFuncLib_ShowOpts.ExecuteDispOpts()),
         (TriggerShowMenu, Function() osFuncLib_PopupMenu.ShowPopupMenu())
     }
@@ -271,25 +272,26 @@ Public NotInheritable Class CoreDataLib
         End Select
     End Function
 
+    Private Shared Function FetchTrigger(tType As TriggerAction) As Func(Of Task)
+        InputMonSvc.SelectState(MonitorStatus.InCmd)
+
+        Return TriggerHandlers.FirstOrDefault(
+            Function(TriggerHandle) TriggerHandle.HandleAction = tType,
+                (NoTrigger, CType(Nothing, Func(Of Task)))).HandleEvent
+    End Function
+
     Public Shared Async Function ExecuteTrigger(tType As TriggerAction) As Task
         Dim objHandlerEvent As Func(Of Task) = Nothing
-
         Dim objTriggerVal = ValidateTrigger(tType)
 
         If ProcessTrigger(objTriggerVal) Then
-
-            InputMonSvc.SelectState(MonitorStatus.InCmd)
-
-            objHandlerEvent = TriggerHandlers.
-                 FirstOrDefault(Function(TriggerHandle) TriggerHandle.HandleAction = tType,
-                                (NoTrigger, CType(Nothing, Func(Of Task)))).HandleEvent
+            objHandlerEvent = FetchTrigger(tType)
         Else
             ResolveAction()
-            Exit Function
-        End If
+            Exit Function : End If
 
         If objHandlerEvent IsNot Nothing Then
-            If objTriggerVal = TriggerValidation.ValidTrigger Then
+            If objTriggerVal = ValidTrigger Then
                 osFuncLib_Progress.SetProgBlockData(AutoCast)
                 Await osHandler_UI.LaunchGui(tType)
                 osFuncLib_Progress.UpdateProgStatus(tType, ProgAction.Activate)
@@ -301,6 +303,8 @@ Public NotInheritable Class CoreDataLib
         ResolveAction()
     End Function
 
+
+
     Private Shared Function ProcessTrigger(valType As TriggerValidation) As Boolean
         Return Not valType = TriggerValidation.InvalidTrigger
     End Function
@@ -308,9 +312,7 @@ Public NotInheritable Class CoreDataLib
     Public Shared Function ValidateTrigger(pType As TriggerAction) As TriggerValidation
         If isUtilityTrigger(pType) Then Return TriggerValidation.ValidUtility
 
-        If VerifyRunStatus() Then
-            InitAbortMonitor(pType)
-
+        If VerifyRunStatus() Then : InitAbortMonitor(pType)
             Return TriggerValidation.ValidTrigger
         Else
             Return TriggerValidation.InvalidTrigger
@@ -344,6 +346,7 @@ Public NotInheritable Class CoreDataLib
     Private Shared Async Function MonitorForCancel(cts As CancellationTokenSource,
                                                  Optional pType As TriggerType = AutoCast) As Task
         Dim token = cts.Token
+
         Try
             While Not token.IsCancellationRequested
                 Select Case pType
@@ -398,7 +401,7 @@ Public NotInheritable Class CoreDataLib
                     End Sub)
             End With
         Else
-            Dim osProgElement = osHandler_UI.osGui_AutoPass2.OddProgBar_AP
+            Dim osProgElement = uiWin_AutoPass.OddProgBar_AP
 
             If pEventData.Length > 0 Then
                 strEventData = pEventData(0).ToString()

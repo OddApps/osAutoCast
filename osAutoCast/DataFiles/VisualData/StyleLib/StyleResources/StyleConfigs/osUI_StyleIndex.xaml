@@ -10,5 +10,6 @@
         <ResourceDictionary Source="/DataFiles/VisualData/StyleLib/StyleResources/StyleProfiles/osUI_Style-Toggle.xaml" />
         <ResourceDictionary Source="/DataFiles/VisualData/StyleLib/StyleResources/StyleProfiles/osUI_Style-TrayMenu.xaml" />
         <ResourceDictionary Source="/DataFiles/VisualData/StyleLib/StyleResources/StyleProfiles/osUI_Style-Prefs.xaml" />
+        <ResourceDictionary Source="/DataFiles/VisualData/StyleLib/StyleResources/StyleProfiles/osUI_Style-AutoPass.xaml" />
     </ResourceDictionary.MergedDictionaries>
 </ResourceDictionary>

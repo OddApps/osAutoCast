@@ -3,6 +3,9 @@ Imports System.Reactive.Subjects
 Imports System.Runtime.InteropServices
 Imports System.Windows.Forms
 Imports osAutoCast.DataTypeLib.TriggerAction
+Imports System.IO
+Imports System.Reflection
+Imports osPriority = System.Windows.Threading.DispatcherPriority
 
 #Disable Warning BC42353
 Public Class InputMonitorService
@@ -76,6 +79,10 @@ Public Class InputMonitorService
 
     Public Function GetState() As MonitorStatus
         Return GetMonitorState()
+    End Function
+
+    Private Shared Function isCmdRunning() As Boolean
+        Return MonitorState = MonitorStatus.InCmd
     End Function
 
     Public Sub New()
@@ -210,53 +217,53 @@ Public Class InputMonitorService
             End Try
         End If
 
-        InputMon_Observer = Observable.Interval(InputMon_Timer).
+        InputMon_Observer = Observable..Interval(InputMon_Timer).
             Select(Function(chkDuration) EvalInputActionInternal()).
             Where(Function(getTrigger) getTrigger <> NoTrigger).
             Subscribe(Sub(taskTrigger) TriggerCmd.OnNext(taskTrigger))
 
     End Sub
 
-    Private Shared Function EvalInputActionInternal() As TriggerAction
-        Return TriggerBindings.FirstOrDefault(
-            Function(evalTrigger)
-                Return evalTrigger.TriggerCondition()
-            End Function, (Nothing, NoTrigger)).TriggerHandler
-    End Function
+    'Private Shared Function EvalInputActionInternal() As TriggerAction
+    'Return TriggerBindings.FirstOrDefault(
+    '    Function(evalTrigger)
+    '        Return evalTrigger.TriggerCondition()
+    '    End Function, (Nothing, NoTrigger)).TriggerHandler
+    'End Function
 
-    Public Sub LaunchTriggerMonitor()
-        StartTriggerMonitor()
-    End Sub
+    'Public Sub LaunchTriggerMonitor()
+    '    StartTriggerMonitor()
+    'End Sub
 
-    Private Shared Sub EstablishTriggerMonitor(ByRef objMonitor As IDisposable)
-        objMonitor = InputTriggerActions.Subscribe(
-            Async Sub(objInputAction)
-                If objInputAction <> NoTrigger Then
-                    SuspendMonitoring()
+    'Private Shared Sub EstablishTriggerMonitor(ByRef objMonitor As IDisposable)
+    '    objMonitor = InputTriggerActions.Subscribe(
+    '        Async Sub(objInputAction)
+    '            If objInputAction <> NoTrigger Then
+    '                SuspendMonitoring()
 
-                    Try
-                        Dim objExecTrigger = PrepDispatcher().InvokeAsync(
-                            Async Function()
-                                Await CoreDataLib.ExecuteTrigger(objInputAction)
-                            End Function)
+    '                Try
+    '                    Dim objExecTrigger = PrepDispatcher().InvokeAsync(
+    '                        Async Function()
+    '                            Await CoreDataLib.ExecuteTrigger(objInputAction)
+    '                        End Function)
 
-                        Await objExecTrigger.Task.Unwrap
-                    Finally
-                        GC.Collect()
-                        GC.WaitForPendingFinalizers()
+    '                    Await objExecTrigger.Task.Unwrap
+    '                Finally
+    '                    GC.Collect()
+    '                    GC.WaitForPendingFinalizers()
 
-                        StartTriggerMonitor()
-                    End Try
-                End If
-            End Sub)
-    End Sub
+    '                    StartTriggerMonitor()
+    '                End Try
+    '            End If
+    '        End Sub)
+    'End Sub
 
-    Private Shared Sub StartTriggerMonitor()
-        ActivateTriggerMonitor()
+    'Private Shared Sub StartTriggerMonitor()
+    '    ActivateTriggerMonitor()
 
-        SetMonitorState(MonitorStatus.Watching)
-        EstablishTriggerMonitor(InputMon_Support)
-    End Sub
+    '    SetMonitorState(MonitorStatus.Watching)
+    '    EstablishTriggerMonitor(InputMon_Support)
+    'End Sub
 
     Public Function DetectTrigger(Optional DetectMode As DetectOpts = DetectOpts.MonitorAll) As Boolean
         Return InputTriggerDetected(DetectMode)
@@ -279,20 +286,143 @@ Public Class InputMonitorService
         End Select
     End Function
 
-    Public Shared Sub SuspendMonitoring()
-        If InputMon_Support IsNot Nothing Then
-            InputMon_Support.Dispose()
-            InputMon_Support = Nothing
-        End If
+    'Public Shared Sub SuspendMonitoring()
+    '    If InputMon_Support IsNot Nothing Then
+    '        InputMon_Support.Dispose()
+    '        InputMon_Support = Nothing
+    '    End If
 
-        If InputMon_Observer IsNot Nothing Then
-            InputMon_Observer.Dispose()
-            InputMon_Observer = Nothing
-        End If
-    End Sub
+    '    If InputMon_Observer IsNot Nothing Then
+    '        InputMon_Observer.Dispose()
+    '        InputMon_Observer = Nothing
+    '    End If
+    'End Sub
 
     Public Sub Dispose() Implements IDisposable.Dispose
         SuspendMonitoring()
     End Sub
+
+#Region "Trigger Polling (OPTION 1)"
+
+    Public Sub LaunchTriggerMonitor()
+        StartTriggerMonitor()
+    End Sub
+
+    Private Shared Sub StartTriggerMonitor()
+        StopTriggerMonitor()
+
+        _pollCts = New CancellationTokenSource()
+
+        Task.Run(Async Function()
+                     Await PollLoopAsync(_pollCts.Token)
+                 End Function)
+
+        MonitorState = MonitorStatus.Watching
+        EstablishTriggerMonitor()
+    End Sub
+
+    Private Shared Sub StopTriggerMonitor()
+        _pollCts?.Cancel()
+        _pollCts = Nothing
+    End Sub
+
+    Private Shared _pollCts As CancellationTokenSource
+    Private Shared _lastTrigger As TriggerAction = NoTrigger
+
+    'Private Shared Async Function PollLoopAsync(ct As CancellationToken) As Task
+    '    Try
+    '        While Not ct.IsCancellationRequested
+    '            Dim trigger = EvalInputActionInternal()
+    '            If trigger <> NoTrigger Then
+    '                TriggerCmd.OnNext(trigger)
+    '            End If
+
+    '            Await Task.Delay(InputMon_Timer, ct).ConfigureAwait(False)
+    '        End While
+    '    Catch ex As OperationCanceledException
+    '        ' expected shutdown
+    '    End Try
+    'End Function
+
+    Private Shared Async Function PollLoopAsync(ct As CancellationToken) As Task
+        Dim sw As Stopwatch = Stopwatch.StartNew()
+        Dim intervalMs As Integer = 5   ' <-- 1–5ms feels instant
+
+        Try
+            While Not ct.IsCancellationRequested
+
+                Dim trigger = EvalInputActionInternal()
+                If trigger <> NoTrigger Then
+                    TriggerCmd.OnNext(trigger)
+                    sw.Restart() ' reset timing after a trigger
+                End If
+
+                ' High-precision wait (prevents drift)
+                Dim elapsed = sw.ElapsedMilliseconds
+                Dim delay = intervalMs - elapsed
+
+                If delay > 0 Then
+                    Await Task.Delay(CInt(delay), ct).ConfigureAwait(False)
+                Else
+                    Await Task.Yield() ' catch up immediately
+                End If
+
+                sw.Restart()
+            End While
+
+
+        Catch ex As OperationCanceledException
+            ' expected
+        End Try
+    End Function
+
+#End Region
+
+#Region "Edge-triggered Evaluation"
+
+    Private Shared Function EvalInputActionInternal() As TriggerAction
+        Return TriggerBindings.FirstOrDefault(
+            Function(evalTrigger) evalTrigger.TriggerCondition(),
+            (Nothing, NoTrigger)).TriggerHandler
+    End Function
+
+#End Region
+
+#Region "Trigger Execution"
+
+    Private Shared Function AuthorizeTrigger(objTrigger As TriggerAction) As Boolean
+        Return (Not MonitorState = MonitorStatus.InCmd) AndAlso Not (objTrigger = NoTrigger)
+    End Function
+
+    Private Shared Sub EstablishTriggerMonitor()
+        TriggerCmd.Subscribe(
+            Async Sub(objTriggerAction)
+                If AuthorizeTrigger(objTriggerAction) Then
+                    SuspendMonitoring()
+
+                    Try
+                        Await Task.Run(
+                            Async Function()
+                                Await PrepDispatcher().Invoke(
+                                    Function()
+                                        Return CoreDataLib.ExecuteTrigger(objTriggerAction)
+                                    End Function, osPriority.Input)
+                            End Function)
+                    Finally
+                        GC.Collect()
+                        GC.WaitForPendingFinalizers()
+
+                        StartTriggerMonitor()
+                    End Try
+                Else : Return : End If
+            End Sub)
+    End Sub
+
+    Public Shared Sub SuspendMonitoring()
+        SetMonitorState(MonitorStatus.InCmd)
+        StopTriggerMonitor()
+    End Sub
+
+#End Region
 
 End Class

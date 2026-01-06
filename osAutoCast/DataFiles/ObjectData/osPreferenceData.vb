@@ -177,7 +177,7 @@ Namespace osPrefLib
             End Set
         End Property
 
-        Private Shared _MainOpts_apProgH As Integer = 28
+        Private Shared _MainOpts_apProgH As Integer
         Public Property MainOpts_apProgH As Integer
             Get
                 Return _MainOpts_apProgH
@@ -189,7 +189,7 @@ Namespace osPrefLib
             End Set
         End Property
 
-        Private Shared _MainOpts_apProgW As Integer = 280
+        Private Shared _MainOpts_apProgW As Integer
         Public Property MainOpts_apProgW As Integer
             Get
                 Return _MainOpts_apProgW
@@ -201,7 +201,7 @@ Namespace osPrefLib
             End Set
         End Property
 
-        Private Shared _MainOpts_apUiH As Integer = 28
+        Private Shared _MainOpts_apUiH As Integer
         Public Property MainOpts_apUiH As Integer
             Get
                 Return _MainOpts_apUiH
@@ -213,7 +213,7 @@ Namespace osPrefLib
             End Set
         End Property
 
-        Private Shared _MainOpts_apUiW As Integer = 288
+        Private Shared _MainOpts_apUiW As Integer
         Public Property MainOpts_apUiW As Integer
             Get
                 Return _MainOpts_apUiW

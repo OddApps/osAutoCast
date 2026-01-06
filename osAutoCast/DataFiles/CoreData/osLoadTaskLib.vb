@@ -78,7 +78,7 @@ Public Module osLoadTaskLib
     End Function
 
     Public Async Function PrepPopupMenuUI(objTaskStatus As TaskStatusReport) As Task
-        Await Task.WhenAll(PrepUI_PopupMenuN2(), PrepUI_TrayMenuN2(), PrepUI_PopupMenuOverlayN2())
+        Await Task.WhenAll(PrepUI_PopupMenu(), PrepUI_TrayMenu(), PrepUI_PopupMenuOverlay())
         objTaskStatus.SetTaskComplete()
     End Function
 
