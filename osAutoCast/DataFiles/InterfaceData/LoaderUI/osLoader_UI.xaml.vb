@@ -123,9 +123,14 @@ Public Class osLoader_UI
 
         AddHandler objLoadProgBar.LoadProgComplete,
             evtLoaderComplete
-
         Await objProcessLoadStages.BeginLoadStage(True)
+
+        '   Dim _loaderCts = New CancellationTokenSource()
+        '    Dim animator As New LoaderProgressAnimator(objLoadProgBar)
+
+        '      Await objProcessLoadStages.RunLoaderAsync(_loaderCts.Token)
     End Function
+
 
     Public Sub InitTriggerMonitor()
         DoInitTriggerMonitor()
@@ -164,8 +169,7 @@ Partial Class osLoader_UI
         {Load_PrefPrep, CreateLoadStageData(35, 65, 350)},
         {Load_PrefApply, CreateLoadStageData(70, 105, 325)},
         {Load_InitShaders, CreateLoadStageData(110, 130, 325)},
-        {Load_Shaders, CreateLoadStageData(135, 165, 325)},
-        {Load_Opts, CreateLoadStageData(170, 190, 350)},
+        {Load_Shaders, CreateLoadStageData(135, 190, 400)},
         {Load_PopupMenu, CreateLoadStageData(195, 220, 325)},
         {Load_StartingSvc, CreateLoadStageData(225, 235, 315)},
         {Load_Starting, CreateLoadStageData(240, 250, 375)}
@@ -177,7 +181,6 @@ Partial Class osLoader_UI
         {CreateLoadTaskData(Load_PrefApply, AddressOf osLoadTaskLib.LoadTask_PrefsApply)},
         {CreateLoadTaskData(Load_InitShaders, AddressOf osLoadTaskLib.InitShaderDevices)},
         {CreateLoadTaskData(Load_Shaders, AddressOf osLoadTaskLib.LoadAllShaders)},
-        {CreateLoadTaskData(Load_Opts, AddressOf osLoadTaskLib.LoadOptsUI)},
         {CreateLoadTaskData(Load_PopupMenu, AddressOf osLoadTaskLib.PrepPopupMenuUI)},
         {CreateLoadTaskData(Load_StartingSvc, AddressOf osLoadTaskLib.LoadTask_StartInMon)},
         {CreateLoadTaskData(Load_Starting, AddressOf osLoadTaskLib.LoadTask_Finalize)}
@@ -189,7 +192,6 @@ Partial Class osLoader_UI
         {Load_PrefApply, "skip"},
         {Load_InitShaders, "Loading Interface"},
         {Load_Shaders, "skip"},
-        {Load_Opts, "skip"},
         {Load_PopupMenu, "Loading Menus"},
         {Load_ApplyConfig, "Applying Configuration"},
         {Load_StartingSvc, "Activating Service"},
@@ -240,6 +242,49 @@ Partial Class osLoader_UI
         End Get
     End Property
 
+    'Public Function BuildLoadStages() As List(Of osLoadStageData2)
+
+    '    Return New List(Of osLoadStageData2) From {
+    '    New osLoadStageData2(325) With {
+    '        .LoadType = Load_Init,
+    '        .StartValue = 0,
+    '        .EndValue = 10,
+    '        .LoadTask = AddressOf osLoadTaskLib.LoadTask_Init
+    '    },
+    '    New osLoadStageData2(325) With {
+    '        .LoadType = Load_PrefPrep,
+    '        .StartValue = 15,
+    '        .EndValue = 30,
+    '  .LoadTask = AddressOf osLoadTaskLib.LoadTask_PrefsLoad
+    '    },
+    '    New osLoadStageData2(325) With {
+    '        .LoadType = Load_InitShaders,
+    '        .StartValue = 35,
+    '        .EndValue = 50,
+    '  .LoadTask = AddressOf osLoadTaskLib.LoadAllShaders
+    '    },
+    '    New osLoadStageData2(325) With {
+    '        .LoadType = Load_PopupMenu,
+    '        .StartValue = 55,
+    '        .EndValue = 75,
+    '        .LoadTask = AddressOf osLoadTaskLib.LoadUI
+    '    },
+    '    New osLoadStageData2(325) With {
+    '        .LoadType = Load_StartingSvc,
+    '        .StartValue = 80,
+    '        .EndValue = 90,
+    '        .LoadTask = AddressOf osLoadTaskLib.LoadTask_StartInMon
+    '    },
+    '    New osLoadStageData2(325) With {
+    '        .LoadType = Load_Starting,
+    '        .StartValue = 95,
+    '        .EndValue = 100,
+    '        .LoadTask = AddressOf osLoadTaskLib.LoadTask_Finalize
+    '    }
+    '}
+    'End Function
+
+
     Public Sub New()
         InitializeComponent()
         DataContext = Me
@@ -266,7 +311,6 @@ Partial Class osLoader_UI
             ComposeLoadStage(Load_PrefApply),
             ComposeLoadStage(Load_InitShaders),
             ComposeLoadStage(Load_Shaders),
-            ComposeLoadStage(Load_Opts),
             ComposeLoadStage(Load_PopupMenu),
             ComposeLoadStage(Load_StartingSvc),
             ComposeLoadStage(Load_Starting)

@@ -691,6 +691,21 @@ Public NotInheritable Class TaskStatusReport
 
 End Class
 
+Public Class osLoader_Stage2
+
+    Public Property LoadStageData As osLoadStageData2
+    Public Property LoadTaskData As osLoadTaskData2
+
+    Public Sub New()
+    End Sub
+
+    Public Sub New(objStageData As osLoadStageData2, objTaskData As osLoadTaskData2)
+        LoadStageData = objStageData
+        LoadTaskData = objTaskData
+    End Sub
+
+End Class
+
 Public Class osLoader_Stage
 
     Public Property LoadStageData As osLoadStageData
@@ -706,6 +721,8 @@ Public Class osLoader_Stage
 
 End Class
 
+
+
 Public Class osLoaderStageIdx
 
     Public Property LoadStages As osLoader_Stage()
@@ -715,6 +732,23 @@ Public Class osLoaderStageIdx
 
     Public Sub New(objStageData As osLoader_Stage())
         LoadStages = objStageData
+    End Sub
+
+End Class
+
+Public Delegate Function LoadWork(progress As IProgress(Of Double), token As CancellationToken) As Task
+
+Public Class osLoadTaskData2
+
+    Public Property LoadType As LoadTaskType
+    Public Property LoadTask As LoadWork
+
+    Public Sub New()
+    End Sub
+
+    Public Sub New(taskType As LoadTaskType, taskLoad As LoadWork)
+        LoadType = taskType
+        LoadTask = taskLoad
     End Sub
 
 End Class
@@ -730,6 +764,44 @@ Public Class osLoadTaskData
     Public Sub New(taskType As LoadTaskType, taskLoad As Func(Of TaskStatusReport, Task))
         LoadType = taskType
         LoadTask = taskLoad
+    End Sub
+
+End Class
+
+Public Class osLoaderStageIdx2
+
+    Public Property LoadStages As osLoadStageData2()
+
+    Public Sub New()
+    End Sub
+
+    Public Sub New(objStageData As osLoadStageData2())
+        LoadStages = objStageData
+    End Sub
+
+End Class
+
+Public Class osLoadStageData2
+
+    Public Property LoadType As LoadTaskType
+    Public Property StartValue As Double
+    Public Property EndValue As Double
+    Public Property Duration As TimeSpan
+    Public Property LoadTask As LoadWork
+
+    Public Sub New()
+    End Sub
+
+    Public Sub New(pDur As Double)
+        Duration = TimeSpan.FromMilliseconds(pDur)
+    End Sub
+
+    Public Sub New(lType As LoadTaskType, sVal As Double, eVal As Double, pDur As Double, lTask As LoadWork)
+        StartValue = sVal
+        EndValue = eVal
+        LoadType = lType
+        LoadTask = lTask
+        Duration = TimeSpan.FromMilliseconds(pDur)
     End Sub
 
 End Class

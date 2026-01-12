@@ -157,13 +157,13 @@ Public Class osInMon
     End Function
 
     Public Async Function ProvisionApp() As Task
-        Await InitializeContentLoad()
+        'Await InitializeContentLoad()
 
-        Await PerformLoadStep(LoadPrefs)
-        Await PerformLoadStep(LoadUI)
-        Await PerformLoadStep(LoadConfig)
-        Await PerformLoadStep(LoadService)
-        Await PerformLoadStep(LoadComplete)
+        'Await PerformLoadStep(LoadPrefs)
+        'Await PerformLoadStep(LoadUI)
+        'Await PerformLoadStep(LoadConfig)
+        'Await PerformLoadStep(LoadService)
+        'Await PerformLoadStep(LoadComplete)
     End Function
 
     Public Async Function InputMonitor_Start() As Task

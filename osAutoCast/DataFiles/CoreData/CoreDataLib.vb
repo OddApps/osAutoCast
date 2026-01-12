@@ -167,15 +167,18 @@ Public NotInheritable Class CoreDataLib
 
     End Function
 
-    Private Shared Function GenerateShaderList(isNew As Boolean) As List(Of osShaderDetails) 'Task(Of List(Of osShaderDetails))
+    Public Shared Function GenerateShaderList(isNew As Boolean) As Task
         '
-        Return osShaderNameList.Select(
+        Return Task.Run(Sub()
+                            ShaderDetailsIdx = osShaderNameList.Select(
                     Function(shaderRes)
                         Dim objShaderRec = CreateShaderRecord(shaderRes)
                         Dim objTask_AddShader = AddShaderToIdx(objShaderRec)
 
                         Return objShaderRec
                     End Function).ToList()
+
+                        End Sub)
         '  End Function)
 
     End Function
@@ -184,21 +187,12 @@ Public NotInheritable Class CoreDataLib
         Return New osShaderDetails(objShaderRes, GetShaderType(objShaderRes))
     End Function
 
+
     Public Shared Async Function ComposeShaderIdx() As Task
-        Await Task.Run(
-            Sub()
-                ShaderDetailsIdx = GenerateShaderList(True)
-            End Sub)
+        Await GenerateShaderList(True)
 
     End Function
 
-    Public Shared Function ComposeShaderIdx(objTaskStatus As TaskStatusReport) As Task
-        Return Task.Run(
-            Sub()
-                ShaderDetailsIdx = GenerateShaderList(True)
-            End Sub)
-
-    End Function
     '    Private Shared Async Function GenerateShaderListAsync(
     '    isNew As Boolean
     ') As Task(Of List(Of osShaderDetails))

@@ -36,6 +36,7 @@ Imports osUtilities = SharpDX.Utilities
 Imports osVert = System.Windows.VerticalAlignment
 Imports pxShader_Pixel = SharpDX.Direct3D11.PixelShader
 Imports pxShader_Vertex = SharpDX.Direct3D11.VertexShader
+Imports osAutoCast.osLoadingElements
 
 #Disable Warning IDE0060 ' Remove unused parameter
 #Disable Warning IDE1006 ' Remove unused parameter
@@ -1632,6 +1633,55 @@ Public Class osPrefExpandEase
 
         Return Math.Min(1.0, Math.Max(0.0, t))
     End Function
+End Class
+
+Public Class LoaderProgressAnimator
+
+    Private ReadOnly _bar As osLoadingProgressBar
+    Private ReadOnly _dispatcher As Dispatcher
+
+    Public Sub New(bar As osLoadingProgressBar)
+        _bar = bar
+        _dispatcher = bar.Dispatcher
+    End Sub
+
+    Public Function AnimateToAsync(
+        target As Double,
+        duration As TimeSpan,
+        easing As IEasingFunction,
+        token As CancellationToken) As Task
+
+        Dim tcs As New TaskCompletionSource(Of Object)()
+
+        _dispatcher.InvokeAsync(Sub()
+
+                                    token.ThrowIfCancellationRequested()
+
+                                    Dim anim As New DoubleAnimation With {
+                .From = _bar.Progress,
+                .To = target,
+                .Duration = New Duration(duration),
+                .EasingFunction = easing,
+                .FillBehavior = FillBehavior.HoldEnd
+            }
+
+                                    AddHandler anim.Completed,
+                Sub()
+                    ' Snap final value
+                    _bar.Progress = target
+                    tcs.TrySetResult(Nothing)
+                End Sub
+
+                                    _bar.BeginAnimation(
+                osLoadingProgressBar.ProgressProperty,
+                anim,
+                HandoffBehavior.SnapshotAndReplace)
+
+                                End Sub, DispatcherPriority.Render)
+
+        Return tcs.Task
+    End Function
+
 End Class
 
 Public Module osUI_Loader

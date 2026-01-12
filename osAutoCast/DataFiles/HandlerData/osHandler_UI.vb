@@ -317,9 +317,8 @@ Public NotInheritable Class osHandler_UI
         RemoveHandler objPopupMenuOverlayWindow.MouseUp, pmFunc_TerminatePopupMenu
     End Sub
 
-    Public Shared Async Function CreateOptsUI() As Task
-        _osPrefsWindow = Await Task.Run(
-            Function() New Lazy(Of osPrefs_GUI)(
+    Public Shared Function CreateOptsUI() As Task
+        _osPrefsWindow = New Lazy(Of osPrefs_GUI)(
                 Function()
                     Return PrepDispatcher().
                         Invoke(Function()
@@ -328,7 +327,7 @@ Public NotInheritable Class osHandler_UI
 
                                    Return objPrefWin
                                End Function, DispatcherPriority.Background)
-                End Function, LazyThreadSafetyMode.ExecutionAndPublication))
+                End Function, LazyThreadSafetyMode.ExecutionAndPublication)
     End Function
 
     'Public Shared Function CreateUI_AutoPass() As Task(Of Lazy(Of progUI_AutoPass))

@@ -86,16 +86,16 @@ Public Module osHandler_Shader
 
     Public Async Function BuildShaderCatalog(isNew As Boolean) As Task
         Dim shaderBytes = Await InitShaderPrep()
-        Await Task.Run(
-            Sub()
-                ShaderDataIdx = shaderBytes.
+        '  Await Task.Run(
+        '     Sub()
+        ShaderDataIdx = shaderBytes.
                     Select(Function(shaderB, idx)
                                Return ShaderDataRecord(
                                     ShaderDataNames(idx), shaderB.Data)
                            End Function).ToDictionary(
                                 Function(r) r.Key,
                                 Function(r) r.Value)
-            End Sub)
+        '    End Sub)
     End Function
 
     Public Function BuildShaderCatalog() As Task(Of Dictionary(Of String, Byte()))
@@ -142,11 +142,11 @@ Public Module osHandler_Shader
     End Function
 
     Public Async Function InitShaderPrep() As Task(Of ShaderBytecode())
-        Return Await Task.Run(
-            Async Function()
-                Dim objShaderBytes = Await DecompressFromBytes()
+        'Return Await Task.Run(
+        '    Async Function()
+        Dim objShaderBytes = Await DecompressFromBytes()
                 Return Await PrepShaderData(objShaderBytes)
-            End Function)
+        '   End Function)
     End Function
 
     Public Async Function PrepShaderData(objShaderBytes As Byte()) As Task(Of ShaderBytecode())

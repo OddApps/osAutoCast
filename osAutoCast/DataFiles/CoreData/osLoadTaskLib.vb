@@ -73,7 +73,10 @@ Public Module osLoadTaskLib
     End Function
 
     Public Async Function LoadOptsUI(objTaskStatus As TaskStatusReport) As Task
-        Await Task.WhenAll(CreateOptsUI(), LoadGUI())
+        '  Await Task.WhenAll(CreateOptsUI(), LoadGUI())
+        Await CreateOptsUI()
+        Await DispatcherHelpers.YieldToRenderAsync()
+        Await LoadGUI()
         objTaskStatus.SetTaskComplete()
     End Function
 
@@ -90,10 +93,15 @@ Public Module osLoadTaskLib
 
     Public Async Function LoadAllShaders(objTaskStatus As TaskStatusReport) As Task
         Await BuildShaderCatalog(True)
+        Await DispatcherHelpers.YieldToRenderAsync()
         Await PreloadShaderCatalog()
-
-        Await CoreDataLib.ComposeShaderIdx(objTaskStatus)
-        '  Await CoreDataLib.ComposeShaderIdxAsync(objTaskStatus)
+        Await DispatcherHelpers.YieldToRenderAsync()
+        Await CoreDataLib.ComposeShaderIdx()
+        Await DispatcherHelpers.YieldToRenderAsync()
+        Await CreateOptsUI()
+        Await DispatcherHelpers.YieldToRenderAsync()
+        Await LoadGUI()
+        Await DispatcherHelpers.YieldToRenderAsync()
         objTaskStatus.SetTaskComplete()
     End Function
 
