@@ -10,6 +10,7 @@ Imports System.Windows.Forms
 Imports System.Windows.Media.Animation
 Imports System.Windows.Threading
 Imports osAutoCast.CoreDataLib
+Imports osAutoCast.osHandler_UI
 Imports osAutoCast.DataTypeLib.AnimationType
 Imports osAutoCast.DataTypeLib.AnimationVisual
 Imports osAutoCast.DataTypeLib.OverlayVisualType
@@ -182,6 +183,9 @@ Public NotInheritable Class osFuncLib_Progress
 
     Public Shared progSteps As Integer = 200
 
+    Public Shared ProgTimeSpan_AC As TimeSpan
+    Public Shared ProgTimeSpan_AP As TimeSpan
+
     Public Shared ProgTimeSpan As TimeSpan
     Public Shared ProgDuration As Integer
     Public Shared ProgInv As Double
@@ -349,8 +353,27 @@ Public NotInheritable Class osFuncLib_Progress
     End Function
 
     Public Shared Sub SetProgBlockData(trigType As TriggerType)
-        ProgDuration = If(trigType = TriggerType.AutoCast, GetFuse(), GetSafetyTimer())
-        ProgTimeSpan = TimeSpan.FromMilliseconds(ProgDuration)
+        Dim pDurAC = GetFuse()
+        Dim pDurAP = GetSafetyTimer()
+
+        ProgDuration = pDurAC
+
+        ProgTimeSpan_AC = TimeSpan.FromMilliseconds(pDurAC)
+        ProgTimeSpan_AP = TimeSpan.FromMilliseconds(pDurAP)
+
+        ProgInv = 1.0 / ProgDuration
+        ProgWidthInv = 1.0 / CalcProgSize(DataTypeLib.TriggerType.AutoCast).Width
+    End Sub
+
+    Public Shared Sub SetProgBlockData(trigType As TriggerAction)
+        Dim pDurAC = GetFuse()
+        Dim pDurAP = GetSafetyTimer()
+
+        ProgDuration = pDurAC
+
+        ProgTimeSpan_AC = TimeSpan.FromMilliseconds(pDurAC)
+        ProgTimeSpan_AP = TimeSpan.FromMilliseconds(pDurAP)
+
         ProgInv = 1.0 / ProgDuration
         ProgWidthInv = 1.0 / CalcProgSize(DataTypeLib.TriggerType.AutoCast).Width
     End Sub
@@ -438,18 +461,16 @@ Public NotInheritable Class osFuncLib_AutoCast
     End Sub
 
     Public Shared Async Function ExecuteAutoCast() As Task
-        Dim isTask_AutoCast = PrepDispatcher().InvokeAsync(
-            Async Function()
-                GetPosGui(ptPos)
+        Await osHandler_UI.DisplayGUI(True, TriggerType.AutoCast, ptPos)
 
-                osFuncLib_Progress.SetProgBlockData(TriggerType.AutoCast)
-                osHandler_UI.DisplayGUI(TriggerType.AutoCast, ptPos)
+        ui_AutoCast.Show()
 
-                Dim retAC = Await osHandler_UI.osGui_AutoCastProgress.LaunchAutoCast()
-                Return retAC
-            End Function)
+        Dim isTask_AutoCast = PrepDispatcher().Invoke(
+            Function()
+                Return ui_AutoCast.LaunchAutoCast()
+            End Function, DispatcherPriority.Render)
 
-        Dim retProgResult = Await isTask_AutoCast.Task.Unwrap()
+        Dim retProgResult = Await isTask_AutoCast
 
         Await ProcessResult(retProgResult)
         osFuncLib_InputScan.isActionComplete = True
@@ -566,24 +587,26 @@ Public NotInheritable Class osFuncLib_AutoPass
     Public Shared Async Function ExecuteAutoPass() As Task
         'Dim objTask_AutoPass = Task.Run(
         '    Async Function()
-        '        uiWin_AutoPass.PresentAutoPassUI()
+        '        ui_AutoPass.PresentAutoPassUI()
 
         '        Dim retAP = Await PrepDispatcher(True).Invoke(
         '            Function()
-        '                Return uiWin_AutoPass.LaunchAutoPass()
+        '                Return ui_AutoPass.LaunchAutoPass()
         '            End Function, DispatcherPriority.Background)
 
         '        Return retAP
         '    End Function)
+        ui_AutoPass.Show()
+
         PrepDispatcher(True).Invoke(
             Sub()
-                uiWin_AutoPass.PresentAutoPassUI()
-            End Sub, DispatcherPriority.Input)
+                ui_AutoPass.PresentAutoPassUI()
+            End Sub, DispatcherPriority.Render)
 
         Dim objTask_AutoPass = PrepDispatcher(True).Invoke(
             Function()
-                Return uiWin_AutoPass.LaunchAutoPass()
-            End Function, DispatcherPriority.Input)
+                Return ui_AutoPass.LaunchAutoPass()
+            End Function, DispatcherPriority.Render)
 
         ' Dim objTask_ProgResult = Await objTask_AutoPass
         Dim retProgResult = Await objTask_AutoPass
@@ -595,7 +618,7 @@ Public NotInheritable Class osFuncLib_AutoPass
     Public Shared Async Function ExecuteAutoPass(isN As Boolean) As Task
         Await PrepDispatcher(True).InvokeAsync(
         Sub()
-            uiWin_AutoPass.PresentAutoPassUI()
+            ui_AutoPass.PresentAutoPassUI()
             osFuncLib_Progress.UpdateProgStatus(TriggerAutoPass, ProgAction.Activate)
 
             apHandler._DisplayTextFunc("Release Mouse To Begin")
@@ -619,7 +642,7 @@ Public NotInheritable Class osFuncLib_AutoPass
         ' so we first await the DispatcherOperation.Task to get the inner task, then await the inner task.
         Dim launchOp = PrepDispatcher(True).InvokeAsync(
         Function()
-            Return uiWin_AutoPass.LaunchAutoPass()
+            Return ui_AutoPass.LaunchAutoPass()
         End Function,
         DispatcherPriority.Background
     )
@@ -683,10 +706,11 @@ Public NotInheritable Class osFuncLib_AutoPass
 
     Private Shared Async Function FinalizeAutoPass() As Task
         Await Task.Delay(750)
-        PrepDispatcher(True).
-            Invoke(Sub()
-                       osHandler_UI.ResetUI(TriggerAutoPass, True)
-                   End Sub)
+
+        PrepDispatcher(True).Invoke(
+            Sub()
+                osHandler_UI.ResetUI(TriggerAutoPass, True)
+            End Sub)
     End Function
 
 End Class
@@ -863,7 +887,7 @@ Public NotInheritable Class MenuOverlayWindow
         End With
     End Sub
 
-    Private Sub SetBG()
+    Public Sub SetBG()
         With Me
             If .isFromTray Then
                 .Background = osBrushColor.Black
@@ -1057,8 +1081,6 @@ End Class
 
 Public NotInheritable Class osFuncLib_PopupMenu
 
-    ' Private Shared objGui_Popup As osPopupMenu_GUI = Nothing
-
     Private Shared objPopupTaskMonitor As Task
 
     Private Shared objPopupTaskPending As TaskCompletionSource(Of Boolean)
@@ -1074,11 +1096,11 @@ Public NotInheritable Class osFuncLib_PopupMenu
     End Property
 
     Public Shared Async Function ShowPopupMenu() As Task
+        '     PrepUtilityTrigger(TriggerType.ShowMenu)
+
         InitCloseMonitor(objPopupTaskPending)
 
-        Await osHandler_UI.GeneratePopupMenu()
-        Await osHandler_UI.PresentPopupMenu()
-
+        Await osHandler_UI.DisplayPopupMenu()
         Dim objPopupResult = Await PopupCloseDetect(objPopupTaskMonitor,
                                                      objPopupTaskPending)
 
@@ -1283,7 +1305,13 @@ Module osFuncLib_UI
 
     Private dirSweep As osSweep = osSweep.Clockwise
 
-    Public ReadOnly Property uiWin_AutoPass As progUI_AutoPass
+    Public ReadOnly Property ui_AutoCast As ProgBarGui_AutoCast
+        Get
+            Return osHandler_UI.osGui_AutoCastProgress
+        End Get
+    End Property
+
+    Public ReadOnly Property ui_AutoPass As progUI_AutoPass
         Get
             Return osHandler_UI.osGui_AutoPass2
         End Get
@@ -1299,7 +1327,6 @@ Module osFuncLib_UI
         Return If(IsAutoPass, osHandler_UI.osGui_AutoPass2.Dispatcher,
             Application.Current.Dispatcher)
     End Function
-
 
     Public Function GetResponse(pType As PromptType) As PromptResponse
         With New PromptData(pType)
@@ -1607,6 +1634,164 @@ Public Class osPrefExpandEase
     End Function
 End Class
 
+Public Module osUI_Loader
+
+    Public Async Function LoadUI_Menus() As Task
+
+        ' ---------- Overlay ----------
+        Await Application.Current.Dispatcher.InvokeAsync(
+            Sub()
+                _osPopupMenuOverlay = PrepUI_PopupMenuOverlay()
+                osPopupMenuOverlay.SetBG()
+            End Sub, DispatcherPriority.Render)
+
+        Await DispatcherHelpers.YieldToRenderAsync()
+
+        Await Application.Current.Dispatcher.InvokeAsync(
+            Sub()
+                _osPopupMenu = PrepUI_PopupMenu()
+                osPopupMenu.WarmupPopupMenu()
+            End Sub, DispatcherPriority.Render)
+
+        Await DispatcherHelpers.YieldToRenderAsync()
+
+        Await Application.Current.Dispatcher.InvokeAsync(
+            Sub()
+                _osTrayMenu = PrepUI_TrayMenu2()
+                osTrayMenu.PrepTrayMenuInit()
+            End Sub, DispatcherPriority.Render)
+
+        '     Await Application.Current.Dispatcher.Invoke(
+        'Async Function()
+        '    _osPopupMenuOverlay = PrepUI_PopupMenuOverlay()
+        '    osPopupMenuOverlay.SetBG()
+        '    Await DispatcherHelpers.YieldToRenderAsync()
+        '    _osPopupMenu = PrepUI_PopupMenu()
+        '    osPopupMenu.WarmupPopupMenu()
+        '    Await DispatcherHelpers.YieldToRenderAsync()
+        '    _osTrayMenu = PrepUI_TrayMenu2()
+        '    osTrayMenu.PrepTrayMenuInit()
+        'End Function, DispatcherPriority.Render)
+
+        '' ---------- Overlay ----------
+        'Await Application.Current.Dispatcher.InvokeAsync(
+        '    Sub()
+        '        _osPopupMenuOverlay = PrepUI_PopupMenuOverlay()
+        '        osPopupMenuOverlay.SetBG()
+        '    End Sub, DispatcherPriority.Background)
+
+        'Await DispatcherHelpers.YieldToRenderAsync()
+
+        'Await Application.Current.Dispatcher.InvokeAsync(
+        '    Sub()
+        '        _osPopupMenu = PrepUI_PopupMenu()
+        '        osPopupMenu.WarmupPopupMenu()
+        '    End Sub, DispatcherPriority.Background)
+
+        'Await DispatcherHelpers.YieldToRenderAsync()
+
+        'Await Application.Current.Dispatcher.InvokeAsync(
+        '    Sub()
+        '        _osTrayMenu = PrepUI_TrayMenu2()
+        '        osTrayMenu.PrepTrayMenuInit()
+        '    End Sub, DispatcherPriority.Background)
+
+    End Function
+
+    Public Async Function LoadUI_TriggerHandlers() As Task
+
+        ' ---------- Overlay ----------
+        Await Application.Current.Dispatcher.InvokeAsync(
+            Sub()
+                osHandler_UI._autoPass2 = osHandler_UI.PrepUI_AutoPass()
+                osHandler_UI.osGui_AutoPass2.PrepAutoPass()
+            End Sub,
+            DispatcherPriority.Background)
+
+        Await DispatcherHelpers.YieldToRenderAsync()
+
+        ' ---------- Popup Menu ----------
+        Await Application.Current.Dispatcher.InvokeAsync(
+            Sub()
+                _osPrefsWindow = PrepUI_Opts()
+                osPrefsWindow.PrepPrefVis()
+            End Sub,
+            DispatcherPriority.Background)
+
+        Await DispatcherHelpers.YieldToRenderAsync()
+
+        ' ---------- Tray Menu ----------
+        Await Application.Current.Dispatcher.InvokeAsync(
+            Sub()
+                _acProgress = PrepUI_AutoCast()
+            End Sub, DispatcherPriority.Background)
+
+    End Function
+
+End Module
+
+Public Module DispatcherHelpers
+
+    Public Async Function YieldToRenderAsync() As Task
+        Await Application.Current.Dispatcher.InvokeAsync(
+            Sub()
+            End Sub, DispatcherPriority.Render)
+    End Function
+
+End Module
+
+Public NotInheritable Class osAutoAnimation
+
+    Private ReadOnly _waits As New Queue(Of TaskCompletionSource(Of Boolean))
+    Private _signaled As Boolean
+
+    Public Sub New(Optional initialState As Boolean = False)
+        _signaled = initialState
+    End Sub
+
+    Public Function WaitAsync(
+        Optional ct As CancellationToken = Nothing) As Task
+
+        SyncLock _waits
+            If _signaled Then
+                _signaled = False
+                Return Task.CompletedTask
+            End If
+
+            Dim tcs = New TaskCompletionSource(Of Boolean)(
+                TaskCreationOptions.RunContinuationsAsynchronously)
+
+            If ct.CanBeCanceled Then
+                ct.Register(
+                    Sub()
+                        If tcs.TrySetCanceled(ct) Then
+                            SyncLock _waits
+                                _waits.Dequeue()
+                            End SyncLock
+                        End If
+                    End Sub)
+            End If
+
+            _waits.Enqueue(tcs)
+            Return tcs.Task
+        End SyncLock
+    End Function
+
+    Public Sub SetAnimation()
+        Dim toRelease As TaskCompletionSource(Of Boolean) = Nothing
+
+        SyncLock _waits
+            If _waits.Count > 0 Then
+                toRelease = _waits.Dequeue()
+            ElseIf Not _signaled Then
+                _signaled = True
+            End If
+        End SyncLock
+
+        toRelease?.TrySetResult(True)
+    End Sub
+End Class
+
 Public Class isEnabledConverter
     Implements IValueConverter
 
@@ -1621,6 +1806,16 @@ Public Class isEnabledConverter
     End Function
 
 End Class
+
+Public Module osTriggerEvents
+
+    Public Event AuthInputMonitor()
+
+    Public Sub AuthorizeInputMonitor()
+        RaiseEvent AuthInputMonitor()
+    End Sub
+
+End Module
 
 Public Class VisQualityConverter
     Implements IValueConverter

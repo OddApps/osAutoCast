@@ -1,16 +1,18 @@
-﻿Imports System.Runtime.InteropServices
+﻿Imports System.ComponentModel
+Imports System.Data
+Imports System.Runtime.InteropServices
 Imports System.Windows.Threading
+Imports osAutoCast.osFuncLib_Progress
 Imports osAutoCast.DataTypeLib.OverlayVisualType
-Imports osAutoCast.DataTypeLib.PopupVisualType
 Imports osAutoCast.DataTypeLib.PopupCloseAction
+Imports osAutoCast.DataTypeLib.PopupVisualType
 Imports osAutoCast.DataTypeLib.ProgressMode
 Imports osAutoCast.DataTypeLib.TriggerAction
 Imports osDraw = System.Drawing
+Imports osThreadMode = System.Threading.LazyThreadSafetyMode
+Imports osTimeSeek = System.Windows.Media.Animation.TimeSeekOrigin
 Imports osTrash = System.Runtime.GCSettings
 Imports osTrashCompact = System.Runtime.GCLargeObjectHeapCompactionMode
-Imports osTimeSeek = System.Windows.Media.Animation.TimeSeekOrigin
-Imports osThreadMode = System.Threading.LazyThreadSafetyMode
-Imports System.ComponentModel
 
 Public NotInheritable Class osHandler_UI
 
@@ -24,14 +26,14 @@ Public NotInheritable Class osHandler_UI
         End Get
     End Property
 
-    Private Shared _osPrefsWindow As Lazy(Of osPrefs_GUI)
+    Public Shared _osPrefsWindow As Lazy(Of osPrefs_GUI)
     Public Shared ReadOnly Property osPrefsWindow As osPrefs_GUI
         Get
             Return _osPrefsWindow.Value
         End Get
     End Property
 
-    Private Shared _autoPass As Lazy(Of progGui_AutoPass)
+    Public Shared _autoPass As Lazy(Of progGui_AutoPass)
     Public Shared ReadOnly Property osGui_AutoPass As progGui_AutoPass
         Get
             Return _autoPass.Value
@@ -39,56 +41,88 @@ Public NotInheritable Class osHandler_UI
     End Property
 
     '   Private Shared _autoPass2 As progUI_AutoPass
-    Private Shared _autoPass2 As Lazy(Of progUI_AutoPass)
+    Public Shared _autoPass2 As Lazy(Of progUI_AutoPass)
     Public Shared ReadOnly Property osGui_AutoPass2 As progUI_AutoPass
         Get
             Return _autoPass2.Value
         End Get
     End Property
 
-    Private Shared _autoCastProgress As ProgBarGui_AutoCast
+    Public Shared _autoCastProgress As ProgBarGui_AutoCast
     Public Shared ReadOnly Property osGui_AutoCastProgress As ProgBarGui_AutoCast
         Get
             Return _autoCastProgress
         End Get
     End Property
 
-    Private Shared _osTrayMenu As Lazy(Of osTrayMenu_GUI)
+    Public Shared _acProgress As Lazy(Of ProgBarGui_AutoCast)
+    Public Shared ReadOnly Property acProgress As ProgBarGui_AutoCast
+        Get
+            Return _acProgress.Value
+        End Get
+    End Property
+
+    Public Shared _osTrayMenu As Lazy(Of osTrayMenu_GUI)
     Public Shared ReadOnly Property osTrayMenu As osTrayMenu_GUI
         Get
             Return _osTrayMenu.Value
         End Get
     End Property
 
-    Private Shared _osPopupMenu As Lazy(Of osPopupMenu_GUI)
+    Public Shared _osPopupMenu As Lazy(Of osPopupMenu_GUI)
     Public Shared ReadOnly Property osPopupMenu As osPopupMenu_GUI
         Get
             Return _osPopupMenu.Value
         End Get
     End Property
 
-    Private Shared _osPopupMenuOverlay As Lazy(Of MenuOverlayWindow)
+    Public Shared _osPopupMenuOverlay As Lazy(Of MenuOverlayWindow)
     Public Shared ReadOnly Property osPopupMenuOverlay As MenuOverlayWindow
         Get
             Return _osPopupMenuOverlay.Value
         End Get
     End Property
 
-    Public Shared Async Function PrepUI_PopupMenuOverlay(Optional isFromTray As Boolean = False) As Task
-        _osPopupMenuOverlay = Await Task.Run(
-            Function() New Lazy(Of MenuOverlayWindow)(
-                Function()
-                    Return PrepDispatcher().
-                        Invoke(Function()
-                                   Dim objPopupMenuOverlay As New MenuOverlayWindow()
-                                   objPopupMenuOverlay.PrepPopupMenuOverlay()
+    Public Shared Async Function GenerateAllUI() As Task
 
-                                   If isFromTray Then objPopupMenuOverlay.ApplyTrayConfig()
+        Await PrepDispatcher().InvokeAsync(
+            Sub()
+                _osPopupMenuOverlay = PrepUI_PopupMenuOverlay()
+                osPopupMenuOverlay.SetBG()
+            End Sub, DispatcherPriority.Background)
 
-                                   Return objPopupMenuOverlay
-                               End Function, DispatcherPriority.Background)
-                End Function, LazyThreadSafetyMode.ExecutionAndPublication))
+        Await DispatcherHelpers.YieldToRenderAsync()
+
+        Await PrepDispatcher().InvokeAsync(
+            Sub()
+                _osPopupMenu = PrepUI_PopupMenu()
+                osPopupMenu.WarmupPopupMenu()
+            End Sub, DispatcherPriority.Background)
+
+        Await DispatcherHelpers.YieldToRenderAsync()
+
+        Await PrepDispatcher().InvokeAsync(
+            Sub()
+                _osTrayMenu = PrepUI_TrayMenu2()
+                osTrayMenu.PrepTrayMenuInit()
+            End Sub, DispatcherPriority.Background)
+
     End Function
+
+    'Public Shared Function PrepUI_PopupMenuOverlay(Optional isFromTray As Boolean = False) As Lazy(Of MenuOverlayWindow)
+    '    Return New Lazy(Of MenuOverlayWindow)(
+    '            Function()
+    '                Return PrepDispatcher().Invoke(
+    '                    Function()
+    '                        Dim objPopupMenuOverlay As New MenuOverlayWindow()
+    '                        objPopupMenuOverlay.PrepPopupMenuOverlay()
+
+    '                        If isFromTray Then objPopupMenuOverlay.ApplyTrayConfig()
+
+    '                        Return objPopupMenuOverlay
+    '                    End Function, DispatcherPriority.Background)
+    '            End Function, LazyThreadSafetyMode.ExecutionAndPublication)
+    'End Function
 
     Public Shared Async Function PrepUI_TrayMenu() As Task
         _osTrayMenu = Await Task.Run(
@@ -104,19 +138,140 @@ Public NotInheritable Class osHandler_UI
                 End Function, LazyThreadSafetyMode.ExecutionAndPublication))
     End Function
 
-    Public Shared Async Function PrepUI_PopupMenu() As Task
-        _osPopupMenu = Await Task.Run(
-            Function() New Lazy(Of osPopupMenu_GUI)(
-                Function()
-                    Return PrepDispatcher().
-                        Invoke(Function()
-                                   Dim objPopupMenu = New osPopupMenu_GUI()
-                                   AddHandler objPopupMenu.Closed, AddressOf osHandler_UI.PrepDispatch
+    Public Shared Async Function GenerateAllUIAsync() As Task
+        Await PrepDispatcher().InvokeAsync(
+        Sub()
+            ' Overlay
+            _osPopupMenuOverlay = PrepUI_PopupMenuOverlay()
+            _osPopupMenuOverlay.Value.SetBG()
 
-                                   Return objPopupMenu
-                               End Function, DispatcherPriority.Background)
-                End Function, LazyThreadSafetyMode.ExecutionAndPublication))
+            ' Popup menu
+            _osPopupMenu = PrepUI_PopupMenu()
+            _osPopupMenu.Value.WarmupPopupMenu()
+
+            ' Tray menu
+            _osTrayMenu = PrepUI_TrayMenu2()
+            _osTrayMenu.Value.PrepTrayMenuInit()
+        End Sub,
+        DispatcherPriority.Background)
     End Function
+
+    Public Shared Function PrepUI_PopupMenuOverlay(
+    Optional isFromTray As Boolean = False) As Lazy(Of MenuOverlayWindow)
+
+        Return New Lazy(Of MenuOverlayWindow)(
+        Function()
+            ' Must already be on UI thread
+            Dim win As New MenuOverlayWindow()
+            win.PrepPopupMenuOverlay()
+            If isFromTray Then win.ApplyTrayConfig()
+            Return win
+        End Function,
+        LazyThreadSafetyMode.None)
+    End Function
+
+    Public Shared Function PrepUI_TrayMenu2() As Lazy(Of osTrayMenu_GUI)
+        Return New Lazy(Of osTrayMenu_GUI)(
+            Function()
+                Dim objTrayMenu As New osTrayMenu_GUI()
+                objTrayMenu.InitTrayMenuVis()
+
+                Return objTrayMenu
+            End Function, LazyThreadSafetyMode.None)
+    End Function
+
+    Public Shared Function PrepUI_PopupMenu() As Lazy(Of osPopupMenu_GUI)
+        Return New Lazy(Of osPopupMenu_GUI)(
+            Function()
+                Dim win As New osPopupMenu_GUI
+                AddHandler win.Closed, AddressOf osHandler_UI.PrepDispatch
+                win.PrepPopupMenu()
+
+                Return win
+            End Function, LazyThreadSafetyMode.None)
+    End Function
+
+    Public Shared Function PrepUI_Opts() As Lazy(Of osPrefs_GUI)
+        Return New Lazy(Of osPrefs_GUI)(
+            Function()
+                Dim objPrefWin As New osPrefs_GUI()
+
+                Return objPrefWin
+            End Function, LazyThreadSafetyMode.None)
+    End Function
+
+    Public Shared Function PrepUI_AutoPass() As Lazy(Of progUI_AutoPass)
+        Return New Lazy(Of progUI_AutoPass)(
+            Function()
+                Dim objPrefWin As New progUI_AutoPass()
+                Return objPrefWin
+            End Function, LazyThreadSafetyMode.None)
+    End Function
+
+    Public Shared Function PrepUI_AutoCast() As Lazy(Of ProgBarGui_AutoCast)
+        Return New Lazy(Of ProgBarGui_AutoCast)(
+            Function()
+                With CoreDataLib.GetProgSizeReport(TriggerType.AutoCast)
+                    SetProgBlockData(TriggerType.AutoCast)
+
+                    Dim objWin_AC As New ProgBarGui_AutoCast(.pWidth, .pHeight,
+                                                                     ProgTimeSpan_AC, AddressOf EaseProgress)
+                    Dim guiLoad = objWin_AC.Handle
+                    guiLoad = Nothing
+
+                    Return objWin_AC
+                End With
+            End Function, LazyThreadSafetyMode.None)
+    End Function
+
+    Public Shared Async Function ComposeTrayMenu() As Task
+        Await PrepDispatcher().InvokeAsync(
+        Sub()
+            _osTrayMenu = PrepUI_TrayMenu2()
+
+            Dim guiReset = _osTrayMenu.Value
+            guiReset.PrepTrayMenuInit()
+        End Sub, DispatcherPriority.Background)
+    End Function
+
+    Public Shared Async Function ComposePopupMenu() As Task
+        Await PrepDispatcher().InvokeAsync(
+        Sub()
+            _osPopupMenu = PrepUI_PopupMenu()
+
+            Dim guiReset = _osPopupMenu.Value
+            guiReset.WarmupPopupMenu()
+        End Sub, DispatcherPriority.Background)
+    End Function
+
+    Public Shared Async Function ComposePopupMenuOverlay() As Task
+        Await PrepDispatcher().InvokeAsync(
+        Sub()
+            _osPopupMenuOverlay = PrepUI_PopupMenuOverlay()
+            Dim guiReset = _osPopupMenuOverlay.Value
+            guiReset.SetBG()
+        End Sub,
+        DispatcherPriority.Background)
+    End Function
+
+    Public Shared Function GenerateUI_TrayMenu() As Task
+        Return ComposeTrayMenu()
+    End Function
+
+    Public Shared Function GenerateUI_PopupMenu() As Task
+        Return ComposePopupMenu()
+    End Function
+
+    Public Shared Function GenerateUI_PopupMenuOverlay() As Task
+        Return ComposePopupMenuOverlay()
+    End Function
+
+    'Public Shared Function GenerateUI_PopupMenuOverlay() As Task
+    '    Return Task.Run(
+    '         Sub()
+    '             Dim aa = ComposePopupMenuOverlay()
+    '         End Sub)
+    'End Function
 
     Private Shared Sub GenerateGUI(objGenGui As TriggerAction)
         Select Case objGenGui
@@ -135,10 +290,10 @@ Public NotInheritable Class osHandler_UI
         Dim objOsPopupMenu = TryCast(sender, osPopupMenu_GUI)
         Dim objOsPopupMenuOverlay = osPopupMenuOverlay
 
+        ClearHandlers(objOsPopupMenu, objOsPopupMenuOverlay)
+
         DisposeUI_PopupMenu.Invoke(objOsPopupMenu)
         DisposeUI_PopupMenuOverlay.Invoke(objOsPopupMenuOverlay)
-
-        ClearHandlers(objOsPopupMenu, objOsPopupMenuOverlay)
 
         _osPopupMenu = Nothing
         _osPopupMenuOverlay = Nothing
@@ -176,31 +331,144 @@ Public NotInheritable Class osHandler_UI
                 End Function, LazyThreadSafetyMode.ExecutionAndPublication))
     End Function
 
-    Public Shared Async Function CreateUI_AutoPass() As Task
-        _autoPass2 = Await Task.Run(
-            Function() New Lazy(Of progUI_AutoPass)(
-                Function()
-                    Return PrepDispatcher().
-                        Invoke(Function()
-                                   Dim objPrefWin As New progUI_AutoPass()
-                                   objPrefWin.PrepAutoPass()
+    'Public Shared Function CreateUI_AutoPass() As Task(Of Lazy(Of progUI_AutoPass))
+    '    Return Task.Run(
+    '        Sub()
+    '            _autoPass2 = New Lazy(Of progUI_AutoPass)(
+    '            Function()
+    '                Return PrepDispatcher().
+    '                    Invoke(Function()
+    '                               Dim objPrefWin As New progUI_AutoPass()
+    '                               objPrefWin.PrepAutoPass()
 
-                                   Return objPrefWin
-                               End Function, DispatcherPriority.Background)
-                End Function, LazyThreadSafetyMode.ExecutionAndPublication))
+    '                               Return objPrefWin
+    '                           End Function, DispatcherPriority.Background)
+    '            End Function, LazyThreadSafetyMode.ExecutionAndPublication)
+    '            PrepDispatcher().
+    '                    Invoke(Sub()
+    '                               Dim guiReset = _autoPass2.Value
+    '                               guiReset.BeginPrep()
+    '                           End Sub, DispatcherPriority.Background)
+    '        End Sub)
+    'End Function
+
+    Public Shared Function CreateUI_AutoPass() As Lazy(Of progUI_AutoPass)
+        Return New Lazy(Of progUI_AutoPass)(
+            Function()
+                Return PrepDispatcher().Invoke(
+                    Function()
+                        Dim objPrefWin As New progUI_AutoPass()
+                        objPrefWin.PrepAutoPass()
+
+                        Return objPrefWin
+                    End Function)
+            End Function, LazyThreadSafetyMode.ExecutionAndPublication)
     End Function
 
-    Public Shared Async Function LaunchGui(progGui As TriggerAction) As Task
+    Private Shared Sub PrepAutoCast()
+        With CoreDataLib.GetProgSizeReport(TriggerType.AutoCast)
+            _autoCastProgress = New ProgBarGui_AutoCast(.pWidth, .pHeight,
+                                        osFuncLib_Progress.ProgTimeSpan_AC,
+                                        AddressOf EaseProgress)
+        End With
+
+        Dim guiLoad = _autoCastProgress.Handle
+        guiLoad = Nothing
+    End Sub
+
+    Public Shared Function CreateUI_AutoCast() As ProgBarGui_AutoCast
+        Return PrepDispatcher().Invoke(
+                    Function()
+                        With CoreDataLib.GetProgSizeReport(TriggerType.AutoCast)
+                            SetProgBlockData(TriggerType.AutoCast)
+
+                            Dim objWin_AC As New ProgBarGui_AutoCast(.pWidth, .pHeight,
+                                                                     ProgTimeSpan_AC, AddressOf EaseProgress)
+                            Dim guiLoad = objWin_AC.Handle
+                            guiLoad = Nothing
+
+                            Return objWin_AC
+                        End With
+
+                    End Function, DispatcherPriority.Background)
+    End Function
+
+    'Public Shared Function CreateUI_AutoCast() As Task(Of ProgBarGui_AutoCast)
+    '    Return Task.Run(
+    '        Function()
+    '            Return PrepDispatcher().Invoke(
+    '                Function()
+    '                    With CoreDataLib.GetProgSizeReport(TriggerType.AutoCast)
+    '                        SetProgBlockData(TriggerType.AutoCast)
+
+    '                        Dim objWin_AC As New ProgBarGui_AutoCast(.pWidth, .pHeight,
+    '                                                                 ProgTimeSpan_AC, AddressOf EaseProgress)
+    '                        Dim guiLoad = objWin_AC.Handle
+    '                        guiLoad = Nothing
+
+    '                        Return objWin_AC
+    '                    End With
+
+    '                End Function, DispatcherPriority.Background)
+    '        End Function)
+    'End Function
+
+    Public Shared Function ComposeAC() As Task
+        Return PrepDispatcher().Invoke(
+            Function()
+                _autoCastProgress = CreateUI_AutoCast()
+            End Function, DispatcherPriority.Background)
+    End Function
+
+    Public Shared Function ComposeAP() As Task
+        Return PrepDispatcher().Invoke(
+            Function()
+                _autoPass2 = CreateUI_AutoPass()
+                Dim guiReset = _autoPass2.Value
+
+                guiReset.BeginPrep()
+            End Function, DispatcherPriority.Background)
+    End Function
+
+    Public Shared Function GenerateUI_AutoCast() As Task
+        Return Task.Run(
+             Sub()
+                 Dim aa = ComposeAC()
+             End Sub)
+    End Function
+
+    Public Shared Function GenerateUI_AutoPass() As Task
+        Return Task.Run(
+             Sub()
+                 Dim aa = ComposeAP()
+             End Sub)
+    End Function
+
+    Public Shared Async Function LoadGUI() As Task
+        Await Task.WhenAll(GenerateUI_AutoCast(), GenerateUI_AutoPass())
+    End Function
+
+    Public Shared Async Function LoadMenuGUI() As Task
+        Await Task.WhenAll(GenerateUI_PopupMenuOverlay(), GenerateUI_PopupMenu())
+    End Function
+
+    Public Shared Function LaunchGui(progGui As TriggerAction) As Task
         Select Case progGui
             Case TriggerAutoCast
-                GenerateGUI(progGui)
+                'If _autoCastProgress Is Nothing Then
+                '    _autoCastProgress = Await CreateUI_AutoCast()
+                'End If
             Case TriggerAutoPass
-                Await CreateUI_AutoPass()
+                'If _autoPass2 Is Nothing Then
+                '    _autoPass2 = CreateUI_AutoPass()
+                'End If
             Case TriggerShowMenu
-                Await GeneratePopupMenu()
+             '   Await GeneratePopupMenu()
             Case TriggerShowTrayMenu
                 '  Await GenerateTrayOverlay()
         End Select
+
+        osFuncLib_Progress.UpdateProgStatus(progGui, ProgAction.Activate)
     End Function
 
     Public Shared Async Function LaunchGui_AP() As Task
@@ -213,14 +481,14 @@ Public NotInheritable Class osHandler_UI
             End Sub, DispatcherPriority.Background).Task
     End Function
 
-    Public Shared Sub DisplayGUI(guiType As TriggerType, Optional ptPosData As osDraw.Point = Nothing)
+    Public Shared Function DisplayGUI(isAsync As Boolean, guiType As TriggerType, Optional ptPosData As osDraw.Point = Nothing) As Task
         Select Case guiType
             Case TriggerType.AutoCast
-                PrepDispatcher().Invoke(
+                Return PrepDispatcher().InvokeAsync(
                     Sub()
+                        osFuncLib_Progress.UpdateProgStatus(TriggerAutoCast, ProgAction.Activate)
                         osGui_AutoCastProgress.InitiateAutoCast()
-
-                    End Sub)
+                    End Sub, DispatcherPriority.Background).Task
             Case TriggerType.AutoPass
                 PrepDispatcher(True).Invoke(
                     Sub()
@@ -232,30 +500,46 @@ Public NotInheritable Class osHandler_UI
             Case TriggerType.ShowMenu
             Case TriggerType.ShowTrayMenu
         End Select
-    End Sub
+    End Function
 
-    Public Shared Async Function PresentPopupMenu() As Task
-        Await PrepDispatcher().InvokeAsync(
-            Async Function()
-                With osPopupMenuOverlay
-                    AddHandler .MouseUp, osHandler_UI.pmFunc_TerminatePopupMenu
+    Public Shared Function PresentPopupMenuOverlay() As Task
+        Return Task.Run(
+             Function()
+                 Return PrepDispatcher().Invoke(
+                    Function()
+                        With osPopupMenuOverlay
+                            AddHandler .MouseUp, osHandler_UI.pmFunc_TerminatePopupMenu
 
-                    .InitPopupMenuOverlay()
-                    Await .InitOverlayOpen(OverlayVisual_Open)
-                End With
+                            .InitPopupMenuOverlay()
+                            Return .InitOverlayOpen(OverlayVisual_Open)
+                        End With
+                    End Function)
+             End Function)
+    End Function
 
-                With osPopupMenu
-                    .Owner = osPopupMenuOverlay
-                    .Owner.ShowInTaskbar = False
+    Public Shared Function PresentPopupMenu() As Task
+        Return Task.Run(
+             Function()
+                 Return PrepDispatcher().Invoke(
+                    Function()
+                        With osPopupMenu
+                            .Owner = osPopupMenuOverlay
+                            .Owner.ShowInTaskbar = False
 
-                    .ShowInTaskbar = False
-                    .Topmost = True
-                    .ShowActivated = False
+                            .ShowInTaskbar = False
+                            .Topmost = True
+                            .ShowActivated = False
 
-                    .Show()
-                    Await .TriggerPopupMenu()
-                End With
-            End Function)
+                            .Show()
+                            Return .TriggerPopupMenu()
+                        End With
+                    End Function)
+             End Function)
+    End Function
+
+    Public Shared Async Function DisplayPopupMenu() As Task
+        Await PresentPopupMenuOverlay()
+        Await PresentPopupMenu()
     End Function
 
     Public Shared Async Function ClosePopupMenu(popupCloseAction As PopupCloseAction) As Task
@@ -271,37 +555,46 @@ Public NotInheritable Class osHandler_UI
         End If
     End Sub
 
+    Private Shared Function CloseUI_PopupMenu(objVisType As PopupVisualType, Optional doOwnerKill As Boolean = False) As Task
+        Return PrepDispatcher().Invoke(
+            Function()
+                LiftPopupMenu(doOwnerKill)
+                Return osPopupMenu.InitPopupClose(objVisType)
+            End Function, DispatcherPriority.Render)
+    End Function
+
+    Private Shared Function CloseUI_PopupMenuOverlay(objVisType As OverlayVisualType) As Task
+        Return PrepDispatcher().Invoke(
+            Function()
+                Return osPopupMenuOverlay.InitOverlayClose(objVisType)
+            End Function, DispatcherPriority.Render)
+    End Function
+
     Private Shared Async Function TerminatePopupMenu(popupCloseAction As PopupCloseAction) As Task
-        Dim objTerminateTask As DispatcherOperation(Of Task) = Nothing
+        Dim objTask_Terminate As Task = Nothing
 
         Select Case popupCloseAction
             Case ClosePopup_Default
-                objTerminateTask = PrepDispatcher().InvokeAsync(
-                    Async Function()
-                        LiftPopupMenu()
-
-                        Await osPopupMenu.InitPopupClose(PopupVisual_Close)
-                        Await osPopupMenuOverlay.InitOverlayClose(OverlayVisual_Close)
-                    End Function, DispatcherPriority.Render)
+                objTask_Terminate = Task.Run(
+                   Async Function()
+                       Await CloseUI_PopupMenu(PopupVisual_Close)
+                       Await CloseUI_PopupMenuOverlay(OverlayVisual_Close)
+                   End Function)
             Case ClosePopup_ByBtn
-                objTerminateTask = PrepDispatcher().InvokeAsync(
+                objTask_Terminate = Task.Run(
                     Async Function()
-                        LiftPopupMenu(True)
-
-                        Await osPopupMenu.InitPopupClose(PopupVisual_CloseByBtn)
-                        Await osPopupMenuOverlay.InitOverlayClose(OverlayVisual_CloseByBtn)
-                    End Function, DispatcherPriority.Render)
+                        Await CloseUI_PopupMenu(PopupVisual_CloseByBtn, True)
+                        Await CloseUI_PopupMenuOverlay(OverlayVisual_CloseByBtn)
+                    End Function)
             Case ClosePopup_ByCmd
-                objTerminateTask = PrepDispatcher().InvokeAsync(
+                objTask_Terminate = Task.Run(
                     Async Function()
-                        LiftPopupMenu()
-
-                        Await osPopupMenu.InitPopupClose(PopupVisual_CloseByCmd)
-                        Await osPopupMenuOverlay.InitOverlayClose(OverlayVisual_CloseByCmd)
-                    End Function, DispatcherPriority.Render)
+                        Await CloseUI_PopupMenu(PopupVisual_CloseByCmd)
+                        Await CloseUI_PopupMenuOverlay(OverlayVisual_CloseByCmd)
+                    End Function)
         End Select
 
-        Await objTerminateTask.Task.Unwrap()
+        Await objTask_Terminate
         Await DisposePopupMenu()
     End Function
 
@@ -313,14 +606,15 @@ Public NotInheritable Class osHandler_UI
     End Sub
 
     Private Shared Async Function DisposePopupMenu() As Task
-        ClearHandlers(osPopupMenu,
-                      osPopupMenuOverlay)
+        ClearHandlers(osPopupMenu, osPopupMenuOverlay)
 
         Await Task.WhenAll(DismissPopupMenu(),
                            DismissPopupMenuOverlay())
 
         Await GeneratePopupMenu()
         InitResourceAlloc()
+
+        AuthorizeInputMonitor()
     End Function
 
     Private Shared Function DismissPopupMenu() As Task
@@ -366,12 +660,11 @@ Public NotInheritable Class osHandler_UI
 
         _osTrayMenu = Nothing
 
-        Dim objTask_GenTrayMenu = PrepUI_TrayMenu()
+        Dim objTask_GenTrayMenu = GenerateUI_TrayMenu()
     End Sub
 
-    Public Shared Async Function GeneratePopupMenu() As Task
-        Await Task.WhenAll(PrepUI_PopupMenu(),
-                           PrepUI_PopupMenuOverlay())
+    Public Shared Function GeneratePopupMenu() As Task
+        Return Task.WhenAll(GenerateUI_PopupMenuOverlay(), GenerateUI_PopupMenu())
     End Function
 
     Public Shared Sub PrepDispatch_Prefs(sender As Object, e As EventArgs)
@@ -388,17 +681,6 @@ Public NotInheritable Class osHandler_UI
                             Dim aa = CreateOptsUI()
                         End Sub)
     End Function
-
-    Private Shared Sub PrepAutoCast()
-        With CoreDataLib.GetProgSizeReport(TriggerType.AutoCast)
-            _autoCastProgress = New ProgBarGui_AutoCast(.pWidth, .pHeight,
-                                        osFuncLib_Progress.ProgTimeSpan,
-                                        AddressOf EaseProgress)
-        End With
-
-        Dim guiLoad = _autoCastProgress.Handle
-        guiLoad = Nothing
-    End Sub
 
     Private Shared Sub PrepAutoPass()
         _autoPass = New Lazy(Of progGui_AutoPass)(
@@ -461,18 +743,14 @@ Public NotInheritable Class osHandler_UI
                         osGui_AutoCastProgress.Close()
                         osGui_AutoCastProgress.Dispose()
                     End Sub)
-
-                _autoCastProgress = Nothing
+                Dim objTask_ComposeAutoCast = ComposeAC()
             Case TriggerAutoPass
                 DismissAutoPassUI()
-
-                If forceCreateNew Then
-                    Dim objTask_LaunchAP = CreateUI_AutoPass()
-                End If
+                Dim objTask_ComposeAutoPass = ComposeAP()
             Case TriggerShowOpts
 
             Case TriggerShowMenu
-            '    PrepUI_PopupMenuOverlay()
+                Dim objTask_GenPopupMenu = GeneratePopupMenu()
             Case TriggerShowTrayMenu
                 '      PrepUI_PopupMenuOverlay()
         End Select
@@ -480,6 +758,7 @@ Public NotInheritable Class osHandler_UI
         guiReset = Nothing
 
         RecaptureResources()
+        AuthorizeInputMonitor()
     End Sub
 
     Public Shared Sub RecaptureResources()

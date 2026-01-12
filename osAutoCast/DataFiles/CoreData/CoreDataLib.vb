@@ -161,7 +161,6 @@ Public NotInheritable Class CoreDataLib
         Return osRegEx.Match(objShaderName, "_(.*?)\.ps",
                              RegexOptions.IgnoreCase).Groups(1).Value
     End Function
-
     Private Shared Function GenerateShaderList() As List(Of osShaderDetails) 'Task(Of List(Of osShaderDetails))
         Return osShaderNameList.Select(
                     Function(shaderRes) CreateShaderRecord(shaderRes)).ToList()
@@ -200,6 +199,52 @@ Public NotInheritable Class CoreDataLib
             End Sub)
 
     End Function
+    '    Private Shared Async Function GenerateShaderListAsync(
+    '    isNew As Boolean
+    ') As Task(Of List(Of osShaderDetails))
+
+    '        Dim tasks = osShaderNameList.Select(
+    '        Async Function(shaderRes)
+    '            Dim shaderRec = CreateShaderRecord(shaderRes)
+
+    '            Await AddShaderToIdxAsync(shaderRec).ConfigureAwait(False)
+
+    '            Return shaderRec
+    '        End Function)
+
+    '        Return (Await Task.WhenAll(tasks).ConfigureAwait(False)).ToList()
+    '    End Function
+
+    '    Public Shared Async Function ComposeShaderIdxAsync(
+    '    objTaskStatus As TaskStatusReport
+    ') As Task
+
+    '        ShaderDetailsIdx = Await GenerateShaderListAsync(True).ConfigureAwait(False)
+
+    '    End Function
+
+    'Private Shared Function GenerateShaderList(isNew As Boolean) As List(Of osShaderDetails)
+    '    '
+    '    Return osShaderNameList.Select(
+    '                Function(shaderRes)
+    '                    Dim objShaderRec = CreateShaderRecord(shaderRes)
+    '                    Dim objTask_AddShader = AddShaderToIdx(objShaderRec)
+
+    '                    Return objShaderRec
+    '                End Function).ToList()
+    'End Function
+
+    'Private Shared Function CreateShaderRecord(objShaderRes As String) As osShaderDetails
+    '    Return New osShaderDetails(objShaderRes, GetShaderType(objShaderRes))
+    'End Function
+
+    'Public Shared Function ComposeShaderIdx(objTaskStatus As TaskStatusReport) As Task
+    '    Return Task.Run(
+    '        Sub()
+    '            ShaderDetailsIdx = GenerateShaderList(True)
+    '        End Sub)
+
+    'End Function
 
     Public Shared Function GetShaderDevice() As osProgDevice
         Return osHandler_Graphics.pDevice
@@ -245,9 +290,10 @@ Public NotInheritable Class CoreDataLib
     End Function
 
     Private Shared Sub ResolveAction()
-
+        'InputMonSvc.SelectState(MonitorStatus.Watching)
         If Not osFuncLib_InputScan.isActionComplete Then Return
         osFuncLib_InputScan.isActionComplete = False
+
     End Sub
 
     Public Shared Sub PrepUtilityTrigger(pType As TriggerType)
@@ -272,50 +318,23 @@ Public NotInheritable Class CoreDataLib
         End Select
     End Function
 
-    Private Shared Function FetchTrigger(tType As TriggerAction) As Func(Of Task)
-        InputMonSvc.SelectState(MonitorStatus.InCmd)
-
-        Return TriggerHandlers.FirstOrDefault(
-            Function(TriggerHandle) TriggerHandle.HandleAction = tType,
-                (NoTrigger, CType(Nothing, Func(Of Task)))).HandleEvent
-    End Function
-
     Public Shared Async Function ExecuteTrigger(tType As TriggerAction) As Task
-        Dim objHandlerEvent As Func(Of Task) = Nothing
-        Dim objTriggerVal = ValidateTrigger(tType)
+        With New TriggerActionData(tType)
+            If .isValidTrigger Then Await .
+                TriggerFunc().Invoke()
 
-        If ProcessTrigger(objTriggerVal) Then
-            objHandlerEvent = FetchTrigger(tType)
-        Else
             ResolveAction()
-            Exit Function : End If
-
-        If objHandlerEvent IsNot Nothing Then
-            If objTriggerVal = ValidTrigger Then
-                osFuncLib_Progress.SetProgBlockData(AutoCast)
-                Await osHandler_UI.LaunchGui(tType)
-                osFuncLib_Progress.UpdateProgStatus(tType, ProgAction.Activate)
-            End If
-
-            Await objHandlerEvent()
-        End If
-
-        ResolveAction()
-    End Function
-
-
-
-    Private Shared Function ProcessTrigger(valType As TriggerValidation) As Boolean
-        Return Not valType = TriggerValidation.InvalidTrigger
+        End With
     End Function
 
     Public Shared Function ValidateTrigger(pType As TriggerAction) As TriggerValidation
-        If isUtilityTrigger(pType) Then Return TriggerValidation.ValidUtility
+
+        If isUtilityTrigger(pType) Then Return ValidUtility
 
         If VerifyRunStatus() Then : InitAbortMonitor(pType)
-            Return TriggerValidation.ValidTrigger
+            Return ValidTrigger
         Else
-            Return TriggerValidation.InvalidTrigger
+            Return InvalidTrigger
         End If
     End Function
 
@@ -401,7 +420,7 @@ Public NotInheritable Class CoreDataLib
                     End Sub)
             End With
         Else
-            Dim osProgElement = uiWin_AutoPass.OddProgBar_AP
+            Dim osProgElement = ui_AutoPass.OddProgBar_AP
 
             If pEventData.Length > 0 Then
                 strEventData = pEventData(0).ToString()

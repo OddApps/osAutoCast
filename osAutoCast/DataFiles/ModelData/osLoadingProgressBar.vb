@@ -96,7 +96,7 @@ Namespace osLoadingElements
         Public Shared ReadOnly ProgressProperty As DependencyProperty = DependencyProperty.
             Register(NameOf(Progress), GetType(Double), GetType(osLoadingProgressBar),
                      New FrameworkPropertyMetadata(0.0, FrameworkPropertyMetadataOptions.AffectsRender,
-                                                   AddressOf OnValueChanged, AddressOf CoerceProgress))
+                                                   AddressOf OnValueChanged))
 
         Private Shared Function CoerceProgress(d As DependencyObject, baseValue As Object) As Object
             Dim ctrl = DirectCast(d, osLoadingProgressBar)
@@ -108,7 +108,8 @@ Namespace osLoadingElements
         End Function
 
         Private Shared Sub OnValueChanged(d As DependencyObject, e As DependencyPropertyChangedEventArgs)
-
+            Dim ctrl = DirectCast(d, osLoadingProgressBar)
+            ctrl.InvalidateVisual()
         End Sub
 
         Public Property Progress As Double
@@ -278,6 +279,14 @@ Namespace osLoadingElements
             End Get
         End Property
 
+
+        Private _ActualProgress As Double
+        Public ReadOnly Property ActualProgress As Double
+            Get
+                Return _ActualProgress
+            End Get
+        End Property
+
 #End Region
 
 #Region "Convenience API (direct percent-based setters)"
@@ -370,6 +379,8 @@ Namespace osLoadingElements
             Dim progressRatio = GetProgRatio()
 
             Dim fillWidth = ActualWidth * progressRatio
+            _ActualProgress = fillWidth
+
             Dim fillP = progressRatio * 100
 
             If fillWidth > 0.0001 Then

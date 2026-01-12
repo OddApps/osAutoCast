@@ -609,9 +609,6 @@ Namespace osPrefLib
             End Function
 
             Public Sub SavePrefsFile()
-
-                Data.objOsPrefIdx.UpdatePrefStore()
-
                 Using pWriter As New System.IO.StreamWriter(CoreDataLib.osPrefFile, False)
                     pWriter.WriteLine("PrefCatalog_")
 

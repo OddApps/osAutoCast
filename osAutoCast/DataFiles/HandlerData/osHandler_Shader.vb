@@ -398,6 +398,36 @@ Public Module osHandler_Shader
                     End Sub, DispatcherPriority.Background)
     End Function
 
+    Public Async Function AddShaderToIdxAsync(
+    objShaderDetails As osShaderDetails
+) As Task
+
+        Dim dispatcher = PrepDispatcher()
+
+        Await dispatcher.InvokeAsync(
+        Sub()
+            Dim idxID = BuildIdxKey(objShaderDetails.ShaderName)
+
+            Select Case objShaderDetails.ShaderType
+                Case sTypePixel
+                    osShaderIdx.Add(New idxShaderRecord(idxID, pxShaderData_Pixel))
+
+                Case sTypeText_G
+                    osShaderIdx.Add(New idxShaderRecord(idxID, pxShaderData_Text_G))
+
+                Case sTypeText_S
+                    osShaderIdx.Add(New idxShaderRecord(idxID, pxShaderData_Text_S))
+
+                Case sTypeVertex
+                    osShaderIdx.Add(New idxShaderRecord(idxID, pxShaderData_Vertex))
+            End Select
+        End Sub,
+        DispatcherPriority.Background
+    ).Task.ConfigureAwait(False)
+
+    End Function
+
+
     Public Function FetchShader(objShaderType As osShaderType) As iPxShader
         Return osShaderIdx.First(
             Function(idxObj)

@@ -34,27 +34,7 @@
                                            LineStackingStrategy="MaxHeight" FontWeight="SemiBold" />
                                 </Label.Content>
                             </Label>
-                            <Button x:Name="osPrefsBtn_Close" Grid.Column="1" Background="Transparent"
-                                    Style="{StaticResource osPrefsBtnCloseStyle}" Foreground="#FF000000"
-                                    HorizontalContentAlignment="Center" VerticalAlignment="Center"
-                                    VerticalContentAlignment="Center" BorderThickness="0"
-                                    FontSize="26" Padding="0,0,2,0" />
-                            <!--<Button x:Name="osPrefsBtn_Close" Grid.Column="1" Background="Transparent"
-                                    HorizontalContentAlignment="Center" VerticalAlignment="Center"
-                                    VerticalContentAlignment="Center" Padding="0,0,2,0"
-                                    BorderThickness="0" FontSize="26">
-                                <Button.Template>
-                                    <ControlTemplate>
-                                        <TextBlock Text="X" x:Name="osPrefsBtn_x" TextAlignment="Center" 
-                                                   LineStackingStrategy="MaxHeight" FontWeight="Bold" />
-                                        <ControlTemplate.Triggers>
-                                            <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter Property="Foreground" Value="White" />
-                                            </Trigger>
-                                        </ControlTemplate.Triggers>
-                                    </ControlTemplate>
-                                </Button.Template>
-                            </Button>-->
+                            <Button x:Name="osPrefsBtn_Close" Grid.Column="1" Background="Transparent" Style="{StaticResource osPrefsBtnCloseStyle}" Foreground="#FF000000" />
                         </Grid>
                         <Border x:Name="osPrefsTitlePanel" Background="#FF282828" VerticalAlignment="Center" Opacity="1">
                             <Label HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Padding="0">

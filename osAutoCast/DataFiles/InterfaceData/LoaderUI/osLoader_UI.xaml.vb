@@ -54,6 +54,11 @@ Public Class osLoader_UI
         End With
     End Sub
 
+    Private Function ValidateTextUpdate(valTaskType As LoadTaskType) As Boolean
+        Dim txtMsg = GetLoadTaskMsg(valTaskType)
+        Return Not txtMsg = "skip"
+    End Function
+
     Private Function VerifyTextUpdate(valTaskType As LoadTaskType, ByRef txtMsg As String) As Boolean
         txtMsg = GetLoadTaskMsg(valTaskType)
         Return Not txtMsg = "skip"
@@ -68,25 +73,25 @@ Public Class osLoader_UI
 
                 ImplementLoadVisEvents(visLoadTextEventTask)
 
-                Dim baa = PrepDispatcher().InvokeAsync(
-                    Sub()
-                        ApplyLoadText(txtMsg)
-                        .BeginAnimation(objVisTxtColor, objVis_TextFadeIn)
-                    End Sub, DispatcherPriority.Render)
+                Dim a = PrepDispatcher().InvokeAsync(
+                        Sub()
+                            ApplyLoadText(txtMsg)
+                            .BeginAnimation(objVisTxtColor, objVis_TextFadeIn)
+                        End Sub, DispatcherPriority.Render)
 
                 Await visLoadTextEventTask.Task
             End With
         End If
     End Function
 
-    Public Async Function FadeLoadTextOut(valTaskType As LoadTaskType) As Task
+    Public Function FadeLoadTextOut(valTaskType As LoadTaskType) As Task
         Dim txtMsg As String = ""
 
         If VerifyTextUpdate(valTaskType, txtMsg) Then
             With objTextBrush
                 ImplementLoadVisEvents()
 
-                Await PrepDispatcher().InvokeAsync(
+                PrepDispatcher().InvokeAsync(
                     Sub()
                         .BeginAnimation(objVisTxtColor, objVis_TextFadeOut)
                     End Sub, DispatcherPriority.Render)
@@ -155,13 +160,13 @@ Partial Class osLoader_UI
     Public osPrefManager As osHandler_Prefs
 
     Private idxLoadStageData As New Dictionary(Of LoadTaskType, osLoadStageData) From {
-        {Load_Init, CreateLoadStageData(0, 30, 400)},
-        {Load_PrefPrep, CreateLoadStageData(35, 65, 415)},
-        {Load_PrefApply, CreateLoadStageData(70, 105, 475)},
-        {Load_InitShaders, CreateLoadStageData(110, 130, 375)},
-        {Load_Shaders, CreateLoadStageData(135, 165, 350)},
+        {Load_Init, CreateLoadStageData(0, 30, 350)},
+        {Load_PrefPrep, CreateLoadStageData(35, 65, 350)},
+        {Load_PrefApply, CreateLoadStageData(70, 105, 325)},
+        {Load_InitShaders, CreateLoadStageData(110, 130, 325)},
+        {Load_Shaders, CreateLoadStageData(135, 165, 325)},
         {Load_Opts, CreateLoadStageData(170, 190, 350)},
-        {Load_PopupMenu, CreateLoadStageData(195, 220, 300)},
+        {Load_PopupMenu, CreateLoadStageData(195, 220, 325)},
         {Load_StartingSvc, CreateLoadStageData(225, 235, 315)},
         {Load_Starting, CreateLoadStageData(240, 250, 375)}
     }
@@ -270,9 +275,13 @@ Partial Class osLoader_UI
         Return New osLoaderStageIdx(objLoadStages)
     End Function
 
+    Private Function GetObjLoadProgBar() As osProgLoad
+        Return Me.objLoadProgBar
+    End Function
+
     Private Function InitLoadHandler() As osHandler_Loader
-        Return New osHandler_Loader(GenerateLoadStages(), objLoadProgBar.Maximum,
-                                    Sub(pVal) SetProgress(pVal), AddressOf FadeLoadTextOut, AddressOf FadeLoadTextIn)
+        Return New osHandler_Loader(GenerateLoadStages(), objLoadProgBar, Sub(pVal) SetProgress(pVal), objLoadText, Sub(txtLoad) SetLoadText(txtLoad), AddressOf ValidateTextUpdate,
+                                    AddressOf GetObjLoadProgBar, AddressOf FadeLoadTextOut, AddressOf FadeLoadTextIn)
     End Function
 
     Private Function ComposeLoadStage(valTaskType As LoadTaskType) As osLoader_Stage
@@ -324,6 +333,14 @@ Partial Class osLoader_UI
 
     Private Sub ApplyLoadText(txtLoad As String)
         objLoadText.Text = txtLoad
+    End Sub
+
+    Private Sub SetLoadText(valTaskType As LoadTaskType)
+        Dim txtMsg As String = ""
+
+        If VerifyTextUpdate(valTaskType, txtMsg) Then
+            objLoadText.Text = txtMsg
+        End If
     End Sub
 
     Private Sub ComposeOutline(sender As Object, e As RoutedEventArgs) Handles LoadingContainerOutline.Loaded

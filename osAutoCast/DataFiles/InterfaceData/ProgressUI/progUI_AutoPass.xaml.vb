@@ -17,6 +17,10 @@ Public Class progUI_AutoPass
         Me.SetDisplayText("Release Shift or Press C To Cancel")
     End Function
 
+    Public Sub BeginPrep()
+        Me.OddProgBar_AP.IsAutoPass = True
+    End Sub
+
     Public Sub PrepAutoPass()
         With Me
             .DataContext = osPrefData.Data
@@ -85,7 +89,7 @@ Partial Public Class progUI_AutoPass
     End Function
 
     Public Sub PresentAutoPassUI()
-        Me.Show()
+        '      Me.Show()
 
         osFuncLib_Progress.UpdateProgStatus(TriggerAutoPass, ProgAction.Activate)
         apHandler._DisplayTextFunc("Release Mouse To Begin")

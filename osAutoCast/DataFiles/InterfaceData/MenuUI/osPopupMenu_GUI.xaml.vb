@@ -324,7 +324,7 @@ Public Class osPopupMenu_GUI
 
 
 
-        ' ShowGameMenuItem()
+        ShowGameMenuItem()
     End Sub
 
     Private Async Function ExitPopupMenu(popupCloseAction As PopupCloseAction, objMenuCmd As Action) As Task
@@ -434,7 +434,7 @@ Partial Public Class osPopupMenu_GUI
 
     Public Sub New()
         InitializeComponent()
-        ShowGameMenuItem()
+        '  ShowGameMenuItem()
     End Sub
 
     Private Sub ShowGameMenuItem()

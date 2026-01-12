@@ -78,6 +78,11 @@ Public Class osTrayMenu_GUI
         End If
     End Sub
 
+    Public Sub InitTrayMenuVis()
+        visTrayMenu_Open = EstablishVisual(TrayMenu_Open)
+        visTrayMenu_Close = EstablishVisual(TrayMenu_Close)
+    End Sub
+
     Public Sub PrepTrayMenuInit()
         visTrayMenu_Open = EstablishVisual(TrayMenu_Open)
         visTrayMenu_Close = EstablishVisual(TrayMenu_Close)

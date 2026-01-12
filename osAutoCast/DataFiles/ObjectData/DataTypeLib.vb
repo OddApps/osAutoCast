@@ -13,6 +13,7 @@ Imports osAutoCast.DataTypeLib.TrayMenuVisuals
 Imports osAutoCast.DataTypeLib.LoadTextVisualType
 Imports osAutoCast.DataTypeLib.LoadTaskStatus
 Imports osAutoCast.DataTypeLib.VisRenderMode
+Imports osAutoCast.DataTypeLib.TriggerValidation
 Imports System.Threading.Tasks.TaskCreationOptions
 Imports osAutoCast.osShaderDataLib
 Imports osDraw = System.Drawing
@@ -28,6 +29,10 @@ Imports pxShader_Vertex = SharpDX.Direct3D11.VertexShader
 Imports osColor = System.Windows.Media.Color
 Imports osVisibility = System.Windows.Visibility
 Imports osAutoCast.osControls
+Imports FuncLib_AC = osAutoCast.osFuncLib_AutoCast
+Imports FuncLib_AP = osAutoCast.osFuncLib_AutoPass
+Imports FuncLib_Opts = osAutoCast.osFuncLib_ShowOpts
+Imports FuncLib_Menu = osAutoCast.osFuncLib_PopupMenu
 
 #Disable Warning BC42353
 
@@ -459,6 +464,103 @@ Public Module DataTypeLib
 #End Region
 
 End Module
+
+Public Class TriggerHandlerData
+
+    Public Property HandleAction As TriggerAction
+    Public Property HandleEvent As Func(Of Task)
+
+    Public Sub New()
+    End Sub
+
+    Public Sub New(objHandleAction As TriggerAction, objHandleEvent As Func(Of Task))
+        HandleAction = objHandleAction
+        HandleEvent = objHandleEvent
+    End Sub
+
+End Class
+
+Public Class osTriggerHandlerIdx
+
+    Public Property TriggerHandlerIdx As TriggerHandlerData()
+
+    Public Sub New()
+    End Sub
+
+    Public Sub New(objHandlerIdx As TriggerHandlerData())
+        TriggerHandlerIdx = objHandlerIdx
+    End Sub
+
+End Class
+
+Public Class TriggerActionData
+
+    Public Property isInvalidTrigger As Boolean
+    Public Property isValidTrigger As Boolean
+
+    Public Property TriggerValidate As TriggerValidation
+
+    Public Property TriggerFunc As Func(Of Task) = Nothing
+
+    Private ReadOnly idxTriggerHandler As TriggerHandlerData() = {
+        CreateTriggerHandler(TriggerAutoCast, AddressOf FuncLib_AC.ExecuteAutoCast),
+        CreateTriggerHandler(TriggerAutoPass, AddressOf FuncLib_AP.ExecuteAutoPass),
+        CreateTriggerHandler(TriggerShowOpts, AddressOf FuncLib_Opts.ExecuteDispOpts),
+        CreateTriggerHandler(TriggerShowMenu, AddressOf FuncLib_Menu.ShowPopupMenu)
+    }
+
+    Private TrigType As TriggerAction
+
+    Private Function CreateTriggerHandler(objHandleAction As TriggerAction,
+                                          objHandleEvent As Func(Of Task)) As TriggerHandlerData
+        Return New TriggerHandlerData(objHandleAction, objHandleEvent)
+    End Function
+
+    Private Function FetchTrigger(tType As TriggerAction) As Func(Of Task)
+        CoreDataLib.InputMonSvc.SelectState(MonitorStatus.InCmd)
+
+        Return idxTriggerHandler.FirstOrDefault(
+            Function(TriggerHandle) TriggerHandle.HandleAction = tType,
+                (SetNoTrigger())).HandleEvent
+    End Function
+
+    Private Function SetNoTrigger() As TriggerHandlerData
+        Return New TriggerHandlerData(NoTrigger, CType(Nothing, Func(Of Task)))
+    End Function
+
+    Private Function ProcessTrigger(valType As TriggerValidation) As Boolean
+        Return Not valType = TriggerValidation.InvalidTrigger
+    End Function
+
+    Public Sub New()
+    End Sub
+
+    Public Sub New(tType As TriggerAction)
+        TriggerValidate = CoreDataLib.ValidateTrigger(tType)
+        TrigType = tType
+
+        If ProcessTrigger(TriggerValidate) Then
+            isValidTrigger = True
+            TriggerFunc = FetchTrigger(tType)
+
+            If TriggerValidate <>
+                ValidUtility Then PrepTriggerHandler()
+        Else
+            isValidTrigger = False
+        End If
+    End Sub
+
+    Public Sub New(objValidate As Boolean, objTaskData As Func(Of Task))
+        isInvalidTrigger = objValidate
+        TriggerFunc = objTaskData
+    End Sub
+
+    Public Sub PrepTriggerHandler()
+        osFuncLib_Progress.SetProgBlockData(TrigType)
+        osFuncLib_Progress.UpdateProgStatus(TrigType, ProgAction.Activate)
+    End Sub
+
+End Class
 
 Public Class osBorderEdge
 
@@ -1405,7 +1507,9 @@ Public Module osPopupMenuLib
                             .IsHitTestVisible = False : .ShowInTaskbar = False
                             .DataContext = Nothing : .Opacity = 0
                         End If
-                    Catch : End Try
+                    Catch
+                        Dim aa As Boolean = False
+                    End Try
                 End With
             End If
         End Sub

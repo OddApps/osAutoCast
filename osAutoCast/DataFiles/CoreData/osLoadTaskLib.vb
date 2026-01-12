@@ -73,12 +73,13 @@ Public Module osLoadTaskLib
     End Function
 
     Public Async Function LoadOptsUI(objTaskStatus As TaskStatusReport) As Task
-        Await CreateOptsUI()
+        Await Task.WhenAll(CreateOptsUI(), LoadGUI())
         objTaskStatus.SetTaskComplete()
     End Function
 
     Public Async Function PrepPopupMenuUI(objTaskStatus As TaskStatusReport) As Task
-        Await Task.WhenAll(PrepUI_PopupMenu(), PrepUI_TrayMenu(), PrepUI_PopupMenuOverlay())
+        Await osUI_Loader.LoadUI_Menus()
+
         objTaskStatus.SetTaskComplete()
     End Function
 
@@ -92,6 +93,7 @@ Public Module osLoadTaskLib
         Await PreloadShaderCatalog()
 
         Await CoreDataLib.ComposeShaderIdx(objTaskStatus)
+        '  Await CoreDataLib.ComposeShaderIdxAsync(objTaskStatus)
         objTaskStatus.SetTaskComplete()
     End Function
 
