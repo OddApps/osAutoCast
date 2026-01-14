@@ -564,7 +564,6 @@ Public NotInheritable Class osFuncLib_ShowOpts
         chkCloseSettings.ResetAndInitTask()
 
         Await osHandler_UI.ShowPrefsUI(chkCloseSettings, True)
-        'Await osHandler_UI.ShowPrefsUI(chkCloseSettings)
         Await AnticipateExit()
 
         Await osHandler_UI.ResetOptsUI(True)
@@ -586,17 +585,8 @@ Public NotInheritable Class osFuncLib_AutoPass
     End Sub
 
     Public Shared Async Function ExecuteAutoPass() As Task
-        'Dim objTask_AutoPass = Task.Run(
-        '    Async Function()
-        '        ui_AutoPass.PresentAutoPassUI()
 
-        '        Dim retAP = Await PrepDispatcher(True).Invoke(
-        '            Function()
-        '                Return ui_AutoPass.LaunchAutoPass()
-        '            End Function, DispatcherPriority.Background)
 
-        '        Return retAP
-        '    End Function)
         ui_AutoPass.Show()
 
         PrepDispatcher(True).Invoke(
@@ -609,7 +599,6 @@ Public NotInheritable Class osFuncLib_AutoPass
                 Return ui_AutoPass.LaunchAutoPass()
             End Function, DispatcherPriority.Render)
 
-        ' Dim objTask_ProgResult = Await objTask_AutoPass
         Dim retProgResult = Await objTask_AutoPass
 
         Await ProcessResult(retProgResult)
@@ -629,18 +618,12 @@ Public NotInheritable Class osFuncLib_AutoPass
         DispatcherPriority.Background
     ).Task
 
-        ' Yield to the UI thread and let layout/render run (replaces Task.Delay hack).
-        ' This is a no-op invoked at Render priority — it gives WPF a chance to finish layout/measure/render.
         Await PrepDispatcher(True).InvokeAsync(
         Sub()
-            ' no-op
         End Sub,
         DispatcherPriority.Render
     ).Task
 
-        ' Call LaunchAutoPass on the UI thread and await its result.
-        ' If LaunchAutoPass returns a Task(Of T), the DispatcherOperation.Task will complete with that Task,
-        ' so we first await the DispatcherOperation.Task to get the inner task, then await the inner task.
         Dim launchOp = PrepDispatcher(True).InvokeAsync(
         Function()
             Return ui_AutoPass.LaunchAutoPass()
@@ -651,7 +634,6 @@ Public NotInheritable Class osFuncLib_AutoPass
         Dim innerTask = Await launchOp.Task      ' innerTask is Task(Of T) if LaunchAutoPass returns Task(Of T)
         Dim retProgResult = Await innerTask      ' await the actual result
 
-        ' Post-processing (can be background if ProcessResult is CPU-bound; keep it awaited here)
         Await ProcessResult(retProgResult)
 
         osFuncLib_InputScan.isActionComplete = True
@@ -668,7 +650,6 @@ Public NotInheritable Class osFuncLib_AutoPass
                 Case ProgResult.Completed
                     PrepDispatcher().Invoke(
                         Sub()
-                            'osHandler_UI.apHandler._DisplayTextFunc("Release Shift To AutoPass | Press C To Cancel")
                             apHandler._DisplayTextFunc("Release Shift - AutoPass | Press C - Cancel")
                         End Sub)
 
@@ -1097,7 +1078,6 @@ Public NotInheritable Class osFuncLib_PopupMenu
     End Property
 
     Public Shared Async Function ShowPopupMenu() As Task
-        '     PrepUtilityTrigger(TriggerType.ShowMenu)
 
         InitCloseMonitor(objPopupTaskPending)
 
@@ -1568,12 +1548,10 @@ Public Class osPrefExpandEase
     End Function
 
     Protected Overrides Function EaseInCore(normalizedTime As Double) As Double
-        ' If both control x's are the trivial curve, return linear
         If X1 = X2 AndAlso Y1 = Y2 AndAlso X1 = 0 AndAlso Y1 = 0 Then
             Return normalizedTime
         End If
 
-        ' Precompute polynomial coefficients for x and y
         Dim cx As Double = 3.0 * X1
         Dim bx As Double = 3.0 * (X2 - X1) - cx
         Dim ax As Double = 1.0 - cx - bx
@@ -1582,25 +1560,20 @@ Public Class osPrefExpandEase
         Dim by As Double = 3.0 * (Y2 - Y1) - cy
         Dim ay As Double = 1.0 - cy - by
 
-        ' Solve for parameter t such that x(t) == normalizedTime
         Dim t As Double = SolveForT(normalizedTime, ax, bx, cx)
 
-        ' Evaluate y(t)
         Dim result As Double = ((ay * t + by) * t + cy) * t
         Return result
     End Function
 
-    ' Evaluate x(t) polynomial
     Private Function SampleCurveX(t As Double, ax As Double, bx As Double, cx As Double) As Double
         Return ((ax * t + bx) * t + cx) * t
     End Function
 
-    ' Evaluate derivative dx/dt
     Private Function SampleCurveDerivativeX(t As Double, ax As Double, bx As Double, cx As Double) As Double
         Return (3.0 * ax * t * t) + (2.0 * bx * t) + cx
     End Function
 
-    ' Solve x(t) = x for t using Newton-Raphson with binary fallback
     Private Function SolveForT(x As Double, ax As Double, bx As Double, cx As Double) As Double
         Dim t As Double = x ' good initial guess
         Const NEWTON_ITERATIONS As Integer = 8
@@ -1615,7 +1588,6 @@ Public Class osPrefExpandEase
             t = tNext
         Next
 
-        ' If Newton didn't converge, use binary search
         Dim lo As Double = 0.0
         Dim hi As Double = 1.0
         t = x
@@ -1645,6 +1617,13 @@ Public Class LoaderProgressAnimator
         _dispatcher = bar.Dispatcher
     End Sub
 
+
+
+
+
+
+
+
     Public Function AnimateToAsync(
         target As Double,
         duration As TimeSpan,
@@ -1652,8 +1631,7 @@ Public Class LoaderProgressAnimator
         token As CancellationToken) As Task
 
         Dim tcs As New TaskCompletionSource(Of Object)()
-
-        _dispatcher.InvokeAsync(Sub()
+        _dispatcher.BeginInvoke(Sub()
 
                                     token.ThrowIfCancellationRequested()
 
@@ -1667,7 +1645,6 @@ Public Class LoaderProgressAnimator
 
                                     AddHandler anim.Completed,
                 Sub()
-                    ' Snap final value
                     _bar.Progress = target
                     tcs.TrySetResult(Nothing)
                 End Sub
@@ -1675,7 +1652,7 @@ Public Class LoaderProgressAnimator
                                     _bar.BeginAnimation(
                 osLoadingProgressBar.ProgressProperty,
                 anim,
-                HandoffBehavior.SnapshotAndReplace)
+                HandoffBehavior.Compose)
 
                                 End Sub, DispatcherPriority.Render)
 
@@ -1686,95 +1663,73 @@ End Class
 
 Public Module osUI_Loader
 
-    Public Async Function LoadUI_Menus() As Task
 
-        ' ---------- Overlay ----------
-        Await Application.Current.Dispatcher.InvokeAsync(
+    Public Async Function LoadUI_Menus() As Task
+        Await PrepDispatcher().InvokeAsync(
             Sub()
                 _osPopupMenuOverlay = PrepUI_PopupMenuOverlay()
-                osPopupMenuOverlay.SetBG()
-            End Sub, DispatcherPriority.Render)
-
-        Await DispatcherHelpers.YieldToRenderAsync()
-
-        Await Application.Current.Dispatcher.InvokeAsync(
-            Sub()
                 _osPopupMenu = PrepUI_PopupMenu()
-                osPopupMenu.WarmupPopupMenu()
-            End Sub, DispatcherPriority.Render)
 
-        Await DispatcherHelpers.YieldToRenderAsync()
+            End Sub, DispatcherPriority.Background)
 
-        Await Application.Current.Dispatcher.InvokeAsync(
+        Await PrepDispatcher().InvokeAsync(
             Sub()
                 _osTrayMenu = PrepUI_TrayMenu2()
+            End Sub, DispatcherPriority.Background)
+    End Function
+
+    Public Async Function LoadUI_InitMenus() As Task
+        Await PrepDispatcher().InvokeAsync(
+            Sub()
+                osPopupMenuOverlay.SetBG()
+                osPopupMenu.WarmupPopupMenu()
+            End Sub, DispatcherPriority.Background)
+
+        Await PrepDispatcher().InvokeAsync(
+            Sub()
                 osTrayMenu.PrepTrayMenuInit()
-            End Sub, DispatcherPriority.Render)
-
-        '     Await Application.Current.Dispatcher.Invoke(
-        'Async Function()
-        '    _osPopupMenuOverlay = PrepUI_PopupMenuOverlay()
-        '    osPopupMenuOverlay.SetBG()
-        '    Await DispatcherHelpers.YieldToRenderAsync()
-        '    _osPopupMenu = PrepUI_PopupMenu()
-        '    osPopupMenu.WarmupPopupMenu()
-        '    Await DispatcherHelpers.YieldToRenderAsync()
-        '    _osTrayMenu = PrepUI_TrayMenu2()
-        '    osTrayMenu.PrepTrayMenuInit()
-        'End Function, DispatcherPriority.Render)
-
-        '' ---------- Overlay ----------
-        'Await Application.Current.Dispatcher.InvokeAsync(
-        '    Sub()
-        '        _osPopupMenuOverlay = PrepUI_PopupMenuOverlay()
-        '        osPopupMenuOverlay.SetBG()
-        '    End Sub, DispatcherPriority.Background)
-
-        'Await DispatcherHelpers.YieldToRenderAsync()
-
-        'Await Application.Current.Dispatcher.InvokeAsync(
-        '    Sub()
-        '        _osPopupMenu = PrepUI_PopupMenu()
-        '        osPopupMenu.WarmupPopupMenu()
-        '    End Sub, DispatcherPriority.Background)
-
-        'Await DispatcherHelpers.YieldToRenderAsync()
-
-        'Await Application.Current.Dispatcher.InvokeAsync(
-        '    Sub()
-        '        _osTrayMenu = PrepUI_TrayMenu2()
-        '        osTrayMenu.PrepTrayMenuInit()
-        '    End Sub, DispatcherPriority.Background)
+            End Sub, DispatcherPriority.Background)
 
     End Function
 
     Public Async Function LoadUI_TriggerHandlers() As Task
+        '   CreateThreadUI_Actions()
 
-        ' ---------- Overlay ----------
-        Await Application.Current.Dispatcher.InvokeAsync(
+        Await PrepDispatcher().InvokeAsync(
+        Sub()
+            _osPrefsWindow = PrepUI_Opts()
+
+            osHandler_UI._autoPass2 = osHandler_UI.PrepUI_AutoPass()
+        End Sub)
+
+        Await PrepDispatcher().InvokeAsync(
             Sub()
-                osHandler_UI._autoPass2 = osHandler_UI.PrepUI_AutoPass()
-                osHandler_UI.osGui_AutoPass2.PrepAutoPass()
-            End Sub,
-            DispatcherPriority.Background)
 
-        Await DispatcherHelpers.YieldToRenderAsync()
+                '_osPrefsWindow = PrepUI_Opts()
 
-        ' ---------- Popup Menu ----------
-        Await Application.Current.Dispatcher.InvokeAsync(
-            Sub()
-                _osPrefsWindow = PrepUI_Opts()
-                osPrefsWindow.PrepPrefVis()
-            End Sub,
-            DispatcherPriority.Background)
+                'osHandler_UI._autoPass2 = osHandler_UI.PrepUI_AutoPass()
 
-        Await DispatcherHelpers.YieldToRenderAsync()
-
-        ' ---------- Tray Menu ----------
-        Await Application.Current.Dispatcher.InvokeAsync(
-            Sub()
-                _acProgress = PrepUI_AutoCast()
+                _autoCastProgress = CreateUI_AutoCast()
             End Sub, DispatcherPriority.Background)
+
+    End Function
+
+    Public Async Function LoadUI_PrepHandlers() As Task
+        Await PrepDispatcher().InvokeAsync(
+        Sub()
+            osPrefsWindow.PrepPrefVis()
+
+            osHandler_UI.osGui_AutoPass2.PrepAutoPass()
+        End Sub)
+        'Await PrepDispatcher().InvokeAsync(
+        '    Sub()
+
+        '        osPrefsWindow.PrepPrefVis()
+
+        '        osHandler_UI.osGui_AutoPass2.PrepAutoPass()
+
+        '    End Sub, DispatcherPriority.Background)
+
 
     End Function
 

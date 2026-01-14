@@ -398,7 +398,11 @@ Public Module DataTypeLib
         Load_Opts
         Load_InitShaders
         Load_Shaders
+        Load_Actions
+        Load_InitActions
         Load_PopupMenu
+        Load_PopupMenus
+        Load_InitMenus
         Load_ApplyConfig
         Load_StartingSvc
         Load_Starting
@@ -789,11 +793,14 @@ Public Class osLoadStageData2
     Public Property Duration As TimeSpan
     Public Property LoadTask As LoadWork
 
+    Public Property LastTask As Boolean = False
+
     Public Sub New()
     End Sub
 
-    Public Sub New(pDur As Double)
+    Public Sub New(pDur As Double, Optional isLastTask As Boolean = False)
         Duration = TimeSpan.FromMilliseconds(pDur)
+        LastTask = isLastTask
     End Sub
 
     Public Sub New(lType As LoadTaskType, sVal As Double, eVal As Double, pDur As Double, lTask As LoadWork)

@@ -142,7 +142,9 @@
     <Style x:Key="LoadingProgressStyle" TargetType="{x:Type osLoadProg:osLoadingProgressBar}">
         <Setter Property="Height" Value="30" />
         <Setter Property="Minimum" Value="0" />
-        <Setter Property="Maximum" Value="250" />
+        <Setter Property="Maximum" Value="200" />
+        <!--<Setter Property="Maximum" Value="250" />-->
+        <!--<Setter Property="Maximum" Value="100" />-->
         <Setter Property="Margin" Value="0,2,0,0" />
         <Setter Property="FillBrush" Value="{StaticResource osLoadScreen_ProgressFill}" />
         <Setter Property="TrackBrush" Value="{StaticResource osLoadScreen_ProgressTrack}" />

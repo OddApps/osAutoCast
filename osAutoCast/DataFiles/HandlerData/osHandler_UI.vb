@@ -164,6 +164,7 @@ Public NotInheritable Class osHandler_UI
             ' Must already be on UI thread
             Dim win As New MenuOverlayWindow()
             win.PrepPopupMenuOverlay()
+            '  win.SetBG()
             If isFromTray Then win.ApplyTrayConfig()
             Return win
         End Function,
@@ -174,7 +175,7 @@ Public NotInheritable Class osHandler_UI
         Return New Lazy(Of osTrayMenu_GUI)(
             Function()
                 Dim objTrayMenu As New osTrayMenu_GUI()
-                objTrayMenu.InitTrayMenuVis()
+                objTrayMenu.PrepTrayMenuInit()
 
                 Return objTrayMenu
             End Function, LazyThreadSafetyMode.None)
@@ -195,7 +196,7 @@ Public NotInheritable Class osHandler_UI
         Return New Lazy(Of osPrefs_GUI)(
             Function()
                 Dim objPrefWin As New osPrefs_GUI()
-
+                objPrefWin.PrepPrefVis()
                 Return objPrefWin
             End Function, LazyThreadSafetyMode.None)
     End Function
@@ -204,6 +205,7 @@ Public NotInheritable Class osHandler_UI
         Return New Lazy(Of progUI_AutoPass)(
             Function()
                 Dim objPrefWin As New progUI_AutoPass()
+                objPrefWin.PrepAutoPass()
                 Return objPrefWin
             End Function, LazyThreadSafetyMode.None)
     End Function
@@ -519,7 +521,7 @@ Public NotInheritable Class osHandler_UI
     Public Shared Function PresentPopupMenu() As Task
         Return Task.Run(
              Function()
-                 Return PrepDispatcher().Invoke(
+                 Return osPopupMenu.Dispatcher.BeginInvoke(
                     Function()
                         With osPopupMenu
                             .Owner = osPopupMenuOverlay

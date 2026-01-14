@@ -79,15 +79,13 @@ Public Class osTrayMenu_GUI
     End Sub
 
     Public Sub InitTrayMenuVis()
-        visTrayMenu_Open = EstablishVisual(TrayMenu_Open)
-        visTrayMenu_Close = EstablishVisual(TrayMenu_Close)
+        SetTrayMenuEvent(TrayMenu_Open)
     End Sub
 
     Public Sub PrepTrayMenuInit()
         visTrayMenu_Open = EstablishVisual(TrayMenu_Open)
         visTrayMenu_Close = EstablishVisual(TrayMenu_Close)
 
-        SetTrayMenuEvent(TrayMenu_Open)
 
         With Me
             .Width = wTrayMenu
