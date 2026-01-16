@@ -29,8 +29,7 @@ Public Class osPrefs_GUI
     End Function
 
     Private Function FetchPrefVis(objVisResource As Style, objVisType As PrefUI_State) As Storyboard
-        Return AllocVis(objVisResource.
-                        Resources(GetVisualState(objVisType)))
+        Return AllocVis(Me.Resources(GetVisualState(objVisType)))
     End Function
 
     'Private Function EstablishVisual(objVisType As PrefUI_State) As Storyboard
@@ -45,7 +44,7 @@ Public Class osPrefs_GUI
 
     Private Sub EstablishVisual(objVisType As PrefUI_State, ByRef objVis As Storyboard)
         Dim objLoadVis = FetchPrefVis(osPrefRes, objVisType)
-        objVis = objLoadVis.Clone()
+        objVis = objLoadVis
     End Sub
 
     Private Sub InitVisual(objVisType As PrefUI_State)
@@ -66,19 +65,24 @@ Public Class osPrefs_GUI
         Me.Hide()
     End Sub
 
-    Private Sub ActivatePrefTracker()
+    Public Sub ActivatePrefTracker()
         objOsPrefTracker = New osPrefTracker(Of osPrefData)(osPrefData.Data)
     End Sub
 
     Public Sub PrepPrefVis()
         InitVisual(PrefUI_Open)
-        ActivatePrefTracker()
+        '  ActivatePrefTracker()
     End Sub
 
     Public Sub DisplayPrefsUI()
         Dim a = PrepDispatcher().BeginInvoke(DispatcherPriority.Render,
             Sub() ShowPrefsUICore())
     End Sub
+
+    Public Function DisplayPrefsUI(isN As Boolean) As Task
+        Return PrepDispatcher().BeginInvoke(DispatcherPriority.Render,
+            Sub() ShowPrefsUICore()).Task
+    End Function
 
     Private Function FetchExpandVisual() As DoubleAnimation
         Return CType(visPrefUI_Open.Children.First(

@@ -14,6 +14,7 @@ Imports osAutoCast.DataTypeLib.LoadTextVisualType
 Imports osAutoCast.DataTypeLib.LoadTaskStatus
 Imports osAutoCast.DataTypeLib.VisRenderMode
 Imports osAutoCast.DataTypeLib.TriggerValidation
+Imports osAutoCast.DataTypeLib.LoadTaskType
 Imports System.Threading.Tasks.TaskCreationOptions
 Imports osAutoCast.osShaderDataLib
 Imports osDraw = System.Drawing
@@ -803,6 +804,16 @@ Public Class osLoadStageData2
         LastTask = isLastTask
     End Sub
 
+    Public Sub New(lType As LoadTaskType, sVal As Double, eVal As Double, pDur As Double,
+                   lTask As LoadWork, Optional isLastTask As Boolean = False)
+        StartValue = sVal
+        EndValue = eVal
+        LoadType = lType
+        LoadTask = lTask
+        Duration = TimeSpan.FromMilliseconds(pDur)
+        LastTask = isLastTask
+    End Sub
+
     Public Sub New(lType As LoadTaskType, sVal As Double, eVal As Double, pDur As Double, lTask As LoadWork)
         StartValue = sVal
         EndValue = eVal
@@ -812,6 +823,97 @@ Public Class osLoadStageData2
     End Sub
 
 End Class
+
+Public Class osLoadingObjects
+
+    Public Property LoadStageIdx As LoadStage()
+
+    'Public Delegate Function LoadFunction(objTaskProgress As IProgress(Of Double), objTaskAbort As CancellationToken) As Task
+    Public Delegate Function LoadFunction(objTaskAbort As CancellationToken) As Task
+
+    Public TaskDataItems As New Dictionary(Of LoadTaskType, TaskData) From {
+        {Load_Init, New TaskData(0, 30, 450)},
+        {Load_PrefPrep, New TaskData(30, 55, 450)},
+        {Load_InitShaders, New TaskData(55, 85, 450)},
+        {Load_PopupMenu, New TaskData(85, 115, 400)},
+        {Load_InitMenus, New TaskData(115, 130, 450)},
+        {Load_InitActions, New TaskData(130, 155, 450)},
+        {Load_Actions, New TaskData(155, 180, 450)},
+        {Load_StartingSvc, New TaskData(180, 190, 450)},
+        {Load_Starting, New TaskData(190, 200, 450, True)}
+    }
+
+    'Public TaskDataItems As New Dictionary(Of LoadTaskType, TaskData) From {
+    '    {Load_Init, New TaskData(0, 15, 375)},
+    '    {Load_PrefPrep, New TaskData(15, 28, 450)},
+    '    {Load_InitShaders, New TaskData(28, 42, 400)},
+    '    {Load_PopupMenu, New TaskData(42, 57, 400)},
+    '    {Load_InitMenus, New TaskData(57, 65, 400)},
+    '    {Load_InitActions, New TaskData(65, 78, 450)},
+    '    {Load_Actions, New TaskData(78, 90, 450)},
+    '    {Load_StartingSvc, New TaskData(90, 95, 375)},
+    '    {Load_Starting, New TaskData(95, 100, 375, True)}
+    '}
+
+    Public Function BuildLoadStage(tType As LoadTaskType, lTask As LoadFunction) As LoadStage
+        Dim objTaskData = FetchTaskData(tType)
+        Return New LoadStage(tType, objTaskData, lTask)
+    End Function
+
+    Public Function FetchTaskData(tType As LoadTaskType) As TaskData
+        Return TaskDataItems.First(
+            Function(typeTask)
+                Return typeTask.Key = tType
+            End Function).Value
+    End Function
+
+    Public Class LoadStage
+
+        Public Property TaskType As LoadTaskType
+        Public Property TaskDetails As TaskData
+        Public Property LoadTask As LoadFunction
+
+        Public Sub New()
+        End Sub
+
+        Public Sub New(lType As LoadTaskType, sVal As Double, eVal As Double, pDur As Double,
+                       lTask As LoadFunction, Optional isLastTask As Boolean = False)
+            TaskType = lType
+            TaskDetails = New TaskData(sVal, eVal, pDur, isLastTask)
+            LoadTask = lTask
+        End Sub
+
+        Public Sub New(lType As LoadTaskType, objTaskData As TaskData, lTask As LoadFunction)
+            TaskType = lType
+            TaskDetails = objTaskData
+            LoadTask = lTask
+        End Sub
+
+    End Class
+
+    Public Class TaskData
+
+        Public Property StartValue As Double
+        Public Property EndValue As Double
+        Public Property Duration As TimeSpan
+        Public Property LastTask As Boolean = False
+
+        Public Sub New()
+        End Sub
+
+        Public Sub New(sVal As Double, eVal As Double,
+                       pDur As Double, Optional isLastTask As Boolean = False)
+            StartValue = sVal
+            EndValue = eVal
+            Duration = TimeSpan.FromMilliseconds(pDur)
+            LastTask = isLastTask
+        End Sub
+
+    End Class
+
+End Class
+
+
 
 Public Class osLoadStageData
 

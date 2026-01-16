@@ -10,59 +10,7 @@
         <Setter Property="HorizontalAlignment" Value="Center" />
         <Setter Property="VerticalAlignment" Value="Stretch" />
         <Setter Property="HorizontalContentAlignment" Value="Center" />
-        <Setter Property="VerticalContentAlignment" Value="Stretch" />
-        <Style.Resources>
-            <Storyboard x:Key="TrayMenuVis_Display">
-                <DoubleAnimation Storyboard.TargetName="TrayMenuOutlineRender"
-                    Storyboard.TargetProperty="ScaleX" From="0" To="1" 
-                    Duration="0:0:0.45" FillBehavior="HoldEnd">
-                    <DoubleAnimation.EasingFunction>
-                        <QuadraticEase EasingMode="EaseIn" />
-                    </DoubleAnimation.EasingFunction>
-                </DoubleAnimation>
-                <DoubleAnimation Storyboard.TargetName="TrayMenuOutlineRender" 
-                    Storyboard.TargetProperty="ScaleY" From="0" To="1" 
-                    Duration="0:0:0.45" FillBehavior="HoldEnd">
-                    <DoubleAnimation.EasingFunction>
-                        <QuadraticEase EasingMode="EaseIn" />
-                    </DoubleAnimation.EasingFunction>
-                </DoubleAnimation>
-                <DoubleAnimation Storyboard.TargetName="TrayMenuOutline" 
-                    Storyboard.TargetProperty="Opacity" From="0" To="1" 
-                    Duration="0:0:0.45" FillBehavior="HoldEnd">
-                    <DoubleAnimation.EasingFunction>
-                        <QuadraticEase EasingMode="EaseIn" />
-                    </DoubleAnimation.EasingFunction>
-                </DoubleAnimation>
-            </Storyboard>
-            <Storyboard x:Key="TrayMenuVis_Close">
-                <DoubleAnimation Storyboard.TargetName="TrayMenuOutlineRender" 
-                                 Storyboard.TargetProperty="ScaleX"
-                                 From="1" To="0" Duration="0:0:0.475"
-                                 FillBehavior="HoldEnd">
-                    <DoubleAnimation.EasingFunction>
-                        <QuadraticEase EasingMode="EaseOut" />
-                    </DoubleAnimation.EasingFunction>
-                </DoubleAnimation>
-                <DoubleAnimation Storyboard.TargetName="TrayMenuOutlineRender" 
-                                 Storyboard.TargetProperty="ScaleY"
-                                 From="1" To="0" Duration="0:0:0.475"
-                                 FillBehavior="HoldEnd">
-                    <DoubleAnimation.EasingFunction>
-                        <QuadraticEase EasingMode="EaseOut" />
-                    </DoubleAnimation.EasingFunction>
-                </DoubleAnimation>
-                <DoubleAnimation Storyboard.TargetName="TrayMenuOutline" 
-                                 Storyboard.TargetProperty="Opacity"
-                                 From="1" To="0" Duration="0:0:0.475"
-                                 FillBehavior="HoldEnd">
-                    <DoubleAnimation.EasingFunction>
-                        <QuadraticEase EasingMode="EaseOut" />
-                    </DoubleAnimation.EasingFunction>
-                </DoubleAnimation>
-            </Storyboard>
-
-        </Style.Resources>
+        <Setter Property="VerticalContentAlignment" Value="Stretch" />        
     </Style>
 
     <Style x:Key="TrayMenuContainerOutlineStyle" TargetType="{x:Type Grid}">

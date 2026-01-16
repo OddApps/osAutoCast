@@ -13,6 +13,8 @@ Imports osAutoCast.DataTypeLib.LoadTextVisualType
 Imports osAutoCast.DataTypeLib.LoaderEasing
 Imports osAutoCast.DataTypeLib.LoadTaskType
 Imports osAutoCast.osHandler_UI
+Imports osAutoCast.osLoadingObjects
+Imports osLoad = osAutoCast.osLoadingObjects
 Imports System.Runtime.InteropServices
 Imports System.Windows.Interop
 Imports osColor = System.Windows.Media.Color
@@ -124,12 +126,8 @@ Public Class osLoader_UI
         AddHandler objLoadProgBar.LoadProgComplete,
             evtLoaderComplete
 
-        Dim _loaderCts = New CancellationTokenSource()
-        ' Dim animator As New LoaderProgressAnimator(objLoadProgBar)
-
-        Await objProcessLoadStages.RunLoaderAsync(_loaderCts.Token)
+        Await objProcessLoadStages.BeginLoadProcess()
     End Function
-
 
     Public Sub InitTriggerMonitor()
         DoInitTriggerMonitor()
@@ -163,30 +161,6 @@ Partial Class osLoader_UI
 
     Public osPrefManager As osHandler_Prefs
 
-    Private idxLoadStageData As New Dictionary(Of LoadTaskType, osLoadStageData) From {
-        {Load_Init, CreateLoadStageData(0, 30, 350)},
-        {Load_PrefPrep, CreateLoadStageData(35, 65, 350)},
-        {Load_PrefApply, CreateLoadStageData(70, 105, 325)},
-        {Load_InitShaders, CreateLoadStageData(110, 130, 325)},
-        {Load_Shaders, CreateLoadStageData(135, 165, 325)},
-        {Load_Opts, CreateLoadStageData(170, 190, 350)},
-        {Load_PopupMenu, CreateLoadStageData(195, 220, 325)},
-        {Load_StartingSvc, CreateLoadStageData(225, 235, 315)},
-        {Load_Starting, CreateLoadStageData(240, 250, 375)}
-    }
-
-    Private idxLoadTasks As New List(Of osLoadTaskData) From {
-        {CreateLoadTaskData(Load_Init, AddressOf osLoadTaskLib.LoadTask_Init)},
-        {CreateLoadTaskData(Load_PrefPrep, AddressOf osLoadTaskLib.LoadTask_PrefsLoad)},
-        {CreateLoadTaskData(Load_PrefApply, AddressOf osLoadTaskLib.LoadTask_PrefsApply)},
-        {CreateLoadTaskData(Load_InitShaders, AddressOf osLoadTaskLib.InitShaderDevices)},
-        {CreateLoadTaskData(Load_Shaders, AddressOf osLoadTaskLib.LoadAllShaders)},
-        {CreateLoadTaskData(Load_Opts, AddressOf osLoadTaskLib.LoadOptsUI)},
-        {CreateLoadTaskData(Load_PopupMenu, AddressOf osLoadTaskLib.PrepPopupMenuUI)},
-        {CreateLoadTaskData(Load_StartingSvc, AddressOf osLoadTaskLib.LoadTask_StartInMon)},
-        {CreateLoadTaskData(Load_Starting, AddressOf osLoadTaskLib.LoadTask_Finalize)}
-    }
-
     Private idxLoadStageMsg As New Dictionary(Of LoadTaskType, String) From {
         {Load_Init, "Initializing Data"},
         {Load_PrefPrep, "Loading Preferences"},
@@ -204,7 +178,7 @@ Partial Class osLoader_UI
         {Load_Actions, "Preparing Actions"}
 }
 
-    Public objProcessLoadStages As osHandler_Loader2
+    Public objProcessLoadStages As osHandler_Loader
 
     Public Property osAutoCastVersion As String = "Ver 3.0"
 
@@ -225,6 +199,13 @@ Partial Class osLoader_UI
             Return Me.LoadingText
         End Get
     End Property
+
+    Public ReadOnly Property objLoadTextHost As Grid
+        Get
+            Return Me.LoadingTextHost
+        End Get
+    End Property
+
 
     Public ReadOnly Property objOutline As Grid
         Get
@@ -250,66 +231,25 @@ Partial Class osLoader_UI
         End Get
     End Property
 
-    Public Function BuildLoadStages() As List(Of osLoadStageData2)
+    Public Function ConstructLoadIdx() As osLoad
+        Dim objLoadIdx As New osLoad
 
-        Return New List(Of osLoadStageData2) From {
-        New osLoadStageData2(375) With {
-            .LoadType = Load_Init,
-            .StartValue = 0,
-            .EndValue = 30,
-            .LoadTask = AddressOf osLoadTaskLib.LoadTask_Init
-        },
-        New osLoadStageData2(450) With {
-            .LoadType = Load_PrefPrep,
-            .StartValue = 30,
-            .EndValue = 55,
-      .LoadTask = AddressOf osLoadTaskLib.LoadTask_PrefsLoad
-        },
-        New osLoadStageData2(450) With {
-            .LoadType = Load_InitShaders,
-            .StartValue = 55,
-            .EndValue = 85,
-      .LoadTask = AddressOf osLoadTaskLib.LoadAllShaders
-        },
-        New osLoadStageData2(400) With {
-            .LoadType = Load_PopupMenu,
-            .StartValue = 85,
-            .EndValue = 115,
-            .LoadTask = AddressOf osLoadTaskLib.LoadTask_LoadMenus
-        },
-        New osLoadStageData2(400) With {
-            .LoadType = Load_InitMenus,
-            .StartValue = 115,
-            .EndValue = 130,
-            .LoadTask = AddressOf osLoadTaskLib.LoadTask_PrepMenus
-        },
-        New osLoadStageData2(450) With {
-            .LoadType = Load_InitActions,
-            .StartValue = 130,
-            .EndValue = 155,
-            .LoadTask = AddressOf osLoadTaskLib.LoadTask_InitActions
-        },
-        New osLoadStageData2(450) With {
-            .LoadType = Load_Actions,
-            .StartValue = 155,
-            .EndValue = 180,
-            .LoadTask = AddressOf osLoadTaskLib.LoadTask_PrepActions
-        },
-        New osLoadStageData2(450) With {
-            .LoadType = Load_StartingSvc,
-            .StartValue = 180,
-            .EndValue = 190,
-            .LoadTask = AddressOf osLoadTaskLib.LoadTask_StartInMon
-        },
-        New osLoadStageData2(450, True) With {
-            .LoadType = Load_Starting,
-            .StartValue = 190,
-            .EndValue = 200,
-            .LoadTask = AddressOf osLoadTaskLib.LoadTask_Finalize
-        }
-    }
+        With objLoadIdx
+            .LoadStageIdx = New List(Of LoadStage) From {
+                .BuildLoadStage(Load_Init, AddressOf LoadTask_Init),
+                .BuildLoadStage(Load_PrefPrep, AddressOf LoadTask_PrefsLoad),
+                .BuildLoadStage(Load_InitShaders, AddressOf LoadAllShaders),
+                .BuildLoadStage(Load_PopupMenu, AddressOf LoadTask_LoadMenus),
+                .BuildLoadStage(Load_InitMenus, AddressOf LoadTask_PrepMenus),
+                .BuildLoadStage(Load_InitActions, AddressOf LoadTask_InitActions),
+                .BuildLoadStage(Load_Actions, AddressOf LoadTask_PrepActions),
+                .BuildLoadStage(Load_StartingSvc, AddressOf LoadTask_StartInMon),
+                .BuildLoadStage(Load_Starting, AddressOf LoadTask_Finalize)
+            }.ToArray()
+        End With
+
+        Return objLoadIdx
     End Function
-
 
     Public Sub New()
         InitializeComponent()
@@ -330,41 +270,13 @@ Partial Class osLoader_UI
         Return New osLoadTaskData(objLoadTaskType, objTask)
     End Function
 
-    Private Function GenerateLoadStages() As osLoaderStageIdx
-        Dim objLoadStages As osLoader_Stage() = {
-            ComposeLoadStage(Load_Init),
-            ComposeLoadStage(Load_PrefPrep),
-            ComposeLoadStage(Load_PrefApply),
-            ComposeLoadStage(Load_InitShaders),
-            ComposeLoadStage(Load_Shaders),
-            ComposeLoadStage(Load_Opts),
-            ComposeLoadStage(Load_PopupMenu),
-            ComposeLoadStage(Load_StartingSvc),
-            ComposeLoadStage(Load_Starting)
-        }
-
-        Return New osLoaderStageIdx(objLoadStages)
-    End Function
-
     Private Function GetObjLoadProgBar() As osProgLoad
         Return Me.objLoadProgBar
     End Function
 
-    Private Function InitLoadHandler() As osHandler_Loader2
-        Return New osHandler_Loader2(BuildLoadStages(), objLoadProgBar, Sub(pVal) SetProgress(pVal), objLoadText, Sub(txtLoad) SetLoadText(txtLoad), AddressOf ValidateTextUpdate,
-                                    AddressOf GetObjLoadProgBar, AddressOf FadeLoadTextOut, AddressOf FadeLoadTextIn)
-    End Function
-
-    Private Function ComposeLoadStage(valTaskType As LoadTaskType) As osLoader_Stage
-        Return New osLoader_Stage(GetLoadStageData(valTaskType),
-                                  GetLoadTaskData(valTaskType))
-    End Function
-
-    Private Function GetLoadTaskData(valTaskType As LoadTaskType) As osLoadTaskData
-        Return idxLoadTasks.First(
-            Function(objLoadTask)
-                Return objLoadTask.LoadType = valTaskType
-            End Function)
+    Private Function InitLoadHandler() As osHandler_Loader
+        Return New osHandler_Loader(ConstructLoadIdx(), objLoadProgBar, AddressOf GetObjLoadProgBar,
+                                     objLoadText, objLoadTextHost, Sub(txtLoad) SetLoadText(txtLoad), AddressOf FadeLoadTextOut, AddressOf FadeLoadTextIn)
     End Function
 
     Private Function GetLoadTaskMsg(valTaskType As LoadTaskType) As String
@@ -374,20 +286,13 @@ Partial Class osLoader_UI
             End Function).Value
     End Function
 
-    Private Function GetLoadStageData(valTaskType As LoadTaskType) As osLoadStageData
-        Return idxLoadStageData.First(
-            Function(objLoadTask)
-                Return objLoadTask.Key = valTaskType
-            End Function).Value
-    End Function
-
     Private Function CreateVisArray() As TimelineCollection
         With New osLoadTextColors(objLoadText, objTextBrush)
             Return New TimelineCollection() From {
                 {New ColorAnimation(.txtShown, .txtHidden,
-                                    TimeSpan.FromMilliseconds(150), FillBehavior.HoldEnd)},
+                                    TimeSpan.FromMilliseconds(50), FillBehavior.HoldEnd)},
                 {New ColorAnimation(.txtHidden, .txtShown,
-                                    TimeSpan.FromMilliseconds(150), FillBehavior.HoldEnd)}}
+                                    TimeSpan.FromMilliseconds(75), FillBehavior.HoldEnd)}}
         End With
     End Function
 

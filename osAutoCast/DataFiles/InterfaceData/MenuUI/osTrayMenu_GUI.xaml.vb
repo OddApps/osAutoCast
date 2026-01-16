@@ -35,11 +35,14 @@ Public Class osTrayMenu_GUI
 
     Private Sub SetTrayMenuEvent(objMenuState As TrayMenuState, Optional setTaskRun As Boolean = False)
         If IsTrayMenuOpen(objMenuState) Then
+            RemoveHandler visTrayMenu_Open.Completed,
+                                                evtDisplayTrayMenu
             evtDisplayTrayMenu =
                 Sub()
                     RemoveHandler visTrayMenu_Open.Completed,
                                                 evtDisplayTrayMenu
 
+                    visTrayMenu_Close = EstablishVisual(TrayMenu_Close)
                     SetVisualMode(TrayMenu_Open)
                 End Sub
 
@@ -69,23 +72,34 @@ Public Class osTrayMenu_GUI
     End Sub
 
     Public Sub DisplayTrayMenu()
-        If PrepDispatcher().CheckAccess() Then
-            ShowTrayMenuCore()
-        Else
-            PrepDispatcher().Invoke(
-                AddressOf ShowTrayMenuCore,
+        'If PrepDispatcher().CheckAccess() Then
+        '    ShowTrayMenuCore()
+        'Else
+        PrepDispatcher().Invoke(
+                AddressOf TriggerVisuals,
                 DispatcherPriority.Render)
-        End If
+        '   End If
     End Sub
 
     Public Sub InitTrayMenuVis()
-        SetTrayMenuEvent(TrayMenu_Open)
+        RemoveHandler visTrayMenu_Open.Completed,
+                                                evtDisplayTrayMenu
+        evtDisplayTrayMenu =
+                Sub()
+                    RemoveHandler visTrayMenu_Open.Completed,
+                                                evtDisplayTrayMenu
+
+                    visTrayMenu_Close = EstablishVisual(TrayMenu_Close)
+                    SetVisualMode(TrayMenu_Open)
+                End Sub
+
+        AddHandler visTrayMenu_Open.Completed,
+                                    evtDisplayTrayMenu
     End Sub
 
     Public Sub PrepTrayMenuInit()
         visTrayMenu_Open = EstablishVisual(TrayMenu_Open)
-        visTrayMenu_Close = EstablishVisual(TrayMenu_Close)
-
+        InitTrayMenuVis()
 
         With Me
             .Width = wTrayMenu
@@ -93,6 +107,26 @@ Public Class osTrayMenu_GUI
 
             BufferTrayMenu()
         End With
+    End Sub
+
+    Private Async Sub TriggerVisuals()
+        Await TrayMenuOutline.Dispatcher.BeginInvoke(
+            Sub()
+                Try
+                    CalcTrayPos()
+
+                    With Me
+                        PresentTrayMenu()
+
+                        .Left = .TrayMenuPos_X
+                        .Top = .TrayMenuPos_Y
+
+                        .Topmost = True
+                    End With
+
+                    visTrayMenu_Open.Begin(TrayMenuOutline)
+                Catch ex As Exception : End Try
+            End Sub, DispatcherPriority.Render)
     End Sub
 
     Private Sub ShowTrayMenuCore()
@@ -106,6 +140,7 @@ Public Class osTrayMenu_GUI
 
             .Topmost = True
         End With
+
 
         visTrayMenu_Open.Begin(TrayMenuOutline)
     End Sub
@@ -322,13 +357,11 @@ Partial Public Class osTrayMenu_GUI
     End Function
 
     Private Function LoadVis_Set(objVisResource As Style, objVisType As TrayMenuState) As Storyboard
-        Return TryCast(objVisResource.
-            Resources(GetVisualKey(objVisType)), Storyboard)
+        Return TryCast(Me.Resources(GetVisualKey(objVisType)), Storyboard)
     End Function
 
     Private Function EstablishVisual(objVisType As TrayMenuState) As Storyboard
-        Dim objLoadVis = LoadVis_Set(TrayMenuRes, objVisType)
-        Return objLoadVis.Clone()
+        Return LoadVis_Set(TrayMenuRes, objVisType)
     End Function
 
     Private Function GetVisualKey(objVisType As TrayMenuState) As String
@@ -469,6 +502,10 @@ Partial Public Class osTrayMenu_GUI
         MyBase.OnDeactivated(e)
 
         If Not isAppLoaded Then Exit Sub
+
+        If visTrayMenu_Close Is Nothing Then
+            visTrayMenu_Close = EstablishVisual(TrayMenu_Close)
+        End If
 
         If ValidateTrayMenuClose() Then
             Return

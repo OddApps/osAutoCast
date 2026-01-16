@@ -2,9 +2,11 @@
 Imports System.Windows.Threading
 Imports osAutoCast.DataTypeLib.LoadTextVisualType
 Imports osAutoCast.osLoadingElements
+Imports osAutoCast.osLoadingObjects
+Imports osLoad = osAutoCast.osLoadingObjects
 Imports osProgLoad = osAutoCast.osLoadingElements.osLoadingProgressBar
 
-Public Class osHandler_Loader
+Public Class osHandler_Loader2
 
     Private ReadOnly _triggerLoadTextVis As Func(Of LoadTextVisualType, String, Task)
 
@@ -199,7 +201,7 @@ Public Class osHandler_Loader
 
         Using linkedToken.Register(
             Sub()
-                PrepDispatcher().InvokeAsync(
+                Application.Current.Dispatcher.InvokeAsync(
                     Sub()
                         _ProgLoad.BeginAnimation(
                         osLoadingProgressBar.ProgressProperty, Nothing)
@@ -211,7 +213,7 @@ Public Class osHandler_Loader
             Dim chkFrom = If(toValue >=
                 ProgressValue, toValue, ProgressValue)
 
-            Await PrepDispatcher().InvokeAsync(
+            Await Application.Current.Dispatcher.InvokeAsync(
                 Sub()
                     _setValue(chkFrom)
                     _ProgLoad.BeginAnimation(
@@ -239,7 +241,7 @@ Public Class osHandler_Loader
     End Function
 
     Private Sub FadeTextOut(valTaskType As LoadTaskType, objVisReset As osAutoAnimation)
-        PrepDispatcher().InvokeAsync(
+        Application.Current.Dispatcher.InvokeAsync(
                 Sub()
                     Dim handler As EventHandler = Nothing
 
@@ -258,7 +260,7 @@ Public Class osHandler_Loader
     End Sub
 
     Private Sub FadeTextIn(valTaskType As LoadTaskType, objVisReset As osAutoAnimation)
-        PrepDispatcher().InvokeAsync(
+        Application.Current.Dispatcher.InvokeAsync(
                 Sub()
                     Dim handler As EventHandler = Nothing
 
@@ -276,6 +278,9 @@ Public Class osHandler_Loader
                     objTextBrush.BeginAnimation(objVisTxtColor, objAni_VisIn)
                 End Sub)
     End Sub
+
+
+
 
     Public Async Function BeginLoadStage(initLoad As Boolean, Optional stageIndex As Integer = 0) As Task
         If initLoad Then stageIndex = 0
@@ -423,35 +428,23 @@ Public Class osHandler_Loader
 End Class
 
 
-Public Class osHandler_Loader2
+Public Class osHandler_Loader
 
-
-    Private ReadOnly _fadeTextOut As Action(Of LoadTextVisualType)
-    Private ReadOnly _fadeTextIn As Action(Of LoadTextVisualType)
+    Private ReadOnly _fadeTextOut As Func(Of LoadTextVisualType, Task)
+    Private ReadOnly _fadeTextIn As Func(Of LoadTextVisualType, Task)
 
     Private ReadOnly _ValidateLoadText As Func(Of LoadTaskType, Boolean)
 
     Private _LoaderText As TextBlock
+    Private _LoaderTextHost As Grid
 
     Private _ProgLoadBar As Func(Of osProgLoad)
 
-    Private ReadOnly _setValue As Action(Of Double)
     Private ReadOnly _setLoadText As Action(Of LoadTaskType)
 
     Private _animationCts As CancellationTokenSource
 
-    Private _renderHandler As EventHandler
-    Private _renderStopwatch As Stopwatch
-    Private _renderDuration As TimeSpan
-    Private _renderFrom As Double
-    Private _renderTo As Double
-    Private _renderEasing As LoaderEasing
-    Private _renderToken As CancellationToken
-    Private _renderTcs As TaskCompletionSource(Of Boolean)
-
-    Private Const DriftSpeed As Double = 10.5
-
-    Private _stages As IReadOnlyList(Of osLoadStageData2)
+    Private ReadOnly _LoadStages As IReadOnlyList(Of LoadStage)
 
     Private _stageCnt As Integer
     Private _stageLast As Integer
@@ -459,66 +452,15 @@ Public Class osHandler_Loader2
     Private _cts As CancellationTokenSource
     Private _currentStageIndex As Integer = -1
 
-
     Private ProgMax As Double
     Private _ProgLoad As osProgLoad
 
+    Private objProgressStage As IProgress(Of Double)
+    Private objProgressTimer As DispatcherTimer = Nothing
 
-    Public objLoadAni_TextVis As Storyboard = Nothing
-
-    Private objAni_VisIn As ColorAnimation
-    Private objAni_VisOut As ColorAnimation
-    Private objAni_q As ColorAnimation
-
-    Public objTextBrush As SolidColorBrush
-
-    Public ReadOnly Property objVisTxtColor As DependencyProperty
-        Get
-            Return SolidColorBrush.ColorProperty
-        End Get
-    End Property
-
-    Public ReadOnly Property objLoadVis_TextFadeOut As ColorAnimation
-        Get
-            Return objAni_VisOut
-        End Get
-    End Property
-
-    Public ReadOnly Property objLoadVis_TextFadeIn As ColorAnimation
-        Get
-            Return objAni_VisIn
-        End Get
-    End Property
-
-
-    Public ReadOnly Property objLoadVis_q As ColorAnimation
-        Get
-            Return objAni_VisIn
-        End Get
-    End Property
-
-    Private _LoaderProgress As Double
-
-    Private Property LoaderProgress As Double
-        Get
-            Return _LoaderProgress
-        End Get
-        Set(value As Double)
-            _LoaderProgress = value
-            _setValue(value)
-        End Set
-    End Property
-    Private _targetProgress As Double
-    Private _visualProgress As Double
-    Private _rendering As Boolean
-
-    Private _progressAnim As DoubleAnimation
-    Private _animClock As AnimationClock
-    Private _isAnimating As Boolean
-
-
-    Public Sub New(objLoadStages As List(Of osLoadStageData2), objProgBar As osProgLoad, setValueAction As Action(Of Double), objLoaderText As UIElement, funcLoadText As Action(Of LoadTaskType), funcValLoadText As Func(Of LoadTaskType, Boolean),
-                   objProg_Load As Func(Of osProgLoad), objTextVis_Out As Action(Of LoadTextVisualType), objTextVis_In As Action(Of LoadTextVisualType))
+    Public Sub New(objLoadStages As osLoad, objProgBar As osProgLoad, objProg_Load As Func(Of osProgLoad),
+                   objLoaderText As TextBlock, objLoaderTextHost As Grid, funcLoadText As Action(Of LoadTaskType),
+                   objTextVis_Out As Func(Of LoadTextVisualType, Task), objTextVis_In As Func(Of LoadTextVisualType, Task))
 
         _ProgLoadBar = objProg_Load
 
@@ -530,196 +472,15 @@ Public Class osHandler_Loader2
         _fadeTextOut = objTextVis_Out
         _fadeTextIn = objTextVis_In
 
-        _setValue = setValueAction
-
         _LoaderText = objLoaderText
+        _LoaderTextHost = objLoaderTextHost
         _setLoadText = funcLoadText
 
-        With New osLoadTextColors(_LoaderText, objTextBrush)
-            objAni_VisIn = New ColorAnimation(.txtHidden, .txtShown,
-                                    TimeSpan.FromMilliseconds(75), FillBehavior.Stop)
-            objAni_VisOut = New ColorAnimation(.txtShown, .txtHidden,
-                                    TimeSpan.FromMilliseconds(75), FillBehavior.HoldEnd)
-        End With
+        _LoadStages = objLoadStages.LoadStageIdx
 
-        _ValidateLoadText = funcValLoadText
-
-        _stages = objLoadStages
-        '  _stagess = objLoadStages
-        '
-        _stageCnt = _stages.Count
-        _stageLast = _stages.Count - 1
-
+        _stageCnt = _LoadStages.Count
+        _stageLast = _LoadStages.Count - 1
     End Sub
-
-    Private Shared Function CreateEasing(e As LoaderEasing) As IEasingFunction
-        Select Case e
-            Case LoaderEasing.EaseIn
-                Return New QuadraticEase With {.EasingMode = EasingMode.EaseIn}
-
-            Case LoaderEasing.EaseOut
-                Return New QuadraticEase With {.EasingMode = EasingMode.EaseOut}
-
-            Case LoaderEasing.EaseInOut
-                Return New ExponentialEase With {.EasingMode = EasingMode.EaseInOut, .Exponent = 2}
-
-            Case LoaderEasing.SmoothStep
-                Return New SineEase With {.EasingMode = EasingMode.EaseInOut}
-
-            Case Else
-                Return Nothing ' Linear
-        End Select
-    End Function
-
-
-    Private Function VerifyLastStage(idxStage As Integer) As Boolean
-        Return (idxStage = _stageLast)
-    End Function
-
-    Private Function VerifyTextVis(txtMsg As String) As Boolean
-        Return Not txtMsg = "skip"
-    End Function
-
-    Private Sub FadeTextOut(valTaskType As LoadTaskType, objVisReset As osAutoAnimation)
-        PrepDispatcher().InvokeAsync(
-                Sub()
-                    Dim handler As EventHandler = Nothing
-
-                    handler =
-                        Sub(sender, e)
-                            RemoveHandler objAni_VisOut.Completed, handler
-
-                            objVisReset.SetAnimation()
-                            objTextBrush.BeginAnimation(objVisTxtColor, Nothing)
-                        End Sub
-
-                    AddHandler objAni_VisOut.Completed, handler
-
-                    objTextBrush.BeginAnimation(objVisTxtColor, objAni_VisOut)
-                End Sub)
-    End Sub
-
-    Private Sub FadeTextIn(valTaskType As LoadTaskType, objVisReset As osAutoAnimation)
-        PrepDispatcher().InvokeAsync(
-                Sub()
-                    Dim handler As EventHandler = Nothing
-
-                    handler =
-                        Sub(sender, e)
-                            RemoveHandler objAni_VisIn.Completed, handler
-
-                            objVisReset.SetAnimation()
-                            objTextBrush.BeginAnimation(objVisTxtColor, Nothing)
-                        End Sub
-
-                    AddHandler objAni_VisIn.Completed, handler
-
-                    _setLoadText(valTaskType)
-                    objTextBrush.BeginAnimation(objVisTxtColor, objAni_VisIn)
-                End Sub)
-    End Sub
-
-    Private Sub FadeTextIn(valTaskType As LoadTaskType)
-
-        Dim handler As EventHandler = Nothing
-
-        handler =
-                        Sub(sender, e)
-                            RemoveHandler objAni_VisIn.Completed, handler
-
-                            objTextBrush.BeginAnimation(objVisTxtColor, Nothing)
-                        End Sub
-
-        AddHandler objAni_VisIn.Completed, handler
-
-        _setLoadText(valTaskType)
-        objTextBrush.BeginAnimation(objVisTxtColor, objAni_VisIn)
-    End Sub
-
-    Private Sub FadeTextOut(valTaskType As LoadTaskType)
-
-        Dim handler As EventHandler = Nothing
-
-                    handler =
-                        Sub(sender, e)
-                            RemoveHandler objAni_VisOut.Completed, handler
-
-                            objTextBrush.BeginAnimation(objVisTxtColor, Nothing)
-                        End Sub
-
-                    AddHandler objAni_VisOut.Completed, handler
-
-        objTextBrush.BeginAnimation(objVisTxtColor, objAni_VisOut)
-    End Sub
-
-    Private Function FadeTextOutAsync(valTaskType As LoadTaskType) As Task
-        Dim tcs As New TaskCompletionSource(Of Boolean)
-
-        PrepDispatcher().InvokeAsync(
-        Sub()
-            Dim handler As EventHandler = Nothing
-            handler =
-                Sub(sender, e)
-                    RemoveHandler objAni_VisOut.Completed, handler
-                    objTextBrush.BeginAnimation(objVisTxtColor, Nothing)
-                    tcs.TrySetResult(True)
-                End Sub
-
-            AddHandler objAni_VisOut.Completed, handler
-            objTextBrush.BeginAnimation(objVisTxtColor, objAni_VisOut)
-        End Sub, DispatcherPriority.Background)
-
-        Return tcs.Task
-    End Function
-
-
-    Private Function FadeTextInAsync(valTaskType As LoadTaskType) As Task
-        Dim tcs As New TaskCompletionSource(Of Boolean)
-
-        PrepDispatcher().InvokeAsync(
-        Sub()
-            Dim handler As EventHandler = Nothing
-            handler =
-                Sub(sender, e)
-                    RemoveHandler objAni_VisIn.Completed, handler
-                    objTextBrush.BeginAnimation(objVisTxtColor, Nothing)
-                    tcs.TrySetResult(True)
-                End Sub
-
-            AddHandler objAni_VisIn.Completed, handler
-
-            _setLoadText(valTaskType)
-            objTextBrush.BeginAnimation(objVisTxtColor, objAni_VisIn)
-        End Sub, DispatcherPriority.Render)
-
-        Return tcs.Task
-    End Function
-
-
-    Private Sub CancelRenderingOnly()
-        StopRendering()
-    End Sub
-
-    Private Shared Function ApplyEasing(t As Double, easing As LoaderEasing) As Double
-        t = Math.Max(0, Math.Min(1, t))
-
-        Select Case easing
-            Case LoaderEasing.EaseIn
-                Return t * t
-            Case LoaderEasing.EaseOut
-                Return t * (2 - t)
-            Case LoaderEasing.EaseInOut
-                If t >= 0.5 Then
-                    Return 1.0 - Math.Pow(-2 * t + 2, 3) / 2.0
-                Else
-                    Return 4 * t * t * t
-                End If
-            Case LoaderEasing.SmoothStep
-                Return t * t * (3 - 2 * t)
-            Case Else
-                Return t
-        End Select
-    End Function
 
     Private Sub CancelCurrent()
         If _cts IsNot Nothing Then
@@ -729,305 +490,132 @@ Public Class osHandler_Loader2
         End If
     End Sub
 
-    Private Sub CancelCurrentAnimation()
-        If _animationCts IsNot Nothing Then
-            _animationCts.Cancel()
-            _animationCts.Dispose()
-            _animationCts = Nothing
-        End If
-
-    End Sub
-
-    Private Function CreateProgressReporter() As IProgress(Of Double)
-        Return New Progress(Of Double)(
-        Sub(value)
-            PrepDispatcher().InvokeAsync(
-                Sub()
-                    AnimateTo(value)
-                End Sub,
-                DispatcherPriority.Render)
-        End Sub)
+    Public Async Function YieldToRender() As Task
+        Dim op = Application.Current.Dispatcher.InvokeAsync(
+            Sub()
+            End Sub, DispatcherPriority.Render)
+        Await op.Task
     End Function
 
-    Private Sub StopRendering()
-        If Not _rendering Then Return
+    Private Function CreateStageProgress(objAnimator As LoaderProgressAnimator,
+                                         objLoadStage As TaskData, token As CancellationToken) As IProgress(Of Double)
 
-        RemoveHandler CompositionTarget.Rendering, _renderHandler
-        _renderHandler = Nothing
+        If Not Application.Current.Dispatcher.CheckAccess() Then
+            Throw New InvalidOperationException("CreateStageProgress must be created on the UI thread.")
+        End If
 
-        _renderStopwatch?.Stop()
-        _renderStopwatch = Nothing
-
-        _rendering = False
-    End Sub
-
-    Private Sub AnimateTo(value As Double)
-        EnsureProgressAnimation()
-
-        value = Math.Max(0, Math.Min(ProgMax, value))
-
-        ' Capture current animated value
-        Dim current = _ProgLoad.Progress
-
-        _progressAnim.From = current
-        _progressAnim.To = value
-
-        ' Restart the clock WITHOUT replacing composition
-        _animClock.Controller.Begin()
-    End Sub
-
-
-    Private Sub EnsureProgressAnimation()
-        If _isAnimating Then Return
-
-        _progressAnim = New DoubleAnimation With {
-        .Duration = TimeSpan.FromMilliseconds(160),
-        .EasingFunction = New QuadraticEase With {.EasingMode = EasingMode.EaseOut},
-        .FillBehavior = FillBehavior.HoldEnd
-    }
-
-        _animClock = _progressAnim.CreateClock()
-
-        _ProgLoad.ApplyAnimationClock(
-        osLoadingProgressBar.ProgressProperty,
-        _animClock,
-        HandoffBehavior.Compose)
-
-        _isAnimating = True
-    End Sub
-
-    Private Function CreateStageProgress(animator As LoaderProgressAnimator, startValue As Double, endValue As Double, token As CancellationToken) As IProgress(Of Double)
+        Dim lastPercent As Double = Double.NaN
+        Dim throttleEpsilon As Double = 0.25
 
         Return New Progress(Of Double)(
-            Async Sub(p)
+            Sub(percent)
+                Try
+                    If Not Double.IsNaN(lastPercent) AndAlso
+                        Math.Abs(percent - lastPercent) < throttleEpsilon Then
+                        Return
+                    End If
 
-                Dim mapped = startValue + (endValue - startValue) * (p / 100.0)
+                    lastPercent = percent
 
-                Await animator.AnimateToAsync(mapped, TimeSpan.FromMilliseconds(120), New QuadraticEase With {.EasingMode = EasingMode.EaseOut}, token)
+                    Dim mapped As Double = If(objLoadStage.LastTask, ProgMax,
+                        objLoadStage.StartValue + ((objLoadStage.EndValue - objLoadStage.StartValue) * (percent / 100.0)))
 
+                    Dim useToken As CancellationToken = If(percent >= 100.0, CancellationToken.None, token)
+                    Dim animDuration As TimeSpan = If(percent >= 100.0, TimeSpan.FromMilliseconds(275), objLoadStage.Duration)
+
+                    Dim objAniProgress = objAnimator.AnimateToAsync(mapped, animDuration,
+                                                                    New ExponentialEase With {
+                                                                        .EasingMode = EasingMode.EaseOut, .Exponent = 0.75
+                                                                    }, useToken)
+
+                Catch ex As OperationCanceledException
+                Catch ex As Exception : End Try
             End Sub)
     End Function
 
-    Private Function CreateStageProgress(animator As LoaderProgressAnimator, objLoadStage As osLoadStageData2, token As CancellationToken) As IProgress(Of Double)
-
-        Return New Progress(Of Double)(
-             Async Sub(p)
-                 With objLoadStage
-                     Dim mapped = If(.LastTask, ProgMax, .StartValue + ((.EndValue) - .StartValue) * (p / 100))
-
-                     Await animator.AnimateToAsync(mapped, .Duration, New ExponentialEase With {.EasingMode = EasingMode.EaseOut, .Exponent = 0.75}, token)
-                 End With
-
-             End Sub)
-    End Function
-
-    Private _lastProgress As Double = 0
-
-    Private Async Function AnimateGapAsync(
-    animator As LoaderProgressAnimator,
-    fromValue As Double,
-    toValue As Double,
-    token As CancellationToken) As Task
-
-        If toValue <= fromValue Then Return
-
-        Dim delta = toValue - fromValue
-
-        ' Speed-based duration (prevents slow crawl)
-        Dim duration = TimeSpan.FromMilliseconds(
-        Math.Max(325, delta * 4))
-
-        Await animator.AnimateToAsync(
-        toValue,
-        duration,
-        Nothing,
-        token)
-    End Function
-
-    Private Delegate Sub LoadTextFunc_FadeIn(valTaskType As LoadTaskType)
-    Private Delegate Sub LoadTextFunc_FadeOut(valTaskType As LoadTaskType)
-
-    Public Async Function ProcessLoadTasks(tokenr As CancellationToken) As Task
-
-        Dim animator As New LoaderProgressAnimator(_ProgLoad)
-
-
-        For Each objLoadStage In _stages
-            CancelCurrent()
-            Dim _loaderCts = New CancellationTokenSource()
-
-            With objLoadStage
-                Dim aa = FadeTextOutAsync(.LoadType)
-
-                Dim objTask_Load = RunLoadTask(objLoadStage, animator, _loaderCts)
-                Dim fadeInSignal As New osAutoAnimation()
-                FadeTextIn(.LoadType, fadeInSignal)
-                Await fadeInSignal.WaitAsync(_loaderCts.Token)
-                Await objTask_Load
-            End With
-        Next
-
-    End Function
-
-    Public Async Function RunLoadTask(objLoadStageData As osLoadStageData2, objAni As LoaderProgressAnimator, objTokenCT As CancellationTokenSource) As Task
-
-        _cts = objTokenCT
-        Dim token = _cts.Token
-
-        token.ThrowIfCancellationRequested()
-
-        Dim taskType = objLoadStageData.LoadType
-
-        Dim progress = CreateStageProgress(
-            objAni, objLoadStageData,
-            token)
-
-
-        Dim loadTask = objLoadStageData.LoadTask(progress, token)
-        Await loadTask
-
-        Await objAni.AnimateToAsync(
-            objLoadStageData.EndValue,
-            objLoadStageData.Duration,
-            New QuadraticEase With {.EasingMode = EasingMode.EaseOut},
-            token)
-
-        _lastProgress = objLoadStageData.EndValue
-    End Function
-
-    Public Async Function RunLoaderAsync(tokenr As CancellationToken) As Task
-
-        Dim animator As New LoaderProgressAnimator(_ProgLoad)
-        Dim cntStage As Integer = 0
-
-        For Each stage In _stages
-            CancelCurrent()
-
-            _cts = New CancellationTokenSource()
-            Dim token = _cts.Token
-
-            token.ThrowIfCancellationRequested()
-
-            'Await AnimateGapAsync(
-            'animator,
-            '_lastProgress,
-            'stage.StartValue,
-            'token)
-            Dim taskType = stage.LoadType
-            '  Dim b = FadeTextOutAsync(taskType)
-            '    Await FadeTextInAsync(taskType)
-            '   Dim fadeOutSignal As New osAutoAnimation()
-            '  FadeTextOut(taskType, fadeOutSignal)
-            Dim bb = PrepDispatcher().Invoke(Function()
-                                                 FadeTextOut(taskType)
-                                             End Function, DispatcherPriority.Render)
-
-
-            'Dim objTask_VisIn = _LoaderText.Dispatcher.BeginInvoke(
-            '    DispatcherPriority.Render, New LoadTextFunc_FadeIn(AddressOf FadeTextIn), taskType)
-            ' Text transition
-            '    Await FadeTextOutAsync(stage.LoadType)
-            '   Dim aa = FadeTextInAsync(stage.LoadType)
-
-
-
-            ' Progress handler
-
-
-            Dim kkk = PrepDispatcher().InvokeAsync(Sub()
-                                                       FadeTextIn(taskType)
-                                                   End Sub, DispatcherPriority.Render)
-
-            Dim progress = CreateStageProgress(
-            animator, stage,
-            token)
-            Await Task.Delay(125)  '      Dim fadeInSignal As New osAutoAnimation()
-            Await kkk
-            ' Run stage work
-            '   Dim aa = FadeTextInAsync(taskType)
-            Dim loadTask = stage.LoadTask(progress, token)
-            'Await PrepDispatcher().InvokeAsync(Sub()
-            '                                       FadeTextIn(taskType)
-            '                                   End Sub, DispatcherPriority.Render)
-            '     FadeTextIn(taskType, fadeInSignal)
-            '     Await fadeInSignal.WaitAsync(token)
-            ' Let fade-in complete, but do not block progress
-            '  Await fadeInSignal.WaitAsync(token)
-            Await loadTask
-            'Dim objTask_FadeTextOut = _LoaderText.Dispatcher.BeginInvoke(
-            '    DispatcherPriority.Render, Function() FadeTextOutAsync(taskType)) ' Ensure stage end reached
-
-            'Dim objTask_VisOut = _LoaderText.Dispatcher.
-            '    BeginInvoke(DispatcherPriority.Render,
-            '                New LoadTextFunc_FadeOut(AddressOf FadeTextOut), taskType)
-
-            Await animator.AnimateToAsync(
-            stage.EndValue,
-            stage.Duration,
-            New QuadraticEase,
-            token)
-            '  Dim bbb = FadeTextOutAsync(taskType)
-
-            _lastProgress = stage.EndValue
-            cntStage += 1
-        Next
-    End Function
-
-
-
-    Private _progressState As Double
-
-    Private Sub CommitProgress(value As Double)
-        _progressState = value
-        _ProgLoad.Progress = value
+    Private Sub CalcStageProgress(ByRef valPercent As Double, Optional valStep As Double = 10)
+        valPercent = Math.Min(90.0, valPercent + valStep)
     End Sub
 
-    Private Async Function AnimateProgress(
-        toValue As Double,
-        duration As TimeSpan,
-        easing As LoaderEasing,
-        token As CancellationToken) As Task
+    Public Function StartUiDispatcherTimer(animator As LoaderProgressAnimator, objLoadStage As TaskData,
+                                           token As CancellationToken, ByRef outTimer As DispatcherTimer) As Progress(Of Double)
 
-        CancelCurrentAnimation()
+        If Not Application.Current.Dispatcher.CheckAccess() Then
+            Throw New InvalidOperationException("StartUiDispatcherTimer must be called on the UI thread.")
+        End If
 
-        Dim fromValue = _progressState
-        _progressState = toValue ' 🔑 claim intent immediately
+        Dim percent As Double = 0.0
+        Dim uiProgress As IProgress(Of Double) = CreateStageProgress(animator, objLoadStage, token)
 
-        _animationCts = CancellationTokenSource.CreateLinkedTokenSource(token)
-        Dim linkedToken = _animationCts.Token
+        outTimer = New DispatcherTimer(DispatcherPriority.Background) With {
+            .Interval = TimeSpan.FromMilliseconds(85)
+        }
 
-        Dim tcs As New TaskCompletionSource(Of Boolean)
+        AddHandler outTimer.Tick,
+            Sub(sender As Object, e As EventArgs)
+                Try
+                    If token.IsCancellationRequested OrElse percent >= 90.0 Then
+                        CType(sender, DispatcherTimer).Stop()
+                        Return
+                    End If
 
-        Await PrepDispatcher().InvokeAsync(
-            Sub()
-                Dim anim As New DoubleAnimation With {
-                    .From = fromValue,
-                    .To = toValue,
-                    .Duration = New Duration(duration),
-                    .FillBehavior = FillBehavior.HoldEnd,
-                    .EasingFunction = CreateEasing(easing)
-                }
+                    CalcStageProgress(percent)
+                    uiProgress.Report(percent)
 
-                AddHandler anim.Completed,
-                    Sub()
-                        _ProgLoad.Progress = toValue ' 🔑 final snap
-                        tcs.TrySetResult(True)
-                    End Sub
+                    Application.Current.Dispatcher.InvokeAsync(
+                        Sub() HoldVisual(), DispatcherPriority.Render)
 
-                _ProgLoad.BeginAnimation(
-                    osLoadingProgressBar.ProgressProperty, anim)
-            End Sub,
-            DispatcherPriority.Render)
+                Catch ex As OperationCanceledException
+                    CType(sender, DispatcherTimer).Stop()
+                Catch ex As Exception
+                    CType(sender, DispatcherTimer).Stop()
+                End Try
+            End Sub
 
-        Try
-            Using linkedToken.Register(Sub() tcs.TrySetCanceled())
-                Await tcs.Task
-            End Using
-        Catch ex As OperationCanceledException
-            ' swallow — animation was cancelled intentionally
-        End Try
+        outTimer.Start()
+
+        Return uiProgress
     End Function
 
+    Public Async Function BeginLoadProcess() As Task
+        Dim objLoadProgressVis As New LoaderProgressAnimator(_ProgLoad)
+        Dim cntStage As Integer = 0
+
+        For Each LoadStage In _LoadStages
+            With LoadStage
+                Dim taskType = .TaskType
+
+                If _cts IsNot Nothing Then
+                    Await Task.Delay(115)
+                    objProgressStage.Report(100)
+                    Await Task.Delay(115)
+
+                    objProgressTimer?.Stop()
+                    CancelCurrent()
+                End If
+
+                _cts = New CancellationTokenSource()
+                Dim objLoadStageToken = _cts.Token
+
+                objLoadStageToken.ThrowIfCancellationRequested()
+
+                Await _fadeTextIn(taskType)
+
+                objProgressTimer = Nothing
+                objProgressStage = StartUiDispatcherTimer(objLoadProgressVis, .TaskDetails, objLoadStageToken, objProgressTimer)
+
+                Dim objLoadTask = .LoadTask(objLoadStageToken)
+                Await objLoadTask
+
+                Dim objTask_ProgressAnimate = objLoadProgressVis.
+                    AnimateToAsync(.TaskDetails.EndValue, TimeSpan.FromMilliseconds(300),
+                                   New QuadraticEase With {
+                                        .EasingMode = EasingMode.EaseOut
+                                   }, CancellationToken.None)
+            End With
+
+        Next
+    End Function
 
 End Class
 

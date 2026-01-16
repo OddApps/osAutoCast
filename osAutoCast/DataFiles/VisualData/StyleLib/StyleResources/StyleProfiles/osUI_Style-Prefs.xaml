@@ -9,7 +9,7 @@
         <Setter Property="SizeToContent" Value="Width" />
         <Setter Property="VerticalAlignment" Value="Center" />
         <Setter Property="VerticalContentAlignment" Value="Center" />
-        <Style.Resources>
+        <!--<Style.Resources>
             <Storyboard x:Key="osPrefsVis_Disp">
                 <DoubleAnimation Storyboard.TargetName="osPrefsMainContainer" Storyboard.TargetProperty="Opacity" BeginTime="{StaticResource osPrefsStartTime_OpenOpacity}" Duration="{StaticResource osPrefsDuration_OpenOpacity}" From="0" To="1" FillBehavior="HoldEnd">
                     <DoubleAnimation.EasingFunction>
@@ -53,7 +53,7 @@
                     </DoubleAnimation.EasingFunction>
                 </DoubleAnimation>
             </Storyboard>
-        </Style.Resources>
+        </Style.Resources>-->
     </Style>
 
     <Style x:Key="osPrefsMainContainerStyle" TargetType="{x:Type osCtrl:osBorder}">

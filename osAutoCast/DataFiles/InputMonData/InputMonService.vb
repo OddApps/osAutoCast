@@ -254,9 +254,8 @@ Public Class InputMonitorService
                     Finally
                         GC.Collect()
                         GC.WaitForPendingFinalizers()
+
                         StartTriggerMonitor()
-
-
                     End Try
                 Else : Return : End If
             End Sub)

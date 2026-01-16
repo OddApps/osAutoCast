@@ -149,10 +149,10 @@ Class Application
                         Await objTask_VisualComplete.Task
                         objTask_VisualComplete = Nothing
 
-                        objLoaderScreen.objAnimation_LoadTextVis.Children.Clear()
-                        objLoaderScreen.objAnimation_LoadTextVis = Nothing
+                        'objLoaderScreen.objAnimation_LoadTextVis.Children.Clear()
+                        'objLoaderScreen.objAnimation_LoadTextVis = Nothing
 
-                        objLoaderScreen.objTextBrush = Nothing
+                        'objLoaderScreen.objTextBrush = Nothing
 
                         objLoaderScreen.Close()
                         osHandler_UI.RecaptureResources()

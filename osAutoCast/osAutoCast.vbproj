@@ -282,6 +282,11 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Resource Include="DataFiles\VisualData\StyleLib\StyleResources\StyleContent\uiStyleContent-Overlay.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
     <Page Include="DataFiles\VisualData\StyleLib\StyleResources\StyleConfigs\osUI_StyleVisuals.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>

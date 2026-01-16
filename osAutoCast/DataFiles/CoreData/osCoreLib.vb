@@ -1,4 +1,6 @@
-﻿Imports System.ComponentModel
+﻿Imports System.IO
+Imports System.Windows.Markup
+Imports System.ComponentModel
 Imports System.Drawing
 Imports System.Drawing.Drawing2D
 Imports System.Globalization
@@ -549,12 +551,16 @@ Public NotInheritable Class osFuncLib_ShowOpts
     Public Shared Async Function ExecuteDispOpts() As Task
         PrepUtilityTrigger(TriggerType.ShowPrefs)
 
+        Dim aa = PrepDispatcher().InvokeAsync(Sub()
+                                                  osPrefsWindow.PrepPrefVis()
+                                              End Sub).Task
+
         chkCloseSettings.ResetAndInitTask()
 
         Await osHandler_UI.ShowPrefsUI(chkCloseSettings, True)
         Await AnticipateExit()
 
-        Await osHandler_UI.ResetOptsUI(True)
+        Dim aaa = osHandler_UI.ResetOptsUI(True)
         osFuncLib_InputScan.isActionComplete = True
     End Function
 
@@ -806,8 +812,11 @@ Public NotInheritable Class MenuOverlayWindow
     Private OverlayOpacity_Tray As Double = 0.01
     Private OverlayOpacity_Popup As Double = 0.0
 
-    Private VisualDataLocation As String = "/DataFiles/VisualData/StyleLib/StyleResources/StyleConfigs/osUI_StyleVisuals.xaml"
+    Private VisualDataLocation As String = "/DataFiles/VisualData/StyleLib/StyleResources/StyleContent/uiStyleContent-Overlay.xaml"
     Private VisualDataURI As System.Uri = New System.Uri(VisualDataLocation, System.UriKind.Relative)
+
+    Private VisualDataLocation2 As String = "/DataFiles/VisualData/StyleLib/StyleResources/StyleConfigs/osUI_StyleVisuals.xaml"
+    Private VisualDataURI2 As System.Uri = New System.Uri(VisualDataLocation, System.UriKind.Relative)
 
     Private objScreenData As Rectangle = SystemInformation.VirtualScreen
 
@@ -875,13 +884,15 @@ Public NotInheritable Class MenuOverlayWindow
                 .Background = osBrushColor.Black
                 .Opacity = OverlayOpacity_Tray
             Else
-                SetOverlayVisuals()
+                '   SetOverlayVisuals()
 
                 .Background = osBrushColor.Black
                 .Opacity = OverlayOpacity_Popup
             End If
         End With
     End Sub
+
+    '     Await ApplyOverlayVisualsAsync(VisualDataURI)
 
     Public Sub InitPopupMenuOverlay()
         With Me
@@ -925,7 +936,93 @@ Public NotInheritable Class MenuOverlayWindow
         End With
     End Sub
 
+    Public Sub ApplyOverlayVisualsAsync()
+        Dim objOverlayVis As ResourceDictionary =
+            CType(XamlReader.Parse(objVisXaml), ResourceDictionary)
+
+        Resources.MergedDictionaries.Add(objOverlayVis)
+
+        Style = CType(objOverlayVis("OverlayVisuals"), Style)
+    End Sub
+
+    Private objVisXaml As String = ""
+
+    Public Async Function LoadOverlayVisualsAsync() As Task
+
+        Dim packUri As New Uri(
+        "pack://application:,,,/osAutoCast;component/DataFiles/VisualData/StyleLib/StyleResources/StyleContent/uiStyleContent-Overlay.xaml",
+        UriKind.Absolute)
+
+        ' 1) read raw XAML OFF UI thread
+        objVisXaml = Await Task.Run(Function()
+                                        Dim sri = Application.GetResourceStream(packUri)
+                                        If sri Is Nothing Then
+                                            Throw New FileNotFoundException("Overlay visuals not found", packUri.ToString())
+                                        End If
+                                        Using sr As New StreamReader(sri.Stream)
+                                            Return sr.ReadToEnd()
+                                        End Using
+                                    End Function) '.ConfigureAwait(False)
+
+
+        ' 1) Read XAML from pack resource OFF the UI thread
+
+    End Function
+
+    Private Async Function LoadOverlayResourceDictionary(
+    uri As Uri
+) As Task(Of ResourceDictionary)
+
+        Dim rd As ResourceDictionary = Nothing
+
+        Await Dispatcher.InvokeAsync(Sub()
+
+                                         Dim sri = Application.GetResourceStream(uri)
+                                         If sri Is Nothing Then
+                                             Throw New FileNotFoundException($"Resource not found: {uri}")
+                                         End If
+
+                                         Using stream = sri.Stream
+                                             rd = DirectCast(XamlReader.Load(stream), ResourceDictionary)
+                                         End Using
+
+                                     End Sub)
+
+        Return rd
+    End Function
+
+    Private Async Function LoadOverlayResourceDictionaryAsync(
+    uri As Uri,
+    Optional token As CancellationToken = Nothing
+) As Task(Of ResourceDictionary)
+
+        ' 1) Read XAML text off the UI thread
+        Dim xamlText As String
+
+        Dim sri = Application.GetResourceStream(uri)
+        If sri Is Nothing Then
+            Throw New FileNotFoundException($"Resource not found: {uri}")
+        End If
+
+        Using sr As New StreamReader(sri.Stream)
+            xamlText = Await sr.ReadToEndAsync().ConfigureAwait(False)
+        End Using
+
+        token.ThrowIfCancellationRequested()
+
+        ' 2) Parse ResourceDictionary on UI thread
+        Dim rd As ResourceDictionary = Nothing
+
+        Await Dispatcher.InvokeAsync(Sub()
+                                         rd = DirectCast(XamlReader.Parse(xamlText), ResourceDictionary)
+                                         rd.Source = VisualDataURI
+                                     End Sub).Task.ConfigureAwait(False)
+
+        Return rd
+    End Function
+
     Private Sub SetOverlayVisuals()
+
         Dim objOverlayVis As New ResourceDictionary() With {
             .Source = VisualDataURI
         }
@@ -1080,6 +1177,10 @@ Public NotInheritable Class osFuncLib_PopupMenu
     Public Shared Async Function ShowPopupMenu() As Task
 
         InitCloseMonitor(objPopupTaskPending)
+
+        Dim aa = PrepDispatcher().InvokeAsync(Sub()
+                                                  osHandler_UI.osPopupMenu.ConfigureVisual()
+                                              End Sub).Task
 
         Await osHandler_UI.DisplayPopupMenu()
         Dim objPopupResult = Await PopupCloseDetect(objPopupTaskMonitor,
@@ -1620,9 +1721,10 @@ Public Class LoaderProgressAnimator
 
 
 
+    Private ReadOnly _animationGate As New SemaphoreSlim(1, 1)
 
-
-
+    Private _currentAnimCts As CancellationTokenSource = Nothing
+    Private _currentAnimTcs As TaskCompletionSource(Of Object) = Nothing
 
     Public Function AnimateToAsync(
         target As Double,
@@ -1630,106 +1732,187 @@ Public Class LoaderProgressAnimator
         easing As IEasingFunction,
         token As CancellationToken) As Task
 
-        Dim tcs As New TaskCompletionSource(Of Object)()
-        _dispatcher.BeginInvoke(Sub()
+        Dim linkedCts = CancellationTokenSource.CreateLinkedTokenSource(token)
+        Dim localTcs As New TaskCompletionSource(Of Object)(TaskCreationOptions.RunContinuationsAsynchronously)
 
-                                    token.ThrowIfCancellationRequested()
+        ' Cancel previous in-flight animation, and complete its TCS so no awaiter hangs.
+        Dim prevCts = Interlocked.Exchange(_currentAnimCts, linkedCts)
+        prevCts?.Cancel()
 
-                                    Dim anim As New DoubleAnimation With {
-                .From = _bar.Progress,
-                .To = target,
-                .Duration = New Duration(duration),
-                .EasingFunction = easing,
-                .FillBehavior = FillBehavior.HoldEnd
-            }
+        Dim prevTcs = Interlocked.Exchange(_currentAnimTcs, localTcs)
+        prevTcs?.TrySetResult(Nothing)
 
-                                    AddHandler anim.Completed,
-                Sub()
-                    _bar.Progress = target
-                    tcs.TrySetResult(Nothing)
-                End Sub
+        _dispatcher.InvokeAsync(Sub()
+                                    Try
+                                        linkedCts.Token.ThrowIfCancellationRequested()
 
-                                    _bar.BeginAnimation(
-                osLoadingProgressBar.ProgressProperty,
-                anim,
-                HandoffBehavior.Compose)
+                                        ' IMPORTANT: do NOT call BeginAnimation(..., Nothing) here --
+                                        ' let SnapshotAndReplace replace the current animation without snapping
+                                        Dim anim As New DoubleAnimation With {
+                                            .To = target,
+                                            .Duration = New Duration(duration),
+                                            .EasingFunction = easing,
+                                            .FillBehavior = FillBehavior.Stop
+                                        }
 
+                                        AddHandler anim.Completed,
+                                            Sub()
+                                                ' when animation completes, write the final value to the backing property
+                                                _bar.Progress = target
+                                                localTcs.TrySetResult(Nothing)
+                                            End Sub
+
+                                        ' Replace the current animation with the new one (preserves current visual start)
+                                        _bar.BeginAnimation(osLoadingProgressBar.ProgressProperty,
+                                                            anim,
+                                                            HandoffBehavior.SnapshotAndReplace)
+
+                                    Catch ex As OperationCanceledException
+                                        localTcs.TrySetResult(Nothing)
+                                    Catch ex As Exception
+                                        localTcs.TrySetException(ex)
+                                    End Try
                                 End Sub, DispatcherPriority.Render)
 
-        Return tcs.Task
+        Return localTcs.Task
     End Function
+
+
+
+
+
+
+    'Public Function AnimateToAsync(
+    '    target As Double,
+    '    duration As TimeSpan,
+    '    easing As IEasingFunction,
+    '    token As CancellationToken) As Task
+
+    '    Dim tcs As New TaskCompletionSource(Of Object)()
+    '    _dispatcher.BeginInvoke(Sub()
+
+    '                                token.ThrowIfCancellationRequested()
+
+    '                                Dim anim As New DoubleAnimation With {
+    '            .From = _bar.Progress,
+    '            .To = target,
+    '            .Duration = New Duration(duration),
+    '            .EasingFunction = easing,
+    '            .FillBehavior = FillBehavior.HoldEnd
+    '        }
+
+    '                                AddHandler anim.Completed,
+    '            Sub()
+    '                _bar.Progress = target
+    '                tcs.TrySetResult(Nothing)
+    '            End Sub
+
+    '                                _bar.BeginAnimation(
+    '            osLoadingProgressBar.ProgressProperty,
+    '            anim,
+    '            HandoffBehavior.Compose)
+
+    '                            End Sub, DispatcherPriority.Render)
+
+    '    Return tcs.Task
+    'End Function
 
 End Class
 
 Public Module osUI_Loader
 
+    Public Sub HoldVisual() : End Sub
 
-    Public Async Function LoadUI_Menus() As Task
+    Public Async Function LoadUI_PopupMenu() As Task
         Await PrepDispatcher().InvokeAsync(
             Sub()
                 _osPopupMenuOverlay = PrepUI_PopupMenuOverlay()
                 _osPopupMenu = PrepUI_PopupMenu()
+            End Sub, DispatcherPriority.Render)
 
-            End Sub, DispatcherPriority.Background)
+        Await osPopupMenuOverlay.LoadOverlayVisualsAsync()
+    End Function
 
-        Await PrepDispatcher().InvokeAsync(
+    Public Function LoadUI_Menus() As Task
+
+        Return PrepDispatcher().InvokeAsync(
             Sub()
+                _osPopupMenuOverlay = PrepUI_PopupMenuOverlay()
+                _osPopupMenu = PrepUI_PopupMenu()
+
                 _osTrayMenu = PrepUI_TrayMenu2()
-            End Sub, DispatcherPriority.Background)
-    End Function
+            End Sub, DispatcherPriority.Render).Task
 
-    Public Async Function LoadUI_InitMenus() As Task
-        Await PrepDispatcher().InvokeAsync(
-            Sub()
-                osPopupMenuOverlay.SetBG()
-                osPopupMenu.WarmupPopupMenu()
-            End Sub, DispatcherPriority.Background)
+        '    Await DispatcherHelpers.YieldToRenderAsync()
 
-        Await PrepDispatcher().InvokeAsync(
-            Sub()
-                osTrayMenu.PrepTrayMenuInit()
-            End Sub, DispatcherPriority.Background)
-
-    End Function
-
-    Public Async Function LoadUI_TriggerHandlers() As Task
-        '   CreateThreadUI_Actions()
-
-        Await PrepDispatcher().InvokeAsync(
-        Sub()
-            _osPrefsWindow = PrepUI_Opts()
-
-            osHandler_UI._autoPass2 = osHandler_UI.PrepUI_AutoPass()
-        End Sub)
-
-        Await PrepDispatcher().InvokeAsync(
-            Sub()
-
-                '_osPrefsWindow = PrepUI_Opts()
-
-                'osHandler_UI._autoPass2 = osHandler_UI.PrepUI_AutoPass()
-
-                _autoCastProgress = CreateUI_AutoCast()
-            End Sub, DispatcherPriority.Background)
-
-    End Function
-
-    Public Async Function LoadUI_PrepHandlers() As Task
-        Await PrepDispatcher().InvokeAsync(
-        Sub()
-            osPrefsWindow.PrepPrefVis()
-
-            osHandler_UI.osGui_AutoPass2.PrepAutoPass()
-        End Sub)
         'Await PrepDispatcher().InvokeAsync(
         '    Sub()
-
-        '        osPrefsWindow.PrepPrefVis()
-
-        '        osHandler_UI.osGui_AutoPass2.PrepAutoPass()
-
+        '        _osTrayMenu = PrepUI_TrayMenu2()
         '    End Sub, DispatcherPriority.Background)
+    End Function
 
+    Public Async Function LoadUI_InitPopupMenu() As Task
+        'Await Task.WhenAll(osPopupMenuOverlay.LoadOverlayVisualsAsync(), osPopupMenu.PreloadVisualData())
+        '  Dim dd = osPopupMenu.PreloadVisualData()
+    End Function
+
+    Public Function LoadUI_TrayMenu() As Task
+        Return PrepDispatcher().InvokeAsync(
+            Sub()
+                _osTrayMenu = PrepUI_TrayMenu2()
+            End Sub, DispatcherPriority.Render).Task
+    End Function
+
+    Public Function LoadUI_InitMenus() As Task
+        Return PrepDispatcher().InvokeAsync(
+            Sub()
+                osPopupMenuOverlay.ApplyOverlayVisualsAsync()
+                osPopupMenuOverlay.SetBG()
+            End Sub, DispatcherPriority.Render).Task
+
+        'PrepDispatcher().Invoke(
+        '    Sub()
+        '        osPopupMenuOverlay.SetBG()
+        '        osPopupMenu.WarmupPopupMenu()
+        '    End Sub, DispatcherPriority.Render)
+
+        ''  Await DispatcherHelpers.YieldToRenderAsync()
+
+        'PrepDispatcher().Invoke(
+        '    Sub()
+        '        osTrayMenu.PrepTrayMenuInit()
+        '    End Sub, DispatcherPriority.Render)
+
+    End Function
+
+    Public Function LoadUI_InitTrayMenu() As Task
+        Return PrepDispatcher().InvokeAsync(
+            Sub()
+                '  osTrayMenu.PrewarmAllVisuals()
+                osTrayMenu.PrepTrayMenuInit()
+            End Sub, DispatcherPriority.Render).Task
+    End Function
+
+    Public Function LoadUI_TriggerHandlers() As Task
+        '   CreateThreadUI_Actions()
+        Return PrepDispatcher().InvokeAsync(
+            Sub()
+                _osPrefsWindow = PrepUI_Opts()
+                osHandler_UI._autoPass2 = osHandler_UI.PrepUI_AutoPass()
+
+                _autoCastProgress = CreateUI_AutoCast()
+            End Sub, DispatcherPriority.Render).Task
+    End Function
+
+    Public Function LoadUI_PrepHandlers() As Task
+        Dim aa = PrepDispatcher().InvokeAsync(
+            Sub()
+                osPrefsWindow.ActivatePrefTracker()
+            End Sub, DispatcherPriority.Background).Task
+        Return PrepDispatcher().InvokeAsync(
+            Sub()
+                osHandler_UI.osGui_AutoPass2.PrepAutoPass()
+            End Sub, DispatcherPriority.Render).Task
 
     End Function
 
@@ -1796,6 +1979,28 @@ Public NotInheritable Class osAutoAnimation
         toRelease?.TrySetResult(True)
     End Sub
 End Class
+
+Public NotInheritable Class osAutoAnimationLoad
+
+
+    Private ReadOnly _tcs As New TaskCompletionSource(Of Object)(
+      TaskCreationOptions.RunContinuationsAsynchronously)
+
+    Public Sub Complete()
+        _tcs.TrySetResult(Nothing)
+    End Sub
+
+    Public Sub Cancel()
+        _tcs.TrySetCanceled()
+    End Sub
+
+    Public Function VisWaitAsync(token As CancellationToken) As Task
+        token.Register(Sub() _tcs.TrySetCanceled())
+        Return _tcs.Task
+    End Function
+
+End Class
+
 
 Public Class isEnabledConverter
     Implements IValueConverter
@@ -2212,6 +2417,23 @@ Public Module ControlExtensions
         Return objPxE
     End Function
 
+    <Runtime.CompilerServices.Extension>
+    Public Async Function ForEachAsync(Of T)(source As IEnumerable(Of T),
+                                              action As Func(Of T, Task)) As Task
+
+        For Each item In source
+            Await action(item)
+        Next
+    End Function
+
+    <Runtime.CompilerServices.Extension>
+    Public Function ForEach(Of T)(source As IEnumerable(Of T),
+                                          action As Func(Of T, Task)) As Task
+
+        For Each item In source
+            action(item)
+        Next
+    End Function
 End Module
 
 Public NotInheritable Class TextBlockExtensions

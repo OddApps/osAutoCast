@@ -102,7 +102,7 @@
         </Style.Resources>
     </Style>
 
-    <Style x:Key="OverlayVisuals" TargetType="{x:Type Window}">
+    <!--<Style x:Key="OverlayVisuals" TargetType="{x:Type Window}">
         <Setter Property="Opacity" Value="0" />
         <Setter Property="CacheMode" Value="BitmapCache" />
         <Setter Property="RenderOptions.BitmapScalingMode" Value="LowQuality" />
@@ -157,6 +157,6 @@
                 </DoubleAnimationUsingKeyFrames>
             </Storyboard>
         </Style.Resources>
-    </Style>
+    </Style>-->
 
 </ResourceDictionary>

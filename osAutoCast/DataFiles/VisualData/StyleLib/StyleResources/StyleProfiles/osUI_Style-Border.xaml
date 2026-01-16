@@ -84,13 +84,6 @@
         <Setter Property="RenderOptions.BitmapScalingMode" Value="LowQuality" />
         <Setter Property="RenderOptions.EdgeMode" Value="Aliased" />
         <Setter Property="osStyle:osPopupScale.PopupScale" Value="0.00" />
-        <Style.Resources>
-            <ResourceDictionary>
-                <ResourceDictionary.MergedDictionaries>
-                    <ResourceDictionary Source="/DataFiles/VisualData/StyleLib/StyleResources/StyleConfigs/osUI_StyleVisuals.xaml"  />
-                </ResourceDictionary.MergedDictionaries>
-            </ResourceDictionary>
-        </Style.Resources>
     </Style>
 
 </ResourceDictionary>

@@ -404,21 +404,58 @@ Namespace osPrefLib
         Private Function PrepPref(pRecData As PrefDataRecord, valType As Type) As Object
             Return Convert.ChangeType(pRecData.PrefVal, valType)
         End Function
+        Public Async Function ApplyPrefs(Optional token As CancellationToken = Nothing,
+                                 Optional progress As IProgress(Of Integer) = Nothing) As Task
+            ' Run everything off the thread-pool and never block the UI.
+            ' Limits concurrency to avoid overwhelming the ThreadPool / disk / CPU.
+            Dim maxConcurrency As Integer = Math.Max(1, Environment.ProcessorCount - 1)
+            Dim sem As New SemaphoreSlim(maxConcurrency, maxConcurrency)
+            Dim tasks As New List(Of Task)()
 
-        Public Async Function ApplyPrefs() As Task
-            prefsSet = Await Task.Run(
-                Async Function()
-                    Dim objTask_ApplyPrefs =
-                        From pRec In objOsPrefIdx.PrefRecords
-                        From pRecData In pRec.RecordData
-                        Select Task.Run(Sub() ApplySetting(
-                            osPreferenceLib.Data, pRec, pRecData))
+            Try
+                For Each pRec In objOsPrefIdx.PrefRecords
+                    For Each pRecData In pRec.RecordData
+                        token.ThrowIfCancellationRequested()
+                        Await sem.WaitAsync(token).ConfigureAwait(False)
 
-                    Await Task.WhenAll(objTask_ApplyPrefs)
+                        Dim taskr = Task.Run(Sub()
+                                                 Try
+                                                     ' Do the heavy/IO-bound work here on a background thread:
+                                                     ApplySetting(osPreferenceLib.Data, pRec, pRecData)
 
-                    Return True
-                End Function)
+                                                     ' Optionally report progress (percent or count)
+                                                     progress?.Report(1) ' you can aggregate on caller side
+                                                 Finally
+                                                     sem.Release()
+                                                 End Try
+                                             End Sub, token)
+
+                        tasks.Add(taskr)
+                    Next
+                Next
+
+                ' Wait for all background tasks to finish (still off UI thread)
+                Await Task.WhenAll(tasks).ConfigureAwait(False)
+
+            Finally
+                sem.Dispose()
+            End Try
         End Function
+
+        'Public Async Function ApplyPrefs() As Task
+        '    prefsSet = Await Task.Run(
+        '        Async Function()
+        '            Dim objTask_ApplyPrefs =
+        '                From pRec In objOsPrefIdx.PrefRecords
+        '                From pRecData In pRec.RecordData
+        '                Select Task.Run(Sub() ApplySetting(
+        '                    osPreferenceLib.Data, pRec, pRecData))
+
+        '            Await Task.WhenAll(objTask_ApplyPrefs)
+
+        '            Return True
+        '        End Function)
+        'End Function
 
         Private Sub ApplySetting(target As Object, pRecord As osPrefRecord, pRecData As PrefDataRecord)
 

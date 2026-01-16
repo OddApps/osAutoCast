@@ -79,8 +79,7 @@ Public Class osPopupMenu_GUI
                         AddHandler objAnimation_Open.Completed,
                             OpenCompleteEvent
                     Case VisualComplete
-                        RemoveHandler objAnimation_Open.Completed,
-                            OpenCompleteEvent
+                        RemoveHandler objAnimation_Open.Completed, OpenCompleteEvent
                 End Select
             Case aniClose
                 Select Case objVisAction
@@ -132,15 +131,33 @@ Public Class osPopupMenu_GUI
 
     Private _popupWarmupDone As Boolean = False
 
-    Public Sub WarmupPopupMenu()
-        ConfigureVisual()
-    End Sub
+    Public Function WarmupPopupMenu() As Task
+        Return Task.Run(Sub()
+                            PrepDispatcher().Invoke(
+                                Sub()
+                                    ConfigureVisual()
+                                End Sub)
+                        End Sub)
+    End Function
+
+    Private Function GetVisual(objVisType As PopupVisualType, isNew As Boolean) As Storyboard
+        Return ConvVisual(Me.Resources(GetVisualKey(objVisType)))
+    End Function
 
     Private Function GetVisual(objVisType As PopupVisualType) As Storyboard
         With ConvVisual(SelectVisual().
                 Resources(GetVisualKey(objVisType)))
             Return .Clone()
         End With
+    End Function
+
+    Private Function LoadVis_Set(objVisType As PopupVisualType) As Storyboard
+        Return ConvVisual(SelectVisual().
+                Resources(GetVisualKey(objVisType)))
+    End Function
+
+    Private Function GetVisual2(objVisType As PopupVisualType) As Storyboard
+        Return _visualCache(objVisType)
     End Function
 
     Private Sub SetVisualMode(objAniType As AnimationType)
@@ -164,19 +181,155 @@ Public Class osPopupMenu_GUI
         RenderOptions.SetBitmapScalingMode(objContainer, setBitMapMode)
     End Sub
 
-    Public Sub EstablishVisual(objVisType As PopupVisualType, ByRef objSetVisual As Storyboard)
-        Dim objPopupVis As Storyboard = GetVisual(objVisType)
+    Private _visualCache As New Dictionary(Of PopupVisualType, Storyboard)()
+    Private _visDataIdx As New Dictionary(Of PopupVisualType, Storyboard)()
 
-        ' objContainer.
+    Public Sub PrewarmAllVisuals()
+        ' call this after ResourceDictionary is merged (preferably during startup)
+        For Each kvp In idxPopupVisuals
+            Dim visType = kvp.Key
+            Dispatcher.Invoke(Sub()
+                                  Dim baseSb = LoadVis_Set(visType)
+                                  If baseSb IsNot Nothing Then
+                                      Dim inst = TryCast(baseSb.Clone(), Storyboard)
+                                      Timeline.SetDesiredFrameRate(inst, 60)
+                                      Storyboard.SetTarget(inst, objContainer)
+                                      ' Optional: Freeze the cloned storyboard to optimize
+                                      'If TypeOf inst Is Freezable Then
+                                      '    CType(inst, Freezable).Freeze()
+                                      'End If
+                                      _visualCache(visType) = inst
+                                  End If
+                              End Sub, DispatcherPriority.Background)
+        Next
+    End Sub
+
+    Public Async Function PreloadVisualData() As Task
+        ' call this after ResourceDictionary is merged (preferably during startup)
+
+        Await Task.Run(Async Function()
+                           For Each kvp In idxPopupVisuals
+
+                               Dim visType = kvp.Key
+                               '    Dim tcs As New TaskCompletionSource(Of Storyboard)()
+
+                               ' Post work on the UI dispatcher at Background priority.
+                               Dim template As Storyboard =
+                               Await PrepDispatcher().InvokeAsync(Function()
+
+                                                                      Dim baseSb = LoadVis_Set(visType)
+                                                                      If baseSb Is Nothing Then Return Nothing
+
+                                                                      Dim inst = TryCast(baseSb.Clone(), Storyboard)
+                                                                      If inst Is Nothing Then Return Nothing
+
+                                                                      Timeline.SetDesiredFrameRate(inst, 60)
+                                                                      Storyboard.SetTarget(inst, objContainer)
+                                                                      ' Freeze so future Clone() is cheap
+                                                                      If TypeOf inst Is Freezable AndAlso Not inst.IsFrozen Then
+                                                                          CType(inst, Freezable).Freeze()
+                                                                      End If
+
+                                                                      Return inst
+
+                                                                  End Function,
+                                                            DispatcherPriority.Render)
+
+                               If template IsNot Nothing Then
+                                   _visDataIdx(visType) = template
+                               End If
+                           Next
+                       End Function)
+        'Await PrepDispatcher().InvokeAsync(Function()
+        '                                       For Each kvp In idxPopupVisuals
+
+        '                                           Dim visType = kvp.Key
+        '                                           '    Dim tcs As New TaskCompletionSource(Of Storyboard)()
+
+        '                                           ' Post work on the UI dispatcher at Background priority.
+
+
+
+        '                                           Dim baseSb = LoadVis_Set(visType)
+        '                                           If baseSb Is Nothing Then Return Nothing
+
+        '                                           Dim inst = TryCast(baseSb.Clone(), Storyboard)
+        '                                           If inst Is Nothing Then Return Nothing
+
+        '                                           Timeline.SetDesiredFrameRate(inst, 60)
+        '                                           Storyboard.SetTarget(inst, objContainer)
+        '                                           ' Freeze so future Clone() is cheap
+        '                                           If TypeOf inst Is Freezable AndAlso Not inst.IsFrozen Then
+        '                                               CType(inst, Freezable).Freeze()
+        '                                           End If
+
+        '                                           Dim template As Storyboard = inst
+
+
+
+        '                                           If template IsNot Nothing Then
+        '                                               _visDataIdx(visType) = template
+        '                                           End If
+
+
+        '                                           ' Await the work but guard with a timeout so we don't hang forever.
+
+
+        '                                           ' If the posted action faulted, this await will rethrow the inner exception — catch it to log
+        '                                           'Dim templateResult As Storyboard = Nothing
+        '                                           'Try
+        '                                           '    templateResult = Await tcs.Task
+        '                                           'Catch ex As Exception
+        '                                           '    Debug.WriteLine($"Prewarm failed for {visType}: {ex}")
+        '                                           '    Continue For
+        '                                           'End Try
+
+        '                                           'If templateResult IsNot Nothing Then
+        '                                           '    _visDataIdx(visType) = templateResult
+        '                                           'End If
+        '                                       Next
+        '                                   End Function,
+        '                             DispatcherPriority.Render)
+
+
+        ' Await the work but guard with a timeout so we don't hang forever.
+
+
+        ' If the posted action faulted, this await will rethrow the inner exception — catch it to log
+        'Dim templateResult As Storyboard = Nothing
+        'Try
+        '    templateResult = Await tcs.Task
+        'Catch ex As Exception
+        '    Debug.WriteLine($"Prewarm failed for {visType}: {ex}")
+        '    Continue For
+        'End Try
+
+        'If templateResult IsNot Nothing Then
+        '    _visDataIdx(visType) = templateResult
+        'End If
+
+
+
+
+    End Function
+
+    Public Sub EstablishVisual(objVisType As PopupVisualType, ByRef objSetVisual As Storyboard)
+        Dim objPopupVis As Storyboard = GetVisual(objVisType, True)
+        'Dim instance As Storyboard = TryCast(objPopupVis.Clone(), Storyboard)
         For Each objAnimation In objPopupVis.Children
             Timeline.SetDesiredFrameRate(objAnimation, 60)
             Storyboard.SetTarget(objAnimation, objContainer)
         Next
 
+        '  Storyboard.SetTarget(instance, objContainer)
+        '  objPopupVis.FreezeReturn()
+        ' objContainer.
+
+
         objSetVisual = objPopupVis
     End Sub
 
-    Private Sub ConfigureVisual()
+    Public Sub ConfigureVisual()
         PrepTransitionVisuals(aniOpen, PopupVisual_Open, VisualStarted)
     End Sub
 
@@ -213,11 +366,16 @@ Public Class osPopupMenu_GUI
     Public Async Function TriggerPopupMenu() As Task
         If Not _hasAnimated Then
             _hasAnimated = True
+
+            '      ConfigureVisual()
+
             BeginOpenTask(objTask_Open)
 
-            InitTransitionVisuals(aniOpen, PopupVisual_Open, VisualStarted)
-            Await objTask_Open.Task
+            '  InitTransitionVisuals(aniOpen, PopupVisual_Open, VisualStarted)
 
+            objAnimation_Open.Begin(Me)
+
+            Await objTask_Open.Task
             SetVisualMode(aniOpen)
         End If
     End Function
@@ -239,10 +397,12 @@ Public Class osPopupMenu_GUI
         Me.Owner = Nothing
     End Sub
 
-    Private Sub PopupOpenComplete()
-        ProcessVisualEvents(aniOpen, VisualComplete)
-
+    Private Sub PopupOpenComplete(sender As Object, e As EventArgs)
         objTask_Open.TrySetResult(True)
+
+        RemoveHandler objAnimation_Open.Completed,
+                            OpenCompleteEvent
+
         objAnimation_Open = Nothing
     End Sub
 
@@ -321,9 +481,6 @@ Public Class osPopupMenu_GUI
     End Sub
 
     Public Sub PrepPopupMenu()
-
-
-
         ShowGameMenuItem()
     End Sub
 

@@ -21,8 +21,10 @@
                         <Border x:Name="LoadContentContainer"
 						    Style="{StaticResource LoadingContentContainerStyle}">
                             <StackPanel Style="{StaticResource LoadingDataContentStyle}">
-                                <TextBlock x:Name="LoadingText" Width="432" Style="{StaticResource LoadingTextStyle}"
-                                           CacheMode="BitmapCache" />
+                                <Grid x:Name="LoadingTextHost" CacheMode="BitmapCache">
+                                    <TextBlock x:Name="LoadingText" Width="432" Style="{StaticResource LoadingTextStyle}"
+                                               CacheMode="BitmapCache" />    
+                                </Grid>
                                 <osLoadProg:osLoadingProgressBar x:Name="uiLoad_ProgressBar"
 								    RenderOptions.BitmapScalingMode="LowQuality"
 								    Style="{StaticResource LoadingProgressStyle}" />
