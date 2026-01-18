@@ -115,6 +115,7 @@ Public Class osPopupMenu_GUI
         Await objContainer.Dispatcher.BeginInvoke(
             Sub()
                 Try
+
                     objVisualData.Begin(objContainer)
                 Catch ex As Exception : End Try
             End Sub, DispatcherPriority.Render)
@@ -315,22 +316,25 @@ Public Class osPopupMenu_GUI
 
     Public Sub EstablishVisual(objVisType As PopupVisualType, ByRef objSetVisual As Storyboard)
         Dim objPopupVis As Storyboard = GetVisual(objVisType, True)
-        'Dim instance As Storyboard = TryCast(objPopupVis.Clone(), Storyboard)
-        For Each objAnimation In objPopupVis.Children
-            Timeline.SetDesiredFrameRate(objAnimation, 60)
-            Storyboard.SetTarget(objAnimation, objContainer)
-        Next
 
-        '  Storyboard.SetTarget(instance, objContainer)
-        '  objPopupVis.FreezeReturn()
-        ' objContainer.
+        'For Each objAnimation In objPopupVis.Children
+        '    Timeline.SetDesiredFrameRate(objAnimation, 60)
+        '    Storyboard.SetTarget(objAnimation, objContainer)
+        'Next
+        Storyboard.SetDesiredFrameRate(objPopupVis, 60)
 
 
         objSetVisual = objPopupVis
+
     End Sub
 
     Public Sub ConfigureVisual()
         PrepTransitionVisuals(aniOpen, PopupVisual_Open, VisualStarted)
+
+        'objAnimation_Open.Begin(objContainer, True)
+        'objAnimation_Open.Pause(objContainer)
+
+        'objAnimation_Open.Seek(TimeSpan.FromMilliseconds(0))
     End Sub
 
     Private Sub InitTransitionVisuals(objAniType As AnimationType, objVisType As PopupVisualType, objVisAction As VisualAction)
@@ -340,7 +344,10 @@ Public Class osPopupMenu_GUI
                 TriggerVisuals(objAnimation_Open, True)
             Case aniClose
                 PrepTransitionVisuals(objAniType, objVisType, objVisAction)
-                TriggerVisuals(objAnimation_Close)
+                Dim aa = osVisQualityAdapter.EstablishVisDataSettings(VisTypeAdapter.VisAdapter_PopupMenu, VisRenderMode.VisMode_LowQuality, True)
+                objAnimation_Close.Begin(objContainer, True)
+
+                '     TriggerVisuals(objAnimation_Close)
         End Select
     End Sub
 
@@ -348,10 +355,12 @@ Public Class osPopupMenu_GUI
         Select Case objAniType
             Case aniOpen
                 EstablishVisual(objVisType, objAnimation_Open)
+                Dim objTask_VisAdapter = osVisQualityAdapter.InitAdapter(VisTypeAdapter.VisAdapter_PopupMenu, objAnimation_Open,
+                                                 True, True, objContainer)
             Case aniClose
                 EstablishVisual(objVisType, objAnimation_Close)
-
-                SetVisualMode(aniClose)
+                osVisQualityAdapter.UpdateVisData(VisTypeAdapter.VisAdapter_PopupMenu, objAnimation_Close)
+                '   SetVisualMode(aniClose)
         End Select
 
         ProcessVisualEvents(objAniType, objVisAction)
@@ -367,8 +376,6 @@ Public Class osPopupMenu_GUI
         If Not _hasAnimated Then
             _hasAnimated = True
 
-            '      ConfigureVisual()
-
             BeginOpenTask(objTask_Open)
 
             '  InitTransitionVisuals(aniOpen, PopupVisual_Open, VisualStarted)
@@ -379,6 +386,22 @@ Public Class osPopupMenu_GUI
             SetVisualMode(aniOpen)
         End If
     End Function
+
+    Public Sub TriggerPopupMenu(isN As Boolean)
+        If Not _hasAnimated Then
+            _hasAnimated = True
+
+            '  BeginOpenTask(objTask_Open)
+
+            '  InitTransitionVisuals(aniOpen, PopupVisual_Open, VisualStarted)
+            '   objAnimation_Open.Seek(TimeSpan.FromMilliseconds(0))
+
+            objAnimation_Open.Begin(objContainer, True)
+
+            '  Await objTask_Open.Task
+            '   SetVisualMode(aniOpen)
+        End If
+    End Sub
 
     Private Sub SetAniDuration(ByRef objDur As Duration, valDur As TimeSpan)
         objDur = New Duration(valDur)
@@ -398,11 +421,12 @@ Public Class osPopupMenu_GUI
     End Sub
 
     Private Sub PopupOpenComplete(sender As Object, e As EventArgs)
-        objTask_Open.TrySetResult(True)
+        '  objTask_Open.TrySetResult(True)
 
         RemoveHandler objAnimation_Open.Completed,
                             OpenCompleteEvent
 
+        SetVisualMode(aniOpen)
         objAnimation_Open = Nothing
     End Sub
 
@@ -481,6 +505,9 @@ Public Class osPopupMenu_GUI
     End Sub
 
     Public Sub PrepPopupMenu()
+        Me.Show()
+        Me.Hide()
+
         ShowGameMenuItem()
     End Sub
 

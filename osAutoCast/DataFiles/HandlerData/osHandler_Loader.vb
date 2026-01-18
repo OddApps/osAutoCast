@@ -427,20 +427,12 @@ Public Class osHandler_Loader2
 
 End Class
 
-
 Public Class osHandler_Loader
 
     Private ReadOnly _fadeTextOut As Func(Of LoadTextVisualType, Task)
     Private ReadOnly _fadeTextIn As Func(Of LoadTextVisualType, Task)
 
-    Private ReadOnly _ValidateLoadText As Func(Of LoadTaskType, Boolean)
-
-    Private _LoaderText As TextBlock
-    Private _LoaderTextHost As Grid
-
     Private _ProgLoadBar As Func(Of osProgLoad)
-
-    Private ReadOnly _setLoadText As Action(Of LoadTaskType)
 
     Private _animationCts As CancellationTokenSource
 
@@ -459,7 +451,6 @@ Public Class osHandler_Loader
     Private objProgressTimer As DispatcherTimer = Nothing
 
     Public Sub New(objLoadStages As osLoad, objProgBar As osProgLoad, objProg_Load As Func(Of osProgLoad),
-                   objLoaderText As TextBlock, objLoaderTextHost As Grid, funcLoadText As Action(Of LoadTaskType),
                    objTextVis_Out As Func(Of LoadTextVisualType, Task), objTextVis_In As Func(Of LoadTextVisualType, Task))
 
         _ProgLoadBar = objProg_Load
@@ -471,10 +462,6 @@ Public Class osHandler_Loader
 
         _fadeTextOut = objTextVis_Out
         _fadeTextIn = objTextVis_In
-
-        _LoaderText = objLoaderText
-        _LoaderTextHost = objLoaderTextHost
-        _setLoadText = funcLoadText
 
         _LoadStages = objLoadStages.LoadStageIdx
 
@@ -489,13 +476,6 @@ Public Class osHandler_Loader
             _cts = Nothing
         End If
     End Sub
-
-    Public Async Function YieldToRender() As Task
-        Dim op = Application.Current.Dispatcher.InvokeAsync(
-            Sub()
-            End Sub, DispatcherPriority.Render)
-        Await op.Task
-    End Function
 
     Private Function CreateStageProgress(objAnimator As LoaderProgressAnimator,
                                          objLoadStage As TaskData, token As CancellationToken) As IProgress(Of Double)
@@ -548,7 +528,7 @@ Public Class osHandler_Loader
         Dim uiProgress As IProgress(Of Double) = CreateStageProgress(animator, objLoadStage, token)
 
         outTimer = New DispatcherTimer(DispatcherPriority.Background) With {
-            .Interval = TimeSpan.FromMilliseconds(85)
+            .Interval = TimeSpan.FromMilliseconds(90)
         }
 
         AddHandler outTimer.Tick,

@@ -43,7 +43,7 @@ Public Class osTrayMenu_GUI
                                                 evtDisplayTrayMenu
 
                     visTrayMenu_Close = EstablishVisual(TrayMenu_Close)
-                    SetVisualMode(TrayMenu_Open)
+                    '   SetVisualMode(TrayMenu_Open)
                 End Sub
 
             AddHandler visTrayMenu_Open.Completed,
@@ -62,23 +62,36 @@ Public Class osTrayMenu_GUI
 
     Public Sub InitTrayMenuClose(Optional setTaskRun As Boolean = False)
         SetTrayMenuEvent(TrayMenu_Close, setTaskRun)
-        SetVisualMode(TrayMenu_Close)
-
-        PrepDispatcher().BeginInvoke(
-        DispatcherPriority.Background,
-            Sub()
-                visTrayMenu_Close.Begin(Me)
-            End Sub)
+        '    SetVisualMode(VisRenderMode.VisMode_LowQuality)
+        Dim aa = osVisQualityAdapter.EstablishVisDataSettings(VisTypeAdapter.VisAdapter_TrayMenu, VisRenderMode.VisMode_LowQuality, True)
+        visTrayMenu_Close.Begin(TrayMenuOutline, True)
+        'PrepDispatcher().Invoke(
+        '    Sub()
+        '        visTrayMenu_Close.Begin()
+        '    End Sub, DispatcherPriority.Render)
     End Sub
 
     Public Sub DisplayTrayMenu()
         'If PrepDispatcher().CheckAccess() Then
         '    ShowTrayMenuCore()
-        'Else
-        PrepDispatcher().Invoke(
-                AddressOf TriggerVisuals,
-                DispatcherPriority.Render)
+        ''Else
+        'PrepDispatcher().Invoke(
+        '        AddressOf TriggerVisuals,
+        '        DispatcherPriority.Render)
         '   End If
+        'EstablishVisual(TrayMenu_Open, visTrayMenu_Open)
+        'InitTrayMenuVis()
+
+        'With Me
+        '    .Width = wTrayMenu
+        '    .Height = hTrayMenu
+
+        '    BufferTrayMenu()
+        'End With
+
+        'Dim a = osVisQualityAdapter.InitAdapter(VisTypeAdapter.VisAdapter_TrayMenu, visTrayMenu_Open,
+        '                                         True, True, TrayMenuOutline, TrayMainContainer)
+        TriggerVisuals()
     End Sub
 
     Public Sub InitTrayMenuVis()
@@ -90,7 +103,7 @@ Public Class osTrayMenu_GUI
                                                 evtDisplayTrayMenu
 
                     visTrayMenu_Close = EstablishVisual(TrayMenu_Close)
-                    SetVisualMode(TrayMenu_Open)
+                    '  SetVisualMode(VisRenderMode.VisMode_HighQuality)
                 End Sub
 
         AddHandler visTrayMenu_Open.Completed,
@@ -98,35 +111,62 @@ Public Class osTrayMenu_GUI
     End Sub
 
     Public Sub PrepTrayMenuInit()
+        Dispatcher.BeginInvoke(
+    Sub()
         visTrayMenu_Open = EstablishVisual(TrayMenu_Open)
         InitTrayMenuVis()
 
+        Dim aa = osVisQualityAdapter.InitAdapter(VisTypeAdapter.VisAdapter_TrayMenu, visTrayMenu_Open,
+                                                  True, True, TrayMenuOutline, TrayMainContainer)
         With Me
             .Width = wTrayMenu
             .Height = hTrayMenu
 
             BufferTrayMenu()
         End With
+    End Sub,
+    DispatcherPriority.Background)
+
     End Sub
 
-    Private Async Sub TriggerVisuals()
-        Await TrayMenuOutline.Dispatcher.BeginInvoke(
-            Sub()
-                Try
-                    CalcTrayPos()
+    Public Async Function PrepTrayMenuInit(isN As Boolean) As Task
+        Await PrepDispatcher().InvokeAsync(
+                    Sub()
+                        visTrayMenu_Open = EstablishVisual(TrayMenu_Open)
+                        InitTrayMenuVis()
 
-                    With Me
-                        PresentTrayMenu()
+                        With Me
+                            .Width = wTrayMenu
+                            .Height = hTrayMenu
 
-                        .Left = .TrayMenuPos_X
-                        .Top = .TrayMenuPos_Y
+                            '  BufferTrayMenu()
+                        End With
 
-                        .Topmost = True
-                    End With
+                        Dim a = osVisQualityAdapter.InitAdapter(VisTypeAdapter.VisAdapter_TrayMenu, visTrayMenu_Open,
+                                                 True, True, TrayMenuOutline, TrayMainContainer)
+                    End Sub, DispatcherPriority.Background)
 
-                    visTrayMenu_Open.Begin(TrayMenuOutline)
-                Catch ex As Exception : End Try
-            End Sub, DispatcherPriority.Render)
+    End Function
+
+    Private Sub TriggerVisuals()
+        'Await Dispatcher.CurrentDispatcher.BeginInvoke(
+        '    Sub()
+        Try
+            CalcTrayPos()
+
+            With Me
+                PresentTrayMenu()
+
+                .Left = .TrayMenuPos_X
+                .Top = .TrayMenuPos_Y
+
+                .Topmost = True
+            End With
+
+            visTrayMenu_Open.Begin(TrayMenuOutline, True)
+
+        Catch ex As Exception : End Try
+        'End Sub, DispatcherPriority.Render)
     End Sub
 
     Private Sub ShowTrayMenuCore()
@@ -145,6 +185,20 @@ Public Class osTrayMenu_GUI
         visTrayMenu_Open.Begin(TrayMenuOutline)
     End Sub
 
+    Private Sub osTrayMenu_GUI_ContentRendered(sender As Object, e As EventArgs) Handles Me.Loaded
+        'With Me
+        '    .Width = wTrayMenu
+        '    .Height = hTrayMenu
+
+        '    BufferTrayMenu()
+        'End With
+        'visTrayMenu_Open = EstablishVisual(TrayMenu_Open)
+        'InitTrayMenuVis()
+
+
+        'Dim a = osVisQualityAdapter.InitAdapter(VisTypeAdapter.VisAdapter_TrayMenu, visTrayMenu_Open,
+        '                                         True, True, TrayMenuOutline, TrayMainContainer)
+    End Sub
 End Class
 
 Partial Public Class osTrayMenu_GUI
@@ -212,6 +266,18 @@ Partial Public Class osTrayMenu_GUI
 #End Region
 
 #Region "Visual Data"
+
+    Private Sub SetVisualMode(objVMode As VisRenderMode)
+        With New osVisRenderMode(objVMode)
+            TrayMenuOutline.CacheMode = .visCache
+            TrayMainContainer.CacheMode = .visCache
+
+            RenderOptions.SetBitmapScalingMode(TrayMenuOutline, .visBitMap)
+            RenderOptions.SetBitmapScalingMode(TrayMainContainer, .visBitMap)
+            RenderOptions.SetEdgeMode(TrayMenuOutline, .visEdges)
+            RenderOptions.SetEdgeMode(TrayMainContainer, .visEdges)
+        End With
+    End Sub
 
     Private Sub SetVisualMode(objMenuState As TrayMenuState)
         Dim setBitMapMode As BitmapScalingMode
@@ -356,6 +422,10 @@ Partial Public Class osTrayMenu_GUI
         Return TrayMenuRes
     End Function
 
+    Private Function LoadVis_Set(objVisType As TrayMenuState) As Storyboard
+        Return TryCast(Me.Resources(GetVisualKey(objVisType)), Storyboard)
+    End Function
+
     Private Function LoadVis_Set(objVisResource As Style, objVisType As TrayMenuState) As Storyboard
         Return TryCast(Me.Resources(GetVisualKey(objVisType)), Storyboard)
     End Function
@@ -363,6 +433,12 @@ Partial Public Class osTrayMenu_GUI
     Private Function EstablishVisual(objVisType As TrayMenuState) As Storyboard
         Return LoadVis_Set(TrayMenuRes, objVisType)
     End Function
+
+    Private Sub EstablishVisual(objVisType As TrayMenuState, ByRef objVisData As Storyboard)
+        Dim objTrayMenuVis = LoadVis_Set(objVisType).Clone()
+
+
+    End Sub
 
     Private Function GetVisualKey(objVisType As TrayMenuState) As String
         Return idxTrayMenuVisuals.First(
@@ -505,6 +581,8 @@ Partial Public Class osTrayMenu_GUI
 
         If visTrayMenu_Close Is Nothing Then
             visTrayMenu_Close = EstablishVisual(TrayMenu_Close)
+            osVisQualityAdapter.UpdateVisData(VisTypeAdapter.VisAdapter_TrayMenu, visTrayMenu_Close)
+
         End If
 
         If ValidateTrayMenuClose() Then

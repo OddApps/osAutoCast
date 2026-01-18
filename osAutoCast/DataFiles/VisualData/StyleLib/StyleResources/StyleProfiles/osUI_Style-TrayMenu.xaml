@@ -19,8 +19,8 @@
         <Setter Property="VerticalAlignment" Value="Center" />
         <Setter Property="Margin" Value="0,3" />
         <Setter Property="Opacity" Value="0" />
-        <Setter Property="CacheMode" Value="BitmapCache" />
-        <Setter Property="RenderOptions.BitmapScalingMode" Value="LowQuality" />
+        <!--<Setter Property="CacheMode" Value="BitmapCache" />
+        <Setter Property="RenderOptions.BitmapScalingMode" Value="LowQuality" />-->
         <Setter Property="RenderTransformOrigin" Value="1,1" />
     </Style>
 

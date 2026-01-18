@@ -12,9 +12,9 @@ Imports System.Windows
 Imports System.Windows.Data
 Imports System.Windows.Media
 Imports System.ComponentModel
+Imports System.Collections.Generic
 
 Namespace osStyle
-
 
     Public Class osStyles
         Inherits DependencyObject
@@ -347,7 +347,7 @@ Namespace osStyle
 
         Public Shared ReadOnly PopupScaleProperty As DependencyProperty = DependencyProperty.
             RegisterAttached("PopupScale", GetType(Double), GetType(osPopupScale),
-                             New PropertyMetadata(0.001, AddressOf OnPopupScaleChanged))
+                             New PropertyMetadata(0.00, AddressOf OnPopupScaleChanged))
 
         Public Shared Sub SetPopupScale(objPopupScale As DependencyObject, valScale As Double)
             objPopupScale.SetValue(PopupScaleProperty, valScale)
@@ -373,7 +373,8 @@ Namespace osStyle
             Dim objVisualTransform = objContainer.RenderTransform
 
             If objVisualTransform Is Nothing Then
-                Dim objVisualScale = New ScaleTransform(0.001, 0.001)
+                Dim objVisualScale = New ScaleTransform(0.00, 0.00)
+
                 objContainer.RenderTransform = objVisualScale
                 Return objVisualScale
             End If
@@ -382,17 +383,21 @@ Namespace osStyle
             If objVerifyVisual IsNot Nothing Then Return objVerifyVisual
 
             Dim chkTransformGroup = TryCast(objVisualTransform, TransformGroup)
+
             If chkTransformGroup IsNot Nothing Then
-                Dim chkVisualGroup = chkTransformGroup.Children.OfType(Of ScaleTransform)().FirstOrDefault()
+                Dim chkVisualGroup = chkTransformGroup.Children.
+                    OfType(Of ScaleTransform)().FirstOrDefault()
+
                 If chkVisualGroup IsNot Nothing Then Return chkVisualGroup
 
-                chkVisualGroup = New ScaleTransform(0.001, 0.001)
+                chkVisualGroup = New ScaleTransform(0.00, 0.00)
                 chkTransformGroup.Children.Insert(0, chkVisualGroup)
+
                 Return chkVisualGroup
             End If
 
             Dim objVisualGroup As New TransformGroup()
-            Dim objVisualScaler As New ScaleTransform(0.001, 0.001)
+            Dim objVisualScaler As New ScaleTransform(0.00, 0.00)
 
             objVisualGroup.Children.Add(objVisualScaler)
             objVisualGroup.Children.Add(objVisualTransform)
@@ -402,6 +407,200 @@ Namespace osStyle
             Return objVisualScaler
         End Function
 
+    End Class
+
+    Public Class osVisualSwitch
+        ' Attached property to assign the Storyboard to watch
+        Public Shared ReadOnly StoryboardProperty As DependencyProperty =
+            DependencyProperty.RegisterAttached("Storyboard", GetType(Storyboard), GetType(osVisualSwitch),
+                                                New PropertyMetadata(Nothing, AddressOf OnStoryboardChanged))
+
+        Public Shared Sub SetStoryboard(o As DependencyObject, sb As Storyboard)
+            o.SetValue(StoryboardProperty, sb)
+        End Sub
+        Public Shared Function GetStoryboard(o As DependencyObject) As Storyboard
+            Return CType(o.GetValue(StoryboardProperty), Storyboard)
+        End Function
+
+        ' Optional RenderAtScale to control bitmap cache scale while animating
+        Public Shared ReadOnly RenderAtScaleProperty As DependencyProperty =
+            DependencyProperty.RegisterAttached("RenderAtScale", GetType(Double), GetType(osVisualSwitch),
+                                                New PropertyMetadata(1.0))
+
+        Public Shared Sub SetRenderAtScale(o As DependencyObject, value As Double)
+            o.SetValue(RenderAtScaleProperty, value)
+        End Sub
+
+        Public Shared Function GetRenderAtScale(o As DependencyObject) As Double
+            Return CDbl(o.GetValue(RenderAtScaleProperty))
+        End Function
+
+        ' Internal map to keep handlers and target reference so we can RemoveHandler later
+        Private Class HandlerInfo
+            Public Property TargetRef As WeakReference(Of UIElement)
+            Public Property CurrentStateHandler As EventHandler
+            Public Property CompletedHandler As EventHandler
+            Public Property RenderAtScale As Double
+        End Class
+
+        Private Shared ReadOnly s_handlers As New Dictionary(Of Storyboard, HandlerInfo)()
+
+        ' Attached property to store saved quality state per element
+        Private Shared ReadOnly SavedStateProperty As DependencyProperty =
+            DependencyProperty.RegisterAttached("SavedQualityState", GetType(QualityState), GetType(osVisualSwitch), New PropertyMetadata(Nothing))
+
+        Private Shared Sub SetSavedState(e As DependencyObject, st As QualityState)
+            e.SetValue(SavedStateProperty, st)
+        End Sub
+        Private Shared Function GetSavedState(e As DependencyObject) As QualityState
+            Return CType(e.GetValue(SavedStateProperty), QualityState)
+        End Function
+
+        ' Called when Storyboard attached/changed
+        Private Shared Sub OnStoryboardChanged(d As DependencyObject, e As DependencyPropertyChangedEventArgs)
+            Dim target = TryCast(d, UIElement)
+            Dim oldSb = TryCast(e.OldValue, Storyboard)
+            Dim newSb = TryCast(e.NewValue, Storyboard)
+
+            If oldSb IsNot Nothing Then
+                ' remove handlers
+                SyncLock s_handlers
+                    Dim info As HandlerInfo = Nothing
+                    If s_handlers.TryGetValue(oldSb, info) Then
+                        If info.CurrentStateHandler IsNot Nothing Then RemoveHandler oldSb.CurrentStateInvalidated, info.CurrentStateHandler
+                        If info.CompletedHandler IsNot Nothing Then RemoveHandler oldSb.Completed, info.CompletedHandler
+                        s_handlers.Remove(oldSb)
+                    End If
+                End SyncLock
+            End If
+
+            If newSb IsNot Nothing AndAlso target IsNot Nothing Then
+                Dim renderScale = GetRenderAtScale(d)
+                ' create handlers that capture the target and storyboard
+                Dim stateHandler As EventHandler = Nothing
+                Dim completedHandler As EventHandler = Nothing
+
+                stateHandler = Sub(s, args)
+                                   Try
+                                       ' Works best when storyboard was begun controllable (Begin(target, True))
+                                       Dim clockState = newSb.GetCurrentState(target)
+                                       If clockState = ClockState.Active Then
+                                           EnableAnimationQualityMode(target, renderScale)
+                                       Else
+                                           RestoreQualityMode(target)
+                                       End If
+                                   Catch ex As Exception
+                                       ' ignore (GetCurrentState may throw if not controllable)
+                                   End Try
+                               End Sub
+
+                completedHandler = Sub(s, args)
+                                       RestoreQualityMode(target)
+                                   End Sub
+
+                AddHandler newSb.CurrentStateInvalidated, stateHandler
+                AddHandler newSb.Completed, completedHandler
+
+                Dim hi As New HandlerInfo With {
+                    .TargetRef = New WeakReference(Of UIElement)(target),
+                    .CurrentStateHandler = stateHandler,
+                    .CompletedHandler = completedHandler,
+                    .RenderAtScale = renderScale
+                }
+
+                SyncLock s_handlers
+                    s_handlers(newSb) = hi
+                End SyncLock
+            End If
+        End Sub
+
+        ' ---- Quality toggling (preserves previous values) ----
+
+        Private Class QualityState
+            Public Property BitmapScaling As BitmapScalingMode?
+            Public Property EdgeMode As EdgeMode?
+            Public Property TextRendering As TextRenderingMode?
+            Public Property TextFormatting As TextFormattingMode?
+            Public Property CacheMode As CacheMode
+            Public Property UseLayoutRounding As Boolean?
+            Public Property SnapsToDevicePixels As Boolean?
+        End Class
+
+        Private Shared Sub EnableAnimationQualityMode(target As UIElement, Optional renderAtScale As Double = 1.0)
+            If target Is Nothing Then Return
+
+            ' If already saved, do nothing
+            If GetSavedState(target) IsNot Nothing Then Return
+
+            Dim prev As New QualityState
+            prev.BitmapScaling = RenderOptions.GetBitmapScalingMode(target)
+            prev.EdgeMode = RenderOptions.GetEdgeMode(target)
+            prev.TextRendering = TextOptions.GetTextRenderingMode(target)
+            prev.TextFormatting = TextOptions.GetTextFormattingMode(target)
+            prev.CacheMode = target.CacheMode
+            Dim fe = TryCast(target, FrameworkElement)
+            If fe IsNot Nothing Then
+                prev.UseLayoutRounding = fe.UseLayoutRounding
+                prev.SnapsToDevicePixels = fe.SnapsToDevicePixels
+            End If
+
+            SetSavedState(target, prev)
+
+            ' Apply lower-quality / fast settings
+            RenderOptions.SetBitmapScalingMode(target, BitmapScalingMode.LowQuality)
+            RenderOptions.SetEdgeMode(target, EdgeMode.Aliased)
+            TextOptions.SetTextRenderingMode(target, TextRenderingMode.Aliased)
+            TextOptions.SetTextFormattingMode(target, TextFormattingMode.Display)
+
+            Try
+                target.CacheMode = New BitmapCache(renderAtScale)
+            Catch ex As Exception
+                ' ignore if setting CacheMode fails
+            End Try
+
+            If fe IsNot Nothing Then
+                fe.UseLayoutRounding = True
+                fe.SnapsToDevicePixels = True
+            End If
+        End Sub
+
+        Private Shared Sub RestoreQualityMode(target As UIElement)
+            If target Is Nothing Then Return
+
+            Dim saved = GetSavedState(target)
+            If saved Is Nothing Then
+                ' Nothing saved — as a fallback restore to reasonable defaults
+                RenderOptions.SetBitmapScalingMode(target, BitmapScalingMode.HighQuality)
+                RenderOptions.SetEdgeMode(target, EdgeMode.Unspecified)
+                TextOptions.SetTextRenderingMode(target, TextRenderingMode.Auto)
+                TextOptions.SetTextFormattingMode(target, TextFormattingMode.Ideal)
+                target.CacheMode = Nothing
+
+                Dim fe_NoSave = TryCast(target, FrameworkElement)
+
+                If fe_NoSave IsNot Nothing Then
+                    fe_NoSave.UseLayoutRounding = False
+                    fe_NoSave.SnapsToDevicePixels = False
+                End If
+                Return
+            End If
+
+            If saved.BitmapScaling.HasValue Then RenderOptions.SetBitmapScalingMode(target, saved.BitmapScaling.Value) Else RenderOptions.SetBitmapScalingMode(target, BitmapScalingMode.HighQuality)
+            If saved.EdgeMode.HasValue Then RenderOptions.SetEdgeMode(target, saved.EdgeMode.Value) Else RenderOptions.SetEdgeMode(target, EdgeMode.Unspecified)
+            If saved.TextRendering.HasValue Then TextOptions.SetTextRenderingMode(target, saved.TextRendering.Value) Else TextOptions.SetTextRenderingMode(target, TextRenderingMode.Auto)
+            If saved.TextFormatting.HasValue Then TextOptions.SetTextFormattingMode(target, saved.TextFormatting.Value) Else TextOptions.SetTextFormattingMode(target, TextFormattingMode.Ideal)
+
+            target.CacheMode = saved.CacheMode
+
+            Dim fe = TryCast(target, FrameworkElement)
+            If fe IsNot Nothing Then
+                If saved.UseLayoutRounding.HasValue Then fe.UseLayoutRounding = saved.UseLayoutRounding.Value
+                If saved.SnapsToDevicePixels.HasValue Then fe.SnapsToDevicePixels = saved.SnapsToDevicePixels.Value
+            End If
+
+            ' Clear saved state
+            SetSavedState(target, Nothing)
+        End Sub
     End Class
 
 End Namespace

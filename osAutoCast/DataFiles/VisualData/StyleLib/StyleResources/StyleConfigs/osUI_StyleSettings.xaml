@@ -95,9 +95,10 @@
     <!-- [ Popup Timing ] -->
 
     <VisSettings:osVisConfig x:Key="PopupAni_OpenStart" visDur="0" />
-    <VisSettings:osVisConfig x:Key="PopupAni_OpenDuration" visDur="225" />
-    <VisSettings:osVisConfig x:Key="PopupAni_OpenDurationPrimary" visDur="550" />
-    <VisSettings:osVisConfig x:Key="PopupAni_OpenDurationFade" visDur="375" />
+    <VisSettings:osVisConfig x:Key="PopupAni_OpenScaleStart" visDur="50" />
+    <VisSettings:osVisConfig x:Key="PopupAni_OpenDuration" visDur="325" />
+    <VisSettings:osVisConfig x:Key="PopupAni_OpenDurationPrimary" visDur="650" />
+    <VisSettings:osVisConfig x:Key="PopupAni_OpenDurationFade" visDur="475" />
 
     <VisSettings:osVisConfig x:Key="PopupAni_CloseStart" visDur="0" />
     <VisSettings:osVisConfig x:Key="PopupAni_CloseDuration" visDur="550" />
@@ -116,7 +117,7 @@
 
     <!-- [ Popup Config ] -->
 
-    <sys:Double x:Key="PopupAni_StartScale">0.00</sys:Double>
+    <sys:Double x:Key="PopupAni_StartScale">0.05</sys:Double>
     <sys:Double x:Key="PopupAni_StartFade">0.0</sys:Double>
     
     <sys:Double x:Key="PopupAni_OpenScale">0.7</sys:Double>

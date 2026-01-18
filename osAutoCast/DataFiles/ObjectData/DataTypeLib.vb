@@ -295,6 +295,12 @@ Public Module DataTypeLib
         VisualComplete
     End Enum
 
+    Public Enum VisTypeAdapter
+        VisAdapter_Opts
+        VisAdapter_TrayMenu
+        VisAdapter_PopupMenu
+    End Enum
+
     Public Enum VisualEasing
         PopupOpen_Scale
         PopupOpen_ScalePrimary
@@ -457,8 +463,8 @@ Public Module DataTypeLib
     End Enum
 
     Public Enum VisRenderMode
-        VisMode_Open
-        VisMode_Close
+        VisMode_HighQuality
+        VisMode_LowQuality
     End Enum
 
     Public Enum RenderStateAction
@@ -602,8 +608,13 @@ End Class
 
 Public Class osVisRenderMode
 
+    Public Property visEdges As EdgeMode
     Public Property visBitMap As BitmapScalingMode
     Public Property visCache As CacheMode
+    Public Property visLayoutSetting As Boolean
+
+    'Public Property visTextRender As TextRenderingMode
+    'Public Property visTextFormat As TextFormattingMode
 
     Public Sub New()
     End Sub
@@ -613,15 +624,49 @@ Public Class osVisRenderMode
         visCache = vCache
     End Sub
 
+    Public Sub New(vBitMap As BitmapScalingMode, vCache As CacheMode, vEdges As EdgeMode)
+        visBitMap = vBitMap
+        visCache = vCache
+        visEdges = vEdges
+    End Sub
+
     Public Sub New(vMode As VisRenderMode)
         Select Case vMode
-            Case VisMode_Open
+            Case VisMode_HighQuality
                 visBitMap = BitmapScalingMode.HighQuality
+                visEdges = EdgeMode.Unspecified
                 visCache = Nothing
-            Case VisMode_Close
+
+                visLayoutSetting = False
+            Case VisMode_LowQuality
                 visBitMap = BitmapScalingMode.LowQuality
-                visCache = New BitmapCache()
+                visEdges = EdgeMode.Aliased
+                visCache = New BitmapCache(1.0)
+
+                visLayoutSetting = True
         End Select
+    End Sub
+
+End Class
+
+Public Class VisAdapterData
+
+    '  Public Property AdapterType As VisTypeAdapter
+    Public Property VisData As Storyboard
+    Public Property VisCollection As UIElement()
+
+    Public Sub New()
+    End Sub
+
+    'Public Sub New(vType As VisTypeAdapter, vData As Storyboard, vCollection As UIElement())
+    '    AdapterType = vType
+    '    VisData = vData
+    '    VisCollection = vCollection
+    'End Sub
+
+    Public Sub New(ByRef vData As Storyboard, vCollection As UIElement())
+        VisData = vData
+        VisCollection = vCollection
     End Sub
 
 End Class
@@ -1060,14 +1105,16 @@ Public Module osVisEaseData
     Public Function SetVisualEase(objVisE As VisualEasing) As EasingFunctionBase
         Select Case objVisE
             Case PopupOpen_Scale : Return New ExponentialEase() With {
-                    .EasingMode = EasingMode.EaseIn
+                    .EasingMode = EasingMode.EaseIn,
+                    .Exponent = 1.5
                 }
             Case PopupOpen_ScalePrimary : Return New BackEase() With {
                     .EasingMode = EasingMode.EaseOut,
                     .Amplitude = 2
                 }
             Case PopupOpen_Fade : Return New ExponentialEase() With {
-                    .EasingMode = EasingMode.EaseIn
+                    .EasingMode = EasingMode.EaseOut,
+                    .Exponent = 0.75
                 }
             Case PopupClose : Return New ExponentialEase() With {
                     .EasingMode = EasingMode.EaseInOut,

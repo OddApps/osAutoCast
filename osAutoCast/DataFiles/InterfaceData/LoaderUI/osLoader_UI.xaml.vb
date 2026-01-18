@@ -276,7 +276,7 @@ Partial Class osLoader_UI
 
     Private Function InitLoadHandler() As osHandler_Loader
         Return New osHandler_Loader(ConstructLoadIdx(), objLoadProgBar, AddressOf GetObjLoadProgBar,
-                                     objLoadText, objLoadTextHost, Sub(txtLoad) SetLoadText(txtLoad), AddressOf FadeLoadTextOut, AddressOf FadeLoadTextIn)
+                                    AddressOf FadeLoadTextOut, AddressOf FadeLoadTextIn)
     End Function
 
     Private Function GetLoadTaskMsg(valTaskType As LoadTaskType) As String

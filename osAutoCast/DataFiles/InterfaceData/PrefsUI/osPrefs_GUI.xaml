@@ -2,48 +2,93 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:local="clr-namespace:osAutoCast" 
         xmlns:osCtrl="clr-namespace:osAutoCast.osControls" xmlns:osPrefs="clr-namespace:osAutoCast.osPrefLib" Height="365"
-        Topmost="True" mc:Ignorable="d" Title="Settings" WindowStyle="None" WindowStartupLocation="CenterScreen"
+        Topmost="True" mc:Ignorable="d" Title="Settings" WindowStyle="None" WindowStartupLocation="CenterScreen" 
         Style="{StaticResource osPrefsStyle}" AllowsTransparency="True" ShowInTaskbar="False">
 
     <Window.Resources>
         <Storyboard x:Key="osPrefsVis_Disp">
-            <DoubleAnimation Storyboard.TargetName="osPrefsMainContainer" Storyboard.TargetProperty="Opacity" BeginTime="{StaticResource osPrefsStartTime_OpenOpacity}" Duration="{StaticResource osPrefsDuration_OpenOpacity}" From="0" To="1" FillBehavior="HoldEnd">
-                <DoubleAnimation.EasingFunction>
-                    <QuadraticEase EasingMode="EaseIn" />
-                </DoubleAnimation.EasingFunction>
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="osPrefsMainContainer" Storyboard.TargetProperty="(UIElement.Opacity)">
+                <EasingDoubleKeyFrame KeyTime="00:00:00" Value="0">
+                    <EasingDoubleKeyFrame.EasingFunction>
+                        <CubicEase EasingMode="EaseOut" />
+                    </EasingDoubleKeyFrame.EasingFunction>
+                </EasingDoubleKeyFrame>
+                <EasingDoubleKeyFrame KeyTime="00:00:0.750" Value="1">
+                    <EasingDoubleKeyFrame.EasingFunction>
+                        <CubicEase EasingMode="EaseOut" />
+                    </EasingDoubleKeyFrame.EasingFunction>
+                </EasingDoubleKeyFrame>
+            </DoubleAnimationUsingKeyFrames>
+            <DoubleAnimation Storyboard.TargetName="osPrefsTitlePanel"
+                             Storyboard.TargetProperty="(UIElement.Opacity)"
+                             BeginTime="{StaticResource osPrefsStartTime_OpenTitle}"
+                             Duration="{StaticResource osPrefsDuration_OpenTitle}" 
+                             From="1" To="0" FillBehavior="HoldEnd">
             </DoubleAnimation>
-            <DoubleAnimation Storyboard.TargetName="osPrefsTitlePanel" Storyboard.TargetProperty="Opacity" BeginTime="{StaticResource osPrefsStartTime_OpenTitle}" Duration="{StaticResource osPrefsDuration_OpenTitle}" From="1" To="0" FillBehavior="HoldEnd">
-            </DoubleAnimation>
-            <DoubleAnimation Storyboard.TargetName="osPrefsOutlineRender" Storyboard.TargetProperty="ScaleX" BeginTime="{StaticResource osPrefsStartTime_OpenScaleX}" Duration="{StaticResource osPrefsDuration_OpenScaleX}" From="0.025" To="1" FillBehavior="HoldEnd">
+            <DoubleAnimation Storyboard.TargetName="osPrefsOutlineRender"
+                             Storyboard.TargetProperty="ScaleX"
+							 BeginTime="{StaticResource osPrefsStartTime_OpenScaleX}"
+							 Duration="{StaticResource osPrefsDuration_OpenScaleX}"
+                             From="0.025" To="1" FillBehavior="HoldEnd">
                 <DoubleAnimation.EasingFunction>
                     <QuadraticEase EasingMode="EaseInOut" />
                 </DoubleAnimation.EasingFunction>
             </DoubleAnimation>
-            <DoubleAnimation x:Name="osPrefExpandVis" Storyboard.TargetName="BottomContainer" Storyboard.TargetProperty="Height" BeginTime="{StaticResource osPrefsStartTime_ExpandHeight}" Duration="{StaticResource osPrefsDuration_ExpandHeight}" From="0" FillBehavior="HoldEnd">
-                <DoubleAnimation.EasingFunction>
-                    <local:osPrefExpandEase EasingMode="EaseIn" />
-                </DoubleAnimation.EasingFunction>
-            </DoubleAnimation>
-            <DoubleAnimation Storyboard.TargetName="BottomContainer" Storyboard.TargetProperty="Opacity" BeginTime="{StaticResource osPrefsStartTime_ExpandOpacity}" Duration="{StaticResource osPrefsDuration_ExpandOpacity}" From="0" To="1" FillBehavior="HoldEnd">
+            <DoubleAnimationUsingKeyFrames x:Name="osPrefExpandVis"
+                                           Storyboard.TargetName="BottomContainer" 
+                                           Storyboard.TargetProperty="(FrameworkElement.Height)">
+                <EasingDoubleKeyFrame KeyTime="00:00:0.80" Value="0">
+                    <EasingDoubleKeyFrame.EasingFunction>
+                        <local:osPrefExpandEase EasingMode="EaseIn" />
+                    </EasingDoubleKeyFrame.EasingFunction>
+                </EasingDoubleKeyFrame>
+            </DoubleAnimationUsingKeyFrames>
+            <DoubleAnimation Storyboard.TargetName="BottomContainer" 
+                             Storyboard.TargetProperty="(UIElement.Opacity)"
+							 BeginTime="{StaticResource osPrefsStartTime_ExpandOpacity}"
+							 Duration="{StaticResource osPrefsDuration_ExpandOpacity}"
+                             From="0" To="1" FillBehavior="HoldEnd">
                 <DoubleAnimation.EasingFunction>
                     <QuadraticEase EasingMode="EaseOut" />
                 </DoubleAnimation.EasingFunction>
             </DoubleAnimation>
         </Storyboard>
         <Storyboard x:Key="osPrefsVis_Close">
-            <DoubleAnimation Storyboard.TargetName="osPrefsMainContainer" Storyboard.TargetProperty="Opacity" BeginTime="00:00:0.850" From="1" To="0" Duration="0:0:0.575" FillBehavior="HoldEnd">
-                <DoubleAnimation.EasingFunction>
-                    <QuadraticEase EasingMode="EaseOut" />
-                </DoubleAnimation.EasingFunction>
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="osPrefsMainContainer"
+                                           Storyboard.TargetProperty="(UIElement.Opacity)">
+                <EasingDoubleKeyFrame KeyTime="00:00:0.850" Value="1" />
+                <EasingDoubleKeyFrame KeyTime="00:00:1.425" Value="0">
+                    <EasingDoubleKeyFrame.EasingFunction>
+                        <QuadraticEase EasingMode="EaseOut" />
+                    </EasingDoubleKeyFrame.EasingFunction>
+                </EasingDoubleKeyFrame>
+            </DoubleAnimationUsingKeyFrames>
+            <DoubleAnimation Storyboard.TargetName="osPrefsTitlePanel" 
+                             Storyboard.TargetProperty="(UIElement.Opacity)"
+							 BeginTime="00:00:0.00" From="0" To="1"
+							 Duration="00:00:0.550" FillBehavior="HoldEnd">
             </DoubleAnimation>
-            <DoubleAnimation Storyboard.TargetName="osPrefsTitlePanel" Storyboard.TargetProperty="Opacity" BeginTime="00:00:0.00" From="0" To="1" Duration="00:00:0.550" FillBehavior="HoldEnd">
-            </DoubleAnimation>
-            <DoubleAnimation Storyboard.TargetName="BottomContainer" Storyboard.TargetProperty="Height" To="0" BeginTime="00:00:00" Duration="00:00:0.750" FillBehavior="HoldEnd">
+            <DoubleAnimationUsingKeyFrames x:Name="osPrefExpandVisC"
+                Storyboard.TargetName="BottomContainer" 
+                Storyboard.TargetProperty="(FrameworkElement.Height)">
+                <EasingDoubleKeyFrame KeyTime="00:00:0.750" Value="0">
+                    <EasingDoubleKeyFrame.EasingFunction>
+                        <QuadraticEase EasingMode="EaseInOut" />
+                    </EasingDoubleKeyFrame.EasingFunction>
+                </EasingDoubleKeyFrame>
+            </DoubleAnimationUsingKeyFrames>
+            <!--<DoubleAnimation Storyboard.TargetName="BottomContainer" 
+                             Storyboard.TargetProperty="Height" To="0"
+							 BeginTime="00:00:0.350"
+							 Duration="00:00:0.400" FillBehavior="HoldEnd">
                 <DoubleAnimation.EasingFunction>
                     <QuadraticEase EasingMode="EaseInOut" />
                 </DoubleAnimation.EasingFunction>
-            </DoubleAnimation>
-            <DoubleAnimation Storyboard.TargetName="osPrefsOutlineRender" Storyboard.TargetProperty="ScaleX" BeginTime="00:00:0.850" From="1" To="0" Duration="0:0:0.575" FillBehavior="HoldEnd">
+            </DoubleAnimation>-->
+            <DoubleAnimation Storyboard.TargetName="osPrefsOutlineRender" 
+                             Storyboard.TargetProperty="ScaleX"
+							 BeginTime="00:00:0.850" From="1" To="0"
+							 Duration="0:0:0.575" FillBehavior="HoldEnd">
                 <DoubleAnimation.EasingFunction>
                     <QuadraticEase EasingMode="EaseOut" />
                 </DoubleAnimation.EasingFunction>
@@ -51,15 +96,12 @@
         </Storyboard>
     </Window.Resources>
 
-
     <Window.DataContext>
         <osPrefs:osPreferenceLib/>
     </Window.DataContext>
 
     <osCtrl:osBorder x:Name="osPrefsMainContainer" Style="{StaticResource osPrefsMainContainerStyle}" CornerRadius="12"
-                     Opacity="0" BorderBrush="#101010" Margin="0" ClipInflation="1" VerticalAlignment="Center" 
-                     CacheMode="BitmapCache" RenderOptions.BitmapScalingMode="LowQuality"
-                     RenderOptions.EdgeMode="Aliased" >
+                     Opacity="0" BorderBrush="#101010" Margin="0" ClipInflation="1" VerticalAlignment="Center">
         <osCtrl:osBorder.RenderTransform>
             <ScaleTransform x:Name="osPrefsOutlineRender" ScaleX="0.025" ScaleY="1" />
         </osCtrl:osBorder.RenderTransform>
@@ -96,7 +138,6 @@
                     </Grid>
                 </Border>
                 <StackPanel Orientation="Vertical" x:Name="BottomContainer" VerticalAlignment="Bottom"
-                            RenderOptions.BitmapScalingMode="LowQuality" CacheMode="BitmapCache"
                             Opacity="0" ClipToBounds="False" Background="#FF3C3C3C" Height="0">                        
                         <osCtrl:osPanel HeaderText="AutoCast" HeaderColor="#FFC4C4C4"
                                          Margin="0,2,0,0" FontFamily="Trebuchet MS" FontSize="18" 

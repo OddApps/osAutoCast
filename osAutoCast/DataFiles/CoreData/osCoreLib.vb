@@ -550,30 +550,50 @@ Public NotInheritable Class osFuncLib_ShowOpts
 
     Public Shared Async Function ExecuteDispOpts() As Task
         PrepUtilityTrigger(TriggerType.ShowPrefs)
-
-        Dim aa = PrepDispatcher().InvokeAsync(Sub()
-                                                  osPrefsWindow.PrepPrefVis()
-                                              End Sub).Task
-
         chkCloseSettings.ResetAndInitTask()
 
-        Await osHandler_UI.ShowPrefsUI(chkCloseSettings, True)
-        Await AnticipateExit()
+        With osPrefsWindow
+            .PrepPrefVis()
 
-        Dim aaa = osHandler_UI.ResetOptsUI(True)
-        osFuncLib_InputScan.isActionComplete = True
-    End Function
+            Await osVisQualityAdapter.InitAdapter(VisTypeAdapter.VisAdapter_Opts, .visPrefUI_Open,
+                                                  True, True, .prefContainer, .osTitleCover, .osContentContainer)
+            AddHandler osPrefsWindow.Closed,
+                       Sub(sender, e)
+                           Dim aaa = osHandler_UI.ResetOptsUI(True)
+                           osFuncLib_InputScan.isActionComplete = True
 
-    Public Shared Async Function ExecuteDispOpts(fromTray As Boolean) As Task
-        PrepUtilityTrigger(TriggerType.ShowPrefs)
+                           DisposeUI_Prefs.Invoke(osPrefsWindow)
+                           _osPrefsWindow = Nothing
 
-        chkCloseSettings.ResetAndInitTask()
+                           osHandler_UI.InitResourceAlloc()
+                       End Sub
 
-        Await osHandler_UI.ShowPrefsUI(chkCloseSettings, True)
-        Await AnticipateExit()
+            Await PrepDispatcher().InvokeAsync(
+                Sub()
+                    'AddHandler osPrefsWindow.Closed,
+                    '    Sub(sender, e)
+                    '        Dim aaa = osHandler_UI.ResetOptsUI(True)
+                    '        osFuncLib_InputScan.isActionComplete = True
 
-        Await osHandler_UI.ResetOptsUI(True)
-        osFuncLib_InputScan.isActionComplete = True
+                    '        DisposeUI_Prefs.Invoke(osPrefsWindow)
+                    '        _osPrefsWindow = Nothing
+
+                    '        osHandler_UI.InitResourceAlloc()
+                    '    End Sub
+
+                    osHandler_UI.ShowPrefsUI(chkCloseSettings, True)
+                End Sub, DispatcherPriority.Render)
+            '   Await Task.Delay(500)
+            '    Await osHandler_UI.ShowPrefsUI(chkCloseSettings, True)
+            '   Await osHandler_UI.ShowPrefsUI(chkCloseSettings, True)
+            Await AnticipateExit()
+
+            Await PrepDispatcher().InvokeAsync(
+                Sub()
+                    .osPrefs_InitCloseVis()
+                End Sub, DispatcherPriority.Render)
+        End With
+
     End Function
 
     Private Shared Function AnticipateExit() As Task
@@ -884,15 +904,11 @@ Public NotInheritable Class MenuOverlayWindow
                 .Background = osBrushColor.Black
                 .Opacity = OverlayOpacity_Tray
             Else
-                '   SetOverlayVisuals()
-
                 .Background = osBrushColor.Black
                 .Opacity = OverlayOpacity_Popup
             End If
         End With
     End Sub
-
-    '     Await ApplyOverlayVisualsAsync(VisualDataURI)
 
     Public Sub InitPopupMenuOverlay()
         With Me
@@ -911,10 +927,63 @@ Public NotInheritable Class MenuOverlayWindow
         End With
     End Sub
 
-    Public Async Function InitOverlayOpen(objVisType As OverlayVisualType) As Task
-        BeginOpenTask(objTask_Open)
-        InitTransitionVisuals(aniOpen, objVisType)
+    Public Sub InitPopupMenuOverlay(objOverlayDisplay As TaskCompletionSource(Of Boolean))
+        With Me
+            .ShowInTaskbar = False
+            .ShowActivated = False
+            .Focusable = False
 
+            .Topmost = True
+
+            .HorizontalAlignment = osHorz.Left
+            .VerticalAlignment = osVert.Top
+            .Width = objScreenData.Width
+            .Height = objScreenData.Height
+
+            objTask_Open = objOverlayDisplay
+            ' objAnimation_Open = EstablishVisual(Me, OverlayVisual_Open)
+
+            objAnimation_Open = New Storyboard With {
+            .FillBehavior = FillBehavior.HoldEnd
+        }
+
+            Dim anim As New DoubleAnimationUsingKeyFrames()
+
+            ' Key frame at 0s -> value 0
+            Dim kf0 As New EasingDoubleKeyFrame(0.0, KeyTime.FromTimeSpan(TimeSpan.Zero)) With {
+            .EasingFunction = New QuadraticEase() With {
+                    .EasingMode = EasingMode.EaseInOut
+                }
+        }
+
+            ' Key frame at 0.5s -> value 1
+            Dim kf1 As New EasingDoubleKeyFrame(0.7, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(500))) With {
+            .EasingFunction = New QuadraticEase() With {
+                    .EasingMode = EasingMode.EaseInOut
+                }
+        }
+
+            anim.KeyFrames.Add(kf0)
+            anim.KeyFrames.Add(kf1)
+
+            ' Target property: Opacity
+            Storyboard.SetTargetProperty(anim, New PropertyPath(UIElement.OpacityProperty))
+
+            ' Optionally assign a concrete target
+            Storyboard.SetTarget(anim, Me)
+
+            objAnimation_Open.Children.Add(anim)
+
+            AddHandler objAnimation_Open.Completed,
+                    OpenCompleteEvent
+
+            .Show()
+            objAnimation_Open.Begin(Me, True)
+        End With
+    End Sub
+
+    Public Async Function InitOverlayOpen(objVisType As OverlayVisualType) As Task
+        InitTransitionVisuals(aniOpen, objVisType)
         Await objTask_Open.Task
     End Function
 
@@ -953,7 +1022,6 @@ Public NotInheritable Class MenuOverlayWindow
         "pack://application:,,,/osAutoCast;component/DataFiles/VisualData/StyleLib/StyleResources/StyleContent/uiStyleContent-Overlay.xaml",
         UriKind.Absolute)
 
-        ' 1) read raw XAML OFF UI thread
         objVisXaml = Await Task.Run(Function()
                                         Dim sri = Application.GetResourceStream(packUri)
                                         If sri Is Nothing Then
@@ -964,8 +1032,6 @@ Public NotInheritable Class MenuOverlayWindow
                                         End Using
                                     End Function) '.ConfigureAwait(False)
 
-
-        ' 1) Read XAML from pack resource OFF the UI thread
 
     End Function
 
@@ -996,7 +1062,6 @@ Public NotInheritable Class MenuOverlayWindow
     Optional token As CancellationToken = Nothing
 ) As Task(Of ResourceDictionary)
 
-        ' 1) Read XAML text off the UI thread
         Dim xamlText As String
 
         Dim sri = Application.GetResourceStream(uri)
@@ -1010,7 +1075,6 @@ Public NotInheritable Class MenuOverlayWindow
 
         token.ThrowIfCancellationRequested()
 
-        ' 2) Parse ResourceDictionary on UI thread
         Dim rd As ResourceDictionary = Nothing
 
         Await Dispatcher.InvokeAsync(Sub()
@@ -1043,10 +1107,9 @@ Public NotInheritable Class MenuOverlayWindow
                 OpenCompleteEvent
         Catch : End Try
 
-        OverlayOpenComplete(objTask_Open)
         objAnimation_Open = Nothing
+        OverlayOpenComplete(objTask_Open)
 
-        SetVisualMode(aniOpen)
     End Sub
 
     Private Sub BeginClosingTask(ByRef objCloseResult As TaskCompletionSource(Of Boolean))
@@ -1075,10 +1138,7 @@ Public NotInheritable Class MenuOverlayWindow
             Case aniClose
                 objAnimation_Close = EstablishVisual(Me, objVisType)
 
-                AddHandler objAnimation_Close.Completed,
-                    Sub()
-                        OverlayCloseComplete(objTask_Close)
-                    End Sub
+                AddHandler objAnimation_Close.Completed, AddressOf osHandler_UI.CloseAndRestoryPopupMenu
         End Select
     End Sub
 
@@ -1120,10 +1180,10 @@ Public NotInheritable Class MenuOverlayWindow
 
         Select Case objAniType
             Case aniOpen
-                TriggerVisuals(Me, objAnimation_Open)
+              '  TriggerVisuals(Me, objAnimation_Open)
             Case aniClose
                 SetVisualMode(aniClose)
-                TriggerVisuals(Me, objAnimation_Close)
+                '   TriggerVisuals(Me, objAnimation_Close)
         End Select
     End Sub
 
@@ -1133,6 +1193,13 @@ Public NotInheritable Class MenuOverlayWindow
 
         Await objTask_Close.Task
     End Function
+
+    Public Sub InitOverlayClose(objVisType As OverlayVisualType, isN As Boolean)
+        ' BeginClosingTask(objTask_Close)
+        InitTransitionVisuals(aniClose, objVisType)
+
+        objAnimation_Close.Begin()
+    End Sub
 
     Protected Overrides Sub OnSourceInitialized(e As EventArgs)
         MyBase.OnSourceInitialized(e)
@@ -1162,6 +1229,8 @@ Public NotInheritable Class osFuncLib_PopupMenu
 
     Private Shared objPopupTaskMonitor As Task
 
+    Private Shared chkOverlayDisplay As TaskCompletionSource(Of Boolean)
+
     Private Shared objPopupTaskPending As TaskCompletionSource(Of Boolean)
     Private Shared objPopupTaskRunning As Boolean
 
@@ -1175,14 +1244,22 @@ Public NotInheritable Class osFuncLib_PopupMenu
     End Property
 
     Public Shared Async Function ShowPopupMenu() As Task
-
         InitCloseMonitor(objPopupTaskPending)
 
-        Dim aa = PrepDispatcher().InvokeAsync(Sub()
-                                                  osHandler_UI.osPopupMenu.ConfigureVisual()
-                                              End Sub).Task
+        chkOverlayDisplay.ResetAndInitTask()
 
-        Await osHandler_UI.DisplayPopupMenu()
+        PrepDispatcher().Invoke(
+            Sub()
+                osHandler_UI.PresentPopupMenuOverlay(True, chkOverlayDisplay)
+            End Sub, DispatcherPriority.Render)
+
+        Await chkOverlayDisplay.Task
+
+        Await PrepDispatcher().InvokeAsync(
+            Sub()
+                osPopupMenu.Show()
+                osHandler_UI.PresentPopupMenu(True)
+            End Sub, DispatcherPriority.Render)
         Dim objPopupResult = Await PopupCloseDetect(objPopupTaskMonitor,
                                                      objPopupTaskPending)
 
@@ -1286,17 +1363,16 @@ Public Module osFuncLib_TrayMenu
 
     Public Property isAppLoaded As Boolean = False
 
-    Public Sub DisplayTrayMenu()
-        With osHandler_UI.osTrayMenu
-            .DisplayTrayMenu()
-            .Activate()
-        End With
-
-        PrepDispatcher().BeginInvoke(
-            DispatcherPriority.Background,
+    Public Async Sub DisplayTrayMenu(sender As Object, e As EventArgs)
+        If Not isAppLoaded Then Exit Sub
+        Await PrepDispatcher().InvokeAsync(
                 Sub()
+                    With osHandler_UI.osTrayMenu
+                        .DisplayTrayMenu()
+                        .Activate()
+                    End With
                     PrepUtilityTrigger(TriggerType.ShowTrayMenu)
-                End Sub)
+                End Sub, DispatcherPriority.Render)
     End Sub
 
     Private Sub UpdateTrayIcon(chkStatus As Boolean)
@@ -1320,11 +1396,7 @@ Public Module osFuncLib_TrayMenu
             .Visible = True
         }
 
-        AddHandler osTrayIcon.Click,
-             Sub(sender As Object, e As EventArgs)
-                 If Not isAppLoaded Then Exit Sub
-                 DisplayTrayMenu()
-             End Sub
+        AddHandler osTrayIcon.Click, AddressOf DisplayTrayMenu
     End Sub
 
 End Module
@@ -1718,9 +1790,6 @@ Public Class LoaderProgressAnimator
         _dispatcher = bar.Dispatcher
     End Sub
 
-
-
-
     Private ReadOnly _animationGate As New SemaphoreSlim(1, 1)
 
     Private _currentAnimCts As CancellationTokenSource = Nothing
@@ -1735,7 +1804,6 @@ Public Class LoaderProgressAnimator
         Dim linkedCts = CancellationTokenSource.CreateLinkedTokenSource(token)
         Dim localTcs As New TaskCompletionSource(Of Object)(TaskCreationOptions.RunContinuationsAsynchronously)
 
-        ' Cancel previous in-flight animation, and complete its TCS so no awaiter hangs.
         Dim prevCts = Interlocked.Exchange(_currentAnimCts, linkedCts)
         prevCts?.Cancel()
 
@@ -1746,8 +1814,6 @@ Public Class LoaderProgressAnimator
                                     Try
                                         linkedCts.Token.ThrowIfCancellationRequested()
 
-                                        ' IMPORTANT: do NOT call BeginAnimation(..., Nothing) here --
-                                        ' let SnapshotAndReplace replace the current animation without snapping
                                         Dim anim As New DoubleAnimation With {
                                             .To = target,
                                             .Duration = New Duration(duration),
@@ -1757,12 +1823,10 @@ Public Class LoaderProgressAnimator
 
                                         AddHandler anim.Completed,
                                             Sub()
-                                                ' when animation completes, write the final value to the backing property
                                                 _bar.Progress = target
                                                 localTcs.TrySetResult(Nothing)
                                             End Sub
 
-                                        ' Replace the current animation with the new one (preserves current visual start)
                                         _bar.BeginAnimation(osLoadingProgressBar.ProgressProperty,
                                                             anim,
                                                             HandoffBehavior.SnapshotAndReplace)
@@ -1777,47 +1841,320 @@ Public Class LoaderProgressAnimator
         Return localTcs.Task
     End Function
 
-
-
-
-
-
-    'Public Function AnimateToAsync(
-    '    target As Double,
-    '    duration As TimeSpan,
-    '    easing As IEasingFunction,
-    '    token As CancellationToken) As Task
-
-    '    Dim tcs As New TaskCompletionSource(Of Object)()
-    '    _dispatcher.BeginInvoke(Sub()
-
-    '                                token.ThrowIfCancellationRequested()
-
-    '                                Dim anim As New DoubleAnimation With {
-    '            .From = _bar.Progress,
-    '            .To = target,
-    '            .Duration = New Duration(duration),
-    '            .EasingFunction = easing,
-    '            .FillBehavior = FillBehavior.HoldEnd
-    '        }
-
-    '                                AddHandler anim.Completed,
-    '            Sub()
-    '                _bar.Progress = target
-    '                tcs.TrySetResult(Nothing)
-    '            End Sub
-
-    '                                _bar.BeginAnimation(
-    '            osLoadingProgressBar.ProgressProperty,
-    '            anim,
-    '            HandoffBehavior.Compose)
-
-    '                            End Sub, DispatcherPriority.Render)
-
-    '    Return tcs.Task
-    'End Function
-
 End Class
+
+Public Module osVisQualityAdapter
+
+    Private Const renderAtScale As Double = 1.0
+
+    Private lstVisObjects As UIElement()
+    Private idxVisAdapters As New Dictionary(Of VisTypeAdapter, VisAdapterData)
+
+    Private Function GetVisualDataRecord(objVisType As VisTypeAdapter) As VisAdapterData
+        Return idxVisAdapters.FirstOrDefault(
+                        Function(visData)
+                            Return visData.Key = objVisType
+                        End Function).Value
+    End Function
+
+    Private Sub FetchVisualDataRecord(objVisType As VisTypeAdapter, ByRef retVisData As VisAdapterData)
+        Dim objVisData As VisAdapterData = Nothing
+        If idxVisAdapters.TryGetValue(objVisType, objVisData) Then
+            retVisData = objVisData
+        End If
+    End Sub
+
+    Public Sub UpdateVisData(objVisType As VisTypeAdapter, ByRef objVisual As Storyboard)
+        Dim objVisData As VisAdapterData = Nothing
+
+        If idxVisAdapters.TryGetValue(objVisType, objVisData) Then
+            objVisData.VisData = objVisual
+        End If
+    End Sub
+
+    Public Async Function InitAdapter(objVisType As VisTypeAdapter, objVisual As Storyboard,
+                                      visApply As Boolean, doReset As Boolean, ParamArray lstVisTargets() As UIElement) As Task
+        With idxVisAdapters
+            If .ContainsKey(objVisType) Then .Remove(objVisType)
+
+            If doReset Then
+                Dim evtVisComplete As EventHandler = Nothing
+
+                evtVisComplete =
+                    Async Sub(sender, e)
+                        Try
+                            Dim objVisData = GetVisualDataRecord(objVisType)
+                            Dim objVisDataArray = objVisData.VisCollection.ToList()
+
+                            Await PrepDispatcher().InvokeAsync(
+                                Sub()
+                                    For Each objVis In objVisDataArray
+                                        RenderOptions.SetBitmapScalingMode(objVis, BitmapScalingMode.HighQuality)
+                                        RenderOptions.SetEdgeMode(objVis, EdgeMode.Unspecified)
+
+                                        objVis.CacheMode = Nothing
+
+                                        With TryCast(objVis, FrameworkElement)
+                                            .UseLayoutRounding = False
+                                            .SnapsToDevicePixels = False
+                                        End With
+                                    Next
+                                End Sub, DispatcherPriority.Render)
+                        Finally
+                            RemoveHandler objVisual.Completed, evtVisComplete
+                        End Try
+                    End Sub
+
+                AddHandler objVisual.Completed, evtVisComplete
+            End If
+
+            If visApply Then
+                Await PrepDispatcher().InvokeAsync(
+                        Sub()
+                            For Each objVisTarget In lstVisTargets
+                                RenderOptions.SetBitmapScalingMode(objVisTarget, BitmapScalingMode.LowQuality)
+                                RenderOptions.SetEdgeMode(objVisTarget, EdgeMode.Aliased)
+
+                                objVisTarget.CacheMode = New BitmapCache(renderAtScale)
+
+                                Dim objVisElement = TryCast(objVisTarget, FrameworkElement)
+
+                                If objVisElement IsNot Nothing Then
+                                    objVisElement.UseLayoutRounding = True
+                                    objVisElement.SnapsToDevicePixels = True
+                                End If
+                            Next
+                        End Sub, DispatcherPriority.Background)
+            End If
+
+            .Add(objVisType,
+                 New VisAdapterData(objVisual, lstVisTargets))
+        End With
+    End Function
+
+    Public Sub SetVisQuality(objVisTarget As UIElement)
+        If objVisTarget Is Nothing Then Return
+
+        RenderOptions.SetBitmapScalingMode(objVisTarget, BitmapScalingMode.LowQuality)
+        RenderOptions.SetEdgeMode(objVisTarget, EdgeMode.Aliased)
+
+        objVisTarget.CacheMode = New BitmapCache(renderAtScale)
+
+        Dim objVisElement = TryCast(objVisTarget, FrameworkElement)
+
+        If objVisElement IsNot Nothing Then
+            objVisElement.UseLayoutRounding = True
+            objVisElement.SnapsToDevicePixels = True
+        End If
+    End Sub
+
+    Public Sub ResetVisQuality(objVisTarget As UIElement)
+        If objVisTarget Is Nothing Then Return
+
+        RenderOptions.SetBitmapScalingMode(objVisTarget, BitmapScalingMode.HighQuality)
+        RenderOptions.SetEdgeMode(objVisTarget, EdgeMode.Unspecified)
+
+        objVisTarget.CacheMode = Nothing
+
+        Dim objVisElement = TryCast(objVisTarget, FrameworkElement)
+
+        If objVisElement IsNot Nothing Then
+            objVisElement.UseLayoutRounding = False
+            objVisElement.SnapsToDevicePixels = False
+        End If
+    End Sub
+
+    Public Sub AttachAdapter(objVisual As Storyboard, objVisTarget As UIElement, Optional setVis As Boolean = False)
+        AddHandler objVisual.Completed,
+            Sub(s, e)
+                ResetVisQuality(objVisTarget)
+            End Sub
+
+        If setVis Then
+            SetVisQuality(objVisTarget)
+        End If
+    End Sub
+
+    Public Async Function AttachAndApplyAdapter(objVisual As Storyboard, doReset As Boolean, ParamArray lstVisTargets() As UIElement) As Task
+        AddHandler objVisual.Completed,
+            AddressOf ResetVisQuality_All_BatchAsync
+
+        Await PrepDispatcher().InvokeAsync(
+            Sub()
+                For Each objVisTarget In lstVisTargets
+                    RenderOptions.SetBitmapScalingMode(objVisTarget, BitmapScalingMode.LowQuality)
+                    RenderOptions.SetEdgeMode(objVisTarget, EdgeMode.Aliased)
+
+                    objVisTarget.CacheMode = New BitmapCache(renderAtScale)
+                Next
+
+                lstVisObjects = lstVisTargets
+            End Sub, DispatcherPriority.Render)
+    End Function
+
+    Public Function AttachAndApplyAdapter(objVisual As Storyboard, ParamArray lstVisTargets() As UIElement) As Task
+        Return PrepDispatcher().InvokeAsync(
+            Sub()
+                For Each objVisTarget In lstVisTargets
+                    RenderOptions.SetBitmapScalingMode(objVisTarget, BitmapScalingMode.LowQuality)
+                    RenderOptions.SetEdgeMode(objVisTarget, EdgeMode.Aliased)
+
+                    objVisTarget.CacheMode = New BitmapCache(renderAtScale)
+
+
+                Next
+            End Sub, DispatcherPriority.Render).Task
+    End Function
+
+    Public Async Sub ResetVisualDataCollection(objVisType As VisTypeAdapter)
+        Dim objVisData = idxVisAdapters.FirstOrDefault(
+            Function(visData)
+                Return visData.Key = objVisType
+            End Function).Value
+
+        Dim snapshot = objVisData.VisCollection.Where(Function(x) x IsNot Nothing).ToList()
+
+        Await PrepDispatcher().InvokeAsync(
+            Sub()
+                For Each objVis In snapshot
+                    RenderOptions.SetBitmapScalingMode(objVis, BitmapScalingMode.HighQuality)
+                    RenderOptions.SetEdgeMode(objVis, EdgeMode.Unspecified)
+
+
+                    objVis.CacheMode = Nothing
+
+
+                Next
+            End Sub)
+    End Sub
+
+    Public Async Function EstablishVisDataSettings(objVisType As VisTypeAdapter, setVisMode As VisRenderMode, Optional clrComplete As Boolean = False) As Task
+        Dim objVisData As VisAdapterData = Nothing
+        FetchVisualDataRecord(objVisType, objVisData)
+
+        Dim snapshot = objVisData.VisCollection.
+            Where(Function(x)
+                      Return x IsNot Nothing
+                  End Function).ToList()
+
+        Await PrepDispatcher().InvokeAsync(
+            Sub()
+                If clrComplete Then
+                    Dim _visD = objVisData.VisData
+                    Dim evtClrComplete As EventHandler = Nothing
+
+                    evtClrComplete =
+                         Sub(sender, e)
+                             Try
+                                 idxVisAdapters.Remove(objVisType)
+                             Catch ex As Exception
+                             Finally
+                                 RemoveHandler _visD.Completed, evtClrComplete
+                             End Try
+                         End Sub
+
+                    AddHandler _visD.Completed, evtClrComplete
+                End If
+
+                With New osVisRenderMode(setVisMode)
+                    For Each objVis In snapshot
+                        RenderOptions.SetBitmapScalingMode(objVis, .visBitMap)
+                        RenderOptions.SetEdgeMode(objVis, .visEdges)
+
+                        objVis.CacheMode = .visCache
+
+                        Dim objVisElement = TryCast(objVis, FrameworkElement)
+
+                        If objVisElement IsNot Nothing Then
+                            objVisElement.UseLayoutRounding = .visLayoutSetting
+                            objVisElement.SnapsToDevicePixels = .visLayoutSetting
+                        End If
+                    Next
+                End With
+            End Sub)
+    End Function
+
+    Public Async Sub ResetVisQuality_All_BatchAsync(sender As Object, e As EventArgs)
+        Dim snapshot = lstVisObjects.Where(Function(x) x IsNot Nothing).ToList()
+
+        Await PrepDispatcher().InvokeAsync(
+            Sub()
+                For Each objVis In snapshot
+                    RenderOptions.SetBitmapScalingMode(objVis, BitmapScalingMode.HighQuality)
+                    RenderOptions.SetEdgeMode(objVis, EdgeMode.Unspecified)
+
+
+                    objVis.CacheMode = Nothing
+
+
+                Next
+            End Sub)
+    End Sub
+
+    Public Async Function SetVisQuality_All_BatchAsync() As Task
+        Dim snapshot = lstVisObjects.Where(Function(x) x IsNot Nothing).ToList()
+
+        Await PrepDispatcher().InvokeAsync(
+            Sub()
+                For Each objVisTarget In snapshot
+                    RenderOptions.SetBitmapScalingMode(objVisTarget, BitmapScalingMode.LowQuality)
+                    RenderOptions.SetEdgeMode(objVisTarget, EdgeMode.Aliased)
+
+                    Try
+                        objVisTarget.CacheMode = New BitmapCache(renderAtScale)
+                    Catch ex As Exception : End Try
+                Next
+            End Sub, DispatcherPriority.Background)
+    End Function
+
+    Public Async Function SetVisQuality_All() As Task
+        Dim ops As New List(Of Task)
+
+        For i = 0 To lstVisObjects.Count - 1
+            Dim objVis = lstVisObjects(i)
+
+            Dim dispOp = Dispatcher.CurrentDispatcher.InvokeAsync(
+            Sub()
+                SetVisQuality(objVis)
+            End Sub, DispatcherPriority.Render) ' or Background/Normal as appropriate
+
+            ops.Add(dispOp.Task)
+        Next
+
+        Await Task.WhenAll(ops)
+    End Function
+
+    Public Async Sub ResetVisQuality_All()
+        Dim ops As New List(Of Task)
+
+        For i = 0 To lstVisObjects.Count - 1
+            Dim objVis = lstVisObjects(i)
+
+            Dim dispOp = Dispatcher.CurrentDispatcher.InvokeAsync(
+                Sub()
+                    RenderOptions.SetBitmapScalingMode(objVis, BitmapScalingMode.HighQuality)
+                    RenderOptions.SetEdgeMode(objVis, EdgeMode.Unspecified)
+
+                    TextOptions.SetTextRenderingMode(objVis, TextRenderingMode.Auto)
+                    TextOptions.SetTextFormattingMode(objVis, TextFormattingMode.Ideal)
+
+                    objVis.CacheMode = Nothing
+
+                    Dim objVisEle = TryCast(objVis, FrameworkElement)
+
+                    If objVisEle IsNot Nothing Then
+                        objVisEle.UseLayoutRounding = False
+                        objVisEle.SnapsToDevicePixels = False
+                    End If
+                End Sub, DispatcherPriority.Render) ' or Background/Normal as appropriate
+
+            ops.Add(dispOp.Task)
+        Next
+
+        Await Task.WhenAll(ops)
+    End Sub
+
+End Module
 
 Public Module osUI_Loader
 
@@ -1830,90 +2167,158 @@ Public Module osUI_Loader
                 _osPopupMenu = PrepUI_PopupMenu()
             End Sub, DispatcherPriority.Render)
 
-        Await osPopupMenuOverlay.LoadOverlayVisualsAsync()
+        'Await osPopupMenuOverlay.LoadOverlayVisualsAsync()
     End Function
 
-    Public Function LoadUI_Menus() As Task
+    Public Async Function LoadUI_Menus() As Task
 
-        Return PrepDispatcher().InvokeAsync(
+        Await PrepDispatcher().InvokeAsync(
             Sub()
                 _osPopupMenuOverlay = PrepUI_PopupMenuOverlay()
                 _osPopupMenu = PrepUI_PopupMenu()
 
                 _osTrayMenu = PrepUI_TrayMenu2()
-            End Sub, DispatcherPriority.Render).Task
+            End Sub, DispatcherPriority.Render)
 
-        '    Await DispatcherHelpers.YieldToRenderAsync()
 
-        'Await PrepDispatcher().InvokeAsync(
-        '    Sub()
-        '        _osTrayMenu = PrepUI_TrayMenu2()
-        '    End Sub, DispatcherPriority.Background)
     End Function
 
     Public Async Function LoadUI_InitPopupMenu() As Task
-        'Await Task.WhenAll(osPopupMenuOverlay.LoadOverlayVisualsAsync(), osPopupMenu.PreloadVisualData())
-        '  Dim dd = osPopupMenu.PreloadVisualData()
     End Function
 
-    Public Function LoadUI_TrayMenu() As Task
-        Return PrepDispatcher().InvokeAsync(
+    Public Async Function LoadUI_TrayMenu() As Task
+        Await PrepDispatcher().InvokeAsync(
             Sub()
                 _osTrayMenu = PrepUI_TrayMenu2()
-            End Sub, DispatcherPriority.Render).Task
+            End Sub, DispatcherPriority.Render)
     End Function
 
-    Public Function LoadUI_InitMenus() As Task
-        Return PrepDispatcher().InvokeAsync(
+    Public Async Function LoadUI_InitMenus() As Task
+        'Dim aaa = PrepDispatcher().InvokeAsync(
+        '    Sub()
+        '        osPopupMenuOverlay.ApplyOverlayVisualsAsync()
+        '    End Sub, DispatcherPriority.Background).Task
+
+        Await PrepDispatcher().InvokeAsync(
             Sub()
-                osPopupMenuOverlay.ApplyOverlayVisualsAsync()
                 osPopupMenuOverlay.SetBG()
-            End Sub, DispatcherPriority.Render).Task
-
-        'PrepDispatcher().Invoke(
-        '    Sub()
-        '        osPopupMenuOverlay.SetBG()
-        '        osPopupMenu.WarmupPopupMenu()
-        '    End Sub, DispatcherPriority.Render)
-
-        ''  Await DispatcherHelpers.YieldToRenderAsync()
-
-        'PrepDispatcher().Invoke(
-        '    Sub()
-        '        osTrayMenu.PrepTrayMenuInit()
-        '    End Sub, DispatcherPriority.Render)
-
+            End Sub, DispatcherPriority.Render)
     End Function
 
-    Public Function LoadUI_InitTrayMenu() As Task
-        Return PrepDispatcher().InvokeAsync(
+    Public Async Function LoadUI_InitTrayMenu() As Task
+        Await PrepDispatcher().InvokeAsync(
             Sub()
-                '  osTrayMenu.PrewarmAllVisuals()
                 osTrayMenu.PrepTrayMenuInit()
-            End Sub, DispatcherPriority.Render).Task
+            End Sub, DispatcherPriority.Render)
     End Function
 
-    Public Function LoadUI_TriggerHandlers() As Task
-        '   CreateThreadUI_Actions()
-        Return PrepDispatcher().InvokeAsync(
+    Public Async Function LoadUI_TriggerHandlers() As Task
+        Await PrepDispatcher().InvokeAsync(
             Sub()
                 _osPrefsWindow = PrepUI_Opts()
                 osHandler_UI._autoPass2 = osHandler_UI.PrepUI_AutoPass()
 
                 _autoCastProgress = CreateUI_AutoCast()
-            End Sub, DispatcherPriority.Render).Task
+            End Sub, DispatcherPriority.Render)
     End Function
 
-    Public Function LoadUI_PrepHandlers() As Task
-        Dim aa = PrepDispatcher().InvokeAsync(
+    Public Async Function LoadUI_PrepHandlers() As Task
+        PrepDispatcher().Invoke(
             Sub()
                 osPrefsWindow.ActivatePrefTracker()
-            End Sub, DispatcherPriority.Background).Task
-        Return PrepDispatcher().InvokeAsync(
+            End Sub, DispatcherPriority.Background)
+
+        Await PrepDispatcher().InvokeAsync(
             Sub()
                 osHandler_UI.osGui_AutoPass2.PrepAutoPass()
-            End Sub, DispatcherPriority.Render).Task
+            End Sub, DispatcherPriority.Render)
+    End Function
 
+    Public Async Function InitializeTriggerMonitor() As Task
+        Try
+            Await Task.Run(
+                Sub()
+                    objLoadUI.InitTriggerMonitor()
+                    CoreDataLib.InputMonSvc.LaunchTriggerMonitor()
+                End Sub)
+        Finally : End Try
+    End Function
+
+End Module
+
+Public Module LoadTaskTimer
+
+    Public Async Function ProcessLoadSequence(totalDelayMs As Integer, delayWeights() As Integer,
+                                                TaskList() As Func(Of Task)) As Task
+
+        Dim nActions As Integer = TaskList.Length
+        Dim nDelays As Integer = delayWeights.Length
+        Dim sumWeights As Integer = 0
+
+        For Each w In delayWeights
+            sumWeights += Math.Max(0, w)
+        Next
+
+        Dim allocatedDelays() As Integer = New Integer(Math.Max(0, nDelays) - 1) {}
+
+        If nActions = 1 Then
+            Dim valSplitDelay = totalDelayMs / 2
+
+            Await Task.Delay(valSplitDelay)
+            Await TaskList(0).Invoke()
+            Await Task.Delay(valSplitDelay)
+            Return
+        End If
+
+        Dim running As Integer = 0
+
+        For i As Integer = 0 To nDelays - 1
+            Dim raw As Double = totalDelayMs * (CDbl(delayWeights(i)) / CDbl(sumWeights))
+            Dim thisMs As Integer = CInt(Math.Round(raw))
+
+            allocatedDelays(i) = Math.Max(0, thisMs)
+            running += allocatedDelays(i)
+        Next
+
+        Dim drift As Integer = totalDelayMs - running
+
+        If nDelays > 0 Then
+            allocatedDelays(nDelays - 1) += drift
+            If allocatedDelays(nDelays - 1) < 0 Then allocatedDelays(nDelays - 1) = 0
+        End If
+
+        For i As Integer = 0 To nActions - 1
+            Await TaskList(i).Invoke()
+
+            If i <= nDelays Then
+                Dim ms As Integer = allocatedDelays(i)
+
+                If ms > 0 Then
+                    Await Task.Delay(ms)
+                End If
+            End If
+        Next
+
+    End Function
+
+    Public Function SetLoadSequence(ParamArray tasks() As Func(Of Task)) As Func(Of Task)()
+        If tasks Is Nothing Then
+            Return Array.Empty(Of Func(Of Task))()
+        End If
+
+        Return tasks.ToArray()
+    End Function
+
+    Public Function SetLoadDelays(ParamArray durDelays() As Integer) As Integer()
+        If durDelays Is Nothing OrElse durDelays.Length = 0 Then
+            Return Array.Empty(Of Integer)()
+        End If
+
+        Return durDelays.ToArray()
+    End Function
+
+    Public Function SetLoadDelays(noDelays As Boolean) As Integer()
+        Return Array.Empty(Of Integer)()
     End Function
 
 End Module

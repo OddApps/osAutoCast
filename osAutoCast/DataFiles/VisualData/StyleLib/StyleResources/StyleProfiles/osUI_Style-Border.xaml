@@ -80,9 +80,9 @@
         <!--<Setter Property="MinWidth" Value="265" />-->
         <Setter Property="RenderTransformOrigin" Value="0.5,0.5" />
         <Setter Property="Opacity" Value="0" />
-        <Setter Property="CacheMode" Value="BitmapCache" />
+        <!--<Setter Property="CacheMode" Value="BitmapCache" />
         <Setter Property="RenderOptions.BitmapScalingMode" Value="LowQuality" />
-        <Setter Property="RenderOptions.EdgeMode" Value="Aliased" />
+        <Setter Property="RenderOptions.EdgeMode" Value="Aliased" />-->
         <Setter Property="osStyle:osPopupScale.PopupScale" Value="0.00" />
     </Style>
 

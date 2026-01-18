@@ -51,121 +51,98 @@ Public Module osLoadTaskLib
     End Property
 
     Public Async Function LoadTask_Init(objTaskAbort As CancellationToken) As Task
-
-        Try
-            Await Task.Delay(425)
-        Finally
-        End Try
+        Await Task.Delay(475)
     End Function
 
     Public Async Function LoadTask_PrefsLoad(objTaskAbort As CancellationToken) As Task
-
-        Try
-            Await osPefs.Data.PreparePrefData()
-
-            Await Task.Delay(250)
-
-            Await osPefs.Data.ApplyPrefs()
-            Await Task.Delay(250)
-        Finally
-        End Try
+        Await ProcessLoadSequence(450, SetLoadDelays(225, 225),
+                                  SetLoadSequence(Function() osPefs.Data.PreparePrefData(),
+                                                  Function() osPefs.Data.ApplyPrefs()))
     End Function
 
     Public Async Function LoadTask_LoadMenus(objTaskAbort As CancellationToken) As Task
-        Try
-            Await osUI_Loader.LoadUI_PopupMenu()
-            Await Task.Delay(225)
-            Await osUI_Loader.LoadUI_TrayMenu()
-            Await Task.Delay(225)
-        Finally
-
-        End Try
+        Await ProcessLoadSequence(450, SetLoadDelays(225, 225),
+                                  SetLoadSequence(Function() osUI_Loader.LoadUI_PopupMenu(),
+                                                  Function() osUI_Loader.LoadUI_TrayMenu()))
     End Function
 
     Public Async Function LoadTask_PrepMenus(objTaskAbort As CancellationToken) As Task
-        Try
-            '    Await Task.Delay(110)
-            '    Await osUI_Loader.LoadUI_InitPopupMenu()
-            ''  Await DispatcherHelpers.YieldToRenderAsync()
-            Await osUI_Loader.LoadUI_InitMenus()
-            Await Task.Delay(225)
-            Await osUI_Loader.LoadUI_InitTrayMenu()
-            Await Task.Delay(230)
-            'Await DispatcherHelpers.YieldToRenderAsync()
-            'Await Task.Delay(125)
-            '       Await DispatcherHelpers.YieldToRenderAsync()
-        Finally
-        End Try
+        Await ProcessLoadSequence(480, SetLoadDelays(240, 240),
+                                  SetLoadSequence(Function() osUI_Loader.LoadUI_InitMenus(),
+                                                  Function() osUI_Loader.LoadUI_InitTrayMenu()))
+        'Await ProcessLoadSequence(475, SetLoadDelays(475),
+        '                          SetLoadSequence(Function() osUI_Loader.LoadUI_InitMenus()))
     End Function
 
     Public Async Function LoadTask_InitActions(objTaskAbort As CancellationToken) As Task
-
-        Try
-            Await Task.Delay(225)
-            Await osUI_Loader.LoadUI_TriggerHandlers()
-            Await Task.Delay(225)
-        Finally
-        End Try
+        Await ProcessLoadSequence(475, SetLoadDelays(475),
+                                  SetLoadSequence(Function() osUI_Loader.LoadUI_TriggerHandlers()))
     End Function
 
     Public Async Function LoadTask_PrepActions(objTaskAbort As CancellationToken) As Task
-        Try
-            Await Task.Delay(150)
-            Await osUI_Loader.LoadUI_PrepHandlers()
-            Await Task.Delay(350)
-        Finally
-        End Try
+        Await ProcessLoadSequence(475, SetLoadDelays(475),
+                                  SetLoadSequence(Function() osUI_Loader.LoadUI_PrepHandlers()))
     End Function
 
     Public Async Function LoadAllShaders(objTaskAbort As CancellationToken) As Task
-
-        Try
-            Await osHandler_Graphics.EnsureCreated()
-            Await Task.Delay(120)
-            Await BuildShaderCatalog(True)
-            Await Task.Delay(130)
-
-            Await PreloadShaderCatalog()
-            Await Task.Delay(130)
-
-            Await CoreDataLib.ComposeShaderIdx()
-            Await Task.Delay(120)
-        Finally
-        End Try
-
+        Await ProcessLoadSequence(500, SetLoadDelays(120, 130, 130, 120),
+                                  SetLoadSequence(Function() osHandler_Graphics.EnsureCreated(),
+                                                  Function() BuildShaderCatalog(True),
+                                                  Function() PreloadShaderCatalog(),
+                                                  Function() CoreDataLib.ComposeShaderIdx()))
     End Function
 
     Public Async Function LoadTask_StartInMon(objTaskAbort As CancellationToken) As Task
-
-        Try
-            Await Task.Run(
-                Sub()
-                    objLoadUI.InitTriggerMonitor()
-                    CoreDataLib.InputMonSvc.LaunchTriggerMonitor()
-                End Sub)
-            Await Task.Delay(445)
-        Finally
-        End Try
+        Await ProcessLoadSequence(475, SetLoadDelays(475),
+                                  SetLoadSequence(Function() osUI_Loader.InitializeTriggerMonitor()))
     End Function
 
     Public Async Function LoadTask_Finalize(objTaskAbort As CancellationToken) As Task
+        Await ProcessLoadSequence(475, SetLoadDelays(475),
+                                  SetLoadSequence(
+                                        Async Function()
+                                            Await Task.Run(
+                                                Sub()
+                                                    uiLoadProgBar.onLastTask = True
+
+                                                    PrepDispatcher().Invoke(
+                                                        Sub()
+                                                            PrepTrayMenu()
+                                                            isAppLoaded = True
+                                                        End Sub)
+
+                                                    uiTextEvtTask.ResetTask()
+                                                End Sub)
+                                        End Function))
+    End Function
+
+    Public Async Function EnsureMinTotalDuration(action As Func(Of CancellationToken, Task), preMs As Integer, postMs As Integer, ct As CancellationToken) As Task
+        If preMs > 0 Then Await Task.Delay(preMs, ct)
+        Await action(ct)
+        If postMs > 0 Then Await Task.Delay(postMs, ct)
+    End Function
+
+    Public Async Function WithSurroundingDelay(preMs As Integer,
+                                           postMs As Integer,
+                                           ct As CancellationToken,
+                                           ParamArray actions() As Func(Of CancellationToken, Task)) As Task
+        If preMs > 0 Then
+            Await Task.Delay(preMs, ct)
+        End If
 
         Try
-            Await Task.Run(
-                 Sub()
-                     uiLoadProgBar.onLastTask = True
+            For Each act In actions
+                ct.ThrowIfCancellationRequested()
+                Await act(ct)
+            Next
 
-                     PrepDispatcher().Invoke(
-                         Sub()
-                             PrepTrayMenu()
-                             isAppLoaded = True
-                         End Sub)
-
-                     uiTextEvtTask.ResetTask()
-                 End Sub)
-            Await Task.Delay(445)
-        Finally
+        Catch
         End Try
+        If postMs > 0 Then
+                ' run post delay even if an earlier action faulted (will throw if cancelled)
+                Await Task.Delay(postMs, ct)
+            End If
+
     End Function
 
 End Module
