@@ -132,7 +132,7 @@ Public NotInheritable Class osHandler_UI
                 PrepDispatcher().Invoke(
                     Sub()
                         _osPrefsWindow = PrepUI_Opts()
-                        osPrefsWindow.ActivatePrefTracker()
+                        Dim objTask_StartTracker = osPrefsWindow.ActivatePrefTracker()
                     End Sub, DispatcherPriority.Background)
             End Sub)
 

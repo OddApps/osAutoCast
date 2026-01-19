@@ -55,47 +55,47 @@ Public Module osLoadTaskLib
     End Function
 
     Public Async Function LoadTask_PrefsLoad(objTaskAbort As CancellationToken) As Task
-        Await ProcessLoadSequence(450, SetLoadDelays(225, 225),
+        Await ProcessLoadSequence(SetLoadDelays(Load_PrefPrep),
                                   SetLoadSequence(Function() osPefs.Data.PreparePrefData(),
                                                   Function() osPefs.Data.ApplyPrefs()))
     End Function
 
     Public Async Function LoadTask_LoadMenus(objTaskAbort As CancellationToken) As Task
-        Await ProcessLoadSequence(450, SetLoadDelays(225, 225),
+        Await ProcessLoadSequence(SetLoadDelays(Load_PopupMenu),
                                   SetLoadSequence(Function() osUI_Loader.LoadUI_PopupMenu(),
                                                   Function() osUI_Loader.LoadUI_TrayMenu()))
     End Function
 
     Public Async Function LoadTask_PrepMenus(objTaskAbort As CancellationToken) As Task
-        Await ProcessLoadSequence(475, SetLoadDelays(475),
+        Await ProcessLoadSequence(SetLoadDelays(Load_InitMenus),
                                   SetLoadSequence(Function() osUI_Loader.LoadUI_InitMenus()))
     End Function
 
     Public Async Function LoadTask_InitActions(objTaskAbort As CancellationToken) As Task
-        Await ProcessLoadSequence(475, SetLoadDelays(475),
+        Await ProcessLoadSequence(SetLoadDelays(Load_InitActions),
                                   SetLoadSequence(Function() osUI_Loader.LoadUI_TriggerHandlers()))
     End Function
 
     Public Async Function LoadTask_PrepActions(objTaskAbort As CancellationToken) As Task
-        Await ProcessLoadSequence(475, SetLoadDelays(475),
+        Await ProcessLoadSequence(SetLoadDelays(Load_Actions),
                                   SetLoadSequence(Function() osUI_Loader.LoadUI_PrepHandlers()))
     End Function
 
     Public Async Function LoadAllShaders(objTaskAbort As CancellationToken) As Task
-        Await ProcessLoadSequence(500, SetLoadDelays(120, 130, 130, 120),
+        Await ProcessLoadSequence(SetLoadDelays(Load_InitShaders),
                                   SetLoadSequence(Function() osHandler_Graphics.EnsureCreated(),
-                                                  Function() BuildShaderCatalog(True),
+                                                  Function() BuildShaderCatalog(),
                                                   Function() PreloadShaderCatalog(),
                                                   Function() CoreDataLib.ComposeShaderIdx()))
     End Function
 
     Public Async Function LoadTask_StartInMon(objTaskAbort As CancellationToken) As Task
-        Await ProcessLoadSequence(475, SetLoadDelays(475),
+        Await ProcessLoadSequence(SetLoadDelays(Load_StartingSvc),
                                   SetLoadSequence(Function() osUI_Loader.InitializeTriggerMonitor()))
     End Function
 
     Public Async Function LoadTask_Finalize(objTaskAbort As CancellationToken) As Task
-        Await ProcessLoadSequence(475, SetLoadDelays(475),
+        Await ProcessLoadSequence(SetLoadDelays(Load_Starting),
                                   SetLoadSequence(Function() osUI_Loader.LoadTasks_WrapUp(uiLoadProgBar, uiTextEvtTask)))
     End Function
 

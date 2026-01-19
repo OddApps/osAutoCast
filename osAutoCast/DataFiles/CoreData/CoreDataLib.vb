@@ -253,6 +253,11 @@ Public NotInheritable Class CoreDataLib
         Return If(objVQ = 0, ProgVisOpts.Performance, ProgVisOpts.Quality)
     End Function
 
+    Public Shared Function VerifyVisQualityPref() As Boolean
+        Dim objVQ = osPrefLib.osPreferenceLib.Data.GenOpts_VisualQuality
+        Return If(objVQ = 0, False, True)
+    End Function
+
     Public Shared Function ChkExecPermission() As Boolean
         If Not IsDebugBuild() Then
             Return DetectGameUI.FocusMTGA()

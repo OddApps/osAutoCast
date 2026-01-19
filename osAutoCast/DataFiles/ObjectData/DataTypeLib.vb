@@ -22,6 +22,7 @@ Imports osForms = System.Windows.Forms
 Imports osIcons = System.Drawing.SystemIcons
 Imports osProgBlendState = SharpDX.Direct3D11.BlendState
 Imports osProgColor = SharpDX.Mathematics.Interop.RawColor4
+Imports osProgBorder = SharpDX.Mathematics.Interop.RawVector4
 Imports osRect = SharpDX.Mathematics.Interop
 Imports osText = SharpDX.DirectWrite
 Imports pxShader_Pixel = SharpDX.Direct3D11.PixelShader
@@ -34,6 +35,8 @@ Imports FuncLib_AC = osAutoCast.osFuncLib_AutoCast
 Imports FuncLib_AP = osAutoCast.osFuncLib_AutoPass
 Imports FuncLib_Opts = osAutoCast.osFuncLib_ShowOpts
 Imports FuncLib_Menu = osAutoCast.osFuncLib_PopupMenu
+Imports osStructLayout = System.Runtime.InteropServices.StructLayoutAttribute
+Imports osLayoutKind = System.Runtime.InteropServices.LayoutKind
 
 #Disable Warning BC42353
 
@@ -154,7 +157,7 @@ Public Module DataTypeLib
         eVal_y2 = 0.95
     End Enum
 
-    <Runtime.InteropServices.StructLayout(Runtime.InteropServices.LayoutKind.Sequential)>
+    <osStructLayout(osLayoutKind.Sequential)>
     Public Structure ProgBarCB
         Public prevValue As Single
         Public currValue As Single
@@ -1607,7 +1610,16 @@ Public Class ProgressMsg
 
     Private Function SetMsgLocation(pType As TriggerType) As osRect.RawRectangleF
         With CoreDataLib.FetchProgSizeReport(pType)
-            Return New osRect.RawRectangleF(0, 0, .Item("pW"), .Item("pH"))
+            Dim progW = .Item("pW")
+            Dim progH = .Item("pH")
+
+            If pType = TriggerType.AutoCast Then
+                If CoreDataLib.VerifyVisQualityPref() Then
+                    progW += 4 : progH += 4
+                End If
+            End If
+
+            Return New osRect.RawRectangleF(0, 0, progW, progH)
         End With
     End Function
 

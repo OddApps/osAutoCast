@@ -24,6 +24,7 @@ Imports osAutoCast.DataTypeLib.ProgStatus
 Imports osAutoCast.DataTypeLib.PromptResponse
 Imports osAutoCast.DataTypeLib.TriggerAction
 Imports osAutoCast.DataTypeLib.UpdateStatusAction
+Imports osAutoCast.DataTypeLib.LoadTaskType
 Imports osBinder = System.Windows.Data
 Imports osBrushColor = System.Windows.Media.Brushes
 Imports osColors = System.Windows.Media
@@ -40,6 +41,7 @@ Imports pxShader_Pixel = SharpDX.Direct3D11.PixelShader
 Imports pxShader_Vertex = SharpDX.Direct3D11.VertexShader
 Imports osAutoCast.osLoadingElements
 Imports osProgLoad = osAutoCast.osLoadingElements.osLoadingProgressBar
+Imports osPefs = osAutoCast.osPrefLib.osPreferenceLib
 
 #Disable Warning IDE0060 ' Remove unused parameter
 #Disable Warning IDE1006 ' Remove unused parameter
@@ -469,6 +471,7 @@ Public NotInheritable Class osFuncLib_AutoCast
 
     Public Shared Async Function ExecuteAutoCast() As Task
         Await osHandler_UI.DisplayGUI(True, TriggerType.AutoCast, ptPos)
+
         ui_AutoCast.InvokeAsync(Sub(gui)
                                     gui.Show()
                                 End Sub)
@@ -560,42 +563,29 @@ Public NotInheritable Class osFuncLib_ShowOpts
         With osPrefsWindow
             .PrepPrefVis()
 
-            Await Task.WhenAll(.ActivatePrefTracker, osVisQualityAdapter.InitAdapter(VisTypeAdapter.VisAdapter_Opts, .visPrefUI_Open,
-                                                  True, True, .prefContainer, .osTitleCover, .osContentContainer))
+            Dim objTask_PrepOpts = .ActivatePrefTracker
+            Dim objTask_PrepOptsVis = osVisQualityAdapter.InitAdapter(VisTypeAdapter.VisAdapter_Opts, .visPrefUI_Open,
+                                                                                True, True, .prefContainer, .osTitleCover, .osContentContainer)
 
-            '          Await osVisQualityAdapter.InitAdapter(VisTypeAdapter.VisAdapter_Opts, .visPrefUI_Open,
-            '                                           True, True, .prefContainer, .osTitleCover, .osContentContainer)
             AddHandler osPrefsWindow.Closed,
                        Sub(sender, e)
-                           Dim aaa = osHandler_UI.ResetOptsUI(True)
                            osFuncLib_InputScan.isActionComplete = True
 
                            DisposeUI_Prefs.Invoke(osPrefsWindow)
                            _osPrefsWindow = Nothing
 
+                           Dim aaa = osHandler_UI.ResetOptsUI(True)
+
                            osHandler_UI.InitResourceAlloc()
                        End Sub
 
-            '      Dim aa = osPrefsWindow.ActivatePrefTracker()
+            Await objTask_PrepOpts
 
             Await PrepDispatcher().InvokeAsync(
                 Sub()
-                    'AddHandler osPrefsWindow.Closed,
-                    '    Sub(sender, e)
-                    '        Dim aaa = osHandler_UI.ResetOptsUI(True)
-                    '        osFuncLib_InputScan.isActionComplete = True
-
-                    '        DisposeUI_Prefs.Invoke(osPrefsWindow)
-                    '        _osPrefsWindow = Nothing
-
-                    '        osHandler_UI.InitResourceAlloc()
-                    '    End Sub
-
                     osHandler_UI.ShowPrefsUI(chkCloseSettings, True)
                 End Sub, DispatcherPriority.Render)
-            '   Await Task.Delay(500)
-            '    Await osHandler_UI.ShowPrefsUI(chkCloseSettings, True)
-            '   Await osHandler_UI.ShowPrefsUI(chkCloseSettings, True)
+
             Await AnticipateExit()
 
             Await PrepDispatcher().InvokeAsync(
@@ -603,7 +593,6 @@ Public NotInheritable Class osFuncLib_ShowOpts
                     .osPrefs_InitCloseVis()
                 End Sub, DispatcherPriority.Render)
         End With
-
     End Function
 
     Private Shared Function AnticipateExit() As Task
@@ -2167,6 +2156,10 @@ End Module
 
 Public Module osUI_Loader
 
+    Public Async Function LoadUI_Init() As Task
+        Await Task.Delay(475)
+    End Function
+
     Public Async Function LoadUI_PopupMenu() As Task
         Await PrepDispatcher().InvokeAsync(
             Sub()
@@ -2210,8 +2203,8 @@ Public Module osUI_Loader
 
                 While Not _autoCastProgress.IsDisposed
                     System.Windows.Forms.Application.DoEvents()
-                        Thread.Sleep(10)
-                    End While
+                    Thread.Sleep(10)
+                End While
             End Sub)
 
         _autoCastThread.SetApartmentState(ApartmentState.STA)
@@ -2342,7 +2335,7 @@ End Class
 
 Public Module LoadTaskTimer
 
-    Public Async Function ProcessLoadSequence(totalDelayMs As Integer, delayWeights() As Integer,
+    Public Async Function ProcessLoadSequence(delayWeights() As Integer,
                                                 TaskList() As Func(Of Task)) As Task
 
         Dim nActions As Integer = TaskList.Length
@@ -2353,6 +2346,7 @@ Public Module LoadTaskTimer
             sumWeights += Math.Max(0, w)
         Next
 
+        Dim totalDelayMs As Integer = sumWeights
         Dim allocatedDelays() As Integer = New Integer(Math.Max(0, nDelays) - 1) {}
 
         If nActions = 1 Then
@@ -2411,8 +2405,25 @@ Public Module LoadTaskTimer
         Return durDelays.ToArray()
     End Function
 
-    Public Function SetLoadDelays(noDelays As Boolean) As Integer()
-        Return Array.Empty(Of Integer)()
+    Public Function SetLoadDelays(objTaskType As LoadTaskType) As Integer()
+        Return GetLoadDelays(objTaskType)
+    End Function
+
+    Public idxLoadDelays As New Dictionary(Of LoadTaskType, Integer()) From {
+        {Load_PrefPrep, {225, 225}},
+        {Load_PopupMenu, {225, 225}},
+        {Load_InitMenus, {475}},
+        {Load_InitActions, {475}},
+        {Load_Actions, {475}},
+        {Load_InitShaders, {120, 130, 130, 120}},
+        {Load_StartingSvc, {475}},
+        {Load_Starting, {475}}
+    }
+
+    Public Function GetLoadDelays(objTaskType As LoadTaskType) As Integer()
+        Return idxLoadDelays.First(Function(objLoadTask)
+                                       Return objLoadTask.Key = objTaskType
+                                   End Function).Value
     End Function
 
 End Module

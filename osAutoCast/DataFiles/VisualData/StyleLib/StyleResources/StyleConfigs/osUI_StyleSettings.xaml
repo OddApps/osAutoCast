@@ -155,7 +155,7 @@
     <VisSettings:osPrefVisStartTime x:Key="osPrefsStartTime_OpenOpacity" visStartTime="0" />
 
     <VisSettings:osPrefVisDuration x:Key="osPrefsDuration_OpenScaleX" visDur="600" />
-    <VisSettings:osPrefVisStartTime x:Key="osPrefsStartTime_OpenScaleX" visStartTime="100" />
+    <VisSettings:osPrefVisStartTime x:Key="osPrefsStartTime_OpenScaleX" visStartTime="0" />
 
     <VisSettings:osPrefVisDuration x:Key="osPrefsDuration_OpenTitle" visDur="400" />
     <VisSettings:osPrefVisStartTime x:Key="osPrefsStartTime_OpenTitle" visStartTime="1200" />

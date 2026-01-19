@@ -38,6 +38,7 @@ Imports osRasterizerState = SharpDX.Direct3D11.RasterizerState
 Imports osRect = SharpDX.Mathematics.Interop
 Imports osRenderBlendOpts = SharpDX.Direct3D11.RenderTargetBlendDescription
 Imports osViewPort = SharpDX.Mathematics.Interop.RawViewportF
+Imports osProgBorder = SharpDX.Mathematics.Interop.RawVector4
 
 Public Class ProgBarGui_AutoCast
 
@@ -214,6 +215,13 @@ Public Class ProgBarGui_AutoCast
     End Sub
 
     Public Sub New(pW As Integer, pH As Integer, pDuration As TimeSpan, pEase As Func(Of Double, Double))
+        progSettingsVQ = ApplySetingsVQ()
+        SetVisualQuality()
+
+        If VisQuality Then
+            pW += 4 : pH += 4
+        End If
+
         InitializeComponent(pW, pH)
 
         FormBorderStyle = osForms.FormBorderStyle.None
@@ -261,7 +269,7 @@ Public Class ProgBarGui_AutoCast
 
         InitProgressStates()
 
-        progSettingsVQ = ApplySetingsVQ()
+        RenderBorder(True)
         RenderFrame()
     End Sub
 
@@ -275,6 +283,16 @@ Public Class ProgBarGui_AutoCast
                 Return New ProgVisualQuality(objVQ, bsOpaqueRGB)
         End Select
     End Function
+
+    Private Sub SetVisualQuality()
+        Dim objVisQuality = CoreDataLib.GetVisualQuality()
+
+        If objVisQuality = ProgVisOpts.Quality Then
+            VisQuality = True
+        Else
+            VisQuality = False
+        End If
+    End Sub
 
     Private Sub CreateTargetResources()
         ResetProgTarget()
@@ -316,8 +334,9 @@ Public Class ProgBarGui_AutoCast
 
         ClearAccumToBackground()
 
-        If osProgScissorState Is Nothing Then CreateProgScissorState()
 
+        If osProgScissorState Is Nothing Then CreateProgScissorState()
+        DrawBorderToAccum()
     End Sub
 
     Private Async Sub CreateShadersAndPipeline()
@@ -358,7 +377,6 @@ Public Class ProgBarGui_AutoCast
     End Sub
 
     Private Sub InitProgressStates()
-
         dsOff = New osDepthStencilState(
             progDevice, New osDepthStencilStateDesc() With {
                 .IsDepthEnabled = False, .IsStencilEnabled = False,
@@ -415,7 +433,6 @@ Public Class ProgBarGui_AutoCast
     End Sub
 
     Private Sub RenderFrame(Optional isDirty As Boolean = False, Optional chkAcProgress As Boolean = False)
-
         If evLatency <> IntPtr.Zero Then
             WaitForSingleObjectEx(evLatency, &HFFFFFFFFI, False)
         End If
@@ -446,10 +463,9 @@ Public Class ProgBarGui_AutoCast
         Dim bbDesc = bBuff.Description
 
         osProgViewPort = New osViewPort With {
-            .X = 0, .Y = 0,
+            .X = 0, .Y = 0, .MinDepth = 0.0F, .MaxDepth = 1.0F,
             .Width = Math.Max(1, CSng(bbDesc.Width)),
-            .Height = Math.Max(1, CSng(bbDesc.Height)),
-            .MinDepth = 0.0F, .MaxDepth = 1.0F
+            .Height = Math.Max(1, CSng(bbDesc.Height))
         }
     End Sub
 
@@ -478,10 +494,8 @@ Public Class ProgBarGui_AutoCast
         Dim bbSizeH = CInt(osProgViewPort.Height)
 
         Return New Texture2DDescription With {
-            .Width = bbSizeW,
-            .Height = bbSizeH,
-            .MipLevels = 1,
-            .ArraySize = 1,
+            .Width = bbSizeW, .Height = bbSizeH,
+            .MipLevels = 1, .ArraySize = 1,
             .Format = osFormat.B8G8R8A8_UNorm,
             .SampleDescription = New SampleDescription(1, 0),
             .Usage = ResourceUsage.Default,
@@ -491,24 +505,56 @@ Public Class ProgBarGui_AutoCast
         }
     End Function
 
-    Private Sub RasterizeProgress(progVal As Single)
+    Private Sub RasterizeBorderOnce()
+        With progContext
+            .OutputMerger.SetDepthStencilState(dsOff)
+            .OutputMerger.SetBlendState(bsOpaque)
+            .OutputMerger.SetTargets(accumRTV)
 
+            ' FULL scissor so border is not clipped
+            SetRasterizerState(0)
+
+            ' write CB values that force full compose
+            Dim map = .MapSubresource(pCB, 0, MapMode.WriteDiscard,
+                                  Direct3D11.MapFlags.None)
+
+            ' prev=0, curr=1 forces full bar draw
+            Utilities.Write(map.DataPointer,
+            GetProgCB(0.0F, 1.0F))
+
+            .UnmapSubresource(pCB, 0)
+
+            .Draw(3, 0)
+        End With
+    End Sub
+
+
+    Private Sub RasterizeProgress(progVal As Single)
         Dim tPrev = lastProgress
         Dim tCurr = Math.Max(0.0F, Math.Min(1.0F, progVal))
+
         If tPrev = tCurr Then Return
 
         With progContext
-
             .OutputMerger.SetDepthStencilState(dsOff)
             .OutputMerger.SetBlendState(progSettingsVQ.BlendState)
             .OutputMerger.SetTargets(accumRTV)
 
+            If VisQuality Then
+                SetRasterizerState(insetPx:=progBorderThickness)
+            End If
+
             Dim map = .MapSubresource(pCB, 0, MapMode.WriteDiscard,
                                       Direct3D11.MapFlags.None)
+
             Utilities.Write(map.DataPointer, GetProgCB(tPrev, tCurr))
             .UnmapSubresource(pCB, 0)
 
             .Draw(3, 0)
+
+            If VisQuality Then
+                SetRasterizerState(insetPx:=0)
+            End If
         End With
 
         lastProgress = tCurr
@@ -555,14 +601,13 @@ Public Class ProgBarGui_AutoCast
 
         CoreDataLib.ProcessProgressEvent(ProgMode_AutoCast, ProgEvent.ClrMsg)
 
+        RenderBorder(True)
         Await Task.Delay(375)
     End Function
 
     Public Async Function BeginProgress() As Task(Of Boolean)
         PrepAbortToken()
         InitiateProgress()
-
-
 
         ProgressTask = StartProgression()
 
@@ -604,9 +649,73 @@ Public Class ProgBarGui_AutoCast
         End With
     End Function
 
+    Private progBrush_Border As SolidColorBrush
+    Private progBorderThickness As Single = 2
+
+    Private Sub DrawBorder()
+        Dim brdrOffset As Single = progBorderThickness * 0.5F
+        Dim pTrack = ProgressTrack
+
+        Dim objBorder As New osRect.RawRectangleF With {
+            .Left = pTrack.Left + brdrOffset, .Right = pTrack.Right - brdrOffset,
+            .Top = pTrack.Top + brdrOffset, .Bottom = pTrack.Bottom - brdrOffset
+        }
+
+        progTarget.DrawRectangle(objBorder, progBrush_Border, progBorderThickness)
+    End Sub
+
+    Private Sub RenderBorder(doDrawTarget As Boolean)
+        If VisQuality Then
+            progTarget.BeginDraw()
+            DrawBorder()
+            progTarget.EndDraw()
+        End If
+    End Sub
+
+    Private Sub RenderBorder()
+        If VisQuality Then
+            DrawBorder()
+        End If
+    End Sub
+
+    Private Sub DrawBorderToAccum()
+        If accumTex Is Nothing Then Return
+
+        ' Query DXGI surface for the accum texture and create a D2D render target on it
+        Using dxgiSurface As Surface = accumTex.QueryInterface(Of Surface)()
+            Dim d2dPixelFmt As New D2DPixelFormat(osFormat.B8G8R8A8_UNorm, AlphaMode.Ignore)
+            Dim props As New RenderTargetProperties(Direct2D1.RenderTargetType.Default,
+                                                d2dPixelFmt, 96.0F, 96.0F,
+                                                Direct2D1.RenderTargetUsage.None,
+                                                Direct2D1.FeatureLevel.Level_DEFAULT)
+
+            Using rt As New RenderTarget(progD2DFactory, dxgiSurface, props)
+                rt.BeginDraw()
+
+                ' create a local brush for this render-target (do NOT reuse progBrush_Border tied to progTarget)
+                Using b As New SolidColorBrush(rt, New osProgColor(0.0F / 255.0F, 0.0F / 255.0F, 0.0F / 255.0F, 1.0F))
+                    Dim brdrOffset As Single = progBorderThickness / 2.0F
+                    Dim pTrack = ProgressTrack
+
+                    Dim objBorder As New osRect.RawRectangleF With {
+                        .Left = pTrack.Left + brdrOffset, .Right = pTrack.Right - brdrOffset,
+                        .Top = pTrack.Top + brdrOffset, .Bottom = pTrack.Bottom - brdrOffset
+                    }
+
+                    rt.DrawRectangle(objBorder, b, progBorderThickness)
+                End Using
+
+                rt.EndDraw()
+            End Using
+        End Using
+    End Sub
+
     Private Async Function StartProgression() As Task(Of ProgStatus)
         ResetProgressTimer()
         ClearAccumToBackground()
+
+        '  DrawBorderToAccum()
+        RenderBorder()
 
         Dim objTask_Progress = Task.Run(
             Async Function() As Task(Of ProgStatus)
@@ -623,8 +732,8 @@ Public Class ProgBarGui_AutoCast
                             End If
 
                             RasterizeProgress(CSng(ProgressValue))
-                                CaptureTexture()
-                                RenderFrame(True, True)
+                            CaptureTexture()
+                            RenderFrame(True, True)
                         End Sub).ConfigureAwait(False)
 
                     Await Task.Delay(1).ConfigureAwait(False)
@@ -649,24 +758,12 @@ Public Class ProgBarGui_AutoCast
         Return objCheckResult
     End Function
 
-    Private Sub SetVisualQuality()
-        Dim objVisQuality = CoreDataLib.GetVisualQuality()
-
-        If objVisQuality = ProgVisOpts.Quality Then
-            VisQuality = True
-        Else
-            VisQuality = False
-        End If
-    End Sub
-
     Private Sub InitiateProgress()
         ProgressStatus = ProgStatus.Running
         ProgressCompleteEvent = New ManualResetEventSlim(False)
         ProgressClock_StepInt = 1.0 / ProgressFuse
 
         lastProgress = 0.0F
-
-        SetVisualQuality()
 
         If VisQuality Then
             progColor_Start = progColor_Active
@@ -859,7 +956,7 @@ Public Class ProgBarGui_AutoCast
                           ProgressText.Location, progBrush_Text, DrawTextOptions.Clip)
             End If
 
-            .EndDraw()
+            '    .EndDraw()
         End With
     End Sub
 
@@ -879,11 +976,13 @@ Public Class ProgBarGui_AutoCast
         progTarget.BeginDraw()
 
         progTarget.FillRectangle(ProgressTrack, progBrush_BG)
+        RenderBorder()
 
         If DisplayProgressText Then
             progTarget.DrawText(ProgressText.MsgText, ProgressText.Format,
                                 ProgressText.Location, progBrush_Text, DrawTextOptions.Clip)
         End If
+
 
         progTarget.EndDraw()
 
@@ -897,6 +996,9 @@ Public Class ProgBarGui_AutoCast
         With progTarget
             .BeginDraw()
             .FillRectangle(ProgressTrack, progBrush_BG)
+
+            RenderBorder()
+
             .EndDraw()
         End With
 
@@ -947,7 +1049,7 @@ Public Class ProgBarGui_AutoCast
         SetRasterizerState()
     End Sub
 
-    Private Sub SetRasterizerState(Optional doClear As Boolean = False)
+    Private Sub SetRasterizerState(Optional doClear As Boolean = False, Optional insetPx As Integer = 0)
         Dim pFeather As Integer = 1
         Dim pT = ProgressTrack
 
@@ -957,13 +1059,44 @@ Public Class ProgBarGui_AutoCast
             Else
                 .State = osProgScissorState
 
-                .SetScissorRectangle(pT.Left - pFeather, pT.Top - pFeather,
-                                     pT.Right + pFeather, pT.Bottom + pFeather)
+                Dim left = CInt(Math.Floor(pT.Left + insetPx))
+                Dim top = CInt(Math.Floor(pT.Top + insetPx))
+                Dim right = CInt(Math.Ceiling(pT.Right - insetPx))
+                Dim bottom = CInt(Math.Ceiling(pT.Bottom - insetPx))
+
+                .SetScissorRectangle(left, top, right, bottom)
+                'Dim left = CInt(Math.Floor(pT.Left + insetPx - pFeather))
+                'Dim top = CInt(Math.Floor(pT.Top + insetPx - pFeather))
+                'Dim right = CInt(Math.Ceiling(pT.Right - insetPx + pFeather))
+                'Dim bottom = CInt(Math.Ceiling(pT.Bottom - insetPx + pFeather))
+
+                '' clamp to valid viewport
+                'left = Math.Max(0, left)
+                'top = Math.Max(0, top)
+                'right = Math.Max(left + 1, right)
+                'bottom = Math.Max(top + 1, bottom)
+
+                '.SetScissorRectangle(left, top, right, bottom)
             End If
         End With
+        'With progContext.Rasterizer
+        '    If doClear Then
+        '        .State = Nothing
+        '    Else
+        '        Dim pFeather As Integer = 1
+        '        Dim pT = ProgressTrack
+
+        '        .State = osProgScissorState
+
+        '        .SetScissorRectangle(pT.Left - pFeather, pT.Top - pFeather,
+        '                             pT.Right + pFeather, pT.Bottom + pFeather)
+        '    End If
+        'End With
     End Sub
 
     Public Sub InitiateAutoCast()
+        SetVisualQuality()
+
         With Me
             SetProgressEvents()
 
@@ -975,7 +1108,6 @@ Public Class ProgBarGui_AutoCast
 
             PresentBackgroundOnce()
             .ShowFirstLoad()
-
         End With
     End Sub
 
@@ -989,6 +1121,11 @@ Public Class ProgBarGui_AutoCast
 
         progTarget.BeginDraw()
         progTarget.FillRectangle(ProgressTrack, progBrush_BG)
+
+        If VisQuality Then
+            DrawBorder()
+        End If
+
         progTarget.EndDraw()
 
         If progSwapChain1 IsNot Nothing Then
@@ -1083,6 +1220,9 @@ Public Class ProgBarGui_AutoCast
         SetColorObj(ProgColorObj.Active, progBrush_Active)
         SetColorObj(ProgColorObj.BackG, progBrush_BG)
         SetColorObj(ProgColorObj.Msg, progBrush_Text)
+
+        progBrush_Border = New SolidColorBrush(progTarget,
+                                                   New osProgColor(0.0F, 0.0F, 0.0F, 1.0F))
     End Sub
 
     Private Sub SetColorObj(objColor As ProgColorObj, ByRef progObj As SolidColorBrush)
@@ -1101,6 +1241,8 @@ Public Class ProgBarGui_AutoCast
 
         progContext.OutputMerger.SetTargets(accumRTV)
         progContext.ClearRenderTargetView(accumRTV, progColor_BG)
+
+
     End Sub
 
     Private Sub ApplyColor(pColorObj As ProgColorObj, ByRef objColor As osProgColor)

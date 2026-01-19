@@ -6,6 +6,7 @@
         ShowActivated="True" WindowStartupLocation="Manual" Focusable="True" SizeToContent="Height"
         ShowInTaskbar="False" DataContext="{Binding RelativeSource={RelativeSource Self}}" 
         Style="{StaticResource TrayMenuStyle}">
+    
     <Window.Resources>
         <Storyboard x:Key="TrayMenuVis_Display">
             <DoubleAnimation Storyboard.TargetName="TrayMenuOutlineRender"
@@ -59,7 +60,6 @@
                 </DoubleAnimation.EasingFunction>
             </DoubleAnimation>
         </Storyboard>
-
     </Window.Resources>
 
     <Grid x:Name="TrayMenuOutline" Style="{StaticResource TrayMenuContainerOutlineStyle}">
@@ -116,4 +116,5 @@
             </Border>
         </Border>
     </Grid>
+    
 </Window>

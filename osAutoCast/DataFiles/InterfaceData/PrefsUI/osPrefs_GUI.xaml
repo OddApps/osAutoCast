@@ -7,15 +7,16 @@
 
     <Window.Resources>
         <Storyboard x:Key="osPrefsVis_Disp">
-            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="osPrefsMainContainer" Storyboard.TargetProperty="(UIElement.Opacity)">
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="osPrefsMainContainer"
+                                           Storyboard.TargetProperty="(UIElement.Opacity)">
                 <EasingDoubleKeyFrame KeyTime="00:00:00" Value="0">
                     <EasingDoubleKeyFrame.EasingFunction>
-                        <CubicEase EasingMode="EaseOut" />
+                        <CubicEase EasingMode="EaseIn" />
                     </EasingDoubleKeyFrame.EasingFunction>
                 </EasingDoubleKeyFrame>
-                <EasingDoubleKeyFrame KeyTime="00:00:0.750" Value="1">
+                <EasingDoubleKeyFrame KeyTime="00:00:0.350" Value="1">
                     <EasingDoubleKeyFrame.EasingFunction>
-                        <CubicEase EasingMode="EaseOut" />
+                        <CubicEase EasingMode="EaseIn" />
                     </EasingDoubleKeyFrame.EasingFunction>
                 </EasingDoubleKeyFrame>
             </DoubleAnimationUsingKeyFrames>
@@ -27,9 +28,9 @@
             </DoubleAnimation>
             <DoubleAnimation Storyboard.TargetName="osPrefsOutlineRender"
                              Storyboard.TargetProperty="ScaleX"
-							 BeginTime="{StaticResource osPrefsStartTime_OpenScaleX}"
+							 BeginTime="00:00:00"
 							 Duration="{StaticResource osPrefsDuration_OpenScaleX}"
-                             From="0.025" To="1" FillBehavior="HoldEnd">
+                             From="0.005" To="1" FillBehavior="HoldEnd">
                 <DoubleAnimation.EasingFunction>
                     <QuadraticEase EasingMode="EaseInOut" />
                 </DoubleAnimation.EasingFunction>
@@ -103,7 +104,7 @@
     <osCtrl:osBorder x:Name="osPrefsMainContainer" Style="{StaticResource osPrefsMainContainerStyle}" CornerRadius="12"
                      Opacity="0" BorderBrush="#101010" Margin="0" ClipInflation="1" VerticalAlignment="Center">
         <osCtrl:osBorder.RenderTransform>
-            <ScaleTransform x:Name="osPrefsOutlineRender" ScaleX="0.025" ScaleY="1" />
+            <ScaleTransform x:Name="osPrefsOutlineRender" ScaleX="0.005" ScaleY="1" />
         </osCtrl:osBorder.RenderTransform>
         <Border Background="#FF3C3C3C" Width="NaN">
             <StackPanel Orientation="Vertical" Background="#FF3C3C3C">
