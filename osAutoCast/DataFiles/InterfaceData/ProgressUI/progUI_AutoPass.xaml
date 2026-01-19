@@ -6,6 +6,10 @@
         Background="Transparent"  WindowStyle="None" WindowStartupLocation="CenterScreen" UseLayoutRounding="True"
         ResizeMode="NoResize" AllowsTransparency="True" Opacity="0">
     
+        <Window.DataContext>
+        <osPrefLib:osPreferenceLib />
+    </Window.DataContext>
+    
     <osCtrl:osBorder x:Name="osAutoPassContainer" Margin="2"
                      CornerRadius="4,4,14,14" ClipInflation="2"
                      Style="{StaticResource osAutoPassContainerStyle}"

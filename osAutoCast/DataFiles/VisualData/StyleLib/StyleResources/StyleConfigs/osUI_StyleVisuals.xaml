@@ -102,12 +102,12 @@
         </Style.Resources>
     </Style>
 
-    <!--<Style x:Key="OverlayVisuals" TargetType="{x:Type Window}">
+    <Style x:Key="PopupOverlayVisuals" TargetType="{x:Type Window}">
         <Setter Property="Opacity" Value="0" />
-        <Setter Property="CacheMode" Value="BitmapCache" />
+        <Setter Property="Background" Value="#FF000000" />
         <Setter Property="RenderOptions.BitmapScalingMode" Value="LowQuality" />
         <Setter Property="RenderOptions.EdgeMode" Value="Aliased" />
-        <Style.Resources>
+        <!--<Style.Resources>
             <Storyboard x:Key="OverlayVisual_Open">
                 <DoubleAnimationUsingKeyFrames x:Name="visOpen_Overlay"
                                                Storyboard.TargetProperty="Opacity"
@@ -156,7 +156,7 @@
                                           EasingFunction="{StaticResource OverlayEase_CloseByBtn}" />
                 </DoubleAnimationUsingKeyFrames>
             </Storyboard>
-        </Style.Resources>
-    </Style>-->
+        </Style.Resources>-->
+    </Style>
 
 </ResourceDictionary>

@@ -56,11 +56,6 @@ Public Class osLoader_UI
         End With
     End Sub
 
-    Private Function ValidateTextUpdate(valTaskType As LoadTaskType) As Boolean
-        Dim txtMsg = GetLoadTaskMsg(valTaskType)
-        Return Not txtMsg = "skip"
-    End Function
-
     Private Function VerifyTextUpdate(valTaskType As LoadTaskType, ByRef txtMsg As String) As Boolean
         txtMsg = GetLoadTaskMsg(valTaskType)
         Return Not txtMsg = "skip"
@@ -99,23 +94,6 @@ Public Class osLoader_UI
                     End Sub, DispatcherPriority.Render)
             End With
         End If
-    End Function
-
-    Private Async Function LoadFinalize(objTaskStatus As TaskStatusReport) As Task
-        Await Task.Run(
-             Sub()
-                 objLoadProgBar.onLastTask = True
-
-                 PrepDispatcher().Invoke(
-                     Sub()
-                         PrepTrayMenu()
-                         isAppLoaded = True
-                     End Sub)
-
-                 visLoadTextEventTask.ResetTask()
-             End Sub)
-
-        objTaskStatus.SetTaskComplete()
     End Function
 
     Public Async Function ProvisionApp() As Task
@@ -164,23 +142,18 @@ Partial Class osLoader_UI
     Private idxLoadStageMsg As New Dictionary(Of LoadTaskType, String) From {
         {Load_Init, "Initializing Data"},
         {Load_PrefPrep, "Loading Preferences"},
-        {Load_PrefApply, "skip"},
         {Load_InitShaders, "Initializing Interface"},
-        {Load_Shaders, "skip"},
-        {Load_Opts, "skip"},
         {Load_PopupMenu, "Loading Menus"},
-        {Load_PopupMenus, "Loading Menus"},
         {Load_InitMenus, "Preparing Menu UI"},
         {Load_InitActions, "Loading User Interface"},
-        {Load_ApplyConfig, "Applying Configuration"},
+        {Load_Actions, "Preparing Actions"},
         {Load_StartingSvc, "Activating Service"},
-        {Load_Starting, "Starting osAutoCast"},
-        {Load_Actions, "Preparing Actions"}
-}
+        {Load_Starting, "Starting osAutoCast"}
+    }
 
     Public objProcessLoadStages As osHandler_Loader
 
-    Public Property osAutoCastVersion As String = "Ver 3.0"
+    Public Property osAutoCastVersion As String = "Ver 3.1"
 
     Public ReadOnly Property osAutoCastTitle As String
         Get

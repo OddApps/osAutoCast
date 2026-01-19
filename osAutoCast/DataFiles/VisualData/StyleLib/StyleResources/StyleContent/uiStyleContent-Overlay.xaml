@@ -6,7 +6,7 @@
         <Setter Property="CacheMode" Value="BitmapCache" />
         <Setter Property="RenderOptions.BitmapScalingMode" Value="LowQuality" />
         <Setter Property="RenderOptions.EdgeMode" Value="Aliased" />
-        <Style.Resources>
+        <!--<Style.Resources>
             <Storyboard x:Key="OverlayVisual_Open">
                 <DoubleAnimationUsingKeyFrames x:Name="visOpen_Overlay" Storyboard.TargetProperty="Opacity" FillBehavior="HoldEnd">
                     <EasingDoubleKeyFrame KeyTime="00:00:00" Value="0" >
@@ -14,7 +14,7 @@
                             <ExponentialEase EasingMode="EaseIn" Exponent="0.75" />
                         </EasingDoubleKeyFrame.EasingFunction>
                     </EasingDoubleKeyFrame>
-                    <EasingDoubleKeyFrame KeyTime="00:00:0.500" Value="1" >
+                    <EasingDoubleKeyFrame KeyTime="00:00:0.500" Value="0.7" >
                         <EasingDoubleKeyFrame.EasingFunction>
                             <ExponentialEase EasingMode="EaseIn" Exponent="0.75" />
                         </EasingDoubleKeyFrame.EasingFunction>
@@ -39,7 +39,7 @@
                     <EasingDoubleKeyFrame KeyTime="{StaticResource OverlayAni_CloseByBtnDuration}" Value="{StaticResource OverlayAni_CloseFade}" EasingFunction="{StaticResource OverlayEase_CloseByBtn}" />
                 </DoubleAnimationUsingKeyFrames>
             </Storyboard>
-        </Style.Resources>
+        </Style.Resources>-->
     </Style>
 
 </ResourceDictionary>

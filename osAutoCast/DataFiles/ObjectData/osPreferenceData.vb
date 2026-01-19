@@ -350,13 +350,11 @@ Namespace osPrefLib
         End Property
 
         Public Async Function PreparePrefData() As Task
-            objOsPrefIdx = Await Task.Run(
-                Async Function()
-                    Dim objTask_BuildPrefIdx = BuildPrefIndexAsync()
-                    Return Await objTask_BuildPrefIdx
-
-                    '  Return objTask_PrefIdx
-                End Function)
+            'Await Task.Run(
+            '    Async Function()
+            Dim objTask_BuildPrefIdx = BuildPrefIndexAsync()
+            objOsPrefIdx = Await objTask_BuildPrefIdx
+            '    End Function)
         End Function
 
         Public Async Function BuildPrefIndexAsync() As Task(Of osPrefIndex)
@@ -439,6 +437,8 @@ Namespace osPrefLib
 
             Finally
                 sem.Dispose()
+
+                prefsSet = True
             End Try
         End Function
 

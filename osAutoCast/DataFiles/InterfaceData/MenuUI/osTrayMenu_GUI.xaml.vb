@@ -111,9 +111,9 @@ Public Class osTrayMenu_GUI
     End Sub
 
     Public Sub PrepTrayMenuInit()
-        Dispatcher.BeginInvoke(
+        Dim bb = Dispatcher.BeginInvoke(
     Sub()
-        visTrayMenu_Open = EstablishVisual(TrayMenu_Open)
+        visTrayMenu_Open = TryCast(Me.Resources(GetVisualKey(TrayMenu_Open)), Storyboard)
         InitTrayMenuVis()
 
         Dim aa = osVisQualityAdapter.InitAdapter(VisTypeAdapter.VisAdapter_TrayMenu, visTrayMenu_Open,
@@ -124,8 +124,7 @@ Public Class osTrayMenu_GUI
 
             BufferTrayMenu()
         End With
-    End Sub,
-    DispatcherPriority.Background)
+    End Sub, DispatcherPriority.Background)
 
     End Sub
 

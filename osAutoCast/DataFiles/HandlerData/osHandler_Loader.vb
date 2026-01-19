@@ -597,5 +597,7 @@ Public Class osHandler_Loader
         Next
     End Function
 
+    Private Sub HoldVisual() : End Sub
+
 End Class
 

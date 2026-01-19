@@ -1742,8 +1742,8 @@ Public Module osPopupMenuLib
             End If
         End Sub
 
-    Public DisposeUI_PopupMenuOverlay As Action(Of MenuOverlayWindow) =
-        Sub(objGui_PopupMenuOverlay As MenuOverlayWindow)
+    Public DisposeUI_PopupMenuOverlay As Action(Of osPopupMenuOverlay_GUI) =
+        Sub(objGui_PopupMenuOverlay As osPopupMenuOverlay_GUI)
             If objGui_PopupMenuOverlay IsNot Nothing Then
                 With objGui_PopupMenuOverlay
                     Try
@@ -1760,8 +1760,8 @@ Public Module osPopupMenuLib
             End If
         End Sub
 
-    Public DisposeUI_TrayOverlay As Action(Of MenuOverlayWindow) =
-        Sub(objGui_PopupMenuOverlay As MenuOverlayWindow)
+    Public DisposeUI_TrayOverlay As Action(Of osPopupMenuOverlay_GUI) =
+        Sub(objGui_PopupMenuOverlay As osPopupMenuOverlay_GUI)
             If objGui_PopupMenuOverlay IsNot Nothing Then
                 With objGui_PopupMenuOverlay
                     Try
@@ -1776,7 +1776,7 @@ Public Module osPopupMenuLib
             End If
         End Sub
 
-    Private Sub ExecPrepUI_TrayMenuOverlay(objGui_PopupMenuOverlay As MenuOverlayWindow)
+    Private Sub ExecPrepUI_TrayMenuOverlay(objGui_PopupMenuOverlay As osPopupMenuOverlay_GUI)
         With objGui_PopupMenuOverlay
             .PrepTrayMenuOverlay()
             .Show()
@@ -1808,22 +1808,22 @@ Public Module osPopupMenuLib
     End Function
 
 
-    Public Function GeneratePopupMenuOverlayGUI(Optional isFromTray As Boolean = False) As Func(Of MenuOverlayWindow)
+    Public Function GeneratePopupMenuOverlayGUI(Optional isFromTray As Boolean = False) As Func(Of osPopupMenuOverlay_GUI)
         Return Function()
                    Return PrepDispatcher().Invoke(
                        Function()
-                           Return New MenuOverlayWindow(isFromTray)
+                           Return New osPopupMenuOverlay_GUI(isFromTray)
                        End Function)
                End Function
     End Function
 
     Public Async Function GeneratePopupMenuOverlayGUIAsync(
     Optional isFromTray As Boolean = False
-) As Task(Of MenuOverlayWindow)
+) As Task(Of osPopupMenuOverlay_GUI)
 
         Return Await PrepDispatcher().InvokeAsync(
         Function()
-            Return New MenuOverlayWindow(isFromTray)
+            Return New osPopupMenuOverlay_GUI(isFromTray)
         End Function,
         DispatcherPriority.Background
     )
@@ -1849,7 +1849,7 @@ Public Module osPopupMenuLib
     End Function
 
 
-    Public DisplayUI_TrayOverlay As Action(Of MenuOverlayWindow) = AddressOf ExecPrepUI_TrayMenuOverlay
+    Public DisplayUI_TrayOverlay As Action(Of osPopupMenuOverlay_GUI) = AddressOf ExecPrepUI_TrayMenuOverlay
 
 End Module
 
@@ -1894,7 +1894,7 @@ Public Class GUI_PrepData
         End With
     End Sub
 
-    Private Sub guiAction_PopupMenuOverlay(objGui_PopupMenuOverlay As MenuOverlayWindow)
+    Private Sub guiAction_PopupMenuOverlay(objGui_PopupMenuOverlay As osPopupMenuOverlay_GUI)
         With objGui_PopupMenuOverlay
             Try
                 If .IsLoaded Then

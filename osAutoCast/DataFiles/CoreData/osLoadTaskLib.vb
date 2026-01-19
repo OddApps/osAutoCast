@@ -67,11 +67,8 @@ Public Module osLoadTaskLib
     End Function
 
     Public Async Function LoadTask_PrepMenus(objTaskAbort As CancellationToken) As Task
-        Await ProcessLoadSequence(480, SetLoadDelays(240, 240),
-                                  SetLoadSequence(Function() osUI_Loader.LoadUI_InitMenus(),
-                                                  Function() osUI_Loader.LoadUI_InitTrayMenu()))
-        'Await ProcessLoadSequence(475, SetLoadDelays(475),
-        '                          SetLoadSequence(Function() osUI_Loader.LoadUI_InitMenus()))
+        Await ProcessLoadSequence(475, SetLoadDelays(475),
+                                  SetLoadSequence(Function() osUI_Loader.LoadUI_InitMenus()))
     End Function
 
     Public Async Function LoadTask_InitActions(objTaskAbort As CancellationToken) As Task
@@ -99,50 +96,7 @@ Public Module osLoadTaskLib
 
     Public Async Function LoadTask_Finalize(objTaskAbort As CancellationToken) As Task
         Await ProcessLoadSequence(475, SetLoadDelays(475),
-                                  SetLoadSequence(
-                                        Async Function()
-                                            Await Task.Run(
-                                                Sub()
-                                                    uiLoadProgBar.onLastTask = True
-
-                                                    PrepDispatcher().Invoke(
-                                                        Sub()
-                                                            PrepTrayMenu()
-                                                            isAppLoaded = True
-                                                        End Sub)
-
-                                                    uiTextEvtTask.ResetTask()
-                                                End Sub)
-                                        End Function))
-    End Function
-
-    Public Async Function EnsureMinTotalDuration(action As Func(Of CancellationToken, Task), preMs As Integer, postMs As Integer, ct As CancellationToken) As Task
-        If preMs > 0 Then Await Task.Delay(preMs, ct)
-        Await action(ct)
-        If postMs > 0 Then Await Task.Delay(postMs, ct)
-    End Function
-
-    Public Async Function WithSurroundingDelay(preMs As Integer,
-                                           postMs As Integer,
-                                           ct As CancellationToken,
-                                           ParamArray actions() As Func(Of CancellationToken, Task)) As Task
-        If preMs > 0 Then
-            Await Task.Delay(preMs, ct)
-        End If
-
-        Try
-            For Each act In actions
-                ct.ThrowIfCancellationRequested()
-                Await act(ct)
-            Next
-
-        Catch
-        End Try
-        If postMs > 0 Then
-                ' run post delay even if an earlier action faulted (will throw if cancelled)
-                Await Task.Delay(postMs, ct)
-            End If
-
+                                  SetLoadSequence(Function() osUI_Loader.LoadTasks_WrapUp(uiLoadProgBar, uiTextEvtTask)))
     End Function
 
 End Module

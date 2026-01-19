@@ -33,6 +33,7 @@ Imports osProgDeviceContext = SharpDX.Direct3D11.DeviceContext
 Imports osProgFactoryD2D = SharpDX.Direct2D1.Factory
 Imports osProgFactoryDW = SharpDX.DirectWrite.Factory
 Imports osProgFactoryDXGI = SharpDX.DXGI.Factory
+Imports osProgFactoryDXGI2 = SharpDX.DXGI.Factory2
 Imports osRasterizerState = SharpDX.Direct3D11.RasterizerState
 Imports osRect = SharpDX.Mathematics.Interop
 Imports osRenderBlendOpts = SharpDX.Direct3D11.RenderTargetBlendDescription
@@ -128,6 +129,15 @@ Public Class ProgBarGui_AutoCast
     Private accumTex As Texture2D
     Private accumRTV As RenderTargetView
 
+    Private VisQuality As Boolean
+
+    Private progColor_Start As osProgColor
+    Private nextProgColor As osProgColor
+    Private progColor_Target As osProgColor = New osProgColor(CalcRGB(34), CalcRGB(139), CalcRGB(34), 1.0F)
+
+    Private colorProgress As Single = 0.0F
+    Private Const ColorLerpSpeed As Single = 0.1F
+
     Private _displayProgressText As Boolean = False
     Public Property DisplayProgressText As Boolean
         Get
@@ -176,6 +186,12 @@ Public Class ProgBarGui_AutoCast
         End Get
     End Property
 
+    Public ReadOnly Property progDxgiFactory2 As osProgFactoryDXGI
+        Get
+            Return osHandler_Graphics.pDxgiFactory2
+        End Get
+    End Property
+
     Public ReadOnly Property progD2DFactory As osProgFactoryD2D
         Get
             Return osHandler_Graphics.pD2DFactory
@@ -189,6 +205,13 @@ Public Class ProgBarGui_AutoCast
     End Property
 
 #End Region
+
+    Public Shared Property Instance As ProgBarGui_AutoCast
+
+    Protected Overrides Sub OnHandleCreated(e As EventArgs)
+        MyBase.OnHandleCreated(e)
+        Instance = Me
+    End Sub
 
     Public Sub New(pW As Integer, pH As Integer, pDuration As TimeSpan, pEase As Func(Of Double, Double))
         InitializeComponent(pW, pH)
@@ -206,22 +229,22 @@ Public Class ProgBarGui_AutoCast
         SetProgressDuration(pDuration)
 
         ProgressEaseFunc = If(pEase,
-            Function(x) x)
+           Function(x) x)
 
         InitDeviceAndSwapChain()
 
         ProgressStatus = ProgStatus.Idle
     End Sub
 
-    Private Sub InitDeviceAndSwapChain()
+    Public Sub InitDeviceAndSwapChain()
         ResetSwapChain()
 
         Try
             Dim osProgSC1 As SwapChain1 = Nothing
 
-            Using osProgFactory2 = progDxgiFactory.QueryInterface(Of SharpDX.DXGI.Factory2)()
-                GenerateSwapChain(osProgFactory2, osProgSC1)
-            End Using
+            '    Using osProgFactory2 = progDxgiFactory.QueryInterface(Of SharpDX.DXGI.Factory2)()
+            GenerateSwapChain(progDxgiFactory2, osProgSC1)
+            '       End Using
 
             SetSwapChain(osProgSC1)
         Catch ex As Exception
@@ -477,7 +500,7 @@ Public Class ProgBarGui_AutoCast
         With progContext
 
             .OutputMerger.SetDepthStencilState(dsOff)
-            .OutputMerger.SetBlendState(bsOpaque)
+            .OutputMerger.SetBlendState(progSettingsVQ.BlendState)
             .OutputMerger.SetTargets(accumRTV)
 
             Dim map = .MapSubresource(pCB, 0, MapMode.WriteDiscard,
@@ -539,6 +562,8 @@ Public Class ProgBarGui_AutoCast
         PrepAbortToken()
         InitiateProgress()
 
+
+
         ProgressTask = StartProgression()
 
         Using CancelStateReg As CancellationTokenRegistration =
@@ -593,9 +618,13 @@ Public Class ProgBarGui_AutoCast
 
                     Await InvokeOnUiAsync(
                         Sub()
+                            If VisQuality Then
+                                progColor_Active = nextProgColor
+                            End If
+
                             RasterizeProgress(CSng(ProgressValue))
-                            CaptureTexture()
-                            RenderFrame(True, True)
+                                CaptureTexture()
+                                RenderFrame(True, True)
                         End Sub).ConfigureAwait(False)
 
                     Await Task.Delay(1).ConfigureAwait(False)
@@ -620,13 +649,42 @@ Public Class ProgBarGui_AutoCast
         Return objCheckResult
     End Function
 
+    Private Sub SetVisualQuality()
+        Dim objVisQuality = CoreDataLib.GetVisualQuality()
+
+        If objVisQuality = ProgVisOpts.Quality Then
+            VisQuality = True
+        Else
+            VisQuality = False
+        End If
+    End Sub
+
     Private Sub InitiateProgress()
         ProgressStatus = ProgStatus.Running
         ProgressCompleteEvent = New ManualResetEventSlim(False)
-
         ProgressClock_StepInt = 1.0 / ProgressFuse
+
         lastProgress = 0.0F
+
+        SetVisualQuality()
+
+        If VisQuality Then
+            progColor_Start = progColor_Active
+            nextProgColor = progColor_Active
+        End If
     End Sub
+
+    Private Function LerpProgColor(a As osProgColor, b As osProgColor, t As Single) As osProgColor
+        If t < 0.0F Then t = 0.0F
+        If t > 1.0F Then t = 1.0F
+
+        Return New osProgColor(
+            a.R + (b.R - a.R) * t,
+            a.G + (b.G - a.G) * t,
+            a.B + (b.B - a.B) * t,
+            a.A + (b.A - a.A) * t
+        )
+    End Function
 
     Private Sub PrepAbortToken()
         _extToken = CoreDataLib.chkActionAbort.Token
@@ -670,6 +728,11 @@ Public Class ProgBarGui_AutoCast
         Dim progVal = VerifyProgLimits(progDuration * ProgressClock_StepInt)
 
         ProgressValue = ProgressEaseFunc(progVal)
+
+        If VisQuality Then
+            colorProgress += (ProgressValue - colorProgress) * ColorLerpSpeed
+            nextProgColor = LerpProgColor(progColor_Start, progColor_Target, colorProgress)
+        End If
     End Sub
 
     Private Sub DrawProgress()
@@ -915,6 +978,7 @@ Public Class ProgBarGui_AutoCast
 
         End With
     End Sub
+
     Private Sub PresentBackgroundOnce()
         If progContext Is Nothing OrElse progRTV Is Nothing OrElse progTarget Is Nothing Then
             Return

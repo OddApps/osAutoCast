@@ -23,7 +23,7 @@ Public Class progUI_AutoPass
 
     Public Sub PrepAutoPass()
         With Me
-            .DataContext = osPrefData.Data
+            '  .DataContext = osPrefData.Data
 
             .objHandlerAP = New osHandler_ProgressBar(Me, True, GetSafetyTimer(), objProgBar.Maximum,
                                               AddressOf SetProgress, AddressOf SetColor, AddressOf SetDisplayText)

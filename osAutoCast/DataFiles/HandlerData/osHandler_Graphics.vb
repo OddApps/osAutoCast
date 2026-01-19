@@ -10,6 +10,7 @@ Imports osProgDevice = SharpDX.Direct3D11.Device
 Imports osProgDeviceContext = SharpDX.Direct3D11.DeviceContext
 Imports osProgDxgiDevice = SharpDX.DXGI.Device1
 Imports osProgDxgiFactory = SharpDX.DXGI.Factory
+Imports osProgDxgiFactory2 = SharpDX.DXGI.Factory2
 Imports osProgFactoryD2D = SharpDX.Direct2D1.Factory
 
 Public NotInheritable Class osHandler_Graphics
@@ -35,6 +36,14 @@ Public NotInheritable Class osHandler_Graphics
         Get
             '  EnsureCreated()
             Return _progDxgiFactory
+        End Get
+    End Property
+
+    Private Shared _progDxgiFactory2 As osProgDxgiFactory2
+    Public Shared ReadOnly Property pDxgiFactory2 As osProgDxgiFactory2
+        Get
+            '  EnsureCreated()
+            Return _progDxgiFactory2
         End Get
     End Property
 
@@ -82,6 +91,8 @@ Public NotInheritable Class osHandler_Graphics
 
                         _progD2dFactory = New osProgFactoryD2D(osFactoryType.MultiThreaded)
                         _progDwFactory = New FactoryDW(osDwFactoryType.Shared)
+
+                        _progDxgiFactory2 = dxgiFactory.QueryInterface(Of SharpDX.DXGI.Factory2)()
                     End Sub, DispatcherPriority.Background)
 
                 _progDevice = device

@@ -29,16 +29,17 @@ Imports osBrushColor = System.Windows.Media.Brushes
 Imports osColors = System.Windows.Media
 Imports osWinControls = System.Windows.Controls
 Imports osHorz = System.Windows.HorizontalAlignment
+Imports osVert = System.Windows.VerticalAlignment
 Imports osPoint = System.Windows.Point
 Imports osSize = System.Windows.Size
 Imports osProgColor = SharpDX.Mathematics.Interop.RawColor4
 Imports osRect = SharpDX.Mathematics.Interop
 Imports osSweep = System.Windows.Media.SweepDirection
 Imports osUtilities = SharpDX.Utilities
-Imports osVert = System.Windows.VerticalAlignment
 Imports pxShader_Pixel = SharpDX.Direct3D11.PixelShader
 Imports pxShader_Vertex = SharpDX.Direct3D11.VertexShader
 Imports osAutoCast.osLoadingElements
+Imports osProgLoad = osAutoCast.osLoadingElements.osLoadingProgressBar
 
 #Disable Warning IDE0060 ' Remove unused parameter
 #Disable Warning IDE1006 ' Remove unused parameter
@@ -300,11 +301,14 @@ Public NotInheritable Class osFuncLib_Progress
 
         Select Case pType
             Case TriggerType.AutoCast
-                Application.Current.
-                    Dispatcher.Invoke(
-                        Sub()
-                            osHandler_UI.osGui_AutoCastProgress.SetProgColor(progColorData, pUpdate)
-                        End Sub)
+                ui_AutoCast.InvokeAsync(Sub(gui)
+                                            gui.SetProgColor(progColorData, pUpdate)
+                                        End Sub)
+                'Application.Current.
+                '    Dispatcher.Invoke(
+                '        Sub()
+                '            osHandler_UI.osGui_AutoCastProgress.SetProgColor(progColorData, pUpdate)
+                '        End Sub)
             Case TriggerType.AutoPass
                 PrepDispatcher(True).Invoke(
                     Sub()
@@ -465,13 +469,14 @@ Public NotInheritable Class osFuncLib_AutoCast
 
     Public Shared Async Function ExecuteAutoCast() As Task
         Await osHandler_UI.DisplayGUI(True, TriggerType.AutoCast, ptPos)
+        ui_AutoCast.InvokeAsync(Sub(gui)
+                                    gui.Show()
+                                End Sub)
+        '   ui_AutoCast.Show()
 
-        ui_AutoCast.Show()
-
-        Dim isTask_AutoCast = PrepDispatcher().Invoke(
-            Function()
-                Return ui_AutoCast.LaunchAutoCast()
-            End Function, DispatcherPriority.Render)
+        Dim isTask_AutoCast = Await ui_AutoCast.InvokeAsync(Function(gui)
+                                                                Return gui.LaunchAutoCast()
+                                                            End Function)
 
         Dim retProgResult = Await isTask_AutoCast
 
@@ -555,8 +560,11 @@ Public NotInheritable Class osFuncLib_ShowOpts
         With osPrefsWindow
             .PrepPrefVis()
 
-            Await osVisQualityAdapter.InitAdapter(VisTypeAdapter.VisAdapter_Opts, .visPrefUI_Open,
-                                                  True, True, .prefContainer, .osTitleCover, .osContentContainer)
+            Await Task.WhenAll(.ActivatePrefTracker, osVisQualityAdapter.InitAdapter(VisTypeAdapter.VisAdapter_Opts, .visPrefUI_Open,
+                                                  True, True, .prefContainer, .osTitleCover, .osContentContainer))
+
+            '          Await osVisQualityAdapter.InitAdapter(VisTypeAdapter.VisAdapter_Opts, .visPrefUI_Open,
+            '                                           True, True, .prefContainer, .osTitleCover, .osContentContainer)
             AddHandler osPrefsWindow.Closed,
                        Sub(sender, e)
                            Dim aaa = osHandler_UI.ResetOptsUI(True)
@@ -567,6 +575,8 @@ Public NotInheritable Class osFuncLib_ShowOpts
 
                            osHandler_UI.InitResourceAlloc()
                        End Sub
+
+            '      Dim aa = osPrefsWindow.ActivatePrefTracker()
 
             Await PrepDispatcher().InvokeAsync(
                 Sub()
@@ -988,7 +998,6 @@ Public NotInheritable Class MenuOverlayWindow
     End Function
 
     Public Sub PrepTrayMenuOverlay()
-
         Me.ShowInTaskbar = False
         Me.ShowActivated = False
         Me.Focusable = False
@@ -1138,7 +1147,7 @@ Public NotInheritable Class MenuOverlayWindow
             Case aniClose
                 objAnimation_Close = EstablishVisual(Me, objVisType)
 
-                AddHandler objAnimation_Close.Completed, AddressOf osHandler_UI.CloseAndRestoryPopupMenu
+                AddHandler objAnimation_Close.Completed, AddressOf osHandler_UI.CloseAndRestorePopupMenu
         End Select
     End Sub
 
@@ -1459,7 +1468,7 @@ Module osFuncLib_UI
 
     Private dirSweep As osSweep = osSweep.Clockwise
 
-    Public ReadOnly Property ui_AutoCast As ProgBarGui_AutoCast
+    Public ReadOnly Property ui_AutoCast As AutoCastGui
         Get
             Return osHandler_UI.osGui_AutoCastProgress
         End Get
@@ -2158,93 +2167,178 @@ End Module
 
 Public Module osUI_Loader
 
-    Public Sub HoldVisual() : End Sub
-
     Public Async Function LoadUI_PopupMenu() As Task
         Await PrepDispatcher().InvokeAsync(
             Sub()
                 _osPopupMenuOverlay = PrepUI_PopupMenuOverlay()
                 _osPopupMenu = PrepUI_PopupMenu()
-            End Sub, DispatcherPriority.Render)
-
-        'Await osPopupMenuOverlay.LoadOverlayVisualsAsync()
-    End Function
-
-    Public Async Function LoadUI_Menus() As Task
-
-        Await PrepDispatcher().InvokeAsync(
-            Sub()
-                _osPopupMenuOverlay = PrepUI_PopupMenuOverlay()
-                _osPopupMenu = PrepUI_PopupMenu()
-
-                _osTrayMenu = PrepUI_TrayMenu2()
-            End Sub, DispatcherPriority.Render)
-
-
-    End Function
-
-    Public Async Function LoadUI_InitPopupMenu() As Task
-    End Function
-
-    Public Async Function LoadUI_TrayMenu() As Task
-        Await PrepDispatcher().InvokeAsync(
-            Sub()
-                _osTrayMenu = PrepUI_TrayMenu2()
-            End Sub, DispatcherPriority.Render)
+            End Sub, visPriority)
     End Function
 
     Public Async Function LoadUI_InitMenus() As Task
-        'Dim aaa = PrepDispatcher().InvokeAsync(
-        '    Sub()
-        '        osPopupMenuOverlay.ApplyOverlayVisualsAsync()
-        '    End Sub, DispatcherPriority.Background).Task
-
         Await PrepDispatcher().InvokeAsync(
             Sub()
-                osPopupMenuOverlay.SetBG()
+                osPopupMenuOverlay.PrepTrayMenuOverlay()
             End Sub, DispatcherPriority.Render)
     End Function
 
-    Public Async Function LoadUI_InitTrayMenu() As Task
-        Await PrepDispatcher().InvokeAsync(
-            Sub()
-                osTrayMenu.PrepTrayMenuInit()
-            End Sub, DispatcherPriority.Render)
+    Public Async Function LoadUI_TrayMenu() As Task
+        Await Task.Run(
+             Sub()
+                 Dim objTask_PrepTrayMenu = PrepDispatcher().InvokeAsync(
+                    Sub()
+                        _osTrayMenu = PrepUI_TrayMenu2()
+                        osTrayMenu.PrepTrayMenuInit()
+                    End Sub, visPriority)
+             End Sub)
     End Function
 
     Public Async Function LoadUI_TriggerHandlers() As Task
+        _autoCastThread = New Thread(
+            Sub()
+                With CoreDataLib.GetProgSizeReport(TriggerType.AutoCast)
+                    osFuncLib_Progress.SetProgBlockData(TriggerType.AutoCast)
+
+                    Dim objWin_AC As New ProgBarGui_AutoCast(.pWidth, .pHeight,
+                                                             osFuncLib_Progress.ProgTimeSpan_AC, AddressOf EaseProgress)
+                    _autoCastProgress = objWin_AC
+                End With
+
+                ProgBarGui_AutoCast.Instance = _autoCastProgress
+
+                _osGui_AutoCastProgress = New AutoCastGui()
+
+                While Not _autoCastProgress.IsDisposed
+                    System.Windows.Forms.Application.DoEvents()
+                        Thread.Sleep(10)
+                    End While
+            End Sub)
+
+        _autoCastThread.SetApartmentState(ApartmentState.STA)
+        _autoCastThread.IsBackground = True
+        _autoCastThread.Start()
+
         Await PrepDispatcher().InvokeAsync(
             Sub()
                 _osPrefsWindow = PrepUI_Opts()
                 osHandler_UI._autoPass2 = osHandler_UI.PrepUI_AutoPass()
-
-                _autoCastProgress = CreateUI_AutoCast()
-            End Sub, DispatcherPriority.Render)
+            End Sub, visPriority)
     End Function
 
     Public Async Function LoadUI_PrepHandlers() As Task
-        PrepDispatcher().Invoke(
-            Sub()
-                osPrefsWindow.ActivatePrefTracker()
-            End Sub, DispatcherPriority.Background)
+        'Await Task.Run(
+        '     Sub()
+        '         Dim objTask_PrepTrayMenu = PrepDispatcher().InvokeAsync(
+        '            Sub()
+        '                osPrefsWindow.ActivatePrefTracker()
+        '                osHandler_UI.osGui_AutoPass2.PrepAutoPass()
+        '            End Sub, visPriority)
+        '     End Sub)
+        'PrepDispatcher().Invoke(
+        '    Sub()
+        '        osPrefsWindow.ActivatePrefTracker()
+        '    End Sub, DispatcherPriority.Background)
 
         Await PrepDispatcher().InvokeAsync(
             Sub()
                 osHandler_UI.osGui_AutoPass2.PrepAutoPass()
-            End Sub, DispatcherPriority.Render)
+            End Sub, visPriority)
     End Function
 
     Public Async Function InitializeTriggerMonitor() As Task
-        Try
-            Await Task.Run(
-                Sub()
-                    objLoadUI.InitTriggerMonitor()
-                    CoreDataLib.InputMonSvc.LaunchTriggerMonitor()
-                End Sub)
-        Finally : End Try
+        Await Task.Run(
+            Sub()
+                objLoadUI.InitTriggerMonitor()
+                CoreDataLib.InputMonSvc.LaunchTriggerMonitor()
+            End Sub)
     End Function
 
+    Public Function LoadTasks_WrapUp(objLoadProgBar As osProgLoad, objTextEvtTask As TaskCompletionSource(Of Boolean)) As Task
+        Return Task.Run(
+            Sub()
+                objLoadProgBar.onLastTask = True
+
+                PrepDispatcher().Invoke(
+                    Sub()
+                        PrepTrayMenu()
+                        isAppLoaded = True
+                    End Sub)
+
+                objTextEvtTask.ResetTask()
+            End Sub)
+    End Function
+
+    Private visPriority As DispatcherPriority =
+        DispatcherPriority.Render
+
 End Module
+
+Public NotInheritable Class AutoCastGui
+
+    Friend Sub New()
+        ' nothing needed here for this minimal version
+    End Sub
+
+    ' Fire-and-forget: call an Action on the WinForms instance thread
+    Public Sub InvokeAsync(action As Action(Of ProgBarGui_AutoCast))
+        Dim f = ProgBarGui_AutoCast.Instance
+        If f Is Nothing OrElse f.IsDisposed Then Return
+
+        ' safe: BeginInvoke posts to the form's thread
+        f.BeginInvoke(New Action(Sub() action(f)))
+    End Sub
+
+    ' Synchronous: call a Func on the WinForms instance thread and get a result
+    Public Function Invoke(Of T)(func As Func(Of ProgBarGui_AutoCast, T)) As T
+        Dim f = ProgBarGui_AutoCast.Instance
+        If f Is Nothing OrElse f.IsDisposed Then
+            Return Nothing
+        End If
+
+        If f.InvokeRequired Then
+            ' Wrap the call in a parameterless Func(Of T) so we can pass it to Control.Invoke
+            Dim wrapper As New Func(Of T)(Function() func(f))
+            Return DirectCast(f.Invoke(wrapper), T)
+        Else
+            Return func(f)
+        End If
+    End Function
+
+    Public Function InvokeAsync(Of T)(func As Func(Of ProgBarGui_AutoCast, T)) As Task(Of T)
+
+        Dim f = ProgBarGui_AutoCast.Instance
+
+        If f Is Nothing OrElse f.IsDisposed Then
+            Return Task.FromException(Of T)(
+            New InvalidOperationException("AutoCast GUI has not been started.")
+        )
+        End If
+
+        Dim tcs As New TaskCompletionSource(Of T)(
+        TaskCreationOptions.RunContinuationsAsynchronously
+    )
+
+        Dim action As Action =
+        Sub()
+            Try
+                Dim result = func(f)
+                tcs.SetResult(result)
+            Catch ex As Exception
+                tcs.SetException(ex)
+            End Try
+        End Sub
+
+        If f.InvokeRequired Then
+            f.BeginInvoke(action)
+        Else
+            action()
+        End If
+
+        Return tcs.Task
+    End Function
+
+End Class
+
 
 Public Module LoadTaskTimer
 

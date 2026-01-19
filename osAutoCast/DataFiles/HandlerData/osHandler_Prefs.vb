@@ -1,8 +1,11 @@
-﻿Imports System.ComponentModel
+﻿Imports System.Linq.Expressions
+Imports System.Collections.Concurrent
+Imports System.ComponentModel
 Imports System.Data
 Imports System.IO
 Imports System.Reflection
 Imports System.Windows.Forms
+Imports System.Windows.Threading
 Imports osAutoCast.DataTypeLib.PrefBinder
 
 Public Class osPrefStore
@@ -312,12 +315,29 @@ Public Class osPrefTracker(Of T As {Class, INotifyPropertyChanged})
 
     Public Sub New(target As T)
         _prefTarget = target
-        PreservePrefs()
+        '  PreservePrefs()
     End Sub
 
     Public Sub PreservePrefs()
         _originalSnapshot = GetPropertySnapshot(_prefTarget)
     End Sub
+
+    Public Async Function PreservePrefs(isN As Boolean) As Task
+        _originalSnapshot = Await GetPropertySnapshotFastAsync(_prefTarget, PrepDispatcher())
+    End Function
+
+    Private ReadOnly GetterCache As New ConcurrentDictionary(Of PropertyInfo, Func(Of Object, Object))()
+
+    Private Function GetFastGetter(p As PropertyInfo) As Func(Of Object, Object)
+        Return GetterCache.GetOrAdd(p,
+        Function(prop)
+            Dim inst = Expression.Parameter(GetType(Object), "i")
+            Dim castInst = Expression.Convert(inst, prop.DeclaringType)
+            Dim propAccess = Expression.Property(castInst, prop)
+            Dim castResult = Expression.Convert(propAccess, GetType(Object))
+            Return Expression.Lambda(Of Func(Of Object, Object))(castResult, inst).Compile()
+        End Function)
+    End Function
 
     Public Sub Revert()
         If _originalSnapshot Is Nothing Then Exit Sub
@@ -349,6 +369,60 @@ Public Class osPrefTracker(Of T As {Class, INotifyPropertyChanged})
 
         Return dict
     End Function
+
+    Public Async Function GetPropertySnapshotFastAsync(
+    instance As T,
+    dispatcher As Dispatcher
+) As Task(Of Dictionary(Of String, Object))
+
+        Dim props = Await Task.Run(Function()
+                                       Return ListPrefProps(instance).
+                                       Where(Function(p) p.CanRead).
+                                       ToArray()
+                                   End Function)
+
+        Return Await dispatcher.InvokeAsync(Function()
+                                                Dim dict As New Dictionary(Of String, Object)
+
+                                                For Each p In props
+                                                    Try
+                                                        dict(p.Name) = GetFastGetter(p)(instance)
+                                                    Catch ex As Exception
+                                                        dict(p.Name) = ex
+                                                    End Try
+                                                Next
+
+                                                Return dict
+                                            End Function, DispatcherPriority.Render)
+    End Function
+
+    'Public Async Function GetPropertySnapshotAsync(instance As T, dispatcher As Dispatcher) As Task(Of Dictionary(Of String, Object))
+
+    '    If instance Is Nothing Then Throw New ArgumentNullException(NameOf(instance))
+    '    If dispatcher Is Nothing Then Throw New ArgumentNullException(NameOf(dispatcher))
+
+    '    ' 1️⃣ Collect property metadata off the UI thread
+    '    Dim props = Await Task.Run(Function()
+    '                                   Return ListPrefProps(instance).
+    '                                   Where(Function(p) p.CanRead).
+    '                                   ToArray()
+    '                               End Function).ConfigureAwait(False)
+
+    '    ' 2️⃣ Read ALL property values on the UI thread in ONE hop
+    '    Return Await dispatcher.InvokeAsync(Function()
+    '                                            Dim dict As New Dictionary(Of String, Object)
+
+    '                                            For Each p In props
+    '                                                Try
+    '                                                    dict(p.Name) = p.GetValue(instance)
+    '                                                Catch ex As Exception
+    '                                                    dict(p.Name) = ex ' or Nothing
+    '                                                End Try
+    '                                            Next
+
+    '                                            Return dict
+    '                                        End Function, DispatcherPriority.Background)
+    'End Function
 
     Private Function ListPrefProps(instance As T) As PropertyInfo()
         Return instance.GetType().GetProperties(BindingFlags.Public Or BindingFlags.Instance)

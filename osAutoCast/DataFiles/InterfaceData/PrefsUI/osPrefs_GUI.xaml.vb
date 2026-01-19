@@ -67,9 +67,10 @@ Public Class osPrefs_GUI
         Me.Hide()
     End Sub
 
-    Public Sub ActivatePrefTracker()
+    Public Async Function ActivatePrefTracker() As Task
         objOsPrefTracker = New osPrefTracker(Of osPrefData)(osPrefData.Data)
-    End Sub
+        Await objOsPrefTracker.PreservePrefs(True)
+    End Function
 
     Public Sub PrepPrefVis()
         InitVisual(PrefUI_Open)
@@ -261,9 +262,9 @@ Public Class osPrefs_GUI
                      SWP_NOMOVE Or SWP_NOSIZE Or SWP_NOACTIVATE)
     End Sub
 
-    Private Sub osPrefs_GUI_Loaded(sender As Object, e As RoutedEventArgs) Handles Me.Loaded
-        Me.DataContext = osPrefData.Data
-    End Sub
+    'Private Sub osPrefs_GUI_Loaded(sender As Object, e As RoutedEventArgs) Handles Me.Loaded
+    '    Me.DataContext = osPrefData.Data
+    'End Sub
 
     Private Sub osPrefsBtnClk_SavePrefs(sender As Object, e As RoutedEventArgs) Handles osPrefsBtn_Save.Click
         If objOsPrefTracker.HasChanges Then

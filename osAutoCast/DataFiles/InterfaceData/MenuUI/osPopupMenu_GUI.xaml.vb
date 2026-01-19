@@ -206,112 +206,34 @@ Public Class osPopupMenu_GUI
     End Sub
 
     Public Async Function PreloadVisualData() As Task
-        ' call this after ResourceDictionary is merged (preferably during startup)
+        Await Task.Run(
+            Async Function()
+                For Each kvp In idxPopupVisuals
+                    Dim visType = kvp.Key
+                    Dim template As Storyboard = Await PrepDispatcher().InvokeAsync(
+                        Function()
 
-        Await Task.Run(Async Function()
-                           For Each kvp In idxPopupVisuals
+                            Dim baseSb = LoadVis_Set(visType)
+                            If baseSb Is Nothing Then Return Nothing
 
-                               Dim visType = kvp.Key
-                               '    Dim tcs As New TaskCompletionSource(Of Storyboard)()
+                            Dim inst = TryCast(baseSb.Clone(), Storyboard)
+                            If inst Is Nothing Then Return Nothing
 
-                               ' Post work on the UI dispatcher at Background priority.
-                               Dim template As Storyboard =
-                               Await PrepDispatcher().InvokeAsync(Function()
+                            Timeline.SetDesiredFrameRate(inst, 60)
+                            Storyboard.SetTarget(inst, objContainer)
+                            ' Freeze so future Clone() is cheap
+                            If TypeOf inst Is Freezable AndAlso Not inst.IsFrozen Then
+                                CType(inst, Freezable).Freeze()
+                            End If
 
-                                                                      Dim baseSb = LoadVis_Set(visType)
-                                                                      If baseSb Is Nothing Then Return Nothing
+                            Return inst
+                        End Function, DispatcherPriority.Render)
 
-                                                                      Dim inst = TryCast(baseSb.Clone(), Storyboard)
-                                                                      If inst Is Nothing Then Return Nothing
-
-                                                                      Timeline.SetDesiredFrameRate(inst, 60)
-                                                                      Storyboard.SetTarget(inst, objContainer)
-                                                                      ' Freeze so future Clone() is cheap
-                                                                      If TypeOf inst Is Freezable AndAlso Not inst.IsFrozen Then
-                                                                          CType(inst, Freezable).Freeze()
-                                                                      End If
-
-                                                                      Return inst
-
-                                                                  End Function,
-                                                            DispatcherPriority.Render)
-
-                               If template IsNot Nothing Then
-                                   _visDataIdx(visType) = template
-                               End If
-                           Next
-                       End Function)
-        'Await PrepDispatcher().InvokeAsync(Function()
-        '                                       For Each kvp In idxPopupVisuals
-
-        '                                           Dim visType = kvp.Key
-        '                                           '    Dim tcs As New TaskCompletionSource(Of Storyboard)()
-
-        '                                           ' Post work on the UI dispatcher at Background priority.
-
-
-
-        '                                           Dim baseSb = LoadVis_Set(visType)
-        '                                           If baseSb Is Nothing Then Return Nothing
-
-        '                                           Dim inst = TryCast(baseSb.Clone(), Storyboard)
-        '                                           If inst Is Nothing Then Return Nothing
-
-        '                                           Timeline.SetDesiredFrameRate(inst, 60)
-        '                                           Storyboard.SetTarget(inst, objContainer)
-        '                                           ' Freeze so future Clone() is cheap
-        '                                           If TypeOf inst Is Freezable AndAlso Not inst.IsFrozen Then
-        '                                               CType(inst, Freezable).Freeze()
-        '                                           End If
-
-        '                                           Dim template As Storyboard = inst
-
-
-
-        '                                           If template IsNot Nothing Then
-        '                                               _visDataIdx(visType) = template
-        '                                           End If
-
-
-        '                                           ' Await the work but guard with a timeout so we don't hang forever.
-
-
-        '                                           ' If the posted action faulted, this await will rethrow the inner exception — catch it to log
-        '                                           'Dim templateResult As Storyboard = Nothing
-        '                                           'Try
-        '                                           '    templateResult = Await tcs.Task
-        '                                           'Catch ex As Exception
-        '                                           '    Debug.WriteLine($"Prewarm failed for {visType}: {ex}")
-        '                                           '    Continue For
-        '                                           'End Try
-
-        '                                           'If templateResult IsNot Nothing Then
-        '                                           '    _visDataIdx(visType) = templateResult
-        '                                           'End If
-        '                                       Next
-        '                                   End Function,
-        '                             DispatcherPriority.Render)
-
-
-        ' Await the work but guard with a timeout so we don't hang forever.
-
-
-        ' If the posted action faulted, this await will rethrow the inner exception — catch it to log
-        'Dim templateResult As Storyboard = Nothing
-        'Try
-        '    templateResult = Await tcs.Task
-        'Catch ex As Exception
-        '    Debug.WriteLine($"Prewarm failed for {visType}: {ex}")
-        '    Continue For
-        'End Try
-
-        'If templateResult IsNot Nothing Then
-        '    _visDataIdx(visType) = templateResult
-        'End If
-
-
-
-
+                    If template IsNot Nothing Then
+                        _visDataIdx(visType) = template
+                    End If
+                Next
+            End Function)
     End Function
 
     Public Sub EstablishVisual(objVisType As PopupVisualType, ByRef objSetVisual As Storyboard)
