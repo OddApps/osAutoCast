@@ -1,8 +1,7 @@
 ﻿<Window x:Class="osPopupMenuOverlay_GUI" x:Name="winPopupMenuOverlay" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" 
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" Focusable="False" mc:Ignorable="d" Title=""
-        WindowStyle="None" AllowsTransparency="True" Topmost="True" ShowInTaskbar="False" ResizeMode="NoResize" CacheMode="BitmapCache"
-        WindowStartupLocation="Manual" Background="Transparent" RenderOptions.BitmapScalingMode="LowQuality" RenderOptions.EdgeMode="Aliased"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:d="http://schemas.microsoft.com/expression/blend/2008" mc:Ignorable="d" 
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" Focusable="False" Title="" WindowStartupLocation="Manual"
+        WindowStyle="None" AllowsTransparency="True" Topmost="True" ShowInTaskbar="False" ResizeMode="NoResize" Background="Transparent"
         Width="{x:Static SystemParameters.VirtualScreenWidth}" Height="{x:Static SystemParameters.VirtualScreenHeight}"
         Left="{x:Static SystemParameters.VirtualScreenLeft}" Top="{x:Static SystemParameters.VirtualScreenTop}">
     
@@ -53,11 +52,9 @@
         </Storyboard>
     </Window.Resources>
     
-    <Grid>
         <Rectangle x:Name="OverlayBackground" Fill="#FF000000" Opacity="0.0"
-                   HorizontalAlignment="Stretch" VerticalAlignment="Stretch" 
+                   HorizontalAlignment="Stretch" VerticalAlignment="Stretch" IsHitTestVisible="False"
                    CacheMode="BitmapCache" RenderOptions.BitmapScalingMode="LowQuality"
-                   RenderOptions.EdgeMode="Aliased"/>
-    </Grid>
+                   RenderOptions.EdgeMode="Aliased" SnapsToDevicePixels="True" UseLayoutRounding="True"/>
 
 </Window>

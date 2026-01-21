@@ -24,44 +24,8 @@ Namespace osLoadingElements
 
 #Region "Fields for fast/slow animation & cancellation"
 
-        Private _animVersion As Integer = 0
-
-        Private _cts As CancellationTokenSource = Nothing
-        Private ReadOnly _lockObj As New Object()
-        Private _currentSlowTarget As Double? = Nothing
-
-        Private ReadOnly _fastDuration As TimeSpan = TimeSpan.FromMilliseconds(410)
-        Private ReadOnly _slowDuration As TimeSpan = TimeSpan.FromSeconds(4)
-
-        Private ProgDuration_Set As Duration = New Duration(_fastDuration)
-        Private ProgDuration_Next As Duration = New Duration(_slowDuration)
-
         Public Event LoadProgComplete As EventHandler
-        Private idxLoadAniTasks As New List(Of TaskCompletionSource(Of Boolean))
-
         Public Property onLastTask As Boolean = False
-
-        Private ReadOnly idxProgLoadNextValues As New Dictionary(Of LoadingProgStatus, osLoadProgData) From
-            {
-                {LoadStatus_StartUp, New osLoadProgData(5, 25)},
-                {LoadStatus_Init, New osLoadProgData(30, 65)},
-                {LoadStatus_PrefPrep, New osLoadProgData(70, 105)},
-                {LoadStatus_LoadingUI, New osLoadProgData(110, 145)},
-                {LoadStatus_ApplyConfig, New osLoadProgData(150, 185)},
-                {LoadStatus_StartingSvc, New osLoadProgData(190, 225)},
-                {LoadStatus_Starting, New osLoadProgData(230, 250, True)}
-        }
-
-        Private _renderingActive As Boolean = False
-        Private _renderSw As Stopwatch = New Stopwatch()
-        Private _renderFrom As Double = 0
-        Private _renderTo As Double = 0
-        Private _renderDurationSeconds As Double = 0
-        Private _renderEasing As IEasingFunction = New ExponentialEase() With {
-            .EasingMode = EasingMode.EaseOut
-        }
-        Private _renderVersion As Integer = 0
-        Private _renderCompletion As Action = Nothing
 
 #End Region
 
@@ -308,35 +272,6 @@ Namespace osLoadingElements
                 _filledSignaled = False
             End If
         End Sub
-
-        Public Function MonitorLoadProgress(Optional ct As CancellationToken = Nothing) As Task(Of Boolean)
-            If _filledSignaled Then
-                Return Task.FromResult(True) : End If
-
-            Dim tcs = New TaskCompletionSource(Of Boolean)(TaskCreationOptions.RunContinuationsAsynchronously)
-
-            SyncLock idxLoadAniTasks
-                idxLoadAniTasks.Add(tcs)
-            End SyncLock
-
-            If Not ct = Nothing AndAlso ct.CanBeCanceled Then
-                Dim reg = ct.Register(
-                    Sub()
-                        SyncLock idxLoadAniTasks
-                            If idxLoadAniTasks.Remove(tcs) Then
-                                tcs.TrySetCanceled()
-                            End If
-                        End SyncLock
-                    End Sub)
-
-                tcs.Task.ContinueWith(
-                    Sub()
-                        reg.Dispose()
-                    End Sub, TaskScheduler.Default)
-            End If
-
-            Return tcs.Task
-        End Function
 
 #End Region
 

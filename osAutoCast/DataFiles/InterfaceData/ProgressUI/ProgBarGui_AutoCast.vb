@@ -139,6 +139,16 @@ Public Class ProgBarGui_AutoCast
     Private colorProgress As Single = 0.0F
     Private Const ColorLerpSpeed As Single = 0.1F
 
+    Private _isResetting As Boolean = False
+    Public Property isResetting As Boolean
+        Get
+            Return _isResetting
+        End Get
+        Set(value As Boolean)
+            _isResetting = value
+        End Set
+    End Property
+
     Private _displayProgressText As Boolean = False
     Public Property DisplayProgressText As Boolean
         Get
@@ -217,12 +227,6 @@ Public Class ProgBarGui_AutoCast
     Public Sub New(pW As Integer, pH As Integer, pDuration As TimeSpan, pEase As Func(Of Double, Double), Optional isFirstLoad As Boolean = False)
         progSettingsVQ = ApplySetingsVQ()
         SetVisualQuality()
-
-        If VisQuality Then
-            '      If Not isFirstLoad Then
-            pW += 4 : pH += 4
-            '      End If
-        End If
 
         InitializeComponent(pW, pH)
 
@@ -1165,7 +1169,7 @@ Public Class ProgBarGui_AutoCast
         End If
 
         _extReg.Dispose()
-        ProgressCompleteEvent.Dispose()
+        ProgressCompleteEvent?.Dispose()
     End Sub
 
     Private Sub GenerateSwapChain(objProgFactory As DXGI.Factory2, ByRef objSwapChain As SwapChain1)
@@ -1259,8 +1263,6 @@ Public Class ProgBarGui_AutoCast
 
         progContext.OutputMerger.SetTargets(accumRTV)
         progContext.ClearRenderTargetView(accumRTV, progColor_BG)
-
-
     End Sub
 
     Private Sub ApplyColor(pColorObj As ProgColorObj, ByRef objColor As osProgColor)
@@ -1307,7 +1309,12 @@ Public Class ProgBarGui_AutoCast
 
     Protected Overrides Sub OnClosing(e As CancelEventArgs)
         MyBase.OnFormClosing(e)
+
         UnsetProgressEvents()
+    End Sub
+
+    Public Sub DisposeForReset()
+
     End Sub
 
     Protected Overrides Sub OnPaintBackground(e As PaintEventArgs)

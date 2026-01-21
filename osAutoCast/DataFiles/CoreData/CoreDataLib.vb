@@ -136,6 +136,31 @@ Public NotInheritable Class CoreDataLib
         End Select
     End Function
 
+    Public Shared Function FetchProgSizeReport(isProgType As TriggerType, chkVisQ As Boolean) As Dictionary(Of String, Integer)
+        Select Case isProgType
+            Case AutoCast
+                osFuncLib_Progress.SetProgBlockData(TriggerType.AutoCast)
+
+                With osPrefLib.osPreferenceLib.Data
+                    Dim progW = .MainOpts_acProgW
+                    Dim progH = .MainOpts_acProgH
+
+                    If CoreDataLib.VerifyVisQualityPref() Then
+                        progW += 4 : progH += 4
+                    End If
+
+                    Return New Dictionary(Of String, Integer) From {
+                        {"pH", progH}, {"pW", progW}
+                    }
+                End With
+            Case AutoPass
+                Return New Dictionary(Of String, Integer) From {
+                        {"pH", osPrefLib.osPreferenceLib.Data.MainOpts_apProgH},
+                        {"pW", osPrefLib.osPreferenceLib.Data.MainOpts_apProgW}
+                    }
+        End Select
+    End Function
+
     Public Shared Function GetProgSizeReport(isProgType As TriggerType) As ProgSizeReport
         Select Case isProgType
             Case AutoCast

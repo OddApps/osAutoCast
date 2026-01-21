@@ -18,8 +18,6 @@ Imports osKeyTime = System.Windows.Media.Animation.KeyTime
 
 Public Class osPrefs_GUI
 
-
-
     Private Function GetVisualState(objVisType As PrefUI_State) As String
         Return idxOsPrefVisuals.First(
             Function(visKey)
@@ -34,11 +32,6 @@ Public Class osPrefs_GUI
     Private Function FetchPrefVis(objVisResource As Style, objVisType As PrefUI_State) As Storyboard
         Return AllocVis(Me.Resources(GetVisualState(objVisType)))
     End Function
-
-    'Private Function EstablishVisual(objVisType As PrefUI_State) As Storyboard
-    '    Dim objLoadVis = FetchPrefVis(osPrefRes, objVisType)
-    '    Return objLoadVis.Clone()
-    'End Function
 
     Private Function SetVisual(objVisType As PrefUI_State) As Storyboard
         Return If(objVisType = PrefUI_Open,
@@ -69,41 +62,26 @@ Public Class osPrefs_GUI
         Me.Hide()
     End Sub
 
-    Public Sub ActivatePrefTracker()
-        objOsPrefTracker = New osPrefLib.osPrefMonitor(Of osPrefData)()
+    Private Function CreatePrefMonitor() As osPrefLib.osPrefMonitor(Of osPrefData)
+        Return New osPrefLib.osPrefMonitor(Of osPrefData)
+    End Function
+
+    Private Sub InitializePrefMonitor()
         objOsPrefTracker.Attach(DirectCast(Me.DataContext, osPrefData))
+    End Sub
+
+    Public Sub ActivatePrefTracker()
+        objOsPrefTracker = CreatePrefMonitor()
+        InitializePrefMonitor()
         'objOsPrefTracker = New osPrefTracker(Of osPrefData)(osPrefData.Data)
         'Await objOsPrefTracker.PreservePrefs(True)
     End Sub
 
     Public Sub PrepPrefVis()
         InitVisual(PrefUI_Open)
-
-        'Dim bab = osVisQualityAdapter.InitAdapter(VisTypeAdapter.VisAdapter_Opts, visPrefUI_Open,
-        '                                          True, True, prefContainer, osTitleCover, osContentContainer)
-
-        'Dim bab = osVisQualityAdapter.AttachAndApplyAdapter(visPrefUI_Open, True,
-        'prefContainer, osTitleCover, osContentContainer)
-        'Dim a = osVisQualityAdapter.AttachAndApplyAdapter(visPrefUI_Open, True,
-        '                                                  prefContainer, osTitleCover, osContentContainer)
-        '  ActivatePrefTracker()
     End Sub
 
-    Public Sub DisplayPrefsUI()
-        Dim a = PrepDispatcher().BeginInvoke(DispatcherPriority.Render,
-            Sub() ShowPrefsUICore())
-    End Sub
-
-    Public Sub DisplayPrefsUI(isN As Boolean)
-        With Me
-            osPrefsIU_Present()
-            .Topmost = True
-        End With
-
-        visPrefUI_Open.Begin(prefContainer)
-    End Sub
-
-    Public Sub DisplayPrefsUI(isN As Boolean, objAwaitClose As TaskCompletionSource(Of Boolean))
+    Public Sub DisplayPrefsUI(objAwaitClose As TaskCompletionSource(Of Boolean))
         objCloseMonitor = objAwaitClose
         visPrefUI_Open.Begin(prefContainer, True)
     End Sub
@@ -183,19 +161,6 @@ Public Class osPrefs_GUI
         AddHandler visPrefUI_Open.Completed, evtComplete_Open
     End Sub
 
-    'Private Sub SetVisualQuality(objVMode As VisRenderMode)
-    '    With New osVisRenderMode(objVMode)
-    '        prefContainer.CacheMode = .visCache
-    '        osContentContainer.CacheMode = .visCache
-
-    '        RenderOptions.SetBitmapScalingMode(osContentContainer, .visBitMap)
-    '        RenderOptions.SetBitmapScalingMode(prefContainer, .visBitMap)
-
-    '        RenderOptions.SetEdgeMode(prefContainer, .visEdges)
-    '        RenderOptions.SetEdgeMode(osContentContainer, .visEdges)
-    '    End With
-    'End Sub
-
     Private Sub SetVisualMode(valPrefState As PrefUI_State)
         Select Case valPrefState
             Case PrefUI_Open
@@ -240,8 +205,7 @@ Public Class osPrefs_GUI
             Dim chkDoSave = GetResponse(PromptType.Prefs_Save)
 
             If chkDoSave = isYes Then
-                osPrefDataIdx.SavePrefsFile()
-                isSaved = True
+                TriggerPrefSave()
             End If
         End If
     End Sub
@@ -255,6 +219,8 @@ Public Class osPrefs_GUI
     Private Sub TriggerPrefSave()
         isSaved = True
         osPrefDataIdx.SavePrefsFile()
+
+        Dim objTask_ResetAutoCast = osHandler_UI.CloseAndResetAutoCast(True)
     End Sub
 
     Private Function isMouseDown(e As MouseButtonEventArgs) As Boolean
@@ -340,7 +306,7 @@ Partial Public Class osPrefs_GUI
     Private Const SWP_NOSIZE As UInteger = &H1
     Private Const SWP_NOACTIVATE As UInteger = &H10
 
-    Public visPrefUI_Open As Storyboard = Nothing
+    Public visPrefUI_Open As New Storyboard
     Public visPrefUI_Close As Storyboard = Nothing
 
     Private idxOsPrefVisuals As New Dictionary(Of PrefUI_State, String) From {

@@ -8,7 +8,80 @@
         Style="{StaticResource TrayMenuStyle}">
     
     <Window.Resources>
-        <Storyboard x:Key="TrayMenuVis_Display">
+      <Storyboard x:Key="TrayMenuVis_Display">
+    <DoubleAnimationUsingKeyFrames Storyboard.TargetName="TrayMenuOutlineRender"
+                                   Storyboard.TargetProperty="ScaleX"
+                                   FillBehavior="HoldEnd">
+        <EasingDoubleKeyFrame KeyTime="00:00:00" Value="0" />
+        <EasingDoubleKeyFrame KeyTime="00:00:00.450" Value="1">
+            <EasingDoubleKeyFrame.EasingFunction>
+                    <QuadraticEase EasingMode="EaseInOut" />
+            </EasingDoubleKeyFrame.EasingFunction>
+        </EasingDoubleKeyFrame>
+    </DoubleAnimationUsingKeyFrames>
+
+    <DoubleAnimationUsingKeyFrames Storyboard.TargetName="TrayMenuOutlineRender"
+                                   Storyboard.TargetProperty="ScaleY"
+                                   FillBehavior="HoldEnd">
+        <EasingDoubleKeyFrame KeyTime="00:00:00" Value="0" />
+        <EasingDoubleKeyFrame KeyTime="00:00:00.450" Value="1">
+            <EasingDoubleKeyFrame.EasingFunction>
+                    <QuadraticEase EasingMode="EaseInOut" />
+            </EasingDoubleKeyFrame.EasingFunction>
+        </EasingDoubleKeyFrame>
+    </DoubleAnimationUsingKeyFrames>
+
+    <DoubleAnimationUsingKeyFrames Storyboard.TargetName="TrayMenuOutline"
+                                   Storyboard.TargetProperty="(UIElement.Opacity)"
+                                   FillBehavior="HoldEnd">
+        <EasingDoubleKeyFrame KeyTime="00:00:00" Value="0" />
+        <EasingDoubleKeyFrame KeyTime="00:00:00.450" Value="1">
+            <EasingDoubleKeyFrame.EasingFunction>
+                    <QuadraticEase EasingMode="EaseInOut" />
+            </EasingDoubleKeyFrame.EasingFunction>
+        </EasingDoubleKeyFrame>
+    </DoubleAnimationUsingKeyFrames>
+</Storyboard>
+
+<Storyboard x:Key="TrayMenuVis_Close">
+    <DoubleAnimationUsingKeyFrames Storyboard.TargetName="TrayMenuOutlineRender"
+                                   Storyboard.TargetProperty="ScaleX"
+                                   FillBehavior="HoldEnd">
+        <EasingDoubleKeyFrame KeyTime="00:00:00" Value="1" />
+        <EasingDoubleKeyFrame KeyTime="00:00:00.575" Value="0">
+            <EasingDoubleKeyFrame.EasingFunction>
+                <!-- start slower so it's not snappy -->
+                    <QuadraticEase EasingMode="EaseInOut" />
+            </EasingDoubleKeyFrame.EasingFunction>
+        </EasingDoubleKeyFrame>
+    </DoubleAnimationUsingKeyFrames>
+
+    <DoubleAnimationUsingKeyFrames Storyboard.TargetName="TrayMenuOutlineRender"
+                                   Storyboard.TargetProperty="ScaleY"
+                                   FillBehavior="HoldEnd">
+        <EasingDoubleKeyFrame KeyTime="00:00:00" Value="1" />
+        <EasingDoubleKeyFrame KeyTime="00:00:00.575" Value="0">
+            <EasingDoubleKeyFrame.EasingFunction>
+                    <QuadraticEase EasingMode="EaseInOut" />
+            </EasingDoubleKeyFrame.EasingFunction>
+        </EasingDoubleKeyFrame>
+    </DoubleAnimationUsingKeyFrames>
+
+    <DoubleAnimationUsingKeyFrames Storyboard.TargetName="TrayMenuOutline"
+                                   Storyboard.TargetProperty="(UIElement.Opacity)"
+                                   FillBehavior="HoldEnd">
+        <EasingDoubleKeyFrame KeyTime="00:00:00" Value="1" />
+        <EasingDoubleKeyFrame KeyTime="00:00:00.575" Value="0">
+            <EasingDoubleKeyFrame.EasingFunction>
+                <!-- opacity leads/smooths out the perceived timing -->
+                    <QuadraticEase EasingMode="EaseInOut" />
+            </EasingDoubleKeyFrame.EasingFunction>
+        </EasingDoubleKeyFrame>
+    </DoubleAnimationUsingKeyFrames>
+</Storyboard>
+
+
+        <!--<Storyboard x:Key="TrayMenuVis_Display">
             <DoubleAnimation Storyboard.TargetName="TrayMenuOutlineRender"
                              Storyboard.TargetProperty="ScaleX"
                              From="0" To="1" Duration="0:0:0.45"
@@ -59,7 +132,7 @@
                     <QuadraticEase EasingMode="EaseOut" />
                 </DoubleAnimation.EasingFunction>
             </DoubleAnimation>
-        </Storyboard>
+        </Storyboard>-->
     </Window.Resources>
 
     <Grid x:Name="TrayMenuOutline" Style="{StaticResource TrayMenuContainerOutlineStyle}">

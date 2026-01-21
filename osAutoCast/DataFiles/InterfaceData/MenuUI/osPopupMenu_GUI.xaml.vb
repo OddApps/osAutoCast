@@ -9,6 +9,7 @@ Imports osAutoCast.DataTypeLib.PopupVisualType
 Imports osAutoCast.DataTypeLib.PromptResponse
 Imports osAutoCast.DataTypeLib.VisualAction
 Imports osAutoCast.DataTypeLib.PopupCloseAction
+Imports osAutoCast.DataTypeLib.VisTypeAdapter
 Imports osAutoCast.GameMenuOpts
 Imports osAutoCast.osStyle
 Imports osAutoCast.osControls
@@ -312,16 +313,7 @@ Public Class osPopupMenu_GUI
     Public Sub TriggerPopupMenu(isN As Boolean)
         If Not _hasAnimated Then
             _hasAnimated = True
-
-            '  BeginOpenTask(objTask_Open)
-
-            '  InitTransitionVisuals(aniOpen, PopupVisual_Open, VisualStarted)
-            '   objAnimation_Open.Seek(TimeSpan.FromMilliseconds(0))
-
             objAnimation_Open.Begin(objContainer, True)
-
-            '  Await objTask_Open.Task
-            '   SetVisualMode(aniOpen)
         End If
     End Sub
 
@@ -426,9 +418,11 @@ Public Class osPopupMenu_GUI
     End Sub
 
     Public Sub PrepPopupMenu()
-        'Me.Show()
-        'Me.Hide()
+        Me.Show()
+        Me.Hide()
 
+        Dim objTask_VisAdapter = osVisQualityAdapter.InitAdapter(VisAdapter_PopupMenu,
+                                                                 Me.objAnimation_Open, True, True, 60, Me.objContainer)
         ShowGameMenuItem()
     End Sub
 

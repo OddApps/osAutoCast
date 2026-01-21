@@ -1795,31 +1795,6 @@ Public Module osPopupMenuLib
         End With
     End Sub
 
-    Public Function GeneratePopupMenuGUI() As Func(Of osPopupMenu_GUI)
-        Return Function()
-                   Return PrepDispatcher().Invoke(
-                       Function()
-                           Dim objWin_PopupMenu = New osPopupMenu_GUI()
-                           AddHandler objWin_PopupMenu.Closed, AddressOf osHandler_UI.PrepDispatch
-
-                           Return objWin_PopupMenu
-                       End Function)
-               End Function
-    End Function
-
-    Public Async Function GeneratePopupMenuGUIAsync() As Task(Of osPopupMenu_GUI)
-        Return Await PrepDispatcher().InvokeAsync(
-        Function()
-            Dim objWin_PopupMenu = New osPopupMenu_GUI()
-            AddHandler objWin_PopupMenu.Closed,
-                       AddressOf osHandler_UI.PrepDispatch
-            Return objWin_PopupMenu
-        End Function,
-        DispatcherPriority.Background
-    )
-    End Function
-
-
     Public Function GeneratePopupMenuOverlayGUI(Optional isFromTray As Boolean = False) As Func(Of osPopupMenuOverlay_GUI)
         Return Function()
                    Return PrepDispatcher().Invoke(

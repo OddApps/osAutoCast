@@ -95,7 +95,6 @@ Public Class osPopupMenuOverlay_GUI
 
         objAnimation_Open = Nothing
         OverlayOpenComplete(objTask_Open)
-
     End Sub
 
     Private Sub BeginClosingTask(ByRef objCloseResult As TaskCompletionSource(Of Boolean))
@@ -129,12 +128,8 @@ Public Class osPopupMenuOverlay_GUI
     End Sub
 
     Private Function EstablishVisual(objContainer As FrameworkElement, objVisType As OverlayVisualType) As Storyboard
-        Dim sbMain = TryCast(Me.Resources(GetVisualKey(objVisType)), Storyboard)
-
-        Dim objOverlayVis As Storyboard = sbMain.Clone()
-
-        Storyboard.SetTarget(objOverlayVis, objContainer)
-        Storyboard.SetDesiredFrameRate(objOverlayVis, 40)
+        Dim objOverlayVis = TryCast(Me.Resources(GetVisualKey(objVisType)), Storyboard)
+        Timeline.SetDesiredFrameRate(objOverlayVis, 45)
 
         Return objOverlayVis
     End Function
@@ -157,32 +152,11 @@ Public Class osPopupMenuOverlay_GUI
         End Select
     End Sub
 
-    Public Async Function InitOverlayClose(objVisType As OverlayVisualType) As Task
-        BeginClosingTask(objTask_Close)
-        InitTransitionVisuals(AnimationType.aniClose, objVisType)
-
-        Await objTask_Close.Task
-    End Function
-
     Public Sub InitOverlayClose(objVisType As OverlayVisualType, isN As Boolean)
-        ' BeginClosingTask(objTask_Close)
         InitTransitionVisuals(aniClose, objVisType)
 
         objAnimation_Close.Begin()
     End Sub
-
-    Private Async Sub TriggerVisuals(objOverlayWindow As FrameworkElement, objVisualData As Storyboard)
-        Await objOverlayWindow.
-            Dispatcher.BeginInvoke(
-            Sub()
-                Try
-                    objVisualData.Begin(objOverlayWindow)
-                Catch ex As Exception
-                    Debug.WriteLine("Failed to begin storyboard: " & ex.Message)
-                End Try
-            End Sub, DispatcherPriority.Render)
-    End Sub
-
 
 End Class
 

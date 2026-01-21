@@ -172,6 +172,7 @@
     </ApplicationDefinition>
     <Compile Include="DataFiles\ControlData\osControlLib.vb" />
     <Compile Include="DataFiles\CoreData\osLoadTaskLib.vb" />
+    <Compile Include="DataFiles\HandlerData\osHandler_AutoCast.vb" />
     <Compile Include="DataFiles\HandlerData\osHandler_ProgressBar.vb" />
     <Compile Include="DataFiles\HandlerData\osHandler_Graphics.vb" />
     <Compile Include="DataFiles\HandlerData\osHandler_Loader.vb" />
