@@ -11,6 +11,7 @@ Imports osAutoCast.DataTypeLib.VisualAction
 Imports osAutoCast.DataTypeLib.PopupCloseAction
 Imports osAutoCast.GameMenuOpts
 Imports osAutoCast.osStyle
+Imports osAutoCast.osControls
 
 #Disable Warning BC42353
 #Disable Warning BC42104
@@ -24,7 +25,7 @@ Public Class osPopupMenu_GUI
     Private objTask_Closing As TaskCompletionSource(Of Boolean)
     Private objTask_Open As TaskCompletionSource(Of Boolean)
 
-    Public objAnimation_Open As Storyboard = Nothing
+    Public objAnimation_Open As New Storyboard
     Private objAnimation_Close As Storyboard = Nothing
 
     Private idxPopupVisuals As New Dictionary(Of PopupVisualType, String) From {
@@ -243,7 +244,7 @@ Public Class osPopupMenu_GUI
         '    Timeline.SetDesiredFrameRate(objAnimation, 60)
         '    Storyboard.SetTarget(objAnimation, objContainer)
         'Next
-        Storyboard.SetDesiredFrameRate(objPopupVis, 60)
+        '   Storyboard.SetDesiredFrameRate(objPopupVis, 60)
 
 
         objSetVisual = objPopupVis
@@ -266,10 +267,9 @@ Public Class osPopupMenu_GUI
                 TriggerVisuals(objAnimation_Open, True)
             Case aniClose
                 PrepTransitionVisuals(objAniType, objVisType, objVisAction)
-                Dim aa = osVisQualityAdapter.EstablishVisDataSettings(VisTypeAdapter.VisAdapter_PopupMenu, VisRenderMode.VisMode_LowQuality, True)
+                Dim objTask_VisAdapter = osVisQualityAdapter.EstablishVisDataSettings(VisTypeAdapter.
+                                                                                      VisAdapter_PopupMenu, VisRenderMode.VisMode_LowQuality, True)
                 objAnimation_Close.Begin(objContainer, True)
-
-                '     TriggerVisuals(objAnimation_Close)
         End Select
     End Sub
 
@@ -277,8 +277,8 @@ Public Class osPopupMenu_GUI
         Select Case objAniType
             Case aniOpen
                 EstablishVisual(objVisType, objAnimation_Open)
-                Dim objTask_VisAdapter = osVisQualityAdapter.InitAdapter(VisTypeAdapter.VisAdapter_PopupMenu, objAnimation_Open,
-                                                 True, True, objContainer)
+                'Dim objTask_VisAdapter = osVisQualityAdapter.InitAdapter(VisTypeAdapter.
+                '                                                         VisAdapter_PopupMenu, objAnimation_Open, True, True, objContainer)
             Case aniClose
                 EstablishVisual(objVisType, objAnimation_Close)
                 osVisQualityAdapter.UpdateVisData(VisTypeAdapter.VisAdapter_PopupMenu, objAnimation_Close)
@@ -344,12 +344,11 @@ Public Class osPopupMenu_GUI
 
     Private Sub PopupOpenComplete(sender As Object, e As EventArgs)
         '  objTask_Open.TrySetResult(True)
+        Try
+            objAnimation_Open = Nothing
+        Catch ex As Exception
 
-        RemoveHandler objAnimation_Open.Completed,
-                            OpenCompleteEvent
-
-        SetVisualMode(aniOpen)
-        objAnimation_Open = Nothing
+        End Try
     End Sub
 
     Private Sub pmCmd_ShowGameMenu(sender As Object, e As RoutedEventArgs) Handles btnShowGameMenu.Checked
@@ -427,8 +426,8 @@ Public Class osPopupMenu_GUI
     End Sub
 
     Public Sub PrepPopupMenu()
-        Me.Show()
-        Me.Hide()
+        'Me.Show()
+        'Me.Hide()
 
         ShowGameMenuItem()
     End Sub

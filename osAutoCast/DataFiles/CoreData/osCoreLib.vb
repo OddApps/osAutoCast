@@ -249,11 +249,6 @@ Public NotInheritable Class osFuncLib_Progress
         {StartAP, osColors.Color.FromRgb(82, 96, 117)}
     }
 
-    Public Shared Sub SetProgContainer(pType As TriggerType)
-        ProgContainer = New Rectangle(0, 0, GetProgSize(pType), GetProgSize(pType, True))
-        ProgContainerBorder = New Rectangle(0, 0, GetProgSize(pType) - 1, GetProgSize(pType, True) - 1)
-    End Sub
-
     Public Shared Sub SetProgState(newStatus As ProgStatus)
         progCurStatus = newStatus
         pBrush_BG = New SolidColorBrush()
@@ -303,14 +298,10 @@ Public NotInheritable Class osFuncLib_Progress
 
         Select Case pType
             Case TriggerType.AutoCast
-                ui_AutoCast.InvokeAsync(Sub(gui)
-                                            gui.SetProgColor(progColorData, pUpdate)
-                                        End Sub)
-                'Application.Current.
-                '    Dispatcher.Invoke(
-                '        Sub()
-                '            osHandler_UI.osGui_AutoCastProgress.SetProgColor(progColorData, pUpdate)
-                '        End Sub)
+                ui_AutoCast.InvokeAsync(
+                    Sub(acGUI)
+                        acGUI.SetProgColor(progColorData, pUpdate)
+                    End Sub)
             Case TriggerType.AutoPass
                 PrepDispatcher(True).Invoke(
                     Sub()
@@ -563,9 +554,14 @@ Public NotInheritable Class osFuncLib_ShowOpts
         With osPrefsWindow
             .PrepPrefVis()
 
-            Dim objTask_PrepOpts = .ActivatePrefTracker
-            Dim objTask_PrepOptsVis = osVisQualityAdapter.InitAdapter(VisTypeAdapter.VisAdapter_Opts, .visPrefUI_Open,
-                                                                                True, True, .prefContainer, .osTitleCover, .osContentContainer)
+            '   Dim objTask_PrepOpts = .ActivatePrefTracker
+            Dim objTask_PrepOptsVis = osVisQualityAdapter.
+                InitAdapter(VisTypeAdapter.VisAdapter_Opts, .visPrefUI_Open,
+                            True, True, .prefContainer, .osTitleCover, .osContentContainer)
+
+            'osVisQualityAdapter.
+            '    InitAdapter(VisTypeAdapter.VisAdapter_Opts, .visPrefUI_Open,
+            '                True, True, True, .prefContainer, .osTitleCover, .osContentContainer)
 
             AddHandler osPrefsWindow.Closed,
                        Sub(sender, e)
@@ -579,7 +575,9 @@ Public NotInheritable Class osFuncLib_ShowOpts
                            osHandler_UI.InitResourceAlloc()
                        End Sub
 
-            Await objTask_PrepOpts
+            'Await osVisQualityAdapter.InitAdapter(VisTypeAdapter.VisAdapter_Opts, .visPrefUI_Open,
+            '                                                                    True, True, .prefContainer, .osTitleCover, .osContentContainer)
+            '  Await objTask_PrepOptsVis
 
             Await PrepDispatcher().InvokeAsync(
                 Sub()
@@ -589,9 +587,9 @@ Public NotInheritable Class osFuncLib_ShowOpts
             Await AnticipateExit()
 
             Await PrepDispatcher().InvokeAsync(
-                Sub()
-                    .osPrefs_InitCloseVis()
-                End Sub, DispatcherPriority.Render)
+                Function()
+                    Return .osPrefs_InitCloseVis()
+                End Function, DispatcherPriority.Render)
         End With
     End Function
 
@@ -1246,18 +1244,19 @@ Public NotInheritable Class osFuncLib_PopupMenu
 
         chkOverlayDisplay.ResetAndInitTask()
 
-        PrepDispatcher().Invoke(
+        Dim objTask_PrepOverlay = PrepDispatcher().InvokeAsync(
             Sub()
                 osHandler_UI.PresentPopupMenuOverlay(True, chkOverlayDisplay)
-            End Sub, DispatcherPriority.Render)
+            End Sub, DispatcherPriority.Background).Task
 
-        Await chkOverlayDisplay.Task
+       Await chkOverlayDisplay.Task
 
         Await PrepDispatcher().InvokeAsync(
             Sub()
-                osPopupMenu.Show()
+                objGui_Popup.Show()
                 osHandler_UI.PresentPopupMenu(True)
             End Sub, DispatcherPriority.Render)
+
         Dim objPopupResult = Await PopupCloseDetect(objPopupTaskMonitor,
                                                      objPopupTaskPending)
 
@@ -1855,6 +1854,11 @@ Public Module osVisQualityAdapter
                         End Function).Value
     End Function
 
+    Private Function GetVisualDataCollection(objVisType As VisTypeAdapter) As UIElement()
+        Dim objVisData = GetVisualDataRecord(objVisType)
+        Return objVisData.VisCollection
+    End Function
+
     Private Sub FetchVisualDataRecord(objVisType As VisTypeAdapter, ByRef retVisData As VisAdapterData)
         Dim objVisData As VisAdapterData = Nothing
         If idxVisAdapters.TryGetValue(objVisType, objVisData) Then
@@ -1870,73 +1874,153 @@ Public Module osVisQualityAdapter
         End If
     End Sub
 
-    Public Async Function InitAdapter(objVisType As VisTypeAdapter, objVisual As Storyboard,
-                                      visApply As Boolean, doReset As Boolean, ParamArray lstVisTargets() As UIElement) As Task
+    Private Function ValidateVisAdapter(objVisType As VisTypeAdapter)
         With idxVisAdapters
-            If .ContainsKey(objVisType) Then .Remove(objVisType)
+            If .ContainsKey(objVisType) Then
+                .Remove(objVisType)
+            End If
+        End With
+    End Function
+
+    Private Function ValidateAndAttachAdapter(objVisType As VisTypeAdapter, objVisual As Storyboard, ParamArray lstVisTargets() As UIElement) As UIElement()
+        ValidateVisAdapter(objVisType)
+        idxVisAdapters.Add(objVisType, New VisAdapterData(objVisual, lstVisTargets))
+
+        Return lstVisTargets
+    End Function
+    'Public Async Function InitAdapter(objVisType As VisTypeAdapter, objVisual As Storyboard,
+    '                                  visApply As Boolean, doReset As Boolean, setFPS As Integer, ParamArray lstVisTargets() As UIElement) As Task
+
+    '    If CoreDataLib.GetVisualQuality() = ProgVisOpts.Performance Then
+    '        Dim objVisDataArray = ValidateAndAttachAdapter(objVisType, objVisual, lstVisTargets)
+    '        Dim cntVisDataArray = objVisDataArray.Count - 1
+
+    '        If doReset Then
+    '            Dim evtVisComplete As EventHandler = Nothing
+
+    '            evtVisComplete =
+    '                 Sub(sender, e)
+    '                     RemoveHandler objVisual.Completed, evtVisComplete
+
+    '                     Dim objTask_VisComplete = PrepDispatcher().InvokeAsync(
+    '                        Sub()
+    '                            For objVis = 0 To cntVisDataArray
+    '                                ResetVisQuality(objVisDataArray(objVis))
+    '                            Next
+    '                        End Sub, DispatcherPriority.Render).Task
+    '                 End Sub
+
+    '            AddHandler objVisual.Completed, evtVisComplete
+    '        End If
+
+    '        Timeline.SetDesiredFrameRate(objVisual, setFPS)
+
+    '        If visApply Then
+    '            Dim objTask_SetVisConfig = PrepDispatcher().InvokeAsync(
+    '                Sub()
+    '                    Dim visBitMapCache As New BitmapCache(renderAtScale)
+
+    '                    For objVis = 0 To cntVisDataArray
+    '                        SetVisQuality(objVisDataArray(objVis), visBitMapCache)
+    '                    Next
+    '                End Sub, DispatcherPriority.Render).Task
+    '        End If
+    '    End If
+
+    '    Await Task.CompletedTask
+    'End Function
+
+    Public Function InitAdapter(objVisType As VisTypeAdapter, objVisual As Storyboard,
+                                      visApply As Boolean, doReset As Boolean, setFPS As Integer, ParamArray lstVisTargets() As UIElement) As Task
+
+        If CoreDataLib.GetVisualQuality() = ProgVisOpts.Performance Then
+            Dim objVisDataArray = ValidateAndAttachAdapter(objVisType, objVisual, lstVisTargets)
+            Dim cntVisDataArray = objVisDataArray.Count - 1
 
             If doReset Then
                 Dim evtVisComplete As EventHandler = Nothing
 
                 evtVisComplete =
-                    Async Sub(sender, e)
-                        Try
-                            Dim objVisData = GetVisualDataRecord(objVisType)
-                            Dim objVisDataArray = objVisData.VisCollection.ToList()
+                     Sub(sender, e)
+                         RemoveHandler objVisual.Completed, evtVisComplete
 
-                            Await PrepDispatcher().InvokeAsync(
-                                Sub()
-                                    For Each objVis In objVisDataArray
-                                        RenderOptions.SetBitmapScalingMode(objVis, BitmapScalingMode.HighQuality)
-                                        RenderOptions.SetEdgeMode(objVis, EdgeMode.Unspecified)
-
-                                        objVis.CacheMode = Nothing
-
-                                        With TryCast(objVis, FrameworkElement)
-                                            .UseLayoutRounding = False
-                                            .SnapsToDevicePixels = False
-                                        End With
-                                    Next
-                                End Sub, DispatcherPriority.Render)
-                        Finally
-                            RemoveHandler objVisual.Completed, evtVisComplete
-                        End Try
-                    End Sub
+                         Dim objTask_VisComplete = PrepDispatcher().InvokeAsync(
+                            Sub()
+                                For objVis = 0 To cntVisDataArray
+                                    ResetVisQuality(objVisDataArray(objVis))
+                                Next
+                            End Sub, DispatcherPriority.Render).Task
+                     End Sub
 
                 AddHandler objVisual.Completed, evtVisComplete
             End If
 
+            Timeline.SetDesiredFrameRate(objVisual, setFPS)
+
             If visApply Then
-                Await PrepDispatcher().InvokeAsync(
-                        Sub()
-                            For Each objVisTarget In lstVisTargets
-                                RenderOptions.SetBitmapScalingMode(objVisTarget, BitmapScalingMode.LowQuality)
-                                RenderOptions.SetEdgeMode(objVisTarget, EdgeMode.Aliased)
+                Dim objTask_SetVisConfig = PrepDispatcher().InvokeAsync(
+                    Sub()
+                        Dim visBitMapCache As New BitmapCache(renderAtScale)
 
-                                objVisTarget.CacheMode = New BitmapCache(renderAtScale)
-
-                                Dim objVisElement = TryCast(objVisTarget, FrameworkElement)
-
-                                If objVisElement IsNot Nothing Then
-                                    objVisElement.UseLayoutRounding = True
-                                    objVisElement.SnapsToDevicePixels = True
-                                End If
-                            Next
-                        End Sub, DispatcherPriority.Background)
+                        For objVis = 0 To cntVisDataArray
+                            SetVisQuality(objVisDataArray(objVis), visBitMapCache)
+                        Next
+                    End Sub, DispatcherPriority.Render).Task
             End If
-
-            .Add(objVisType,
-                 New VisAdapterData(objVisual, lstVisTargets))
-        End With
+        End If
     End Function
 
-    Public Sub SetVisQuality(objVisTarget As UIElement)
-        If objVisTarget Is Nothing Then Return
 
+    Public Async Function InitAdapter(objVisType As VisTypeAdapter, objVisual As Storyboard,
+                                      visApply As Boolean, doReset As Boolean, ParamArray lstVisTargets() As UIElement) As Task
+
+        If CoreDataLib.GetVisualQuality() = ProgVisOpts.Performance Then
+            Dim objVisDataArray = ValidateAndAttachAdapter(objVisType, objVisual, lstVisTargets)
+            Dim cntVisDataArray = objVisDataArray.Count - 1
+
+            If doReset Then
+                Dim evtVisComplete As EventHandler = Nothing
+
+                evtVisComplete =
+                     Sub(sender, e)
+                         RemoveHandler objVisual.Completed, evtVisComplete
+
+                         Dim objTask_VisComplete = PrepDispatcher().InvokeAsync(
+                            Sub()
+                                For objVis = 0 To cntVisDataArray
+                                    ResetVisQuality(objVisDataArray(objVis))
+                                Next
+                            End Sub, DispatcherPriority.Render).Task
+                     End Sub
+
+                AddHandler objVisual.Completed, evtVisComplete
+            End If
+
+            Timeline.SetDesiredFrameRate(objVisual, 50)
+
+            If visApply Then
+                Dim objTask_SetVisConfig = PrepDispatcher().InvokeAsync(
+                    Sub()
+                        Dim visBitMapCache As New BitmapCache(renderAtScale)
+
+                        For objVis = 0 To cntVisDataArray
+                            SetVisQuality(objVisDataArray(objVis), visBitMapCache)
+                        Next
+                    End Sub, DispatcherPriority.Render).Task
+            End If
+        End If
+
+        Await Task.CompletedTask
+    End Function
+
+    Public Sub SetVisQuality(objVisTarget As UIElement, objBitMapCache As CacheMode)
         RenderOptions.SetBitmapScalingMode(objVisTarget, BitmapScalingMode.LowQuality)
         RenderOptions.SetEdgeMode(objVisTarget, EdgeMode.Aliased)
 
-        objVisTarget.CacheMode = New BitmapCache(renderAtScale)
+        TextOptions.SetTextRenderingMode(objVisTarget, TextRenderingMode.Aliased)
+        TextOptions.SetTextFormattingMode(objVisTarget, TextFormattingMode.Display)
+
+        objVisTarget.CacheMode = objBitMapCache
 
         Dim objVisElement = TryCast(objVisTarget, FrameworkElement)
 
@@ -1946,32 +2030,31 @@ Public Module osVisQualityAdapter
         End If
     End Sub
 
-    Public Sub ResetVisQuality(objVisTarget As UIElement)
-        If objVisTarget Is Nothing Then Return
+    Public Sub ResetVisQuality(objVis As UIElement)
+        RenderOptions.SetBitmapScalingMode(objVis, BitmapScalingMode.HighQuality)
+        RenderOptions.SetEdgeMode(objVis, EdgeMode.Unspecified)
 
-        RenderOptions.SetBitmapScalingMode(objVisTarget, BitmapScalingMode.HighQuality)
-        RenderOptions.SetEdgeMode(objVisTarget, EdgeMode.Unspecified)
+        TextOptions.SetTextRenderingMode(objVis, TextRenderingMode.Auto)
+        TextOptions.SetTextFormattingMode(objVis, TextFormattingMode.Ideal)
 
-        objVisTarget.CacheMode = Nothing
+        objVis.CacheMode = Nothing
 
-        Dim objVisElement = TryCast(objVisTarget, FrameworkElement)
-
-        If objVisElement IsNot Nothing Then
-            objVisElement.UseLayoutRounding = False
-            objVisElement.SnapsToDevicePixels = False
-        End If
+        With TryCast(objVis, FrameworkElement)
+            .UseLayoutRounding = False
+            .SnapsToDevicePixels = False
+        End With
     End Sub
 
-    Public Sub AttachAdapter(objVisual As Storyboard, objVisTarget As UIElement, Optional setVis As Boolean = False)
-        AddHandler objVisual.Completed,
-            Sub(s, e)
-                ResetVisQuality(objVisTarget)
-            End Sub
+    'Public Sub AttachAdapter(objVisual As Storyboard, objVisTarget As UIElement, Optional setVis As Boolean = False)
+    '    AddHandler objVisual.Completed,
+    '        Sub(s, e)
+    '            ResetVisQuality(objVisTarget)
+    '        End Sub
 
-        If setVis Then
-            SetVisQuality(objVisTarget)
-        End If
-    End Sub
+    '    If setVis Then
+    '        SetVisQuality(objVisTarget)
+    '    End If
+    'End Sub
 
     Public Async Function AttachAndApplyAdapter(objVisual As Storyboard, doReset As Boolean, ParamArray lstVisTargets() As UIElement) As Task
         AddHandler objVisual.Completed,
@@ -2027,49 +2110,58 @@ Public Module osVisQualityAdapter
     End Sub
 
     Public Async Function EstablishVisDataSettings(objVisType As VisTypeAdapter, setVisMode As VisRenderMode, Optional clrComplete As Boolean = False) As Task
-        Dim objVisData As VisAdapterData = Nothing
-        FetchVisualDataRecord(objVisType, objVisData)
+        If CoreDataLib.GetVisualQuality() = ProgVisOpts.Performance Then
+            Dim objVisData As VisAdapterData = Nothing
+            FetchVisualDataRecord(objVisType, objVisData)
 
-        Dim snapshot = objVisData.VisCollection.
-            Where(Function(x)
-                      Return x IsNot Nothing
-                  End Function).ToList()
+            Dim snapshot = objVisData.VisCollection.
+                Where(Function(x)
+                          Return x IsNot Nothing
+                      End Function).ToList()
 
-        Await PrepDispatcher().InvokeAsync(
-            Sub()
-                If clrComplete Then
-                    Dim _visD = objVisData.VisData
-                    Dim evtClrComplete As EventHandler = Nothing
+            Await PrepDispatcher().InvokeAsync(
+                Sub()
+                    If clrComplete Then
+                        Dim _visD = objVisData.VisData
+                        Dim evtClrComplete As EventHandler = Nothing
 
-                    evtClrComplete =
-                         Sub(sender, e)
-                             Try
-                                 idxVisAdapters.Remove(objVisType)
-                             Catch ex As Exception
-                             Finally
-                                 RemoveHandler _visD.Completed, evtClrComplete
-                             End Try
-                         End Sub
+                        evtClrComplete =
+                             Sub(sender, e)
+                                 Try
+                                     idxVisAdapters.Remove(objVisType)
+                                 Catch ex As Exception
+                                 Finally
+                                     RemoveHandler _visD.Completed, evtClrComplete
+                                 End Try
+                             End Sub
 
-                    AddHandler _visD.Completed, evtClrComplete
-                End If
+                        AddHandler _visD.Completed, evtClrComplete
+                    End If
 
-                With New osVisRenderMode(setVisMode)
-                    For Each objVis In snapshot
-                        RenderOptions.SetBitmapScalingMode(objVis, .visBitMap)
-                        RenderOptions.SetEdgeMode(objVis, .visEdges)
+                    With New osVisRenderMode(setVisMode)
+                        Dim objCacheMode = .visCache
 
-                        objVis.CacheMode = .visCache
+                        For i As Integer = 0 To snapshot.Count - 1
+                            SetVisQuality(snapshot(i), objCacheMode)
+                        Next
+                        'For Each objVis In snapshot
+                        '    RenderOptions.SetBitmapScalingMode(objVis, .visBitMap)
+                        '    RenderOptions.SetEdgeMode(objVis, .visEdges)
 
-                        Dim objVisElement = TryCast(objVis, FrameworkElement)
+                        '    objVis.CacheMode = .visCache
 
-                        If objVisElement IsNot Nothing Then
-                            objVisElement.UseLayoutRounding = .visLayoutSetting
-                            objVisElement.SnapsToDevicePixels = .visLayoutSetting
-                        End If
-                    Next
-                End With
-            End Sub)
+                        '    Dim objVisElement = TryCast(objVis, FrameworkElement)
+
+                        '    If objVisElement IsNot Nothing Then
+                        '        objVisElement.UseLayoutRounding = .visLayoutSetting
+                        '        objVisElement.SnapsToDevicePixels = .visLayoutSetting
+                        '    End If
+                        'Next
+                    End With
+                End Sub)
+        Else
+            Await Task.CompletedTask
+        End If
     End Function
 
     Public Async Sub ResetVisQuality_All_BatchAsync(sender As Object, e As EventArgs)
@@ -2105,53 +2197,6 @@ Public Module osVisQualityAdapter
             End Sub, DispatcherPriority.Background)
     End Function
 
-    Public Async Function SetVisQuality_All() As Task
-        Dim ops As New List(Of Task)
-
-        For i = 0 To lstVisObjects.Count - 1
-            Dim objVis = lstVisObjects(i)
-
-            Dim dispOp = Dispatcher.CurrentDispatcher.InvokeAsync(
-            Sub()
-                SetVisQuality(objVis)
-            End Sub, DispatcherPriority.Render) ' or Background/Normal as appropriate
-
-            ops.Add(dispOp.Task)
-        Next
-
-        Await Task.WhenAll(ops)
-    End Function
-
-    Public Async Sub ResetVisQuality_All()
-        Dim ops As New List(Of Task)
-
-        For i = 0 To lstVisObjects.Count - 1
-            Dim objVis = lstVisObjects(i)
-
-            Dim dispOp = Dispatcher.CurrentDispatcher.InvokeAsync(
-                Sub()
-                    RenderOptions.SetBitmapScalingMode(objVis, BitmapScalingMode.HighQuality)
-                    RenderOptions.SetEdgeMode(objVis, EdgeMode.Unspecified)
-
-                    TextOptions.SetTextRenderingMode(objVis, TextRenderingMode.Auto)
-                    TextOptions.SetTextFormattingMode(objVis, TextFormattingMode.Ideal)
-
-                    objVis.CacheMode = Nothing
-
-                    Dim objVisEle = TryCast(objVis, FrameworkElement)
-
-                    If objVisEle IsNot Nothing Then
-                        objVisEle.UseLayoutRounding = False
-                        objVisEle.SnapsToDevicePixels = False
-                    End If
-                End Sub, DispatcherPriority.Render) ' or Background/Normal as appropriate
-
-            ops.Add(dispOp.Task)
-        Next
-
-        Await Task.WhenAll(ops)
-    End Sub
-
 End Module
 
 Public Module osUI_Loader
@@ -2172,6 +2217,9 @@ Public Module osUI_Loader
         Await PrepDispatcher().InvokeAsync(
             Sub()
                 osPopupMenuOverlay.PrepTrayMenuOverlay()
+                Dim objTask_VisAdapter = osVisQualityAdapter.InitAdapter(VisTypeAdapter.
+                                                         VisAdapter_PopupMenu, osPopupMenu.objAnimation_Open, True, True, 75, osPopupMenu.objContainer)
+                ' PrepDispatch_Popup()
             End Sub, DispatcherPriority.Render)
     End Function
 
@@ -2189,12 +2237,20 @@ Public Module osUI_Loader
     Public Async Function LoadUI_TriggerHandlers() As Task
         _autoCastThread = New Thread(
             Sub()
-                With CoreDataLib.GetProgSizeReport(TriggerType.AutoCast)
+                With CoreDataLib.FetchProgSizeReport(TriggerType.AutoCast)
                     osFuncLib_Progress.SetProgBlockData(TriggerType.AutoCast)
 
-                    Dim objWin_AC As New ProgBarGui_AutoCast(.pWidth, .pHeight,
-                                                             osFuncLib_Progress.ProgTimeSpan_AC, AddressOf EaseProgress)
+                    Dim progW = .Item("pW")
+                    Dim progH = .Item("pH")
+
+                    'If CoreDataLib.VerifyVisQualityPref() Then
+                    '    progW += 4 : progH += 4
+                    'End If
+
+                    Dim objWin_AC As New ProgBarGui_AutoCast(progW, progH,
+                                            osFuncLib_Progress.ProgTimeSpan_AC, AddressOf EaseProgress)
                     _autoCastProgress = objWin_AC
+
                 End With
 
                 ProgBarGui_AutoCast.Instance = _autoCastProgress
@@ -2416,8 +2472,8 @@ Public Module LoadTaskTimer
         {Load_InitActions, {475}},
         {Load_Actions, {475}},
         {Load_InitShaders, {120, 130, 130, 120}},
-        {Load_StartingSvc, {475}},
-        {Load_Starting, {475}}
+        {Load_StartingSvc, {450}},
+        {Load_Starting, {450}}
     }
 
     Public Function GetLoadDelays(objTaskType As LoadTaskType) As Integer()

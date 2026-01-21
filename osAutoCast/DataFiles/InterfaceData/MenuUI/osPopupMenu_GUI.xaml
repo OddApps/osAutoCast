@@ -1,4 +1,5 @@
 ﻿<Window x:Class="osPopupMenu_GUI" x:Name="winPopupMenu" xmlns:osStyle="clr-namespace:osAutoCast.osStyle"
+        xmlns:osCtrl="clr-namespace:osAutoCast.osControls"
         xmlns:local="clr-namespace:osAutoCast" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         mc:Ignorable="d" Topmost="True" DataContext="{Binding RelativeSource={RelativeSource Self}}" 
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="osPopupMenu_GUI" IsTabStop="False"
@@ -8,16 +9,27 @@
         ShowInTaskbar="False" Style="{StaticResource MainContentContainerStyle}">
     
     <Window.Resources>
-            <Storyboard x:Key="PopupVisual_Open">
-                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="popupMainContainer"
-                                               Storyboard.TargetProperty="(osStyle:osPopupScale.PopupScale)" 
-                                               BeginTime="00:00:00" FillBehavior="HoldEnd">
-                    <EasingDoubleKeyFrame KeyTime="00:00:0.00" Value="0.00" />
-                    <EasingDoubleKeyFrame KeyTime="00:00:0.05" Value="0.00">
+            <Storyboard x:Key="PopupVisual_Open" BeginTime="00:00:0.085">
+                <!--<DoubleAnimation  Storyboard.TargetName="popupMainContainer"
+                                  Storyboard.TargetProperty="(osStyle:osPopupScale.PopupScale)"
+                                  To="0" Duration="0:0:0.001" />-->
+                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="PopupMainContainerRender"
+                                               Storyboard.TargetProperty="ScaleX">
+                    <EasingDoubleKeyFrame KeyTime="00:00:0.000" Value="0.00" />
+                    <EasingDoubleKeyFrame KeyTime="00:00:0.350" Value="0.7">
                         <EasingDoubleKeyFrame.EasingFunction>
                             <ExponentialEase EasingMode="EaseIn" Exponent="0.75" />
                         </EasingDoubleKeyFrame.EasingFunction>
                     </EasingDoubleKeyFrame>
+                    <EasingDoubleKeyFrame KeyTime="00:00:0.775" Value="1">
+                        <EasingDoubleKeyFrame.EasingFunction>
+                            <BackEase EasingMode="EaseOut" Amplitude="2" />
+                        </EasingDoubleKeyFrame.EasingFunction>
+                    </EasingDoubleKeyFrame>
+                </DoubleAnimationUsingKeyFrames>
+                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="PopupMainContainerRender"
+                                               Storyboard.TargetProperty="ScaleY">
+                    <EasingDoubleKeyFrame KeyTime="00:00:0.000" Value="0.00" />
                     <EasingDoubleKeyFrame KeyTime="00:00:0.350" Value="0.7">
                         <EasingDoubleKeyFrame.EasingFunction>
                             <ExponentialEase EasingMode="EaseIn" Exponent="0.75" />
@@ -30,14 +42,8 @@
                     </EasingDoubleKeyFrame>
                 </DoubleAnimationUsingKeyFrames>
                 <DoubleAnimationUsingKeyFrames Storyboard.TargetName="popupMainContainer"
-                                               Storyboard.TargetProperty="(UIElement.Opacity)" 
-                                               BeginTime="00:00:00" FillBehavior="HoldEnd">
-                    <EasingDoubleKeyFrame KeyTime="00:00:0.00" Value="0" />
-                    <EasingDoubleKeyFrame KeyTime="00:00:0.05" Value="0">
-                        <EasingDoubleKeyFrame.EasingFunction>
-                            <ExponentialEase EasingMode="EaseIn" Exponent="0.75" />
-                        </EasingDoubleKeyFrame.EasingFunction>
-                    </EasingDoubleKeyFrame>
+                                               Storyboard.TargetProperty="(UIElement.Opacity)">
+                    <EasingDoubleKeyFrame KeyTime="00:00:0.000" Value="0" />
                     <EasingDoubleKeyFrame KeyTime="00:00:0.775" Value="1">
                         <EasingDoubleKeyFrame.EasingFunction>
                             <ExponentialEase EasingMode="EaseIn" Exponent="0.75" />
@@ -46,8 +52,17 @@
                 </DoubleAnimationUsingKeyFrames>
             </Storyboard>
             <Storyboard x:Key="PopupVisual_Close">
-                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="popupMainContainer"
-                                               Storyboard.TargetProperty="(osStyle:osPopupScale.PopupScale)" FillBehavior="HoldEnd">
+                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="PopupMainContainerRender"
+                                               Storyboard.TargetProperty="ScaleX" FillBehavior="HoldEnd">
+                    <EasingDoubleKeyFrame KeyTime="{StaticResource PopupAni_CloseStart}" 
+										  Value="{StaticResource PopupAni_Loaded}"
+                                          EasingFunction="{StaticResource PopupEase_Close}" />
+                    <EasingDoubleKeyFrame KeyTime="{StaticResource PopupAni_CloseDuration}" 
+										  Value="{StaticResource PopupAni_CloseScale}"
+                                          EasingFunction="{StaticResource PopupEase_Close}" />
+                </DoubleAnimationUsingKeyFrames>
+                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="PopupMainContainerRender"
+                                               Storyboard.TargetProperty="ScaleY" FillBehavior="HoldEnd">
                     <EasingDoubleKeyFrame KeyTime="{StaticResource PopupAni_CloseStart}" 
 										  Value="{StaticResource PopupAni_Loaded}"
                                           EasingFunction="{StaticResource PopupEase_Close}" />
@@ -66,8 +81,17 @@
                 </DoubleAnimationUsingKeyFrames>
             </Storyboard>
             <Storyboard x:Key="PopupVisual_CloseByCmd">
-                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="popupMainContainer" 
-											   Storyboard.TargetProperty="(osStyle:osPopupScale.PopupScale)" FillBehavior="HoldEnd">
+                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="PopupMainContainerRender"
+                                               Storyboard.TargetProperty="ScaleX" FillBehavior="HoldEnd">
+                    <EasingDoubleKeyFrame KeyTime="{StaticResource PopupAni_CloseStart}" 
+										  Value="{StaticResource PopupAni_Loaded}" 
+										  EasingFunction="{StaticResource PopupEase_CloseByCmd}" />
+                    <EasingDoubleKeyFrame KeyTime="{StaticResource PopupAni_CloseDuration}" 
+										  Value="{StaticResource PopupAni_CloseScale}" 
+										  EasingFunction="{StaticResource PopupEase_CloseByCmd}" />
+                </DoubleAnimationUsingKeyFrames>
+                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="PopupMainContainerRender"
+                                               Storyboard.TargetProperty="ScaleY" FillBehavior="HoldEnd">
                     <EasingDoubleKeyFrame KeyTime="{StaticResource PopupAni_CloseStart}" 
 										  Value="{StaticResource PopupAni_Loaded}" 
 										  EasingFunction="{StaticResource PopupEase_CloseByCmd}" />
@@ -86,8 +110,17 @@
                 </DoubleAnimationUsingKeyFrames>
             </Storyboard>
             <Storyboard x:Key="PopupVisual_CloseByBtn">
-                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="popupMainContainer" 
-                                               Storyboard.TargetProperty="(osStyle:osPopupScale.PopupScale)" FillBehavior="HoldEnd">
+                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="PopupMainContainerRender"
+                                               Storyboard.TargetProperty="ScaleX" FillBehavior="HoldEnd">
+                    <EasingDoubleKeyFrame KeyTime="{StaticResource PopupAni_CloseStart}" 
+										  Value="{StaticResource PopupAni_Loaded}" 
+										  EasingFunction="{StaticResource PopupEase_CloseByCmd}" />
+                    <EasingDoubleKeyFrame KeyTime="{StaticResource PopupAni_CloseByBtnDuration}" 
+										  Value="{StaticResource PopupAni_CloseByBtnScale}" 
+										  EasingFunction="{StaticResource PopupEase_CloseByBtn}" />
+                </DoubleAnimationUsingKeyFrames>
+                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="PopupMainContainerRender"
+                                               Storyboard.TargetProperty="ScaleY" FillBehavior="HoldEnd">
                     <EasingDoubleKeyFrame KeyTime="{StaticResource PopupAni_CloseStart}" 
 										  Value="{StaticResource PopupAni_Loaded}" 
 										  EasingFunction="{StaticResource PopupEase_CloseByCmd}" />
@@ -107,9 +140,11 @@
             </Storyboard>        
     </Window.Resources>
 
-    <Border x:Name="popupMainContainer" Style="{StaticResource MainContainerStyle}">
-        <Grid x:Name="popupContentContainer" 
-              Style="{StaticResource ContentContainerStyle}">
+    <Border x:Name="popupMainContainer" Style="{StaticResource MainContainerStyle}" Opacity="0">
+        <Border.RenderTransform>
+            <ScaleTransform x:Name="PopupMainContainerRender" ScaleX="0" ScaleY="0" />
+        </Border.RenderTransform>
+        <Grid x:Name="popupContentContainer" Style="{StaticResource ContentContainerStyle}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition/>
             </Grid.ColumnDefinitions>

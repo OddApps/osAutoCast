@@ -370,16 +370,12 @@ Public Class osPrefTracker(Of T As {Class, INotifyPropertyChanged})
         Return dict
     End Function
 
-    Public Async Function GetPropertySnapshotFastAsync(
-    instance As T,
-    dispatcher As Dispatcher
-) As Task(Of Dictionary(Of String, Object))
+    Public Async Function GetPropertySnapshotFastAsync(instance As T, dispatcher As Dispatcher) As Task(Of Dictionary(Of String, Object))
 
-        Dim props = Await Task.Run(Function()
-                                       Return ListPrefProps(instance).
-                                       Where(Function(p) p.CanRead).
-                                       ToArray()
-                                   End Function)
+        Dim props = Await Task.Run(
+            Function()
+                Return ListPrefProps(instance).Where(Function(p) p.CanRead).ToArray()
+            End Function)
 
         Return Await dispatcher.InvokeAsync(Function()
                                                 Dim dict As New Dictionary(Of String, Object)

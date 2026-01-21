@@ -410,18 +410,21 @@ Public NotInheritable Class CoreDataLib
             If pEventData.Length > 0 Then
                 strEventData = pEventData(0).ToString()
             End If
-            With PrepareProgEvent(osHandler_UI._autoCastProgress)
-                osHandler_UI.osGui_AutoCastProgress.InvokeAsync(Sub(gui)
-                                                                    gui.PerformProgressEvent(GenerateProgEventData(pEvent, objProgEventType,
-                                                        strEventData))
-                                                                End Sub)
+            'With PrepareProgEvent(osHandler_UI._autoCastProgress)
+            osHandler_UI.osGui_AutoCastProgress.InvokeAsync(Sub(gui)
+                                                                With PrepareProgEvent(ProgBarGui_AutoCast.Instance)
+                                                                    .evDispatch.Invoke(Sub()
+                                                                                           .evAction(GenerateProgEventData(pEvent, objProgEventType,
+                                                                                                                           strEventData))
+                                                                                       End Sub)
 
-                '.evDispatch.Invoke(
-                '    Sub()
-                '        .evAction(GenerateProgEventData(pEvent, objProgEventType,
-                '                                        strEventData))
-                '    End Sub)
-            End With
+                                                                    '            gui.PerformProgressEvent(GenerateProgEventData(pEvent, objProgEventType,
+                                                                    'strEventData))
+                                                                End With
+                                                            End Sub)
+
+
+            '      End With
         Else
             Dim osProgElement = ui_AutoPass.OddProgBar_AP
 

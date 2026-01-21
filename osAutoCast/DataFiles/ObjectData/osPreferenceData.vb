@@ -87,7 +87,6 @@ Namespace osPrefLib
 
         Public Shared idxPrefRecords As PrefRecordIndex
 
-
         Private Shared _Data As osPreferenceLib
         Public Shared ReadOnly Property Data As osPreferenceLib
             Get
@@ -402,6 +401,7 @@ Namespace osPrefLib
         Private Function PrepPref(pRecData As PrefDataRecord, valType As Type) As Object
             Return Convert.ChangeType(pRecData.PrefVal, valType)
         End Function
+
         Public Async Function ApplyPrefs(Optional token As CancellationToken = Nothing,
                                  Optional progress As IProgress(Of Integer) = Nothing) As Task
             ' Run everything off the thread-pool and never block the UI.
@@ -441,21 +441,6 @@ Namespace osPrefLib
                 prefsSet = True
             End Try
         End Function
-
-        'Public Async Function ApplyPrefs() As Task
-        '    prefsSet = Await Task.Run(
-        '        Async Function()
-        '            Dim objTask_ApplyPrefs =
-        '                From pRec In objOsPrefIdx.PrefRecords
-        '                From pRecData In pRec.RecordData
-        '                Select Task.Run(Sub() ApplySetting(
-        '                    osPreferenceLib.Data, pRec, pRecData))
-
-        '            Await Task.WhenAll(objTask_ApplyPrefs)
-
-        '            Return True
-        '        End Function)
-        'End Function
 
         Private Sub ApplySetting(target As Object, pRecord As osPrefRecord, pRecData As PrefDataRecord)
 
@@ -750,6 +735,128 @@ Namespace osPrefLib
 
         Private Sub OnPropertyChanged(Optional propertyName As String = Nothing)
             RaiseEvent PropertyChanged(Me, New PropertyChangedEventArgs(propertyName))
+        End Sub
+
+    End Class
+
+    Public Class RevertibleDirtyTracker(Of T As Class)
+        Private _target As T
+        Private ReadOnly _originalValues As New Dictionary(Of String, Object)
+        Private _isDirty As Boolean
+
+        Public ReadOnly Property IsDirty As Boolean
+            Get
+                Return _isDirty
+            End Get
+        End Property
+
+        Public Sub Attach(target As T)
+            If target Is Nothing Then Throw New ArgumentNullException(NameOf(target))
+            _target = target
+            _isDirty = False
+            _originalValues.Clear()
+
+            ' Capture original values
+            For Each prop In GetTrackableProperties()
+                _originalValues(prop.Name) = prop.GetValue(_target)
+            Next
+
+            Dim inpc = TryCast(_target, INotifyPropertyChanged)
+            If inpc Is Nothing Then
+                Throw New InvalidOperationException("Target must implement INotifyPropertyChanged.")
+            End If
+
+            AddHandler inpc.PropertyChanged, AddressOf OnPropertyChanged
+        End Sub
+
+        Public Sub Detach()
+            Dim inpc = TryCast(_target, INotifyPropertyChanged)
+            If inpc IsNot Nothing Then
+                RemoveHandler inpc.PropertyChanged, AddressOf OnPropertyChanged
+            End If
+            _target = Nothing
+            _originalValues.Clear()
+        End Sub
+
+        Public Sub ResetBaseline()
+            If _target Is Nothing Then Return
+            _originalValues.Clear()
+            For Each prop In GetTrackableProperties()
+                _originalValues(prop.Name) = prop.GetValue(_target)
+            Next
+            _isDirty = False
+        End Sub
+
+        Public Sub RevertChanges()
+            If _target Is Nothing Then Return
+
+            For Each prop In GetTrackableProperties()
+                If Not _originalValues.ContainsKey(prop.Name) Then Continue For
+
+                Dim original = _originalValues(prop.Name)
+                Dim current = prop.GetValue(_target)
+
+                If Not Object.Equals(original, current) Then
+                    prop.SetValue(_target, original)
+                End If
+            Next
+
+            _isDirty = False
+        End Sub
+
+        Private Sub OnPropertyChanged(sender As Object, e As PropertyChangedEventArgs)
+            _isDirty = True
+        End Sub
+
+        Private Function GetTrackableProperties() As IEnumerable(Of PropertyInfo)
+            Return GetType(T).
+            GetProperties(BindingFlags.Public Or BindingFlags.Instance).
+            Where(Function(p) p.CanRead AndAlso p.CanWrite AndAlso p.GetIndexParameters().Length = 0)
+        End Function
+    End Class
+
+    Public Class osPrefMonitor(Of T As Class)
+
+        Private _prefsChanged As Boolean
+        Private _target As T
+
+        Public ReadOnly Property prefsChanged As Boolean
+            Get
+                Return _prefsChanged
+            End Get
+        End Property
+
+        Public Sub Attach(target As T)
+            _target = target
+            _prefsChanged = False
+
+            Dim inpc = TryCast(_target, INotifyPropertyChanged)
+
+            If inpc IsNot Nothing Then
+                AddHandler inpc.PropertyChanged, AddressOf OnPropertyChanged
+            Else
+                Throw New InvalidOperationException("Target does not implement INotifyPropertyChanged.")
+            End If
+        End Sub
+
+        Public Sub Detach()
+            If _target Is Nothing Then Return
+
+            Dim inpc = TryCast(_target, INotifyPropertyChanged)
+
+            If inpc IsNot Nothing Then
+                RemoveHandler inpc.PropertyChanged, AddressOf OnPropertyChanged
+            End If
+
+            _target = Nothing
+        End Sub
+
+        Public Sub ResetDirty()
+            _prefsChanged = False
+        End Sub
+
+        Private Sub OnPropertyChanged(sender As Object, e As PropertyChangedEventArgs)
+            _prefsChanged = True
         End Sub
 
     End Class

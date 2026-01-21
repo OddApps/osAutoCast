@@ -214,12 +214,14 @@ Public Class ProgBarGui_AutoCast
         Instance = Me
     End Sub
 
-    Public Sub New(pW As Integer, pH As Integer, pDuration As TimeSpan, pEase As Func(Of Double, Double))
+    Public Sub New(pW As Integer, pH As Integer, pDuration As TimeSpan, pEase As Func(Of Double, Double), Optional isFirstLoad As Boolean = False)
         progSettingsVQ = ApplySetingsVQ()
         SetVisualQuality()
 
         If VisQuality Then
+            '      If Not isFirstLoad Then
             pW += 4 : pH += 4
+            '      End If
         End If
 
         InitializeComponent(pW, pH)
@@ -334,9 +336,8 @@ Public Class ProgBarGui_AutoCast
 
         ClearAccumToBackground()
 
-
         If osProgScissorState Is Nothing Then CreateProgScissorState()
-        DrawBorderToAccum()
+        '  DrawBorderToAccum()
     End Sub
 
     Private Async Sub CreateShadersAndPipeline()
@@ -564,6 +565,10 @@ Public Class ProgBarGui_AutoCast
         With progContext
             .OutputMerger.SetTargets(accumRTV)
 
+            If VisQuality Then
+                SetRasterizerState(insetPx:=progBorderThickness)
+            End If
+
             Dim objMapRes = .MapSubresource(pCB, 0, MapMode.WriteDiscard,
                                              Direct3D11.MapFlags.None)
             Utilities.Write(objMapRes.DataPointer,
@@ -578,6 +583,10 @@ Public Class ProgBarGui_AutoCast
             .PixelShader.SetConstantBuffer(0, pCB)
 
             .Draw(3, 0)
+
+            If VisQuality Then
+                SetRasterizerState(insetPx:=0)
+            End If
         End With
 
         SetRasterizerState(True)
@@ -608,6 +617,12 @@ Public Class ProgBarGui_AutoCast
     Public Async Function BeginProgress() As Task(Of Boolean)
         PrepAbortToken()
         InitiateProgress()
+
+        ResetProgressTimer()
+        ClearAccumToBackground()
+
+        DrawBorderToAccum()
+        RenderBorder(True)
 
         ProgressTask = StartProgression()
 
@@ -681,41 +696,42 @@ Public Class ProgBarGui_AutoCast
     Private Sub DrawBorderToAccum()
         If accumTex Is Nothing Then Return
 
-        ' Query DXGI surface for the accum texture and create a D2D render target on it
-        Using dxgiSurface As Surface = accumTex.QueryInterface(Of Surface)()
-            Dim d2dPixelFmt As New D2DPixelFormat(osFormat.B8G8R8A8_UNorm, AlphaMode.Ignore)
-            Dim props As New RenderTargetProperties(Direct2D1.RenderTargetType.Default,
+        If VisQuality Then
+            Using dxgiSurface As Surface = accumTex.QueryInterface(Of Surface)()
+                Dim d2dPixelFmt As New D2DPixelFormat(osFormat.B8G8R8A8_UNorm, Direct2D1.AlphaMode.Ignore)
+                Dim props As New RenderTargetProperties(Direct2D1.RenderTargetType.Default,
                                                 d2dPixelFmt, 96.0F, 96.0F,
                                                 Direct2D1.RenderTargetUsage.None,
                                                 Direct2D1.FeatureLevel.Level_DEFAULT)
 
-            Using rt As New RenderTarget(progD2DFactory, dxgiSurface, props)
-                rt.BeginDraw()
+                Using rt As New RenderTarget(progD2DFactory, dxgiSurface, props)
+                    rt.BeginDraw()
 
-                ' create a local brush for this render-target (do NOT reuse progBrush_Border tied to progTarget)
-                Using b As New SolidColorBrush(rt, New osProgColor(0.0F / 255.0F, 0.0F / 255.0F, 0.0F / 255.0F, 1.0F))
-                    Dim brdrOffset As Single = progBorderThickness / 2.0F
-                    Dim pTrack = ProgressTrack
+                    ' create a local brush for this render-target (do NOT reuse progBrush_Border tied to progTarget)
+                    Using b As New SolidColorBrush(rt, New osProgColor(0.0F / 255.0F, 0.0F / 255.0F, 0.0F / 255.0F, 1.0F))
+                        Dim brdrOffset As Single = progBorderThickness / 2.0F
+                        Dim pTrack = ProgressTrack
 
-                    Dim objBorder As New osRect.RawRectangleF With {
+                        Dim objBorder As New osRect.RawRectangleF With {
                         .Left = pTrack.Left + brdrOffset, .Right = pTrack.Right - brdrOffset,
                         .Top = pTrack.Top + brdrOffset, .Bottom = pTrack.Bottom - brdrOffset
                     }
 
-                    rt.DrawRectangle(objBorder, b, progBorderThickness)
-                End Using
+                        rt.DrawRectangle(objBorder, b, progBorderThickness)
+                    End Using
 
-                rt.EndDraw()
+                    rt.EndDraw()
+                End Using
             End Using
-        End Using
+        End If
     End Sub
 
     Private Async Function StartProgression() As Task(Of ProgStatus)
-        ResetProgressTimer()
-        ClearAccumToBackground()
+        'ResetProgressTimer()
+        'ClearAccumToBackground()
 
-        '  DrawBorderToAccum()
-        RenderBorder()
+        'DrawBorderToAccum()
+        ''     RenderBorder()
 
         Dim objTask_Progress = Task.Run(
             Async Function() As Task(Of ProgStatus)
@@ -948,16 +964,19 @@ Public Class ProgBarGui_AutoCast
     End Sub
 
     Public Sub DrawMsg()
-        With progTarget
-            .BeginDraw()
+        PrepDispatcher.Invoke(Sub()
+                                  With progTarget
+                                      .BeginDraw()
 
-            If DisplayProgressText Then
-                .DrawText(ProgressText.MsgText, ProgressText.Format,
-                          ProgressText.Location, progBrush_Text, DrawTextOptions.Clip)
-            End If
+                                      If DisplayProgressText Then
+                                          .DrawText(ProgressText.MsgText, ProgressText.Format,
+                                                    ProgressText.Location, progBrush_Text, DrawTextOptions.Clip)
+                                      End If
 
-            '    .EndDraw()
-        End With
+                                      .EndDraw()
+                                  End With
+                              End Sub)
+
     End Sub
 
     Public Sub DisplayMsg(txtMsg As String, pType As TriggerType)
@@ -976,6 +995,7 @@ Public Class ProgBarGui_AutoCast
         progTarget.BeginDraw()
 
         progTarget.FillRectangle(ProgressTrack, progBrush_BG)
+
         RenderBorder()
 
         If DisplayProgressText Then
@@ -1122,9 +1142,7 @@ Public Class ProgBarGui_AutoCast
         progTarget.BeginDraw()
         progTarget.FillRectangle(ProgressTrack, progBrush_BG)
 
-        If VisQuality Then
-            DrawBorder()
-        End If
+        RenderBorder()
 
         progTarget.EndDraw()
 

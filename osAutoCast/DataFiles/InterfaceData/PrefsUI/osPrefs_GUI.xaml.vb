@@ -18,6 +18,8 @@ Imports osKeyTime = System.Windows.Media.Animation.KeyTime
 
 Public Class osPrefs_GUI
 
+
+
     Private Function GetVisualState(objVisType As PrefUI_State) As String
         Return idxOsPrefVisuals.First(
             Function(visKey)
@@ -67,10 +69,12 @@ Public Class osPrefs_GUI
         Me.Hide()
     End Sub
 
-    Public Async Function ActivatePrefTracker() As Task
-        objOsPrefTracker = New osPrefTracker(Of osPrefData)(osPrefData.Data)
-        Await objOsPrefTracker.PreservePrefs(True)
-    End Function
+    Public Sub ActivatePrefTracker()
+        objOsPrefTracker = New osPrefLib.osPrefMonitor(Of osPrefData)()
+        objOsPrefTracker.Attach(DirectCast(Me.DataContext, osPrefData))
+        'objOsPrefTracker = New osPrefTracker(Of osPrefData)(osPrefData.Data)
+        'Await objOsPrefTracker.PreservePrefs(True)
+    End Sub
 
     Public Sub PrepPrefVis()
         InitVisual(PrefUI_Open)
@@ -100,41 +104,18 @@ Public Class osPrefs_GUI
     End Sub
 
     Public Sub DisplayPrefsUI(isN As Boolean, objAwaitClose As TaskCompletionSource(Of Boolean))
-
         objCloseMonitor = objAwaitClose
-
-        '     SetVisualQuality(VisMode_LowQuality)
-
-        With Me
-            '   osPrefsIU_Present()
-            .Topmost = True
-        End With
-
-
-        'osVisQualityAdapter.SetVisQuality(Me)
-
         visPrefUI_Open.Begin(prefContainer, True)
     End Sub
-    'Public Function DisplayPrefsUI(isN As Boolean) As Task
-    '    Return Dispatcher.CurrentDispatcher.BeginInvoke(DispatcherPriority.Render,
-    '        Sub()
-    '            With Me
-    '                osPrefsIU_Present()
-    '                .Topmost = True
-    '            End With
 
-    '            visPrefUI_Open.Begin(prefContainer)
-    '        End Sub).Task
-    'End Function
-
-    Private Function FetchExpandVisual() As DoubleAnimationUsingKeyFrames ' DoubleAnimation
+    Private Function FetchExpandVisual() As DoubleAnimationUsingKeyFrames
         Return CType(visPrefUI_Open.Children.First(
             Function(objVis)
                 Return objVis.Name = "osPrefExpandVis"
             End Function), DoubleAnimationUsingKeyFrames)
     End Function
 
-    Private Function FetchCloseVisual() As DoubleAnimationUsingKeyFrames ' DoubleAnimation
+    Private Function FetchCloseVisual() As DoubleAnimationUsingKeyFrames
         Return CType(visPrefUI_Close.Children.First(
             Function(objVis)
                 Return objVis.Name = "osPrefExpandVisC"
@@ -160,12 +141,12 @@ Public Class osPrefs_GUI
                 New EasingDoubleKeyFrame() With {
                     .KeyTime = SetVisDuration(1600),
                     .Value = objExpandH,
-                    .EasingFunction = New osPrefExpandEase() With {.EasingMode = EasingMode.EaseIn}
-                })
+                    .EasingFunction = New osPrefExpandEase() With {
+                        .EasingMode = EasingMode.EaseIn
+                    }})
 
             .Height = 0
         End With
-
     End Sub
 
     Private Sub ApplyCloserSize()
@@ -177,7 +158,6 @@ Public Class osPrefs_GUI
                    .Value = objExpandH,
                    .EasingFunction = New QuadraticEase() With {.EasingMode = EasingMode.EaseInOut}
                })
-
     End Sub
 
     Public Sub ShowPrefsUICore()
@@ -191,19 +171,38 @@ Public Class osPrefs_GUI
 
     Private Sub SetOpenEvents()
         evtComplete_Open =
-                    Sub()
-                        RemoveHandler visPrefUI_Open.Completed,
-                                                                evtComplete_Open
+            Sub()
+                RemoveHandler visPrefUI_Open.Completed, evtComplete_Open
 
+                visPrefUI_Open.Stop()
+                visPrefUI_Open = Nothing
 
-                        SetVisualMode(PrefUI_Open)
+                SetVisualMode(PrefUI_Open)
+            End Sub
 
-                        visPrefUI_Open.Stop()
-                        visPrefUI_Open = Nothing
-                    End Sub
+        AddHandler visPrefUI_Open.Completed, evtComplete_Open
+    End Sub
 
-        AddHandler visPrefUI_Open.Completed,
-                                            evtComplete_Open
+    'Private Sub SetVisualQuality(objVMode As VisRenderMode)
+    '    With New osVisRenderMode(objVMode)
+    '        prefContainer.CacheMode = .visCache
+    '        osContentContainer.CacheMode = .visCache
+
+    '        RenderOptions.SetBitmapScalingMode(osContentContainer, .visBitMap)
+    '        RenderOptions.SetBitmapScalingMode(prefContainer, .visBitMap)
+
+    '        RenderOptions.SetEdgeMode(prefContainer, .visEdges)
+    '        RenderOptions.SetEdgeMode(osContentContainer, .visEdges)
+    '    End With
+    'End Sub
+
+    Private Sub SetVisualMode(valPrefState As PrefUI_State)
+        Select Case valPrefState
+            Case PrefUI_Open
+                osTitleCover.Visibility = Visibility.Collapsed
+            Case PrefUI_Close
+                osTitleCover.Visibility = Visibility.Visible
+        End Select
     End Sub
 
     Private Sub SetCloseEvents()
@@ -216,41 +215,13 @@ Public Class osPrefs_GUI
                 Me.Close()
             End Sub
 
+        osVisQualityAdapter.UpdateVisData(VisTypeAdapter.
+                                          VisAdapter_Opts, visPrefUI_Close)
+
         AddHandler visPrefUI_Close.Completed,
                                             evtComplete_Close
 
-        osVisQualityAdapter.UpdateVisData(VisTypeAdapter.VisAdapter_Opts, visPrefUI_Close)
-
-        '  SetVisualMode(PrefUI_Close)
-    End Sub
-
-    Private Sub SetVisualQuality(objVMode As VisRenderMode)
-        With New osVisRenderMode(objVMode)
-            prefContainer.CacheMode = .visCache
-            osContentContainer.CacheMode = .visCache
-
-            RenderOptions.SetBitmapScalingMode(osContentContainer, .visBitMap)
-            RenderOptions.SetBitmapScalingMode(prefContainer, .visBitMap)
-
-            RenderOptions.SetEdgeMode(prefContainer, .visEdges)
-            RenderOptions.SetEdgeMode(osContentContainer, .visEdges)
-        End With
-    End Sub
-
-    Private Sub SetVisualMode(valPrefState As PrefUI_State)
-        Select Case valPrefState
-            Case PrefUI_Open
-                osTitleCover.Visibility = Visibility.Collapsed
-                RenderOptions.SetEdgeMode(prefContainer, EdgeMode.Unspecified)
-
-                SetVisualQuality(VisMode_HighQuality)
-            Case PrefUI_Close
-                osTitleCover.Visibility = Visibility.Visible
-                RenderOptions.SetEdgeMode(prefContainer, EdgeMode.Aliased)
-                RenderOptions.SetEdgeMode(osContentContainer, EdgeMode.Aliased)
-
-                SetVisualQuality(VisMode_LowQuality)
-        End Select
+        SetVisualMode(PrefUI_Close)
     End Sub
 
     Public Sub osPrefsIU_Present()
@@ -260,23 +231,17 @@ Public Class osPrefs_GUI
 
         SetWindowPos(objHwnd, HWND_TOPMOST, 0, 0, 0, 0,
                      SWP_NOMOVE Or SWP_NOSIZE Or SWP_NOACTIVATE)
+
+        Me.Topmost = True
     End Sub
 
-    'Private Sub osPrefs_GUI_Loaded(sender As Object, e As RoutedEventArgs) Handles Me.Loaded
-    '    Me.DataContext = osPrefData.Data
-    'End Sub
-
     Private Sub osPrefsBtnClk_SavePrefs(sender As Object, e As RoutedEventArgs) Handles osPrefsBtn_Save.Click
-        If objOsPrefTracker.HasChanges Then
+        If objOsPrefTracker.prefsChanged Then
             Dim chkDoSave = GetResponse(PromptType.Prefs_Save)
 
             If chkDoSave = isYes Then
                 osPrefDataIdx.SavePrefsFile()
-                objOsPrefTracker.HasChanges()
-
                 isSaved = True
-            Else
-                objOsPrefTracker.Revert()
             End If
         End If
     End Sub
@@ -297,7 +262,7 @@ Public Class osPrefs_GUI
     End Function
 
     Private Function HasPrefChanges() As Boolean
-        Return objOsPrefTracker.HasChanges
+        Return objOsPrefTracker.prefsChanged
     End Function
 
     Private Function HasUnsavedChanges() As Boolean
@@ -332,10 +297,10 @@ Public Class osPrefs_GUI
         objCloseMonitor.TrySetResult(True)
     End Sub
 
-    Public Sub osPrefs_InitCloseVis()
-        Dim aa = osVisQualityAdapter.EstablishVisDataSettings(VisTypeAdapter.VisAdapter_Opts, VisRenderMode.VisMode_LowQuality, True)
+    Public Async Function osPrefs_InitCloseVis() As Task
+        Await osVisQualityAdapter.EstablishVisDataSettings(VisTypeAdapter.VisAdapter_Opts, VisRenderMode.VisMode_LowQuality, True)
         visPrefUI_Close.Begin(prefContainer, True)
-    End Sub
+    End Function
 
     Private Sub osPrefsBtnClk_Close(sender As Object, e As RoutedEventArgs) Handles osPrefsBtn_Close.Click
         Select Case GetPrefSaveState()
@@ -348,9 +313,7 @@ Public Class osPrefs_GUI
                     Case isYes
                         TriggerPrefSave()
                         osPrefs_InitClose(True)
-                    Case isNo
-                        objOsPrefTracker.Revert()
-                    Case isCancel
+                    Case isNo Or isCancel
                         Exit Sub
                 End Select
         End Select
@@ -366,7 +329,11 @@ Partial Public Class osPrefs_GUI
     Private evtComplete_Close As EventHandler
 
     Private isSaved As Boolean = False
-    Private objOsPrefTracker As osPrefTracker(Of osPrefData)
+
+    'Private objOsPrefTracker As osPrefTracker(Of osPrefData)
+    'Private objOsPrefTracker As osPrefTracker(Of osPrefData)
+
+    Private objOsPrefTracker As osPrefLib.osPrefMonitor(Of osPrefData)
 
     Private Shared ReadOnly HWND_TOPMOST As New IntPtr(-1)
     Private Const SWP_NOMOVE As UInteger = &H2
@@ -413,6 +380,10 @@ Partial Public Class osPrefs_GUI
 
     Public Sub New()
         InitializeComponent()
+    End Sub
+
+    Private Sub osPrefs_GUI_Loaded(sender As Object, e As RoutedEventArgs) Handles Me.Loaded
+        ActivatePrefTracker()
     End Sub
 
     Protected Overrides Sub OnSourceInitialized(e As EventArgs)

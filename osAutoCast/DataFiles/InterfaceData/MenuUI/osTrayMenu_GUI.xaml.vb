@@ -111,21 +111,20 @@ Public Class osTrayMenu_GUI
     End Sub
 
     Public Sub PrepTrayMenuInit()
-        Dim bb = Dispatcher.BeginInvoke(
-    Sub()
-        visTrayMenu_Open = TryCast(Me.Resources(GetVisualKey(TrayMenu_Open)), Storyboard)
-        InitTrayMenuVis()
+        Dim objTask_InitTrayMenu = Dispatcher.BeginInvoke(
+            Sub()
+                visTrayMenu_Open = TryCast(Me.Resources(GetVisualKey(TrayMenu_Open)), Storyboard)
+                InitTrayMenuVis()
 
-        Dim aa = osVisQualityAdapter.InitAdapter(VisTypeAdapter.VisAdapter_TrayMenu, visTrayMenu_Open,
+                Dim objTask_VisAdapter = osVisQualityAdapter.InitAdapter(VisTypeAdapter.VisAdapter_TrayMenu, visTrayMenu_Open,
                                                   True, True, TrayMenuOutline, TrayMainContainer)
-        With Me
-            .Width = wTrayMenu
-            .Height = hTrayMenu
+                With Me
+                    .Width = wTrayMenu
+                    .Height = hTrayMenu
 
-            BufferTrayMenu()
-        End With
-    End Sub, DispatcherPriority.Background)
-
+                    BufferTrayMenu()
+                End With
+            End Sub, DispatcherPriority.Background)
     End Sub
 
     Public Async Function PrepTrayMenuInit(isN As Boolean) As Task

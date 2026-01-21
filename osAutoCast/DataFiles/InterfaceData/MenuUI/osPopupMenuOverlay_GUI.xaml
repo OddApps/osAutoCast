@@ -10,11 +10,7 @@
         <Storyboard x:Key="OverlayVisual_Open">
             <DoubleAnimationUsingKeyFrames x:Name="visOpen_Overlay" Storyboard.TargetName="OverlayBackground"
                                             Storyboard.TargetProperty="(UIElement.Opacity)" FillBehavior="HoldEnd">
-                <EasingDoubleKeyFrame KeyTime="00:00:00" Value="0" >
-                    <EasingDoubleKeyFrame.EasingFunction>
-                        <QuadraticEase EasingMode="EaseInOut" />
-                    </EasingDoubleKeyFrame.EasingFunction>
-                </EasingDoubleKeyFrame>
+                <EasingDoubleKeyFrame KeyTime="00:00:00" Value="0" />
                 <EasingDoubleKeyFrame KeyTime="00:00:0.500" Value="0.7" >
                     <EasingDoubleKeyFrame.EasingFunction>
                         <QuadraticEase EasingMode="EaseInOut" />

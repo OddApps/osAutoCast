@@ -98,8 +98,6 @@ Public NotInheritable Class osHandler_UI
     End Property
 
     Public Shared Async Function RestoreUI_PopupMenu() As Task
-
-
         Await Task.Run(
             Sub()
                 PrepDispatcher().Invoke(
@@ -132,7 +130,6 @@ Public NotInheritable Class osHandler_UI
                 PrepDispatcher().Invoke(
                     Sub()
                         _osPrefsWindow = PrepUI_Opts()
-                        Dim objTask_StartTracker = osPrefsWindow.ActivatePrefTracker()
                     End Sub, DispatcherPriority.Background)
             End Sub)
 
@@ -281,6 +278,18 @@ Public NotInheritable Class osHandler_UI
         End Select
     End Sub
 
+    Public Shared Sub PrepDispatch_Popup()
+        Dim objOsPopupMenu = _osPopupMenu.Value
+
+        ClearHandlers(objOsPopupMenu)
+
+        DisposeUI_PopupMenu.Invoke(objOsPopupMenu)
+
+        _osPopupMenu = Nothing
+
+        Dim objResetPopupMenu = GenerateUI_PopupMenu()
+    End Sub
+
     Public Shared Sub PrepDispatch(sender As Object, e As EventArgs)
         Dim objOsPopupMenu = TryCast(sender, osPopupMenu_GUI)
         Dim objOsPopupMenuOverlay = osPopupMenuOverlay
@@ -304,6 +313,10 @@ Public NotInheritable Class osHandler_UI
                  End Sub)
 
         InitResourceAlloc()
+    End Sub
+
+    Private Shared Sub ClearHandlers(objPopupMenu As osPopupMenu_GUI)
+        RemoveHandler objPopupMenu.Closed, AddressOf PrepDispatch
     End Sub
 
     Private Shared Sub ClearHandlers(objPopupMenu As osPopupMenu_GUI, objPopupMenuOverlayWindow As osPopupMenuOverlay_GUI)
@@ -796,16 +809,8 @@ Public NotInheritable Class osHandler_UI
         Dim _objAwaitClose = objAwaitClose
 
         osPrefsWindow.osPrefsIU_Present()
-        '   SetVisualMode(osPrefsWindow.prefContainer)
         osPrefsWindow.DisplayPrefsUI(True, _objAwaitClose)
     End Sub
-
-    Public Shared Function ClosePrefsUI() As Task
-        Return PrepDispatcher().InvokeAsync(
-            Sub()
-                osPrefsWindow.osPrefs_InitCloseVis()
-            End Sub, DispatcherPriority.Render).Task
-    End Function
 
     Public Shared Function isOverlayActive() As Boolean
         Return If(osPopupMenuOverlay IsNot Nothing, True, False)
