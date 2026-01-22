@@ -457,14 +457,19 @@ Public NotInheritable Class osFuncLib_AutoCast
     Public Shared Async Function ExecuteAutoCast() As Task
         Await osHandler_UI.DisplayGUI(True, TriggerType.AutoCast, ptPos)
 
-        ui_AutoCast.InvokeAsync(Sub(gui)
-                                    gui.Show()
-                                End Sub)
+        Dim ba = ui_AutoCast.InvokeAsync(Sub(gui)
+                                             gui.Show()
+                                         End Sub)
         '   ui_AutoCast.Show()
 
-        Dim isTask_AutoCast = ui_AutoCast.InvokeAsync(Function(gui)
-                                                          Return gui.LaunchAutoCast()
-                                                      End Function)
+        Dim isTask_AutoCast = ui_AutoCast.InvokeTask(
+            Function(gui)
+                Return gui.LaunchAutoCast()
+            End Function)
+        'Dim isTask_AutoCast = ui_AutoCast.InvokeAsync(Function(gui)
+        '                                                  Return gui.LaunchAutoCast()
+        '                                              End Function)
+
 
         Dim retProgResult = Await isTask_AutoCast
 
@@ -2268,6 +2273,8 @@ Public Module osUI_Loader
         '_autoCastThread.IsBackground = True
         '_autoCastThread.Start()
 
+        '        Dim ab = osHandler_AutoCast.StartAutoCastGuiAsync()
+
         osHandler_AutoCast.InitializeAutoCastUI()
 
         Await PrepDispatcher().InvokeAsync(
@@ -2319,13 +2326,13 @@ Public NotInheritable Class AutoCastGui
     End Sub
 
     ' Fire-and-forget: call an Action on the WinForms instance thread
-    Public Sub InvokeAsync(action As Action(Of ProgBarGui_AutoCast))
-        Dim f = ProgBarGui_AutoCast.Instance
-        If f Is Nothing OrElse f.IsDisposed Then Return
+    'Public Sub InvokeAsync(action As Action(Of ProgBarGui_AutoCast))
+    '    Dim f = ProgBarGui_AutoCast.Instance
+    '    If f Is Nothing OrElse f.IsDisposed Then Return
 
-        ' safe: BeginInvoke posts to the form's thread
-        f.BeginInvoke(New Action(Sub() action(f)))
-    End Sub
+    '    ' safe: BeginInvoke posts to the form's thread
+    '    f.BeginInvoke(New Action(Sub() action(f)))
+    'End Sub
 
     ' Synchronous: call a Func on the WinForms instance thread and get a result
     Public Function Invoke(Of T)(func As Func(Of ProgBarGui_AutoCast, T)) As T
@@ -2343,7 +2350,7 @@ Public NotInheritable Class AutoCastGui
         End If
     End Function
 
-    Public Function InvokeAsync(Of T)(func As Func(Of ProgBarGui_AutoCast, T)) As Task(Of T)
+    Public Function InvokeAsync(Of T)(func As Func(Of ProgBarGui_AutoCast, T), isN As Boolean) As Task(Of T)
         Dim f = ProgBarGui_AutoCast.Instance
         If f Is Nothing OrElse f.IsDisposed Then
             Return Task.FromException(Of T)(New InvalidOperationException("AutoCast GUI has not been started."))
@@ -2368,6 +2375,39 @@ Public NotInheritable Class AutoCastGui
         End If
 
         Return tcs.Task
+    End Function
+
+    Public Async Function InvokeTask(Of T)(
+    func As Func(Of ProgBarGui_AutoCast, Task(Of T))
+) As Task(Of T)
+
+        Dim f = ProgBarGui_AutoCast.Instance
+        If f Is Nothing OrElse f.IsDisposed Then
+            Throw New InvalidOperationException("AutoCast GUI has not been started.")
+        End If
+
+        ' If already on the GUI thread, just await directly
+        If Not f.InvokeRequired Then
+            Return Await func(f)
+        End If
+
+        ' Marshal to GUI thread, then await the async work
+        Dim tcs As New TaskCompletionSource(Of T)(
+        TaskCreationOptions.RunContinuationsAsynchronously
+    )
+
+        f.BeginInvoke(New Action(
+        Async Sub()
+            Try
+                Dim result As T = Await func(f)
+                tcs.SetResult(result)
+            Catch ex As Exception
+                tcs.SetException(ex)
+            End Try
+        End Sub
+    ))
+
+        Return Await tcs.Task
     End Function
 
     ' 2) async-return overload (handles Func(...)->Task(Of T) and unwraps the inner task)
@@ -2414,32 +2454,32 @@ Public NotInheritable Class AutoCastGui
     End Function
 
     '' 3) async action (no result) overload
-    'Public Function InvokeAsync(action As Action(Of ProgBarGui_AutoCast)) As Task
-    '    Dim f = ProgBarGui_AutoCast.Instance
-    '    If f Is Nothing OrElse f.IsDisposed Then
-    '        Return Task.FromException(New InvalidOperationException("AutoCast GUI has not been started."))
-    '    End If
+    Public Function InvokeAsync(action As Action(Of ProgBarGui_AutoCast)) As Task
+        Dim f = ProgBarGui_AutoCast.Instance
+        If f Is Nothing OrElse f.IsDisposed Then
+            Return Task.FromException(New InvalidOperationException("AutoCast GUI has not been started."))
+        End If
 
-    '    Dim tcs As New TaskCompletionSource(Of Object)(TaskCreationOptions.RunContinuationsAsynchronously)
+        Dim tcs As New TaskCompletionSource(Of Object)(TaskCreationOptions.RunContinuationsAsynchronously)
 
-    '    Dim wrapper As Action =
-    '    Sub()
-    '        Try
-    '            action(f)
-    '            tcs.SetResult(Nothing)
-    '        Catch ex As Exception
-    '            tcs.SetException(ex)
-    '        End Try
-    '    End Sub
+        Dim wrapper As Action =
+        Sub()
+            Try
+                action(f)
+                tcs.SetResult(Nothing)
+            Catch ex As Exception
+                tcs.SetException(ex)
+            End Try
+        End Sub
 
-    '    If f.InvokeRequired Then
-    '        f.BeginInvoke(wrapper)
-    '    Else
-    '        wrapper()
-    '    End If
+        If f.InvokeRequired Then
+            f.BeginInvoke(wrapper)
+        Else
+            wrapper()
+        End If
 
-    '    Return tcs.Task
-    'End Function
+        Return tcs.Task
+    End Function
 
 End Class
 

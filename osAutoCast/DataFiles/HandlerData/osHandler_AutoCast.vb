@@ -20,6 +20,11 @@ Public NotInheritable Class osHandler_AutoCast
 
     Public Shared Sub InitializeAutoCastUI()
         SyncLock _startupLock
+
+            If _autoCastThread IsNot Nothing AndAlso _autoCastThread.IsAlive Then
+                Return
+            End If
+
             _autoCastCts = New CancellationTokenSource()
             _startupEvent.Reset()
 
@@ -33,29 +38,32 @@ Public NotInheritable Class osHandler_AutoCast
                         Dim objWin_AC As New ProgBarGui_AutoCast(.Item("pW"), .Item("pH"),
                                             osFuncLib_Progress.ProgTimeSpan_AC, AddressOf EaseProgress)
 
-                        _autoCastProgress = objWin_AC
+                        '     _autoCastProgress = objWin_AC
 
-                        ProgBarGui_AutoCast.Instance = objWin_AC
                         _osGui_AutoCastProgress = New AutoCastGui()
+                        ProgBarGui_AutoCast.Instance = objWin_AC
+
+                        AddHandler objWin_AC.FormClosed,
+                            Sub()
+                                Try
+                                    objContextAC.ExitThread()
+                                Catch : End Try
+                            End Sub
+
+                        _startupEvent.Set()
+                        osRunForm.Run(objContextAC)
+
+                        '    _autoCastProgress = Nothing
+                        ProgBarGui_AutoCast.Instance = Nothing
+                        _osGui_AutoCastProgress = Nothing
+                        _autoCastThreadId = 0
                     End With
-
-                    SetCloseEvent(objContextAC)
-
-                    _startupEvent.Set()
-                    osRunForm.Run(objContextAC)
-
-                    ResetAutoCast()
                 End Sub)
 
-            ActivateAutoCastThread()
+            _autoCastThread.SetApartmentState(ApartmentState.STA)
+            _autoCastThread.IsBackground = True
+            _autoCastThread.Start()
         End SyncLock
-    End Sub
-
-
-    Private Shared Sub ActivateAutoCastThread()
-        _autoCastThread.SetApartmentState(ApartmentState.STA)
-        _autoCastThread.IsBackground = True
-        _autoCastThread.Start()
     End Sub
 
     Public Shared Function StopAutoCastGui(Optional timeoutMs As Integer = 5000) As Boolean
@@ -93,7 +101,13 @@ Public NotInheritable Class osHandler_AutoCast
                 _autoCastCts?.Dispose()
             Catch : End Try
 
-            ResetAutoCast(True)
+            '      _autoCastProgress = Nothing
+            _autoCastCts = Nothing
+            _autoCastThread = Nothing
+            _osGui_AutoCastProgress = Nothing
+            ProgBarGui_AutoCast.Instance = Nothing
+            _startupEvent.Reset()
+            _autoCastThreadId = 0
 
             Return True
         End SyncLock
