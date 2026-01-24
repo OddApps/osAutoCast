@@ -65,10 +65,10 @@
         <Setter Property="Background" Value="#FF3C3C3C" />
         <Setter Property="BorderThickness" Value="8" />
         <Setter Property="CornerRadius" Value="12" />
-        <Setter Property="Opacity" Value="0" />
         <Setter Property="Margin" Value="2" />
         <Setter Property="RenderTransformOrigin" Value="0.5,0.5" />
-        <!--<Setter Property="CacheMode" Value="BitmapCache" />
+        <!--<Setter Property="Opacity" Value="0" />
+       <Setter Property="CacheMode" Value="BitmapCache" />
         <Setter Property="RenderOptions.BitmapScalingMode" Value="LowQuality" />-->
     </Style>
 
@@ -146,11 +146,11 @@
         <Setter Property="VerticalAlignment" Value="Center" />
         <Setter Property="VerticalContentAlignment" Value="Center" />
         <Style.Triggers>
-            <DataTrigger Binding="{Binding GenOpts_VisualQuality}" Value="0">
+            <DataTrigger Binding="{Binding VisQualitySetting, RelativeSource={RelativeSource AncestorType=Window}}" Value="0">
                 <Setter Property="ContentTemplate" Value="{x:Null}" />
                 <Setter Property="Template" Value="{StaticResource osPrefsBtnVis_Performance}" />
             </DataTrigger>
-            <DataTrigger Binding="{Binding GenOpts_VisualQuality}" Value="1">
+            <DataTrigger Binding="{Binding VisQualitySetting, RelativeSource={RelativeSource AncestorType=Window}}" Value="1">
                 <Setter Property="ContentTemplate" Value="{StaticResource osEffectPrefsText}" />
                 <Setter Property="Template" Value="{StaticResource osPrefsBtnVis_Quality}" />
             </DataTrigger>

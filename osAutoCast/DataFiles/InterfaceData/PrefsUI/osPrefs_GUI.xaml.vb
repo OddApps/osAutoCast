@@ -1,16 +1,14 @@
-﻿Imports System.ComponentModel
-Imports System.Runtime.InteropServices
+﻿Imports System.Runtime.InteropServices
 Imports System.Windows.Interop
 Imports System.Windows.Media.Animation
 Imports System.Windows.Threading
+Imports osAutoCast.DataTypeLib.PrefSaveState
 Imports osAutoCast.DataTypeLib.PrefUI_State
 Imports osAutoCast.DataTypeLib.PromptResponse
-Imports osAutoCast.DataTypeLib.PrefSaveState
-Imports osAutoCast.DataTypeLib.VisRenderMode
-Imports osAutoCast.osStyle
 Imports osAutoCast.osControls
-Imports osPrefData = osAutoCast.osPrefLib.osPreferenceLib
+Imports osAutoCast.osVisualAdapter
 Imports osKeyTime = System.Windows.Media.Animation.KeyTime
+Imports osPrefData = osAutoCast.osPrefLib.osPreferenceLib
 
 #Disable Warning BC42353
 #Disable Warning BC42104
@@ -35,7 +33,7 @@ Public Class osPrefs_GUI
 
     Private Function SetVisual(objVisType As PrefUI_State) As Storyboard
         Return If(objVisType = PrefUI_Open,
-            visPrefUI_Open, visPrefUI_Close)
+            VisDataObject, visPrefUI_Close)
     End Function
 
     Private Sub EstablishVisual(objVisType As PrefUI_State, ByRef objVis As Storyboard)
@@ -47,12 +45,19 @@ Public Class osPrefs_GUI
         Select Case objVisType
             Case PrefUI_Open
                 EstablishVisual(PrefUI_Open, visPrefUI_Open)
+                Me.VisDataObject = visPrefUI_Open
 
-                ApplyExpanderSize()
+                '       Dim objConfigSettings = EstablishVisConfig()
+
+                '   Dim aa = objVisAdapt.InitVisualAdapter()
+
                 SetOpenEvents()
                 BufferPrefWin()
+
             Case PrefUI_Close
                 EstablishVisual(PrefUI_Close, visPrefUI_Close)
+                Me.VisDataObject = visPrefUI_Close
+
                 ApplyCloserSize()
         End Select
     End Sub
@@ -60,44 +65,68 @@ Public Class osPrefs_GUI
     Private Sub BufferPrefWin()
         Me.Show()
         Me.Hide()
+
     End Sub
 
-    Private Function CreatePrefMonitor() As osPrefLib.osPrefMonitor(Of osPrefData)
-        Return New osPrefLib.osPrefMonitor(Of osPrefData)
+    Private Function EstablishVisConfig() As VisAdapterConfig
+        Return VisAdapterConfig.ObjectReset Or VisAdapterConfig.UpdateAsync_OnDispose Or VisAdapterConfig.UpdateAsync_OnReset
     End Function
-
-    Private Sub InitializePrefMonitor()
-        objOsPrefTracker.Attach(DirectCast(Me.DataContext, osPrefData))
-    End Sub
-
-    Public Sub ActivatePrefTracker()
-        objOsPrefTracker = CreatePrefMonitor()
-        InitializePrefMonitor()
-        'objOsPrefTracker = New osPrefTracker(Of osPrefData)(osPrefData.Data)
-        'Await objOsPrefTracker.PreservePrefs(True)
-    End Sub
 
     Public Sub PrepPrefVis()
         InitVisual(PrefUI_Open)
+        ' Me.VisDataObject = visPrefUI_Open
+        Dim objConfigSettings = EstablishVisConfig()
+        Me.VisAdapter = New VisQualityAdapter(Me, objConfigSettings,
+                                                   prefContainer, osTitleCover, osContentContainer)
+        ApplyExpanderSize()
+        '     objVisAdapt = New VisQualityAdapter(Me, EstablishVisConfig(), prefContainer, osTitleCover, osContentContainer)
     End Sub
+
+    Public Overrides Property VisDataObject As Storyboard
+        Get
+            Return MyBase.VisDataObject
+        End Get
+        Set(value As Storyboard)
+            MyBase.VisDataObject = value
+        End Set
+    End Property
 
     Public Sub DisplayPrefsUI(objAwaitClose As TaskCompletionSource(Of Boolean))
         objCloseMonitor = objAwaitClose
-        visPrefUI_Open.Begin(prefContainer, True)
+        Dim ba = TriggerVisuals_Open(False, True)
     End Sub
 
+    Public Overrides Function TriggerVisuals_Open(Optional doAsync As Boolean = True, Optional objAwaitClose As TaskCompletionSource(Of Boolean) = Nothing) As Task
+        objCloseMonitor = objAwaitClose
+        Dim aaa = MyBase.TriggerVisuals_Open(doAsync)
+    End Function
+
+    Private Function TriggerDisplayPrefsUI() As Task
+        VisDataObject.Begin(prefContainer, True)
+    End Function
+
     Private Function FetchExpandVisual() As DoubleAnimationUsingKeyFrames
-        Return CType(visPrefUI_Open.Children.First(
+        Return CType(osVisDataArray_Open().First(
             Function(objVis)
-                Return objVis.Name = "osPrefExpandVis"
+                With VerifyVisData(objVis)
+                    Return .VisTarget = "BottomContainer" AndAlso
+                        .VisProperty = "Height"
+                End With
             End Function), DoubleAnimationUsingKeyFrames)
     End Function
 
     Private Function FetchCloseVisual() As DoubleAnimationUsingKeyFrames
-        Return CType(visPrefUI_Close.Children.First(
+        Return CType(osVisDataArray_Close().First(
             Function(objVis)
-                Return objVis.Name = "osPrefExpandVisC"
+                With VerifyVisData(objVis)
+                    Return .VisTarget = "BottomContainer" AndAlso
+                        .VisProperty = "Height"
+                End With
             End Function), DoubleAnimationUsingKeyFrames)
+    End Function
+
+    Private Function VerifyVisData(objVisData As DoubleAnimationUsingKeyFrames) As VisDataDetails
+        Return New VisDataDetails(objVisData)
     End Function
 
     Private Function SetVisDuration(valDur As Double) As osKeyTime
@@ -144,21 +173,21 @@ Public Class osPrefs_GUI
             .Topmost = True
         End With
 
-        visPrefUI_Open.Begin()
+        VisDataObject.Begin()
     End Sub
 
     Private Sub SetOpenEvents()
         evtComplete_Open =
             Sub()
-                RemoveHandler visPrefUI_Open.Completed, evtComplete_Open
+                RemoveHandler VisDataObject.Completed, evtComplete_Open
 
-                visPrefUI_Open.Stop()
-                visPrefUI_Open = Nothing
+                VisDataObject.Stop()
+                '  visPrefUI_Open = Nothing
 
                 SetVisualMode(PrefUI_Open)
             End Sub
 
-        AddHandler visPrefUI_Open.Completed, evtComplete_Open
+        AddHandler VisDataObject.Completed, evtComplete_Open
     End Sub
 
     Private Sub SetVisualMode(valPrefState As PrefUI_State)
@@ -175,15 +204,15 @@ Public Class osPrefs_GUI
 
         evtComplete_Close =
             Sub()
-                RemoveHandler visPrefUI_Close.Completed,
+                RemoveHandler VisDataObject.Completed,
                                                         evtComplete_Close
                 Me.Close()
             End Sub
 
-        osVisQualityAdapter.UpdateVisData(VisTypeAdapter.
-                                          VisAdapter_Opts, visPrefUI_Close)
+        'osVisQualityAdapter.UpdateVisData(VisTypeAdapter.
+        '                                  VisAdapter_Opts, visPrefUI_Close)
 
-        AddHandler visPrefUI_Close.Completed,
+        AddHandler VisDataObject.Completed,
                                             evtComplete_Close
 
         SetVisualMode(PrefUI_Close)
@@ -249,36 +278,53 @@ Public Class osPrefs_GUI
         End Select
     End Function
 
-    Private Sub osPrefs_InitClose()
-        SetCloseEvents()
-        Dispatcher.CurrentDispatcher.
-            BeginInvoke(DispatcherPriority.Render,
-                        Sub()
-                            visPrefUI_Close.Begin(Me, True)
-                        End Sub)
-    End Sub
+    'Private Sub osPrefs_InitClose()
+    '    SetCloseEvents()
+    '    Dispatcher.CurrentDispatcher.
+    '        BeginInvoke(DispatcherPriority.Render,
+    '                    Sub()
+    '                        visPrefUI_Close.Begin(Me, True)
+    '                    End Sub)
+    'End Sub
 
-    Private Sub osPrefs_InitClose(isN As Boolean)
+    'Private Function osPrefs_InitClose() As Task
+    '    SetCloseEvents()
+    '    objCloseMonitor.TrySetResult(True)
+    'End Function
+
+    Private Function osPrefs_InitClose() As Task
+        '   Dim ba = TriggerVisuals_Close(False, True)
+        SetCloseEvents()
+        objCloseMonitor.TrySetResult(True)
+    End Function
+
+    Private Sub osPrefs_InitClose2()
         SetCloseEvents()
         objCloseMonitor.TrySetResult(True)
     End Sub
 
-    Public Async Function osPrefs_InitCloseVis() As Task
-        Await osVisQualityAdapter.EstablishVisDataSettings(VisTypeAdapter.VisAdapter_Opts, VisRenderMode.VisMode_LowQuality, True)
-        visPrefUI_Close.Begin(prefContainer, True)
+    Public Function osPrefs_InitCloseVis() As Task
+        '   Await objVisAdapt.ApplyVisuals(True)
+        '    visPrefUI_Close.Begin(prefContainer, True)
+        '  Dim ba = TriggerVisuals_Close(False, True)
+        '  Return Task.CompletedTask
+    End Function
+
+    Public Overrides Async Function TriggerVisuals_Close(Optional doAsync As Boolean = True) As Task
+        Await MyBase.TriggerVisuals_Close(doAsync)
     End Function
 
     Private Sub osPrefsBtnClk_Close(sender As Object, e As RoutedEventArgs) Handles osPrefsBtn_Close.Click
         Select Case GetPrefSaveState()
             Case Prefs_NoChanges
-                osPrefs_InitClose(True)
+                osPrefs_InitClose2()'  osPrefs_InitClose()
             Case Prefs_Saved
-                osPrefs_InitClose(True)
+                osPrefs_InitClose2()' osPrefs_InitClose()
             Case Prefs_NotSaved
                 Select Case GetResponse(PromptType.Prefs_Close)
                     Case isYes
                         TriggerPrefSave()
-                        osPrefs_InitClose(True)
+                        osPrefs_InitClose2()'  osPrefs_InitClose()
                     Case isNo Or isCancel
                         Exit Sub
                 End Select
@@ -296,9 +342,6 @@ Partial Public Class osPrefs_GUI
 
     Private isSaved As Boolean = False
 
-    'Private objOsPrefTracker As osPrefTracker(Of osPrefData)
-    'Private objOsPrefTracker As osPrefTracker(Of osPrefData)
-
     Private objOsPrefTracker As osPrefLib.osPrefMonitor(Of osPrefData)
 
     Private Shared ReadOnly HWND_TOPMOST As New IntPtr(-1)
@@ -307,12 +350,31 @@ Partial Public Class osPrefs_GUI
     Private Const SWP_NOACTIVATE As UInteger = &H10
 
     Public visPrefUI_Open As New Storyboard
-    Public visPrefUI_Close As Storyboard = Nothing
+    Public visPrefUI_Close As New Storyboard
 
     Private idxOsPrefVisuals As New Dictionary(Of PrefUI_State, String) From {
         {PrefUI_Open, "osPrefsVis_Disp"},
         {PrefUI_Close, "osPrefsVis_Close"}
     }
+
+    Private VisQualityValidated As Boolean
+
+    Public objVisAdapt As VisQualityAdapter
+
+    Private _VisQualitySetting As String = "n/a"
+    Public ReadOnly Property VisQualitySetting As String
+        Get
+            If _VisQualitySetting = "n/a" Then
+                _VisQualitySetting = osPrefData.Data.GenOpts_VisualQuality
+            End If
+
+            If isSaved Then
+                _VisQualitySetting = osPrefData.Data.GenOpts_VisualQuality
+            End If
+
+            Return _VisQualitySetting
+        End Get
+    End Property
 
     Private ReadOnly Property osPrefRes As Style
         Get
@@ -343,6 +405,41 @@ Partial Public Class osPrefs_GUI
             Return osPrefData.Data.objOsPrefIdx
         End Get
     End Property
+
+    Private ReadOnly Property osVisDataArray_Open As IEnumerable(Of DoubleAnimationUsingKeyFrames)
+        Get
+            Return VisDataObject.Children.OfType(Of DoubleAnimationUsingKeyFrames)
+            'Return visPrefUI_Open.Children.OfType(Of DoubleAnimationUsingKeyFrames)
+        End Get
+    End Property
+
+    Private ReadOnly Property osVisDataArray_Close As IEnumerable(Of DoubleAnimationUsingKeyFrames)
+        Get
+            Return VisDataObject.Children.OfType(Of DoubleAnimationUsingKeyFrames)
+        End Get
+    End Property
+
+    'Public Overrides Property VisDataObject As Storyboard
+    '    Get
+    '        Return MyBase.VisDataObject
+    '    End Get
+    '    Set(value As Storyboard)
+    '        MyBase.VisDataObject = value
+    '    End Set
+    'End Property
+
+    Private Function CreatePrefMonitor() As osPrefLib.osPrefMonitor(Of osPrefData)
+        Return New osPrefLib.osPrefMonitor(Of osPrefData)
+    End Function
+
+    Private Sub InitializePrefMonitor()
+        objOsPrefTracker.Attach(DirectCast(Me.DataContext, osPrefData))
+    End Sub
+
+    Public Sub ActivatePrefTracker()
+        objOsPrefTracker = CreatePrefMonitor()
+        InitializePrefMonitor()
+    End Sub
 
     Public Sub New()
         InitializeComponent()

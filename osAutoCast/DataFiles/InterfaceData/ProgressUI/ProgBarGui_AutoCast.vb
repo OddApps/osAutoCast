@@ -137,7 +137,7 @@ Public Class ProgBarGui_AutoCast
     Private progColor_Target As osProgColor = New osProgColor(CalcRGB(34), CalcRGB(139), CalcRGB(34), 1.0F)
 
     Private colorProgress As Single = 0.0F
-    Private Const ColorLerpSpeed As Single = 0.1F
+    Private Const ColorLerpSpeed As Single = 0.35F
 
     Private _isResetting As Boolean = False
     Public Property isResetting As Boolean
@@ -225,7 +225,7 @@ Public Class ProgBarGui_AutoCast
     End Sub
 
     Public Sub New(pW As Integer, pH As Integer, pDuration As TimeSpan, pEase As Func(Of Double, Double), Optional isFirstLoad As Boolean = False)
-        progSettingsVQ = ApplySetingsVQ()
+
         SetVisualQuality()
 
         InitializeComponent(pW, pH)
@@ -273,13 +273,13 @@ Public Class ProgBarGui_AutoCast
         CreateTargetResources()
         CreateShadersAndPipeline()
 
-        InitProgressStates()
+        ApplySetingsVQ()
 
         RenderBorder(True)
         RenderFrame()
     End Sub
 
-    Private Function ApplySetingsVQ() As ProgVisualQuality
+    Private Function ApplySetingsVQ(isSetter As Boolean) As ProgVisualQuality
         Dim objVQ = CoreDataLib.GetVisualQuality()
 
         Select Case objVQ
@@ -289,6 +289,14 @@ Public Class ProgBarGui_AutoCast
                 Return New ProgVisualQuality(objVQ, bsOpaqueRGB)
         End Select
     End Function
+
+    Private Sub ApplySetingsVQ()
+        Dim objVQ = CoreDataLib.GetVisualQuality()
+        InitProgressStates()
+
+        progSettingsVQ = New ProgVisualQuality(
+            objVQ, If(VisQuality, bsPremul, bsOpaque))
+    End Sub
 
     Private Sub SetVisualQuality()
         Dim objVisQuality = CoreDataLib.GetVisualQuality()

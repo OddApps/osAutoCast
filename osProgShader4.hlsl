@@ -1,59 +1,134 @@
-// ProgressBarPS.hlsl
-// Compile target: ps_5_0
+#pragma pack_matrix(row_major)
 
-cbuffer ProgressCB : register(b0)
-{
-    float startTime;      // seconds
-    float currentTime;    // seconds
-    float duration;       // seconds
-    int   easingType;     // 0=linear,1=inQuad,2=outQuad,3=inOutQuad,4=inSine
-    float4 fillColor;
-    float4 bgColor;
-    float2 resolution;
-    float2 padding;      // 16-byte alignment
+cbuffer ProgBarCB : register(b0) {
+    float prevValue;
+    float currValue;
+    float invSize;
+    float flags;
+    float4 pcoloractive;
+    float4 pcolorbg;
+    float barOffset;
+    float pad0;
+    float pad1;
+    float pad2;
 };
 
-struct PSInput
-{
-    float4 pos : SV_POSITION;
-    float2 uv  : TEXCOORD0;
+struct osProgShader_Input {
+    float4 pos : SV_Position;
 };
 
-float Ease(float t, int type)
+// --- SM6-safe derivative width ---
+float PixelWidth(float x)
 {
-    t = saturate(t);
-
-    if (type == 0) return t;                    // Linear
-    if (type == 1) return t * t;                // EaseInQuad
-    if (type == 2) return 1.0 - (1.0 - t) * (1.0 - t); // EaseOutQuad
-    if (type == 3)
-    {
-        if (t < 0.5) return 2.0 * t * t;
-        return -1.0 + (4.0 - 2.0 * t) * t;
-    }
-    if (type == 4) return 1.0 - cos(t * 1.5707963); // EaseInSine
-
-    return t;
+    // Explicit derivative magnitude (preferred in SM6)
+    float dx = abs(ddx(x));
+    float dy = abs(ddy(x));
+    return max(dx + dy, 1e-6);
 }
 
-float4 osProgShader_Main(PSInput IN) : SV_TARGET
+// --- Pixel snapping ---
+float SnapToPx(float t, float invSize)
 {
-    float rawT = (currentTime - startTime) / max(duration, 0.0001);
-    float progress = Ease(rawT, easingType);
+    float px = rcp(invSize);
+    return round(t * px) * invSize;
+}
 
-    float edgeAA = 1.0 / max(1.0, resolution.x);
-    float fillMask = smoothstep(progress - edgeAA, progress + edgeAA, IN.uv.x);
+// --- Full bar AA blend ---
+float ProgBlend_Full(float edge, float x, float invSize)
+{
+    float d = x - edge;
 
-    float4 color = lerp(bgColor, fillColor, fillMask);
+    float w = max(
+        0.5 * invSize,
+        0.5 * PixelWidth(x)
+    );
 
-    // Moving sheen inside filled region
-    if (IN.uv.x <= progress)
+    return saturate(0.5 - d * rcp(2.0 * w));
+}
+
+// --- Step transition blend ---
+float ProgBlend_Step(float a, float b, float x, float invSize, float dv)
+{
+    float lo = min(a, b);
+    float hi = max(a, b);
+
+    hi = max(hi, lo + invSize);
+
+    const float FEATHER_PER_UNIT_DV_PX = 0.75;
+    const float FEATHER_EXTRA_MAX_PX   = 0.5;
+
+    float addHalfPx =
+        min(dv * FEATHER_PER_UNIT_DV_PX, FEATHER_EXTRA_MAX_PX);
+
+    float halfAA =
+        max(0.5 * invSize, 0.5 * PixelWidth(x))
+        + addHalfPx * invSize;
+
+    float left  = smoothstep(lo - halfAA, lo + halfAA, x);
+    float right = 1.0 - smoothstep(hi - halfAA, hi + halfAA, x);
+
+    return saturate(left * right);
+}
+
+// --- Main ---
+float4 osProgShader_Main(osProgShader_Input pin) : SV_Target
+{
+    float u = (pin.pos.x - barOffset) * invSize;
+
+    if (u < 0.0 || u > 1.0)
+        discard;
+
+    float a = SnapToPx(prevValue, invSize);
+    float b = SnapToPx(currValue, invSize);
+
+    bool fullCompose = (((uint)flags & 4u) != 0u);
+
+    if (fullCompose)
     {
-        float wave =
-            sin((IN.uv.x * 12.0 - currentTime * 6.0) * 6.2831853) * 0.5 + 0.5;
-        color.rgb += wave * 0.10 * (1.0 - IN.uv.x / max(progress, 0.001));
-    }
+        // base AA fill factor (same as original)
+        float filled = ProgBlend_Full(b, u, invSize);
 
-    color.a = lerp(bgColor.a, fillColor.a, fillMask);
-    return color;
+        // Gamma-correct blend: convert to linear, lerp, convert back to sRGB.
+        // This produces perceptually better blends for color gradients.
+        // Use 2.2 gamma approximation (fast and visually pleasant).
+        float3 bg_lin  = pow(pcolorbg.rgb, 2.2f);
+        float3 act_lin = pow(pcoloractive.rgb, 2.2f);
+        float3 col_lin = lerp(bg_lin, act_lin, filled);
+        float3 col_srgb = pow(col_lin, 1.0f / 2.2f);
+
+        // Subtle rim/highlight at the fill edge to give depth.
+        // Compute an edge-aware width (same AA-aware width logic).
+        float w = max(0.5f * invSize, 0.5f * PixelWidth(u));
+        // local distance from the exact edge in units of that width
+        float local = (u - b) / w;
+
+        // Gaussian-like narrow highlight centered on the edge, only on the filled side.
+        float inside = step(u, b); // 1 when inside filled region (u <= b), else 0
+        // sharpness: larger value -> narrower highlight. 64 chosen to keep it tight.
+        float rim = exp(-local * local * 64.0f) * 0.12f * inside;
+        // reduce rim strength where the fill is very small (avoid overwhelming tiny fills)
+        rim *= saturate(filled * 6.0f);
+
+        // apply rim as an additive highlight (clamped)
+        float3 final_rgb = saturate(col_srgb + rim);
+
+        float4 col;
+        col.rgb = final_rgb;
+        col.a = 1.0f;
+        return col;
+    }
+    else
+    {
+        if (a == b)
+            discard;
+
+        float dv = abs(b - a);
+        float m  = ProgBlend_Step(a, b, u, invSize, dv);
+
+        if (m <= 0.0)
+            discard;
+
+        float4 baseCol = (b >= a) ? pcoloractive : pcolorbg;
+        return baseCol;
+    }
 }

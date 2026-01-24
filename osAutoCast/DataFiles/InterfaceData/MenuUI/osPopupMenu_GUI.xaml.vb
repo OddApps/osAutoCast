@@ -13,6 +13,7 @@ Imports osAutoCast.DataTypeLib.VisTypeAdapter
 Imports osAutoCast.GameMenuOpts
 Imports osAutoCast.osStyle
 Imports osAutoCast.osControls
+Imports osAutoCast.osVisualAdapter
 
 #Disable Warning BC42353
 #Disable Warning BC42104
@@ -27,7 +28,7 @@ Public Class osPopupMenu_GUI
     Private objTask_Open As TaskCompletionSource(Of Boolean)
 
     Public objAnimation_Open As New Storyboard
-    Private objAnimation_Close As Storyboard = Nothing
+    Private objAnimation_Close As New Storyboard
 
     Private idxPopupVisuals As New Dictionary(Of PopupVisualType, String) From {
         {PopupVisual_Open, "PopupVisual_Open"},
@@ -78,10 +79,10 @@ Public Class osPopupMenu_GUI
             Case aniOpen
                 Select Case objVisAction
                     Case VisualStarted
-                        AddHandler objAnimation_Open.Completed,
+                        AddHandler VisDataObject.Completed,
                             OpenCompleteEvent
                     Case VisualComplete
-                        RemoveHandler objAnimation_Open.Completed, OpenCompleteEvent
+                        RemoveHandler VisDataObject.Completed, OpenCompleteEvent
                 End Select
             Case aniClose
                 Select Case objVisAction
@@ -187,57 +188,6 @@ Public Class osPopupMenu_GUI
     Private _visualCache As New Dictionary(Of PopupVisualType, Storyboard)()
     Private _visDataIdx As New Dictionary(Of PopupVisualType, Storyboard)()
 
-    Public Sub PrewarmAllVisuals()
-        ' call this after ResourceDictionary is merged (preferably during startup)
-        For Each kvp In idxPopupVisuals
-            Dim visType = kvp.Key
-            Dispatcher.Invoke(Sub()
-                                  Dim baseSb = LoadVis_Set(visType)
-                                  If baseSb IsNot Nothing Then
-                                      Dim inst = TryCast(baseSb.Clone(), Storyboard)
-                                      Timeline.SetDesiredFrameRate(inst, 60)
-                                      Storyboard.SetTarget(inst, objContainer)
-                                      ' Optional: Freeze the cloned storyboard to optimize
-                                      'If TypeOf inst Is Freezable Then
-                                      '    CType(inst, Freezable).Freeze()
-                                      'End If
-                                      _visualCache(visType) = inst
-                                  End If
-                              End Sub, DispatcherPriority.Background)
-        Next
-    End Sub
-
-    Public Async Function PreloadVisualData() As Task
-        Await Task.Run(
-            Async Function()
-                For Each kvp In idxPopupVisuals
-                    Dim visType = kvp.Key
-                    Dim template As Storyboard = Await PrepDispatcher().InvokeAsync(
-                        Function()
-
-                            Dim baseSb = LoadVis_Set(visType)
-                            If baseSb Is Nothing Then Return Nothing
-
-                            Dim inst = TryCast(baseSb.Clone(), Storyboard)
-                            If inst Is Nothing Then Return Nothing
-
-                            Timeline.SetDesiredFrameRate(inst, 60)
-                            Storyboard.SetTarget(inst, objContainer)
-                            ' Freeze so future Clone() is cheap
-                            If TypeOf inst Is Freezable AndAlso Not inst.IsFrozen Then
-                                CType(inst, Freezable).Freeze()
-                            End If
-
-                            Return inst
-                        End Function, DispatcherPriority.Render)
-
-                    If template IsNot Nothing Then
-                        _visDataIdx(visType) = template
-                    End If
-                Next
-            End Function)
-    End Function
-
     Public Sub EstablishVisual(objVisType As PopupVisualType, ByRef objSetVisual As Storyboard)
         Dim objPopupVis As Storyboard = GetVisual(objVisType, True)
 
@@ -254,11 +204,7 @@ Public Class osPopupMenu_GUI
 
     Public Sub ConfigureVisual()
         PrepTransitionVisuals(aniOpen, PopupVisual_Open, VisualStarted)
-
-        'objAnimation_Open.Begin(objContainer, True)
-        'objAnimation_Open.Pause(objContainer)
-
-        'objAnimation_Open.Seek(TimeSpan.FromMilliseconds(0))
+        '     VisDataObject = objAnimation_Open
     End Sub
 
     Private Sub InitTransitionVisuals(objAniType As AnimationType, objVisType As PopupVisualType, objVisAction As VisualAction)
@@ -268,8 +214,8 @@ Public Class osPopupMenu_GUI
                 TriggerVisuals(objAnimation_Open, True)
             Case aniClose
                 PrepTransitionVisuals(objAniType, objVisType, objVisAction)
-                Dim objTask_VisAdapter = osVisQualityAdapter.EstablishVisDataSettings(VisTypeAdapter.
-                                                                                      VisAdapter_PopupMenu, VisRenderMode.VisMode_LowQuality, True)
+
+                ' Dim objTask_VisAdapter = objVisAdapt.ApplyVisuals(True)
                 objAnimation_Close.Begin(objContainer, True)
         End Select
     End Sub
@@ -277,13 +223,10 @@ Public Class osPopupMenu_GUI
     Private Sub PrepTransitionVisuals(objAniType As AnimationType, objVisType As PopupVisualType, objVisAction As VisualAction)
         Select Case objAniType
             Case aniOpen
-                EstablishVisual(objVisType, objAnimation_Open)
-                'Dim objTask_VisAdapter = osVisQualityAdapter.InitAdapter(VisTypeAdapter.
-                '                                                         VisAdapter_PopupMenu, objAnimation_Open, True, True, objContainer)
+                EstablishVisual(objVisType, VisDataObject)
             Case aniClose
                 EstablishVisual(objVisType, objAnimation_Close)
-                osVisQualityAdapter.UpdateVisData(VisTypeAdapter.VisAdapter_PopupMenu, objAnimation_Close)
-                '   SetVisualMode(aniClose)
+                '  Dim objTask_VisAdapter = objVisAdapt.ApplyVisuals(True)
         End Select
 
         ProcessVisualEvents(objAniType, objVisAction)
@@ -313,7 +256,8 @@ Public Class osPopupMenu_GUI
     Public Sub TriggerPopupMenu(isN As Boolean)
         If Not _hasAnimated Then
             _hasAnimated = True
-            objAnimation_Open.Begin(objContainer, True)
+            Dim ba = TriggerVisuals_Open(True, True)
+            '  objAnimation_Open.Begin(objContainer, True)
         End If
     End Sub
 
@@ -417,12 +361,25 @@ Public Class osPopupMenu_GUI
         osStopApp()
     End Sub
 
+    Public objVisAdapt As VisQualityAdapter
+
+    Private Function EstablishVisConfig() As VisAdapterConfig
+        Return VisAdapterConfig.ObjectReset Or VisAdapterConfig.UpdateAsync_OnDispose Or VisAdapterConfig.UpdateAsync_OnLoad
+    End Function
+
     Public Sub PrepPopupMenu()
         Me.Show()
         Me.Hide()
 
-        Dim objTask_VisAdapter = osVisQualityAdapter.InitAdapter(VisAdapter_PopupMenu,
-                                                                 Me.objAnimation_Open, True, True, 60, Me.objContainer)
+        VisDataObject = objAnimation_Open
+
+        Dim objConfigSettings = EstablishVisConfig()
+        Me.VisAdapter = New VisQualityAdapter(Me, objConfigSettings,
+                                                       objContainer)
+        Dim objVisConfig = VisAdapterConfig.ApplyVisuals Or VisAdapterConfig.UpdateAsync_OnLoad Or
+            VisAdapterConfig.ObjectReset
+
+
         ShowGameMenuItem()
     End Sub
 
@@ -533,6 +490,7 @@ Partial Public Class osPopupMenu_GUI
 
     Public Sub New()
         InitializeComponent()
+        '  VisDataObject = objAnimation_Open
         '  ShowGameMenuItem()
     End Sub
 

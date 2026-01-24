@@ -184,49 +184,44 @@ Public Module osHandler_Shader
 
         objTaskDone = Await Task.Run(
             Async Function()
-                Dim pxTask = Task.Run(Function()
-                                          Using ms As New MemoryStream(ShaderDataIdx("Px"))
-                                              Return ShaderBytecode.FromStream(ms)
-                                          End Using
-                                      End Function)
+                Dim pxTask = Task.Run(
+                    Function()
+                        Using ms As New MemoryStream(ShaderDataIdx("Px"))
+                            Return ShaderBytecode.FromStream(ms)
+                        End Using
+                    End Function)
 
-                Dim vxTask = Task.Run(Function()
-                                          Using ms As New MemoryStream(ShaderDataIdx("Vx"))
-                                              Return ShaderBytecode.FromStream(ms)
-                                          End Using
-                                      End Function)
+                Dim vxTask = Task.Run(
+                    Function()
+                        Using ms As New MemoryStream(ShaderDataIdx("Vx"))
+                            Return ShaderBytecode.FromStream(ms)
+                        End Using
+                    End Function)
 
                 Dim aba = Await Task.WhenAll(pxTask, vxTask)
 
                 Await PrepDispatcher().InvokeAsync(
-                                         Sub()
-                                             ' Pixel
-                                             Using pxByte = aba(0)
-                                                 Dim pxShader = New PixelShader(ShaderDevice, pxByte)
-                                                 pxShaderData_Pixel = New pxShaderPixel(pxShader)
-                                             End Using
+                    Sub()
+                        Using pxByte = aba(0)
+                            Dim pxShader = New PixelShader(ShaderDevice, pxByte)
+                            pxShaderData_Pixel = New pxShaderPixel(pxShader)
+                        End Using
 
-                                             ' Vertex
-                                             Using vxByte = aba(1)
-                                                 Dim vxShader = New VertexShader(ShaderDevice, vxByte)
-                                                 pxShaderData_Vertex = New pxShaderVertex(vxShader)
-                                             End Using
+                        Using vxByte = aba(1)
+                            Dim vxShader = New VertexShader(ShaderDevice, vxByte)
+                            pxShaderData_Vertex = New pxShaderVertex(vxShader)
+                        End Using
 
-                                             ' Text shaders
-                                             Dim txG As New pxShader_Text
-                                             txG.SetStreamSource(New MemoryStream(ShaderDataIdx("TxG")))
-                                             pxShaderData_Text_G = New pxShaderText_G(txG)
+                        Dim txG As New pxShader_Text
+                        txG.SetStreamSource(New MemoryStream(ShaderDataIdx("TxG")))
+                        pxShaderData_Text_G = New pxShaderText_G(txG)
 
-                                             Dim txS As New pxShader_Text
-                                             txS.SetStreamSource(New MemoryStream(ShaderDataIdx("TxS")))
-                                             pxShaderData_Text_S = New pxShaderText_S(txS)
-                                         End Sub, DispatcherPriority.Background)
+                        Dim txS As New pxShader_Text
+                        txS.SetStreamSource(New MemoryStream(ShaderDataIdx("TxS")))
+                        pxShaderData_Text_S = New pxShaderText_S(txS)
+                    End Sub, DispatcherPriority.Background)
                 Return True
             End Function)
-        ' ShaderDataIdx = Await BuildShaderCatalog()
-
-        ' Load bytecode in background
-
     End Function
 
 

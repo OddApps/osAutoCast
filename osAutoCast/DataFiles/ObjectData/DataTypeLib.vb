@@ -475,6 +475,33 @@ Public Module DataTypeLib
         UnhookRender
     End Enum
 
+    'Public Enum VisAdapterConfig
+    '    EnableLayoutVisuals
+    '    DisableLayoutVisuals
+    '    EnableUpdateAsync_OnLoad
+    '    DisableUpdateAsync_OnLoad
+    '    EnableVisualReset
+    '    DisableVisualReset
+    'End Enum
+
+    <Flags>
+    Public Enum VisAdapterConfig
+        None = 0
+        ApplyVisuals = 1
+        ObjectReset = 2
+        UpdateAsync_OnLoad = 4
+        UpdateAsync_OnReset = 8
+        UpdateAsync_OnDispose = 16
+    End Enum
+
+    Public Enum VisConfigItem
+        ApplyVisuals = 1
+        ObjectReset = 2
+        UpdateAsync_OnLoad = 4
+        UpdateAsync_OnReset = 8
+        UpdateAsync_OnDispose = 16
+    End Enum
+
 #End Region
 
 End Module
@@ -648,6 +675,21 @@ Public Class osVisRenderMode
 
                 visLayoutSetting = True
         End Select
+    End Sub
+
+End Class
+
+Public Class VisDataDetails
+
+    Public Property VisTarget As String
+    Public Property VisProperty As String
+
+    Public Sub New()
+    End Sub
+
+    Public Sub New(objVisData As DoubleAnimationUsingKeyFrames)
+        VisTarget = Storyboard.GetTargetName(objVisData)
+        VisProperty = Storyboard.GetTargetProperty(objVisData).Path
     End Sub
 
 End Class
@@ -2425,10 +2467,11 @@ Public Class ResponseBox
 End Class
 
 Public NotInheritable Class PromptResponseState
-    Private Sub New()
-    End Sub
 
     Private Shared _depth As Integer = 0
+
+    Private Sub New()
+    End Sub
 
     Public Shared ReadOnly Property isPromptResponseOpen As Boolean
         Get
@@ -2447,6 +2490,7 @@ Public NotInheritable Class PromptResponseState
     Public Shared Sub ExitPromptResponse()
         Threading.Interlocked.Decrement(_depth)
     End Sub
+
 End Class
 
 Public Class PromptData
@@ -2486,6 +2530,33 @@ Public Class PromptData
                 Title = "Disable"
                 MsgType = MsgBoxType.isQuestion
         End Select
+    End Sub
+
+End Class
+
+Public NotInheritable Class TrayMenuStatus
+
+    Private Shared _TrayDepth As Integer = 0
+
+    Private Sub New()
+    End Sub
+
+    Public Shared ReadOnly Property isTrayMenuOpen As Boolean
+        Get
+            Return Threading.Volatile.Read(_TrayDepth) > 0
+        End Get
+    End Property
+
+    Public Shared Sub PreventSecondaryClose()
+        Threading.Interlocked.Increment(_TrayDepth)
+    End Sub
+
+    Public Shared Sub EnterTrayMenu()
+        Threading.Interlocked.Increment(_TrayDepth)
+    End Sub
+
+    Public Shared Sub ExitTrayMenu()
+        Threading.Interlocked.Decrement(_TrayDepth)
     End Sub
 
 End Class

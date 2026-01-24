@@ -1,5 +1,5 @@
-﻿<Window x:Class="osPopupMenu_GUI" x:Name="winPopupMenu" xmlns:osStyle="clr-namespace:osAutoCast.osStyle"
-        xmlns:osCtrl="clr-namespace:osAutoCast.osControls"
+﻿<osVis:VisAdapterUI x:Class="osPopupMenu_GUI" x:Name="winPopupMenu" xmlns:osStyle="clr-namespace:osAutoCast.osStyle"
+        xmlns:osCtrl="clr-namespace:osAutoCast.osControls" xmlns:osVis="clr-namespace:osAutoCast.osVisualAdapter"
         xmlns:local="clr-namespace:osAutoCast" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         mc:Ignorable="d" Topmost="True" DataContext="{Binding RelativeSource={RelativeSource Self}}" 
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="osPopupMenu_GUI" IsTabStop="False"
@@ -8,11 +8,8 @@
         WindowStartupLocation="CenterScreen" ShowActivated="False" WindowStyle="None" Focusable="False"
         ShowInTaskbar="False" Style="{StaticResource MainContentContainerStyle}">
     
-    <Window.Resources>
+    <osVis:VisAdapterUI.Resources>
             <Storyboard x:Key="PopupVisual_Open" BeginTime="00:00:0.085">
-                <!--<DoubleAnimation  Storyboard.TargetName="popupMainContainer"
-                                  Storyboard.TargetProperty="(osStyle:osPopupScale.PopupScale)"
-                                  To="0" Duration="0:0:0.001" />-->
                 <DoubleAnimationUsingKeyFrames Storyboard.TargetName="PopupMainContainerRender"
                                                Storyboard.TargetProperty="ScaleX">
                     <EasingDoubleKeyFrame KeyTime="00:00:0.000" Value="0.00" />
@@ -138,7 +135,7 @@
 										  EasingFunction="{StaticResource PopupEase_CloseByBtn}" />
                 </DoubleAnimationUsingKeyFrames>
             </Storyboard>        
-    </Window.Resources>
+    </osVis:VisAdapterUI.Resources>
 
     <Border x:Name="popupMainContainer" Style="{StaticResource MainContainerStyle}" Opacity="0">
         <Border.RenderTransform>
@@ -175,4 +172,4 @@
         </Grid>
     </Border>
     
-</Window>
+</osVis:VisAdapterUI>

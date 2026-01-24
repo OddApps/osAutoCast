@@ -38,8 +38,6 @@ Public NotInheritable Class osHandler_AutoCast
                         Dim objWin_AC As New ProgBarGui_AutoCast(.Item("pW"), .Item("pH"),
                                             osFuncLib_Progress.ProgTimeSpan_AC, AddressOf EaseProgress)
 
-                        '     _autoCastProgress = objWin_AC
-
                         _osGui_AutoCastProgress = New AutoCastGui()
                         ProgBarGui_AutoCast.Instance = objWin_AC
 
@@ -53,16 +51,18 @@ Public NotInheritable Class osHandler_AutoCast
                         _startupEvent.Set()
                         osRunForm.Run(objContextAC)
 
-                        '    _autoCastProgress = Nothing
                         ProgBarGui_AutoCast.Instance = Nothing
                         _osGui_AutoCastProgress = Nothing
                         _autoCastThreadId = 0
                     End With
                 End Sub)
 
-            _autoCastThread.SetApartmentState(ApartmentState.STA)
-            _autoCastThread.IsBackground = True
-            _autoCastThread.Start()
+            With _autoCastThread
+                .SetApartmentState(ApartmentState.STA)
+                .IsBackground = True
+                .Start()
+            End With
+
         End SyncLock
     End Sub
 
@@ -75,14 +75,14 @@ Public NotInheritable Class osHandler_AutoCast
             Try
                 Dim objAcInstance = ProgBarGui_AutoCast.Instance
 
-                If objAcInstance IsNot Nothing AndAlso Not objAcInstance.IsDisposed Then
+                If ValidateInstance(objAcInstance) Then
                     Try
-                        objAcInstance.BeginInvoke(
-                            New Action(Sub()
-                                           If Not objAcInstance.IsDisposed Then
-                                               objAcInstance.Close()
-                                           End If
-                                       End Sub))
+                        objAcInstance.BeginInvoke(New Action(
+                                Sub()
+                                    If Not objAcInstance.IsDisposed Then
+                                        objAcInstance.Close()
+                                    End If
+                                End Sub))
                     Catch : End Try
                 Else
                     If _autoCastThreadId <> 0 Then
@@ -101,7 +101,6 @@ Public NotInheritable Class osHandler_AutoCast
                 _autoCastCts?.Dispose()
             Catch : End Try
 
-            '      _autoCastProgress = Nothing
             _autoCastCts = Nothing
             _autoCastThread = Nothing
             _osGui_AutoCastProgress = Nothing
@@ -113,31 +112,9 @@ Public NotInheritable Class osHandler_AutoCast
         End SyncLock
     End Function
 
-    Private Shared Sub SetCloseEvent(acContext As ApplicationContext)
-        AddHandler _autoCastProgress.FormClosed,
-            Sub()
-                Try
-                    acContext.ExitThread()
-                Catch : End Try
-            End Sub
-    End Sub
-
-    Private Shared Sub ResetAutoCast(Optional doAll As Boolean = False)
-        If doAll Then
-            _autoCastProgress = Nothing
-            _autoCastCts = Nothing
-            _autoCastThread = Nothing
-            _osGui_AutoCastProgress = Nothing
-            ProgBarGui_AutoCast.Instance = Nothing
-            _startupEvent.Reset()
-            _autoCastThreadId = 0
-        Else
-            _autoCastProgress = Nothing
-            ProgBarGui_AutoCast.Instance = Nothing
-            _osGui_AutoCastProgress = Nothing
-            _autoCastThreadId = 0
-        End If
-    End Sub
+    Private Shared Function ValidateInstance(objInstance As ProgBarGui_AutoCast) As Boolean
+        Return objInstance IsNot Nothing AndAlso Not objInstance.IsDisposed
+    End Function
 
     Public Shared ReadOnly Property AutoCast_UI As AutoCastGui
         Get
@@ -146,11 +123,10 @@ Public NotInheritable Class osHandler_AutoCast
     End Property
 
     <DllImport("kernel32.dll")>
-    Private Shared Function GetCurrentThreadId() As Integer
-    End Function
+    Private Shared Function GetCurrentThreadId() As Integer : End Function
 
     <DllImport("user32.dll", SetLastError:=True)>
-    Private Shared Function PostThreadMessage(dwThreadId As Integer, Msg As Integer, wParam As IntPtr, lParam As IntPtr) As Boolean
-    End Function
+    Private Shared Function PostThreadMessage(dwThreadId As Integer, Msg As Integer,
+                                              wParam As IntPtr, lParam As IntPtr) As Boolean : End Function
 
 End Class

@@ -14,6 +14,7 @@ Imports osTimeSeek = System.Windows.Media.Animation.TimeSeekOrigin
 Imports osTrash = System.Runtime.GCSettings
 Imports osTrashCompact = System.Runtime.GCLargeObjectHeapCompactionMode
 Imports osAutoCast.osHandler_AutoCast
+Imports System.Windows.Media.Animation
 
 #Disable Warning BC42104
 
@@ -90,8 +91,12 @@ Public NotInheritable Class osHandler_UI
             Sub()
                 _osPopupMenuOverlay = PrepUI_PopupMenuOverlay()
                 _osPopupMenu = PrepUI_PopupMenu()
+            End Sub, DispatcherPriority.Background).Task
 
+        Await PrepDispatcher().InvokeAsync(
+            Sub()
                 osPopupMenuOverlay.PrepTrayMenuOverlay()
+                osPopupMenu.PrepPopupMenu()
             End Sub, DispatcherPriority.Background).Task
     End Function
 
@@ -115,6 +120,11 @@ Public NotInheritable Class osHandler_UI
         Await PrepDispatcher().InvokeAsync(
             Sub()
                 _osPrefsWindow = PrepUI_Opts()
+            End Sub, DispatcherPriority.Background)
+
+        Await PrepDispatcher().InvokeAsync(
+            Sub()
+                osTrayMenu.PrepTrayMenuInit()
             End Sub, DispatcherPriority.Background)
 
         AuthorizeInputMonitor()
@@ -155,6 +165,8 @@ Public NotInheritable Class osHandler_UI
         Return New Lazy(Of osPrefs_GUI)(
             Function()
                 Dim objPrefWin As New osPrefs_GUI()
+                objPrefWin.PrepPrefVis()
+
                 Return objPrefWin
             End Function, LazyThreadSafetyMode.None)
     End Function
@@ -411,6 +423,7 @@ Public NotInheritable Class osHandler_UI
     Public Shared Sub PresentPopupMenu(isN As Boolean)
         With osPopupMenu
             .ConfigureVisual()
+
 
             .Owner = osPopupMenuOverlay
             .Owner.ShowInTaskbar = False

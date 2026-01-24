@@ -209,6 +209,7 @@
     <Compile Include="DataFiles\ModelData\osTextDisplay.vb" />
     <Compile Include="DataFiles\ModelData\osUpDownTextBox.vb" />
     <Compile Include="DataFiles\ObjectData\osPreferenceData.vb" />
+    <Compile Include="DataFiles\VisualData\AdapterLib\osVisualAdapter.vb" />
     <Compile Include="DataFiles\VisualData\StyleLib\osStyleManager.vb" />
     <Compile Include="DataFiles\VisualData\EffectsLib\osEffectManager.vb" />
     <Compile Include="GlobalSuppressions.vb" />

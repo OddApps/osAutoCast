@@ -42,6 +42,7 @@ Imports pxShader_Vertex = SharpDX.Direct3D11.VertexShader
 Imports osAutoCast.osLoadingElements
 Imports osProgLoad = osAutoCast.osLoadingElements.osLoadingProgressBar
 Imports osPefs = osAutoCast.osPrefLib.osPreferenceLib
+Imports SharpDX.D3DCompiler
 
 #Disable Warning IDE0060 ' Remove unused parameter
 #Disable Warning IDE1006 ' Remove unused parameter
@@ -549,9 +550,12 @@ Public NotInheritable Class osFuncLib_ShowOpts
 
     Public Shared Async Function ExecuteDispOpts() As Task
         With osPrefsWindow
-            Dim objTask_PrepOptsVis = osVisQualityAdapter.
-                InitAdapter(VisTypeAdapter.VisAdapter_Opts, .visPrefUI_Open,
-                            True, True, 50, .prefContainer, .osTitleCover, .osContentContainer)
+
+            '   .objVisAdapt = New VisQualityAdapter(True, osPrefsWindow, .prefContainer, .osTitleCover, .osContentContainer)
+            'Dim objTask_PrepOptsVis = .objVisAdapt.SetOpenVisuals(True)
+            'Dim objTask_PrepOptsVis = osVisQualityAdapter.
+            '    InitAdapter(VisTypeAdapter.VisAdapter_Opts, .visPrefUI_Open,
+            '                True, True, 50, .prefContainer, .osTitleCover, .osContentContainer)
 
             PrepUtilityTrigger(TriggerType.ShowPrefs)
             chkCloseSettings.ResetAndInitTask()
@@ -569,17 +573,17 @@ Public NotInheritable Class osFuncLib_ShowOpts
 
             Dim objTask_DispOpts = PrepDispatcher().InvokeAsync(
                 Sub()
-                    .PrepPrefVis()
+                    '   .PrepPrefVis()
 
                     .osPrefsIU_Present()
-                    .DisplayPrefsUI(chkCloseSettings)
+                    .TriggerVisuals_Open(False, objAwaitClose:=chkCloseSettings)
                 End Sub, DispatcherPriority.Render)
 
             Await AnticipateExit()
 
             Await PrepDispatcher().InvokeAsync(
                 Function()
-                    Return .osPrefs_InitCloseVis()
+                    Return .TriggerVisuals_Close(True)
                 End Function, DispatcherPriority.Render)
         End With
     End Function
@@ -1448,7 +1452,6 @@ End Module
 Module osFuncLib_UI
 
     Private Const progEaseThreshold As Double = 0.32
-
     Private dirSweep As osSweep = osSweep.Clockwise
 
     Public ReadOnly Property ui_AutoCast As AutoCastGui
@@ -1671,22 +1674,6 @@ Module osFuncLib_UI
 
                 Return progEaseThreshold + (1.0 - progEaseThreshold) * pEased
         End Select
-
-        'If progEaseThreshold <= 0.0 Then
-        '    Return 1.0 - Math.Pow(1.0 - progVal, 4.0)
-        'End If
-
-        'If progEaseThreshold >= 1.0 Then
-        '    Return progVal
-        'End If
-
-        'If progVal <= progEaseThreshold Then
-        '    Return progVal
-        'Else
-        '    Dim pThreshold = (progVal - progEaseThreshold) / (1.0 - progEaseThreshold)
-        '    Dim pEased = 1.0 - Math.Pow(1.0 - pThreshold, 4.0)
-        '    Return progEaseThreshold + (1.0 - progEaseThreshold) * pEased
-        'End If
     End Function
 
     Public Function CalcEase(eVal As Double) As Double
@@ -1899,51 +1886,8 @@ Public Module osVisQualityAdapter
         Return lstVisTargets
     End Function
 
-    'Public Async Function InitAdapter(objVisType As VisTypeAdapter, objVisual As Storyboard,
-    '                                  visApply As Boolean, doReset As Boolean, setFPS As Integer, ParamArray lstVisTargets() As UIElement) As Task
-
-    '    If CoreDataLib.GetVisualQuality() = ProgVisOpts.Performance Then
-    '        Dim objVisDataArray = ValidateAndAttachAdapter(objVisType, objVisual, lstVisTargets)
-    '        Dim cntVisDataArray = objVisDataArray.Count - 1
-
-    '        If doReset Then
-    '            Dim evtVisComplete As EventHandler = Nothing
-
-    '            evtVisComplete =
-    '                 Sub(sender, e)
-    '                     RemoveHandler objVisual.Completed, evtVisComplete
-
-    '                     Dim objTask_VisComplete = PrepDispatcher().InvokeAsync(
-    '                        Sub()
-    '                            For objVis = 0 To cntVisDataArray
-    '                                ResetVisQuality(objVisDataArray(objVis))
-    '                            Next
-    '                        End Sub, DispatcherPriority.Render).Task
-    '                 End Sub
-
-    '            AddHandler objVisual.Completed, evtVisComplete
-    '        End If
-
-    '        Timeline.SetDesiredFrameRate(objVisual, setFPS)
-
-    '        If visApply Then
-    '            Dim objTask_SetVisConfig = PrepDispatcher().InvokeAsync(
-    '                Sub()
-    '                    Dim visBitMapCache As New BitmapCache(renderAtScale)
-
-    '                    For objVis = 0 To cntVisDataArray
-    '                        SetVisQuality(objVisDataArray(objVis), visBitMapCache)
-    '                    Next
-    '                End Sub, DispatcherPriority.Render).Task
-    '        End If
-    '    End If
-
-    '    Await Task.CompletedTask
-    'End Function
-
     Public Function InitAdapter(objVisType As VisTypeAdapter, objVisual As Storyboard,
                                       visApply As Boolean, doReset As Boolean, setFPS As Integer, ParamArray lstVisTargets() As UIElement) As Task
-
         If CoreDataLib.GetVisualQuality() = ProgVisOpts.Performance Then
             Dim objVisDataArray = ValidateAndAttachAdapter(objVisType, objVisual, lstVisTargets)
             Dim cntVisDataArray = objVisDataArray.Count - 1
@@ -2057,17 +2001,6 @@ Public Module osVisQualityAdapter
         End If
     End Sub
 
-    'Public Sub AttachAdapter(objVisual As Storyboard, objVisTarget As UIElement, Optional setVis As Boolean = False)
-    '    AddHandler objVisual.Completed,
-    '        Sub(s, e)
-    '            ResetVisQuality(objVisTarget)
-    '        End Sub
-
-    '    If setVis Then
-    '        SetVisQuality(objVisTarget)
-    '    End If
-    'End Sub
-
     Public Async Function AttachAndApplyAdapter(objVisual As Storyboard, doReset As Boolean, ParamArray lstVisTargets() As UIElement) As Task
         AddHandler objVisual.Completed,
             AddressOf ResetVisQuality_All_BatchAsync
@@ -2156,19 +2089,6 @@ Public Module osVisQualityAdapter
                         For i As Integer = 0 To snapshot.Count - 1
                             SetVisQuality(snapshot(i), objCacheMode)
                         Next
-                        'For Each objVis In snapshot
-                        '    RenderOptions.SetBitmapScalingMode(objVis, .visBitMap)
-                        '    RenderOptions.SetEdgeMode(objVis, .visEdges)
-
-                        '    objVis.CacheMode = .visCache
-
-                        '    Dim objVisElement = TryCast(objVis, FrameworkElement)
-
-                        '    If objVisElement IsNot Nothing Then
-                        '        objVisElement.UseLayoutRounding = .visLayoutSetting
-                        '        objVisElement.SnapsToDevicePixels = .visLayoutSetting
-                        '    End If
-                        'Next
                     End With
                 End Sub)
         Else
@@ -2229,52 +2149,19 @@ Public Module osUI_Loader
         Await PrepDispatcher().InvokeAsync(
             Sub()
                 osPopupMenuOverlay.PrepTrayMenuOverlay()
+                osPopupMenu.PrepPopupMenu()
             End Sub, DispatcherPriority.Render)
     End Function
 
     Public Async Function LoadUI_TrayMenu() As Task
         Await PrepDispatcher().InvokeAsync(
             Sub()
-                _osTrayMenu = PrepUI_TrayMenu()
                 osTrayMenu.PrepTrayMenuInit()
+                _osTrayMenu = PrepUI_TrayMenu()
             End Sub, visPriority)
     End Function
 
     Public Async Function LoadUI_TriggerHandlers() As Task
-        '_autoCastThread = New Thread(
-        '    Sub()
-        '        With CoreDataLib.FetchProgSizeReport(TriggerType.AutoCast)
-        '            osFuncLib_Progress.SetProgBlockData(TriggerType.AutoCast)
-
-        '            Dim progW = .Item("pW")
-        '            Dim progH = .Item("pH")
-
-        '            'If CoreDataLib.VerifyVisQualityPref() Then
-        '            '    progW += 4 : progH += 4
-        '            'End If
-
-        '            Dim objWin_AC As New ProgBarGui_AutoCast(progW, progH,
-        '                                    osFuncLib_Progress.ProgTimeSpan_AC, AddressOf EaseProgress)
-        '            _autoCastProgress = objWin_AC
-
-        '        End With
-
-        '        ProgBarGui_AutoCast.Instance = _autoCastProgress
-
-        '        _osGui_AutoCastProgress = New AutoCastGui()
-
-        '        While Not _autoCastProgress.IsDisposed
-        '            System.Windows.Forms.Application.DoEvents()
-        '            Thread.Sleep(10)
-        '        End While
-        '    End Sub)
-
-        '_autoCastThread.SetApartmentState(ApartmentState.STA)
-        '_autoCastThread.IsBackground = True
-        '_autoCastThread.Start()
-
-        '        Dim ab = osHandler_AutoCast.StartAutoCastGuiAsync()
-
         osHandler_AutoCast.InitializeAutoCastUI()
 
         Await PrepDispatcher().InvokeAsync(
@@ -2287,6 +2174,7 @@ Public Module osUI_Loader
     Public Async Function LoadUI_PrepHandlers() As Task
         Await PrepDispatcher().InvokeAsync(
             Sub()
+                '  osPrefsWindow.PrepPrefVis()
                 osHandler_UI.osGui_AutoPass2.PrepAutoPass()
             End Sub, visPriority)
     End Function
@@ -2431,7 +2319,7 @@ Public NotInheritable Class AutoCastGui
                 innerTask.ContinueWith(Sub(tt)
                                            If tt.IsCanceled Then
                                                tcs.SetCanceled()
-                                           ElseIf tT.IsFaulted Then
+                                           ElseIf tt.IsFaulted Then
                                                ' propagate exception(s)
                                                tcs.SetException(tt.Exception.InnerExceptions)
                                            Else

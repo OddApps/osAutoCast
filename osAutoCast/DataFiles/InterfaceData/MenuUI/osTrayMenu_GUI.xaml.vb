@@ -21,6 +21,7 @@ Imports osKeyTime = System.Windows.Media.Animation.KeyTime
 Imports osForms = System.Windows.Forms
 Imports osCursor = System.Drawing.Point
 Imports System.Windows.Interop
+Imports osAutoCast.osVisualAdapter
 
 #Disable Warning BC42353
 #Disable Warning BC42024
@@ -49,6 +50,9 @@ Public Class osTrayMenu_GUI
             AddHandler visTrayMenu_Open.Completed,
                                     evtDisplayTrayMenu
         Else
+            If visTrayMenu_Close Is Nothing Then
+                visTrayMenu_Close = EstablishVisual(TrayMenu_Close)
+            End If
             AddHandler visTrayMenu_Close.Completed,
                  Sub()
                      If setTaskRun Then
@@ -63,7 +67,9 @@ Public Class osTrayMenu_GUI
     Public Sub InitTrayMenuClose(Optional setTaskRun As Boolean = False)
         SetTrayMenuEvent(TrayMenu_Close, setTaskRun)
         '    SetVisualMode(VisRenderMode.VisMode_LowQuality)
-        Dim aa = osVisQualityAdapter.EstablishVisDataSettings(VisTypeAdapter.VisAdapter_TrayMenu, VisRenderMode.VisMode_LowQuality, True)
+        'Dim aa = osVisQualityAdapter.EstablishVisDataSettings(VisTypeAdapter.VisAdapter_TrayMenu, VisRenderMode.VisMode_LowQuality, True)
+        Dim objTask_VisAdapter = objVisAdapt.ApplyVisuals(True)
+
         visTrayMenu_Close.Begin(TrayMenuOutline, True)
         'PrepDispatcher().Invoke(
         '    Sub()
@@ -115,7 +121,6 @@ Public Class osTrayMenu_GUI
                                                 evtDisplayTrayMenu
 
                     visTrayMenu_Close = EstablishVisual(TrayMenu_Close)
-                    osVisQualityAdapter.UpdateVisData(VisTypeAdapter.VisAdapter_TrayMenu, visTrayMenu_Close)
                     '  SetVisualMode(VisRenderMode.VisMode_HighQuality)
                 End Sub
 
@@ -126,9 +131,13 @@ Public Class osTrayMenu_GUI
     Public Sub PrepTrayMenuInit()
         '  visTrayMenu_Open = TryCast(Me.Resources(GetVisualKey(TrayMenu_Open)), Storyboard)
         ' InitTrayMenuVis()
+        Dim objVisConfig = VisAdapterConfig.ApplyVisuals Or VisAdapterConfig.UpdateAsync_OnLoad Or
+            VisAdapterConfig.ObjectReset
 
-        Dim objTask_VisAdapter = osVisQualityAdapter.InitAdapter(VisTypeAdapter.VisAdapter_TrayMenu, visTrayMenu_Open,
-                                                  True, True, TrayMenuOutline, TrayMainContainer)
+        objVisAdapt = New VisQualityAdapter(Me, objVisConfig, TrayMenuOutline, TrayMainContainer)
+
+        'Dim objTask_VisAdapter = osVisQualityAdapter.InitAdapter(VisTypeAdapter.VisAdapter_TrayMenu, visTrayMenu_Open,
+        '                                          True, True, TrayMenuOutline, TrayMainContainer)
         With Me
             .Width = wTrayMenu
             .Height = hTrayMenu
@@ -151,6 +160,8 @@ Public Class osTrayMenu_GUI
 
         visTrayMenu_Open = TryCast(Me.Resources(GetVisualKey(TrayMenu_Open)), Storyboard)
         InitTrayMenuVis()
+
+        allowTrayClose = True
     End Sub
 
     Public Async Function PrepTrayMenuInit(isN As Boolean) As Task
@@ -223,6 +234,7 @@ Public Class osTrayMenu_GUI
         'Dim a = osVisQualityAdapter.InitAdapter(VisTypeAdapter.VisAdapter_TrayMenu, visTrayMenu_Open,
         '                                         True, True, TrayMenuOutline, TrayMainContainer)
     End Sub
+
 End Class
 
 Partial Public Class osTrayMenu_GUI
@@ -247,7 +259,7 @@ Partial Public Class osTrayMenu_GUI
     Private visGameMenu_Close As Storyboard = Nothing
 
     Private visTrayMenu_Open As New Storyboard
-    Private visTrayMenu_Close As Storyboard = Nothing
+    Private visTrayMenu_Close As New Storyboard
 
     Private evtDispTrayMenuTask As Action = AddressOf ShowTrayMenuCore
 
@@ -256,12 +268,16 @@ Partial Public Class osTrayMenu_GUI
 
     Private objTask_Closing As TaskCompletionSource(Of Boolean) = Nothing
 
+    Public objVisAdapt As VisQualityAdapter
+
     Private hTrayMenu As Double = 152
     Private hTrayMenu_GameMenu As Double = 184
 
     Private wTrayMenu As Double = 196
 
     Private objCurPos As osCursor
+
+    Public allowTrayClose As Boolean
 
 #Region "Properties"
 
@@ -285,6 +301,15 @@ Partial Public Class osTrayMenu_GUI
         Get
             Return Me.Style
         End Get
+    End Property
+
+    Public Overrides Property VisDataObject As Storyboard
+        Get
+            Return MyBase.VisDataObject
+        End Get
+        Set(value As Storyboard)
+            MyBase.VisDataObject = value
+        End Set
     End Property
 
 #End Region
@@ -430,7 +455,7 @@ Partial Public Class osTrayMenu_GUI
     Private Sub EstablishVisual(objVisType As TrayMenuState, ByRef objVisData As Storyboard)
         Dim objTrayMenuVis = LoadVis_Set(objVisType) '.Clone()
 
-
+        objVisData = objTrayMenuVis
     End Sub
 
     Private Function GetVisualKey(objVisType As TrayMenuState) As String
@@ -492,6 +517,7 @@ Partial Public Class osTrayMenu_GUI
     Private Sub TriggerTrayMenuDispose(Optional setTaskRun As Boolean = False)
         PromptResponseState.PreventSecondaryClose()
 
+        allowTrayClose = False
         InitTrayMenuClose(setTaskRun)
     End Sub
 
@@ -556,6 +582,9 @@ Partial Public Class osTrayMenu_GUI
 
     Public Sub New(Optional objLoadTask As TaskCompletionSource(Of Boolean) = Nothing)
         InitializeComponent()
+
+        VisDataObject = visTrayMenu_Open
+
         ShowGameMenuItem()
 
         If objLoadTask IsNot Nothing Then
@@ -572,12 +601,26 @@ Partial Public Class osTrayMenu_GUI
 
         If Not isAppLoaded Then Exit Sub
 
-        If ValidateTrayMenuClose() Then
-            Return
-        Else
-            TriggerTrayMenuDispose()
+        If allowTrayClose Then
+            If ValidateTrayMenuClose() Then
+                Return
+            Else
+                TriggerTrayMenuDispose()
+            End If
         End If
     End Sub
+
+    'Protected Overrides Sub OnDeactivated(e As EventArgs)
+    '    MyBase.OnDeactivated(e)
+
+    '    If Not isAppLoaded Then Exit Sub
+
+    '    If ValidateTrayMenuClose() Then
+    '        Return
+    '    Else
+    '        TriggerTrayMenuDispose()
+    '    End If
+    'End Sub
 
     Private Sub TrayMenuClosed(sender As Object, e As EventArgs) Handles Me.Closed
         Try

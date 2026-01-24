@@ -15,8 +15,8 @@ Namespace osEffectManager
 
         Public Sub New()
             With Me
-                .PixelShader = GetTestShader(True)
-                '  .PixelShader = FetchShader(sTypeText_S).sText_S
+                '  .PixelShader = GetTestShader(True)
+                .PixelShader = FetchShader(sTypeText_S).sText_S
 
                 .PaddingLeft = 6
                 .PaddingRight = 6
@@ -136,8 +136,8 @@ Namespace osEffectManager
 
         Public Sub New()
             With Me
-                .PixelShader = GetTestShader(False)
-                '.PixelShader = FetchShader(sTypeText_G).sText_G
+                '    .PixelShader = GetTestShader(False)
+                .PixelShader = FetchShader(sTypeText_G).sText_G
 
                 .PaddingLeft = 6
                 .PaddingRight = 6
