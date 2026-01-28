@@ -234,36 +234,41 @@ Public Class InputMonitorService
             End Function, (Nothing, NoTrigger)).TriggerHandler
     End Function
 
-    Public Sub LaunchTriggerMonitor()
-        StartTriggerMonitor()
+    Public Sub LaunchTriggerMonitor(uiScheduler As TaskScheduler)
+        StartTriggerMonitor(uiScheduler)
     End Sub
 
-    Private Shared Sub EstablishTriggerMonitor(ByRef objMonitor As IDisposable)
+    Private Shared Sub EstablishTriggerMonitor(uiScheduler As TaskScheduler, ByRef objMonitor As IDisposable)
+
         objMonitor = TriggerCmd.Subscribe(
             Async Sub(objTriggerAction)
                 If AuthorizeTrigger(objTriggerAction) Then
                     SuspendMonitoring()
                     Try
-                        Await Task.Run(
-                            Async Function()
-                                Await PrepDispatcher().Invoke(
-                                    Function()
-                                        Return CoreDataLib.ExecuteTrigger(objTriggerAction)
-                                    End Function)
-                            End Function)
+                        Await Task.Factory.StartNew(
+                            Function()
+                                Return CoreDataLib.ExecuteTrigger(objTriggerAction)
+                            End Function, Nothing, TaskCreationOptions.RunContinuationsAsynchronously, uiScheduler).Unwrap()
+                        'Await Task.Run(
+                        '    Async Function()
+                        '        Await PrepDispatcher().Invoke(
+                        '            Function()
+                        '                Return CoreDataLib.ExecuteTrigger(objTriggerAction)
+                        '            End Function)
+                        '    End Function)
                     Finally
                         GC.Collect()
                         GC.WaitForPendingFinalizers()
 
-                        StartTriggerMonitor()
+                        StartTriggerMonitor(uiScheduler)
                     End Try
                 Else : Return : End If
             End Sub)
     End Sub
 
-    Private Shared Sub StartTriggerMonitor()
+    Private Shared Sub StartTriggerMonitor(uiScheduler As TaskScheduler)
         ActivateTriggerMonitor()
-        EstablishTriggerMonitor(InputMon_Support)
+        EstablishTriggerMonitor(uiScheduler, InputMon_Support)
     End Sub
 
     Public Function DetectTrigger(Optional DetectMode As DetectOpts = DetectOpts.MonitorAll) As Boolean

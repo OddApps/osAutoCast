@@ -29,7 +29,7 @@ Public Class osPopupMenuOverlay_GUI
     Private objAnimation_Open As Storyboard = Nothing
     Private objAnimation_Close As Storyboard = Nothing
 
-    Private OpenCompleteEvent As EventHandler = AddressOf OpenComplete
+    Private OpenCompleteEvent As EventHandler
 
     Private OverlayOpacity_Tray As Double = 0
     Private OverlayOpacity_Popup As Double = 0
@@ -53,15 +53,8 @@ Public Class osPopupMenuOverlay_GUI
 
     Public Sub InitPopupMenuOverlay(objOverlayDisplay As TaskCompletionSource(Of Boolean))
         With Me
-            objAnimation_Open = EstablishVisual(osOverlay, OverlayVisual_Open)
-
             objTask_Open = objOverlayDisplay
-
-            AddHandler objAnimation_Open.Completed,
-                    OpenCompleteEvent
-
             .Show()
-            objAnimation_Open.Begin(osOverlay, True)
         End With
     End Sub
 
@@ -78,23 +71,39 @@ Public Class osPopupMenuOverlay_GUI
             .ShowActivated = False
             .Topmost = True
             .Focusable = False
-
-            .SetBG()
         End With
+
+        PrepPopupMenuOverlay()
     End Sub
 
-    Public Sub PrepPopupMenuOverlay()
-        objAnimation_Open = EstablishVisual(osOverlay, OverlayVisual_Open)
+    Private Sub EstablishVisual(objVisType As OverlayVisualType)
+        Me.VisDataObject = TryCast(Me.Resources(GetVisualKey(objVisType)), Storyboard)
     End Sub
 
-    Private Sub OpenComplete()
-        Try
-            RemoveHandler objAnimation_Open.Completed,
-                OpenCompleteEvent
-        Catch : End Try
+    Private Sub PrepPopupMenuOverlay()
+        EstablishVisual(OverlayVisual_Open)
+        SetOpenEvents()
 
-        objAnimation_Open = Nothing
-        OverlayOpenComplete(objTask_Open)
+        InitializeVisAdapter(Me, EstablishVisConfig(), osOverlay)
+    End Sub
+
+
+    Private Function EstablishVisConfig() As VisAdapterConfig
+        Return VisAdapterConfig.EnableAll
+        'Return VisAdapterConfig.ResetVisualSettings Or VisAdapterConfig.UpdateAsync_OnDispose Or
+        '    VisAdapterConfig.UpdateAsync_OnReset
+    End Function
+
+    Private Sub SetOpenEvents()
+        OpenCompleteEvent =
+            Sub()
+                RemoveHandler Me.VisDataObject.Completed, OpenCompleteEvent
+
+                VisDataObject.Stop()
+                OverlayOpenComplete(objTask_Open)
+            End Sub
+
+        AddHandler VisDataObject.Completed, OpenCompleteEvent
     End Sub
 
     Private Sub BeginClosingTask(ByRef objCloseResult As TaskCompletionSource(Of Boolean))
@@ -121,9 +130,9 @@ Public Class osPopupMenuOverlay_GUI
                 AddHandler objAnimation_Open.Completed,
                     OpenCompleteEvent
             Case aniClose
-                objAnimation_Close = EstablishVisual(osOverlay, objVisType)
+                EstablishVisual(objVisType)
 
-                AddHandler objAnimation_Close.Completed, AddressOf osHandler_UI.CloseAndRestorePopupMenu
+                AddHandler Me.VisDataObject.Completed, AddressOf osHandler_UI.CloseAndRestorePopupMenu
         End Select
     End Sub
 
@@ -143,19 +152,11 @@ Public Class osPopupMenuOverlay_GUI
     Public Sub InitTransitionVisuals(objAniType As AnimationType, objVisType As OverlayVisualType)
         PrepTransitionVisuals(objAniType, objVisType)
 
-        Select Case objAniType
-            Case aniOpen
-              '  TriggerVisuals(Me, objAnimation_Open)
-            Case aniClose
-                '   SetVisualMode(aniClose)
-                '   TriggerVisuals(Me, objAnimation_Close)
-        End Select
     End Sub
 
     Public Sub InitOverlayClose(objVisType As OverlayVisualType, isN As Boolean)
-        InitTransitionVisuals(aniClose, objVisType)
-
-        objAnimation_Close.Begin()
+        EstablishVisual(objVisType)
+        AddHandler Me.VisDataObject.Completed, AddressOf osHandler_UI.CloseAndRestorePopupMenu
     End Sub
 
 End Class
@@ -191,13 +192,6 @@ Partial Public Class osPopupMenuOverlay_GUI
 
         With Me
             .isFromTray = isTray
-        End With
-    End Sub
-
-    Public Sub SetBG()
-        With Me
-            .Background = osBrushColor.Transparent
-            .Opacity = 1.0
         End With
     End Sub
 

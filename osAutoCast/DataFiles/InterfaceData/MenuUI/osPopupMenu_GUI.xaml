@@ -1,12 +1,9 @@
-﻿<osVis:VisAdapterUI x:Class="osPopupMenu_GUI" x:Name="winPopupMenu" xmlns:osStyle="clr-namespace:osAutoCast.osStyle"
-        xmlns:osCtrl="clr-namespace:osAutoCast.osControls" xmlns:osVis="clr-namespace:osAutoCast.osVisualAdapter"
-        xmlns:local="clr-namespace:osAutoCast" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        mc:Ignorable="d" Topmost="True" DataContext="{Binding RelativeSource={RelativeSource Self}}" 
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="osPopupMenu_GUI" IsTabStop="False"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008" Background="Transparent"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" AllowsTransparency="True"
-        WindowStartupLocation="CenterScreen" ShowActivated="False" WindowStyle="None" Focusable="False"
-        ShowInTaskbar="False" Style="{StaticResource MainContentContainerStyle}">
+﻿<osVis:VisAdapterUI x:Class="osPopupMenu_GUI" x:Name="winPopupMenu" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:d="http://schemas.microsoft.com/expression/blend/2008" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:osVis="clr-namespace:osAutoCast.osVisualAdapter"
+                    mc:Ignorable="d" Topmost="True" DataContext="{Binding RelativeSource={RelativeSource Self}}" Title="osPopupMenu_GUI" IsTabStop="False"
+                    Background="Transparent" AllowsTransparency="True" WindowStartupLocation="CenterScreen" ShowActivated="False"
+                    WindowStyle="None" Focusable="False" ShowInTaskbar="False" Style="{StaticResource MainContentContainerStyle}">
     
     <osVis:VisAdapterUI.Resources>
             <Storyboard x:Key="PopupVisual_Open" BeginTime="00:00:0.085">

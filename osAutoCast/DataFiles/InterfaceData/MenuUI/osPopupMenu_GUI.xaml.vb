@@ -24,7 +24,7 @@ Public Class osPopupMenu_GUI
 
     Public Event EvCloseByClick(sender As Object, e As EventArgs)
 
-    Private objTask_Closing As TaskCompletionSource(Of Boolean)
+    Public objTask_Closing As TaskCompletionSource(Of Boolean)
     Private objTask_Open As TaskCompletionSource(Of Boolean)
 
     Public objAnimation_Open As New Storyboard
@@ -56,16 +56,22 @@ Public Class osPopupMenu_GUI
         objOpenResult.ResetAndInitTask()
     End Sub
 
-    Public Async Function InitPopupClose(objVisType As PopupVisualType) As Task
-
+    Public Sub InitPopupClose(objVisType As PopupVisualType)
         DetectCloseMethod(objVisType)
         BeginClosingTask(objTask_Closing)
 
-        InitTransitionVisuals(aniClose, objVisType, VisualStarted)
+        EstablishVisual(objVisType)
+        ProcessVisualEvents(aniClose, VisualStarted)
+    End Sub
 
+    Public Async Function InterceptPopupMenuClose() As Task
         Await objTask_Closing.Task
-
     End Function
+
+    'Public Overrides Async Function TriggerVisuals_Close() As Task
+    '    Await MyBase.TriggerVisuals_Close()
+    '    Await objTask_Closing.Task
+    'End Function
 
     Private Function GetVisualKey(objVisType As PopupVisualType) As String
         Return idxPopupVisuals.
@@ -87,10 +93,10 @@ Public Class osPopupMenu_GUI
             Case aniClose
                 Select Case objVisAction
                     Case VisualStarted
-                        AddHandler objAnimation_Close.Completed,
+                        AddHandler VisDataObject.Completed,
                             CloseCompleteEvent
                     Case VisualComplete
-                        RemoveHandler objAnimation_Close.Completed,
+                        RemoveHandler VisDataObject.Completed,
                             CloseCompleteEvent
                 End Select
         End Select
@@ -188,22 +194,29 @@ Public Class osPopupMenu_GUI
     Private _visualCache As New Dictionary(Of PopupVisualType, Storyboard)()
     Private _visDataIdx As New Dictionary(Of PopupVisualType, Storyboard)()
 
+    Public Sub EstablishVisual(objVisType As PopupVisualType)
+        Me.VisDataObject = GetVisual(objVisType, True)
+    End Sub
+
     Public Sub EstablishVisual(objVisType As PopupVisualType, ByRef objSetVisual As Storyboard)
         Dim objPopupVis As Storyboard = GetVisual(objVisType, True)
-
-        'For Each objAnimation In objPopupVis.Children
-        '    Timeline.SetDesiredFrameRate(objAnimation, 60)
-        '    Storyboard.SetTarget(objAnimation, objContainer)
-        'Next
-        '   Storyboard.SetDesiredFrameRate(objPopupVis, 60)
-
-
         objSetVisual = objPopupVis
+    End Sub
 
+    Private Sub SetOpenEvents()
+        OpenCompleteEvent =
+            Sub()
+                RemoveHandler VisDataObject.Completed, OpenCompleteEvent
+                VisDataObject.Stop()
+            End Sub
+
+        AddHandler VisDataObject.Completed, OpenCompleteEvent
     End Sub
 
     Public Sub ConfigureVisual()
-        PrepTransitionVisuals(aniOpen, PopupVisual_Open, VisualStarted)
+        '    EstablishVisual(PopupVisual_Open)
+        'SetOpenEvents()
+        '   PrepTransitionVisuals(aniOpen, PopupVisual_Open, VisualStarted)
         '     VisDataObject = objAnimation_Open
     End Sub
 
@@ -221,14 +234,7 @@ Public Class osPopupMenu_GUI
     End Sub
 
     Private Sub PrepTransitionVisuals(objAniType As AnimationType, objVisType As PopupVisualType, objVisAction As VisualAction)
-        Select Case objAniType
-            Case aniOpen
-                EstablishVisual(objVisType, VisDataObject)
-            Case aniClose
-                EstablishVisual(objVisType, objAnimation_Close)
-                '  Dim objTask_VisAdapter = objVisAdapt.ApplyVisuals(True)
-        End Select
-
+        EstablishVisual(objAniType)
         ProcessVisualEvents(objAniType, objVisAction)
     End Sub
 
@@ -256,8 +262,6 @@ Public Class osPopupMenu_GUI
     Public Sub TriggerPopupMenu(isN As Boolean)
         If Not _hasAnimated Then
             _hasAnimated = True
-            Dim ba = TriggerVisuals_Open(True, True)
-            '  objAnimation_Open.Begin(objContainer, True)
         End If
     End Sub
 
@@ -274,7 +278,7 @@ Public Class osPopupMenu_GUI
 
         ProcessVisualEvents(aniClose, VisualComplete)
 
-        objAnimation_Close = Nothing
+        VisDataObject.Stop()
         Me.Owner = Nothing
     End Sub
 
@@ -364,23 +368,19 @@ Public Class osPopupMenu_GUI
     Public objVisAdapt As VisQualityAdapter
 
     Private Function EstablishVisConfig() As VisAdapterConfig
-        Return VisAdapterConfig.ObjectReset Or VisAdapterConfig.UpdateAsync_OnDispose Or VisAdapterConfig.UpdateAsync_OnLoad
+        Return VisAdapterConfig.EnableAll
     End Function
 
-    Public Sub PrepPopupMenu()
+    Private Sub BufferPopupMenu()
         Me.Show()
         Me.Hide()
+    End Sub
 
-        VisDataObject = objAnimation_Open
+    Public Sub PrepPopupMenu()
+        EstablishVisual(PopupVisual_Open)
+        SetOpenEvents()
 
-        Dim objConfigSettings = EstablishVisConfig()
-        Me.VisAdapter = New VisQualityAdapter(Me, objConfigSettings,
-                                                       objContainer)
-        Dim objVisConfig = VisAdapterConfig.ApplyVisuals Or VisAdapterConfig.UpdateAsync_OnLoad Or
-            VisAdapterConfig.ObjectReset
-
-
-        ShowGameMenuItem()
+        InitializeVisAdapter(Me, EstablishVisConfig(), objContainer)
     End Sub
 
     Private Async Function ExitPopupMenu(popupCloseAction As PopupCloseAction, objMenuCmd As Action) As Task
@@ -441,6 +441,10 @@ Public Class osPopupMenu_GUI
         End With
     End Sub
 
+    Private Sub osPopupMenu_GUI_Loaded(sender As Object, e As RoutedEventArgs) Handles Me.Loaded
+        ShowGameMenuItem()
+    End Sub
+
 End Class
 
 Partial Public Class osPopupMenu_GUI
@@ -483,15 +487,13 @@ Partial Public Class osPopupMenu_GUI
         Set(value As GameMenuItem)
             If _dispGameMenuItem <> value Then
                 _dispGameMenuItem = value
-                OnPropertyChanged()
+                OnDisplayGameMenuChanged()
             End If
         End Set
     End Property
 
     Public Sub New()
         InitializeComponent()
-        '  VisDataObject = objAnimation_Open
-        '  ShowGameMenuItem()
     End Sub
 
     Private Sub ShowGameMenuItem()
@@ -504,9 +506,9 @@ Partial Public Class osPopupMenu_GUI
         SetWinOpts(GetWinHwnd(Me))
     End Sub
 
-    Public Event PropertyChanged As PropertyChangedEventHandler Implements INotifyPropertyChanged.PropertyChanged
-    Private Sub OnPropertyChanged(<CallerMemberName> Optional name As String = Nothing)
-        RaiseEvent PropertyChanged(Me, New PropertyChangedEventArgs(name))
+    Public Event DisplayGameMenuChanged As PropertyChangedEventHandler Implements INotifyPropertyChanged.PropertyChanged
+    Private Sub OnDisplayGameMenuChanged(<CallerMemberName> Optional name As String = Nothing)
+        RaiseEvent DisplayGameMenuChanged(Me, New PropertyChangedEventArgs(name))
     End Sub
 
 End Class

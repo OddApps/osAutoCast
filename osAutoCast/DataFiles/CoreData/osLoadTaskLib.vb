@@ -29,21 +29,6 @@ Public Module osLoadTaskLib
         End Get
     End Property
 
-    Private ReadOnly Property uiPrefHandler As osHandler_Prefs
-        Get
-            Return objLoadUI.osPrefManager
-        End Get
-    End Property
-
-    Private Property uiTextVis As Storyboard
-        Get
-            Return objLoadUI.objAnimation_LoadTextVis
-        End Get
-        Set(value As Storyboard)
-            objLoadUI.objAnimation_LoadTextVis = value
-        End Set
-    End Property
-
     Private ReadOnly Property uiTextEvtTask As TaskCompletionSource(Of Boolean)
         Get
             Return objLoadUI.visLoadTextEventTask
@@ -57,19 +42,21 @@ Public Module osLoadTaskLib
     Public Async Function LoadTask_PrefsLoad(objTaskAbort As CancellationToken) As Task
         Await ProcessLoadSequence(SetLoadDelays(Load_PrefPrep),
                                   SetLoadSequence(Function() osPefs.Data.PreparePrefData(),
-                                                  Function() osPefs.Data.ApplyPrefs()))
+                                                  Function() osPefs.Data.ApplyPrefs(True)))
     End Function
 
     Public Async Function LoadTask_LoadMenus(objTaskAbort As CancellationToken) As Task
-        Await ProcessLoadSequence(SetLoadDelays(Load_PopupMenu),
+        Await ProcessLoadSequence(SetLoadDelays(Load_AllMenus),
                                   SetLoadSequence(Function() osUI_Loader.LoadUI_PopupMenu(),
-                                                  Function() osUI_Loader.LoadUI_TrayMenu()))
+                                                  Function() osUI_Loader.LoadUI_PrefTrayMenus()))
     End Function
 
     Public Async Function LoadTask_PrepMenus(objTaskAbort As CancellationToken) As Task
         Await ProcessLoadSequence(SetLoadDelays(Load_InitMenus),
-                                  SetLoadSequence(Function() osUI_Loader.LoadUI_InitMenus()))
+                                  SetLoadSequence(Function() osUI_Loader.LoadUI_InitMenus(),
+                                                  Function() osUI_Loader.LoadUI_InitPrefTrayMenus()))
     End Function
+
 
     Public Async Function LoadTask_InitActions(objTaskAbort As CancellationToken) As Task
         Await ProcessLoadSequence(SetLoadDelays(Load_InitActions),

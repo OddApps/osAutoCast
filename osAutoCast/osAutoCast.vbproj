@@ -178,9 +178,6 @@
     <Compile Include="DataFiles\HandlerData\osHandler_Loader.vb" />
     <Compile Include="DataFiles\HandlerData\osHandler_Shader.vb" />
     <Compile Include="DataFiles\HandlerData\osHandler_UI.vb" />
-    <Compile Include="DataFiles\InputMonData\osInMon.xaml.vb">
-      <DependentUpon>osInMon.xaml</DependentUpon>
-    </Compile>
     <Compile Include="DataFiles\InterfaceData\LoaderUI\osLoader_UI.xaml.vb">
       <DependentUpon>osLoader_UI.xaml</DependentUpon>
     </Compile>
@@ -243,10 +240,6 @@
     <Page Include="DataFiles\InterfaceData\ProgressUI\progGui_AutoPass.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
-    </Page>
-    <Page Include="DataFiles\InputMonData\osInMon.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
     </Page>
     <Compile Include="Application.xaml.vb">
       <DependentUpon>Application.xaml</DependentUpon>

@@ -1,4 +1,5 @@
-﻿Imports System.Windows.Threading
+﻿Imports System.ComponentModel
+Imports System.Windows.Threading
 Imports Microsoft.Win32.SafeHandles
 Imports SharpDX.Direct3D
 Imports SharpDX.Direct3D11
@@ -15,10 +16,11 @@ Imports osProgFactoryD2D = SharpDX.Direct2D1.Factory
 
 Public NotInheritable Class osHandler_Graphics
 
+    Private Shared osGraphicFlags As DeviceCreationFlags = DeviceCreationFlags.BgraSupport
+
     Private Shared _progDevice As osProgDevice
     Public Shared ReadOnly Property pDevice As osProgDevice
         Get
-            ' EnsureCreated()
             Return _progDevice
         End Get
     End Property
@@ -26,7 +28,6 @@ Public NotInheritable Class osHandler_Graphics
     Private Shared _progContext As osProgDeviceContext
     Public Shared ReadOnly Property pContext As osProgDeviceContext
         Get
-            ' EnsureCreated()
             Return _progContext
         End Get
     End Property
@@ -34,7 +35,6 @@ Public NotInheritable Class osHandler_Graphics
     Private Shared _progDxgiFactory As osProgDxgiFactory
     Public Shared ReadOnly Property pDxgiFactory As osProgDxgiFactory
         Get
-            '  EnsureCreated()
             Return _progDxgiFactory
         End Get
     End Property
@@ -42,7 +42,6 @@ Public NotInheritable Class osHandler_Graphics
     Private Shared _progDxgiFactory2 As osProgDxgiFactory2
     Public Shared ReadOnly Property pDxgiFactory2 As osProgDxgiFactory2
         Get
-            '  EnsureCreated()
             Return _progDxgiFactory2
         End Get
     End Property
@@ -50,7 +49,6 @@ Public NotInheritable Class osHandler_Graphics
     Private Shared _progD2dFactory As osProgFactoryD2D
     Public Shared ReadOnly Property pD2DFactory As osProgFactoryD2D
         Get
-            '  EnsureCreated()
             Return _progD2dFactory
         End Get
     End Property
@@ -58,7 +56,6 @@ Public NotInheritable Class osHandler_Graphics
     Private Shared _progDwFactory As FactoryDW
     Public Shared ReadOnly Property pDWFactory As FactoryDW
         Get
-            '  EnsureCreated()
             Return _progDwFactory
         End Get
     End Property
@@ -67,40 +64,53 @@ Public NotInheritable Class osHandler_Graphics
     End Sub
 
     Public Shared Async Function EnsureCreated() As Task
+        Dim objOsGraphics = Await InitGraphicCreation()
 
-        Dim objTask_EnsureCreated As Boolean
+        With objOsGraphics
+            _progD2dFactory = .osGraphics_ProgFactoryD2D
+            _progDwFactory = .osGraphics_ProgDwFactory
 
-        objTask_EnsureCreated = Await Task.Run(
-            Async Function()
-                Dim device As osProgDevice = Nothing
-                Dim context As Object = Nothing
-                Dim dxgiFactory As osProgDxgiFactory = Nothing
+            _progDxgiFactory2 = .osGraphics_ProgDxgiFactory2
 
-                Await PrepDispatcher().InvokeAsync(
-                    Sub()
-                        Dim flags = DeviceCreationFlags.BgraSupport
+            _progDevice = .osGraphics_ProgDevice
+            _progContext = .osGraphics_ProgDeviceContext
+            _progDxgiFactory = .osGraphics_ProgDxgiFactory
+        End With
+    End Function
 
-                        device = New osProgDevice(DriverType.Hardware, flags)
-                        context = device.ImmediateContext
+    Private Shared Function InitGraphicCreation() As Task(Of osGraphicsData)
+        Dim objTask_GraphicsData As New TaskCompletionSource(Of osGraphicsData)()
+        Dim objTask_InitGraphics As New BackgroundWorker()
 
-                        Using dxgiDev = device.QueryInterface(Of osProgDxgiDevice)()
-                            Using adapter = dxgiDev.Adapter
-                                dxgiFactory = adapter.GetParent(Of osProgDxgiFactory)()
-                            End Using
-                        End Using
+        AddHandler objTask_InitGraphics.DoWork,
+            Sub(sender As Object, e As DoWorkEventArgs)
+                Dim osG_ProgDevice = New osProgDevice(DriverType.Hardware, osGraphicFlags)
+                Dim osG_ProgContext = osG_ProgDevice.ImmediateContext
 
-                        _progD2dFactory = New osProgFactoryD2D(osFactoryType.MultiThreaded)
-                        _progDwFactory = New FactoryDW(osDwFactoryType.Shared)
+                Dim osG_ProgDxgiFactory As osProgDxgiFactory = Nothing
+                Using dxgiDev = osG_ProgDevice.QueryInterface(Of osProgDxgiDevice)()
+                    Using objAdapter = dxgiDev.Adapter
+                        osG_ProgDxgiFactory = objAdapter.GetParent(Of osProgDxgiFactory)()
+                    End Using
+                End Using
 
-                        _progDxgiFactory2 = dxgiFactory.QueryInterface(Of SharpDX.DXGI.Factory2)()
-                    End Sub, DispatcherPriority.Background)
+                Dim resProgD2dFactory = New osProgFactoryD2D(osFactoryType.MultiThreaded)
+                Dim resProgDwFactory = New FactoryDW(osDwFactoryType.Shared)
+                Dim resProgDxgiFactory2 = osG_ProgDxgiFactory.QueryInterface(Of osProgDxgiFactory2)()
 
-                _progDevice = device
-                _progContext = context
-                _progDxgiFactory = dxgiFactory
+                e.Result = New osGraphicsData(resProgD2dFactory, resProgDwFactory,
+                                      osG_ProgDevice, resProgDxgiFactory2, osG_ProgContext, osG_ProgDxgiFactory)
+            End Sub
 
-                Return True
-            End Function)
+        AddHandler objTask_InitGraphics.RunWorkerCompleted,
+            Sub(sender As Object, e As RunWorkerCompletedEventArgs)
+                objTask_GraphicsData.SetResult(DirectCast(e.Result, osGraphicsData))
+                objTask_InitGraphics.Dispose()
+            End Sub
+
+        objTask_InitGraphics.RunWorkerAsync()
+
+        Return objTask_GraphicsData.Task
     End Function
 
     Public Shared Sub FlushDevice()
@@ -119,42 +129,3 @@ Public NotInheritable Class osHandler_Graphics
     End Sub
 
 End Class
-
-Public Module WaitHandleAsync
-
-    <Runtime.CompilerServices.Extension>
-    Public Function AwaitSignalAsync(evHandle As IntPtr, Optional ct As CancellationToken = Nothing) As Task
-
-        If evHandle = IntPtr.Zero Then
-            Return Task.CompletedTask
-        End If
-
-        Dim wh As New EventWaitHandle(False, EventResetMode.AutoReset)
-        wh.SafeWaitHandle = New SafeWaitHandle(evHandle, ownsHandle:=False)
-
-        Dim tcs = New TaskCompletionSource(Of Object)(TaskCreationOptions.RunContinuationsAsynchronously)
-        Dim reg As RegisteredWaitHandle = Nothing
-
-        reg = ThreadPool.RegisterWaitForSingleObject(wh,
-           Sub(state, timedOut)
-               reg.Unregister(Nothing)
-               If ct.IsCancellationRequested Then
-                   tcs.TrySetCanceled(ct)
-               Else
-                   tcs.TrySetResult(Nothing)
-               End If
-           End Sub, state:=Nothing,
-           millisecondsTimeOutInterval:=-1,
-           executeOnlyOnce:=True)
-
-        If ct.CanBeCanceled Then
-            ct.Register(Sub()
-                            reg.Unregister(Nothing)
-                            tcs.TrySetCanceled(ct)
-                        End Sub)
-        End If
-
-        Return tcs.Task
-    End Function
-
-End Module

@@ -2,402 +2,284 @@
 Imports System.Windows.Media.Animation
 Imports System.Windows.Threading
 Imports osAutoCast.DataTypeLib.VisAdapterConfig
+Imports osNotify = System.ComponentModel.INotifyPropertyChanged
 
 Namespace osVisualAdapter
 
     Public Class VisAdapterUI
-        Inherits Window
-        Implements INotifyPropertyChanged
+        Inherits Window : Implements osNotify
 
-        Public Event LifecycleSignal As EventHandler
+        Private VisAdapaterInitiated As Boolean = False
 
-        Protected Sub RaiseLifecycleSignal()
-            RaiseEvent LifecycleSignal(Me, EventArgs.Empty)
-        End Sub
-
-        Public Event VisOutlineUpdated As EventHandler(Of VisOutlineUpdatedEventArgs)
+        Private VisDataOutlineBuffer As Storyboard
+        Private VisDataOutline_onComplete As EventHandler
 
         Private _visDataObject As Storyboard
         Public Overridable Property VisDataObject As Storyboard
             Get
                 Return _visDataObject
             End Get
-            Set(value As Storyboard)
-                If ReferenceEquals(_visDataObject, value) Then Return
-                _visDataObject = If(value Is Nothing, Nothing, value.Clone())
-                OnPropertyChanged(NameOf(VisDataObject))
+            Set(objVisObject As Storyboard)
+                If ReferenceEquals(_visDataObject, objVisObject) Then
+                    Return
+                Else
+                    _visDataObject = If(
+                        objVisObject.Clone(), Nothing)
+
+                    OnVisDataOutlineChanged(NameOf(VisDataObject))
+                End If
             End Set
         End Property
-
-        Public Sub PrepVisAdapter(objWinUI As VisAdapterUI)
-
-        End Sub
-
-        Public Function TriggerVisuals_Open(doAsync As Boolean, startVis As Boolean) As Task
-            VisAdapter.ApplyVisualReset()
-
-            If doAsync Then
-                Dim objTask_SetVisuals = VisAdapter.ApplyVisuals(True)
-            Else
-                Dim objTask_SetVisuals = VisAdapter.ApplyVisuals()
-            End If
-
-            VisDataObject.Begin(VisAdapter.GetStartingVis(), True)
-
-            Return Task.CompletedTask
-        End Function
-
-        'Public Overridable Function TriggerVisuals_Close(Optional doAsync As Boolean = True) As Task
-        '    If doAsync Then
-        '        Dim objTask_SetVisuals = VisAdapter.ApplyVisuals(True)
-        '    Else
-        '        Dim objTask_SetVisuals = VisAdapter.ApplyVisuals()
-        '    End If
-
-        '    VisDataObject.Begin(VisAdapter.GetStartingVis(), True)
-        '    Return Task.CompletedTask
-        'End Function
-
-        Public Overridable Function TriggerVisuals_Open(Optional doAsync As Boolean = True, Optional objAwaitClose As TaskCompletionSource(Of Boolean) = Nothing) As Task
-            VisAdapter.ApplyVisualReset()
-
-            If doAsync Then
-                Dim objTask_SetVisuals = VisAdapter.ApplyVisuals(True)
-            Else
-                Dim objTask_SetVisuals = VisAdapter.ApplyVisuals()
-            End If
-
-            VisDataObject.Begin(VisAdapter.GetStartingVis(), True)
-
-            Return Task.CompletedTask
-        End Function
-
-        Public Overridable Async Function TriggerVisuals_Close(Optional doAsync As Boolean = True) As Task
-            If doAsync Then
-                Await VisAdapter.ApplyVisuals(True)
-            Else
-                Dim objTask_SetVisuals = VisAdapter.ApplyVisuals()
-            End If
-
-            VisDataObject.Begin(VisAdapter.GetStartingVis(), True)
-            Await Task.CompletedTask
-        End Function
 
         Private _visAdapter As VisQualityAdapter
         Public Property VisAdapter As VisQualityAdapter
             Get
                 Return _visAdapter
             End Get
-            Set(value As VisQualityAdapter)
-                _visAdapter = If(value Is Nothing, Nothing, value)
+            Set(objVisAdapter As VisQualityAdapter)
+                _visAdapter = If(
+                    objVisAdapter, Nothing)
             End Set
         End Property
 
-        Protected Sub OnVisOutlineUpdated(newSb As Storyboard)
-            RaiseEvent VisOutlineUpdated(Me, New VisOutlineUpdatedEventArgs(newSb))
+        Public Sub AttachVisOutline(vDataName As String, Optional vDataTask As Action = Nothing)
+            VisDataOutlineBuffer = PrepareVisOutline(Me.Resources(vDataName))
+
+            If vDataTask IsNot Nothing Then
+                VisDataOutline_onComplete =
+                    Sub(s, e)
+                        RemoveHandler VisDataObject.Completed, VisDataOutline_onComplete
+                        vDataTask.Invoke()
+                    End Sub
+            End If
         End Sub
 
-        Public Class VisOutlineUpdatedEventArgs
-            Inherits EventArgs
+        Private Function PrepareVisOutline(visObject As Object) As Storyboard
+            Dim objVisData = TryCast(visObject, Storyboard)
+            objVisData.FreezeReturn()
 
-            Public ReadOnly Property Storyboard As Storyboard
+            Return objVisData
+        End Function
 
-            Public Sub New(sb As Storyboard)
-                Storyboard = sb
-            End Sub
-        End Class
+        Public Sub InitializeVisAdapter(objVisAdapterUI As VisAdapterUI,
+                                        setVisConfig As VisAdapterConfig, ParamArray lstVisTargets() As UIElement)
 
-        Public Event PropertyChanged As PropertyChangedEventHandler _
-            Implements INotifyPropertyChanged.PropertyChanged
+            '        If Not VisAdapaterInitiated Then
+            VisAdapter = New VisQualityAdapter(objVisAdapterUI, setVisConfig, lstVisTargets)
 
-        Protected Overridable Sub OnPropertyChanged(propName As String)
-            RaiseEvent PropertyChanged(Me, New PropertyChangedEventArgs(propName))
+            Dim objTask_ProcessConfig = VisAdapter.ProcessVisConfig()
+            '        VisAdapaterInitiated = True
+            '  End If
+        End Sub
+
+        Public Overridable Async Function TriggerVisuals_Open() As Task
+            Dim isTaskAsync As Boolean
+            Dim objTask_SetVisuals = Me.VisAdapter.TriggerApplyVisuals(isTaskAsync)
+
+            '   If isTaskAsync Then
+            Await objTask_SetVisuals
+            '  End If
+
+            VisDataObject.Begin(Me.VisAdapter.GetStartingVis(), True)
+            ' Await Task.CompletedTask
+
+        End Function
+
+        Public Overridable Async Function TriggerVisuals_Close() As Task
+            Dim isTaskAsync As Boolean
+            Dim objTask_SetVisuals = Me.VisAdapter.TriggerApplyVisuals(True, isTaskAsync)
+
+            'If isTaskAsync Then
+            Await objTask_SetVisuals
+            'End If
+
+            VisDataObject.Begin(Me.VisAdapter.GetStartingVis(), True)
+
+            '    Await Task.CompletedTask
+            'If Not isTaskAsync Then
+            '    Await Task.CompletedTask : End If
+        End Function
+
+        Public Event VisDataOutlineChanged As _
+            PropertyChangedEventHandler Implements osNotify.PropertyChanged
+
+        Protected Overridable Sub OnVisDataOutlineChanged(propName As String)
+            RaiseEvent VisDataOutlineChanged(Me, New PropertyChangedEventArgs(propName))
         End Sub
 
     End Class
 
     Public Class VisQualityAdapter
 
-        Private evtVisComplete As EventHandler = AddressOf ResetVisuals
-
-        Private Const renderAtScale As Double = 1.0
-
-        Private VisAdapterConfiguration As VisAdapterConfig
-        Private VisAdapterConfigIdx As Dictionary(Of VisConfigItem, Boolean)
-
-        Private VisConfigDataList As New List(Of VisConfigItem) From {
-            VisConfigItem.ApplyVisuals,
-            VisConfigItem.ObjectReset,
-            VisConfigItem.UpdateAsync_OnLoad,
-            VisConfigItem.UpdateAsync_OnReset,
-            VisConfigItem.UpdateAsync_OnDispose
-        }
-
-        Private VisCloseTask As Func(Of Task)
-        Private VisCloseTrigger As Action
+        Private ReadOnly VisAdapter_UI As VisAdapterUI
 
         Private VisObjectIdx As UIElement()
         Private VisObjectCnt As Integer
 
-        Private ReadOnly VisAdapter_UI As VisAdapterUI
-        Private ReadOnly VisAdapter_Dispatch As Dispatcher
+        Private evtResetVisuals As EventHandler
 
-        Private VisDataOutline As Storyboard
+        Private VisAdapterConfiguration As VisAdapterConfig
+        Private VisAdapterConfigIdx As New Dictionary(Of VisAdapterConfig, Boolean) From {
+            {None, False},
+            {ResetVisualSettings, False},
+            {UpdateAsync_OnLoad, False},
+            {UpdateAsync_OnReset, False},
+            {UpdateAsync_OnDispose, False}
+        }
 
-        Private ReadOnly Property VisOutline As Storyboard
+        Private ReadOnly Property VisDataOutline As Storyboard
             Get
                 Return VisAdapter_UI.VisDataObject
             End Get
         End Property
-
-        Public Sub New()
-        End Sub
-
-        'Public Sub New(objVisAdapterUI As VisAdapterUI, setVisConfig As VisAdapterConfig, ParamArray lstVisTargets() As UIElement)
-        '    VisObjectIdx = lstVisTargets
-        '    VisObjectCnt = VisObjectIdx.Count - 1
-
-        '    VisAdapter_UI = objVisAdapterUI
-        '    VisAdapter_Dispatch = objVisAdapterUI.Dispatcher
-
-        '    VisAdapterConfiguration = setVisConfig
-        '    ProcessVisConfig()
-
-        '    If ValidateConfig(VisAdapterConfig.ObjectReset) Then
-        '        ApplyVisualReset()
-        '    End If
-
-        '    If ValidateConfig(VisAdapterConfig.ApplyVisuals) Then
-        '        If ValidateConfig(VisAdapterConfig.UpdateAsync_OnLoad) Then
-        '            Dim objTask_SetVisuals = ApplyVisuals(True)
-        '        Else
-        '            Dim objTask_SetVisuals = ApplyVisuals()
-        '        End If
-        '    End If
-        'End Sub
 
         Public Sub New(objVisAdapterUI As VisAdapterUI, setVisConfig As VisAdapterConfig, ParamArray lstVisTargets() As UIElement)
             VisObjectIdx = lstVisTargets
             VisObjectCnt = VisObjectIdx.Count - 1
 
             VisAdapter_UI = objVisAdapterUI
-            VisAdapter_Dispatch = objVisAdapterUI.Dispatcher
-
-            ' VisCloseTask = objCloseTask
-            'AddHandler VisAdapter_UI.LifecycleSignal, Sub(s, e)
-            '                                              Dim aa = OnLifecycleSignal()
-            '                                          End Sub
 
             VisAdapterConfiguration = setVisConfig
-            ProcessVisConfig()
-
-
-            'If FetchConfig(VisAdapterConfig.ApplyVisuals) Then
-            '    Dim aa = InitVisualAdapter()
-            'End If
-
-            'If FetchConfig(VisAdapterConfig.ObjectReset) Then
-            '    ApplyVisualReset()
-            'End If
-
-            'If FetchConfig(VisAdapterConfig.ApplyVisuals) Then
-            '    If FetchConfig(VisAdapterConfig.UpdateAsync_OnLoad) Then
-            '        Dim objTask_SetVisuals = ApplyVisuals(True)
-            '    Else
-            '        Dim objTask_SetVisuals = ApplyVisuals()
-            '    End If
-            'End If
         End Sub
 
-        Public Async Function InitVisualAdapter() As Task
-            If FetchConfig(VisAdapterConfig.ObjectReset) Then
-                ApplyVisualReset()
-            End If
+        Private Sub DetermineResetEvent()
+            Dim visConfig_AsyncReset = FetchConfig(UpdateAsync_OnReset)
 
-            If FetchConfig(VisAdapterConfig.ApplyVisuals) Then
-                If FetchConfig(VisAdapterConfig.UpdateAsync_OnLoad) Then
-                    Await ApplyVisuals(True)
-                Else
-                    Dim objTask_SetVisuals = ApplyVisuals()
-                End If
-            End If
-        End Function
+            evtResetVisuals = Nothing
 
-        Public Sub New(objVisAdapterUI As VisAdapterUI, setVisConfig As VisAdapterConfig, objCloseTrigger As Action, isTrigger As Boolean, ParamArray lstVisTargets() As UIElement)
-            VisObjectIdx = lstVisTargets
-            VisObjectCnt = VisObjectIdx.Count - 1
-
-            VisAdapter_UI = objVisAdapterUI
-            VisAdapter_Dispatch = objVisAdapterUI.Dispatcher
-
-            VisCloseTrigger = objCloseTrigger
-            AddHandler VisAdapter_UI.LifecycleSignal, Sub(s, e)
-                                                          Dim aa = OnLifecycleSignal()
-                                                      End Sub
-
-
-            VisAdapterConfiguration = setVisConfig
-            ProcessVisConfig()
-
-            If FetchConfig(VisAdapterConfig.ObjectReset) Then
-                ApplyVisualReset()
-            End If
-
-            If FetchConfig(VisAdapterConfig.ApplyVisuals) Then
-                If FetchConfig(VisAdapterConfig.UpdateAsync_OnLoad) Then
-                    Dim objTask_SetVisuals = ApplyVisuals(True)
-                Else
-                    Dim objTask_SetVisuals = ApplyVisuals()
-                End If
-            End If
-        End Sub
-
-        Private Async Function OnLifecycleSignal() As Task
-            If VisCloseTask Is Nothing Then
-                If FetchConfig(VisAdapterConfig.UpdateAsync_OnDispose) Then
-                    Dim objDisposeTask_ApplyVis = ApplyVisuals(True)
-                    Dim objDisposeTask_TriggerEvent = TriggerVisClose(VisCloseTrigger)
-
-                    Await objDisposeTask_TriggerEvent()
-                Else
-                    Dim objDisposeTask_ApplyVis = ApplyVisuals()
-                    Dim objDisposeTask_TriggerEvent = TriggerVisClose(VisCloseTrigger)()
-                End If
+            If visConfig_AsyncReset Then
+                evtResetVisuals =
+                    Async Sub(sender As Object, e As EventArgs)
+                        Await ResetVisuals_Async()
+                    End Sub
             Else
-                If FetchConfig(VisAdapterConfig.UpdateAsync_OnDispose) Then
-                    Dim objDisposeTask_ApplyVis = ApplyVisuals(True)
-                    Await VisCloseTask()
-                Else
-                    Dim objDisposeTask_ApplyVis = ApplyVisuals()
-                    Dim objDisposeTask_TriggerEvent = VisCloseTask()
-                End If
+                evtResetVisuals =
+                    Sub(sender As Object, e As EventArgs)
+                        ResetVisuals()
+                    End Sub
             End If
-        End Function
-
-        Public Sub SetConfiguration(setVisConfig As VisAdapterConfig)
-            VisAdapterConfiguration = setVisConfig
         End Sub
 
-        Public Function TriggerVisClose(action As Action) As Func(Of Task)
-            Return Function()
-                       action()
-                       Return Task.CompletedTask
-                   End Function
+        Private Sub OnVisOutlineUpdate(sender As Object, e As PropertyChangedEventArgs)
+            If e.PropertyName <> NameOf(VisAdapterUI.VisDataObject) Then Return
+
+            DetermineResetEvent()
+
+            If ValidateVisDataOutline() Then
+                SyncVisDataOutline()
+            End If
+        End Sub
+
+        Private Sub SyncVisDataOutline()
+            RemoveHandler VisDataOutline.Completed, evtResetVisuals
+            AddHandler VisDataOutline.Completed, evtResetVisuals
+        End Sub
+
+        Private Function ValidateVisDataObject() As Boolean
+            Return VisAdapter_UI.VisDataObject IsNot Nothing
+        End Function
+
+        Private Function ValidateVisDataOutline() As Boolean
+            Return VisDataOutline IsNot Nothing
         End Function
 
         Public Function GetStartingVis() As FrameworkElement
             Return CType(VisObjectIdx(0), FrameworkElement)
         End Function
 
-        Private Sub OnVisOutlineUpdate(sender As Object, e As PropertyChangedEventArgs)
-            If e.PropertyName <> NameOf(VisAdapterUI.VisDataObject) Then Return
-
-            If VisDataOutline IsNot Nothing Then
-                If FetchConfig(VisConfigItem.UpdateAsync_OnReset) Then
-                    RemoveHandler VisDataOutline.Completed, AddressOf ResetVisuals_Async
-                Else
-                    RemoveHandler VisDataOutline.Completed, AddressOf ResetVisuals
-                End If
-            End If
-
-            Try
-                If VisAdapter_UI.VisDataObject IsNot Nothing Then
-                    VisDataOutline = VisAdapter_UI.VisDataObject
-                Else
-                    VisDataOutline = Nothing
-                End If
-            Catch ex As Exception
-                VisDataOutline = Nothing
-            End Try
-
-            If VisDataOutline IsNot Nothing Then
-                If FetchConfig(VisConfigItem.UpdateAsync_OnReset) Then
-                    AddHandler VisDataOutline.Completed, AddressOf ResetVisuals_Async
-                Else
-                    AddHandler VisDataOutline.Completed, AddressOf ResetVisuals
-                End If
-            End If
-        End Sub
-
-        Private Sub ProcessVisConfig()
-            VisAdapterConfigIdx = New Dictionary(Of VisConfigItem, Boolean)
-
-            For Each visConfigItem In VisConfigDataList
-                VisAdapterConfigIdx.Add(visConfigItem, ValidateConfig(visConfigItem))
-            Next
-        End Sub
-
-        Private Function FetchConfig(objVisConfigItem As VisConfigItem) As Boolean
-            Return VisAdapterConfigIdx.First(
-                Function(objVisConfigData)
-                    Return objVisConfigData.Key = objVisConfigItem
-                End Function).Value
+        Private Function isVisPerformance() As Boolean
+            Return CoreDataLib.GetVisualQuality() = ProgVisOpts.Performance
         End Function
 
-        Private Sub SetConfigDefaults()
-            VisAdapterConfiguration = VisAdapterConfig.ApplyVisuals Or VisAdapterConfig.UpdateAsync_OnLoad Or
-                VisAdapterConfig.ObjectReset
+        Public Async Function ProcessVisConfig() As Task
+            Await PrepDispatcher().InvokeAsync(
+                Sub()
+                    For Each visConfig In VisAdapterConfigIdx.Keys.ToList()
+                        UpdateConfigSetting(visConfig)
+                    Next
+                End Sub, DispatcherPriority.Background)
+        End Function
 
-        End Sub
-
-        Private Sub ApplyVisConfig(Optional chkReset As Boolean = False)
-            If chkReset Then
-                If FetchConfig(VisConfigItem.ObjectReset) Then
-                    ApplyVisualReset()
-                End If
-            End If
-
-            If FetchConfig(VisConfigItem.ApplyVisuals) Then
-                If FetchConfig(VisConfigItem.UpdateAsync_OnLoad) Then
-                    Dim objTask_SetVisuals = ApplyVisuals(True)
-                Else
-                    Dim objTask_SetVisuals = ApplyVisuals()
-                End If
-            End If
+        Private Sub UpdateConfigSetting(VisConfigSetting As VisAdapterConfig)
+            VisAdapterConfigIdx(VisConfigSetting) = ValidateConfig(VisConfigSetting)
         End Sub
 
         Private Function ValidateConfig(chkVisConfig As VisAdapterConfig) As Boolean
             Return (VisAdapterConfiguration And chkVisConfig) <> 0
         End Function
 
-        Private Function isVisPerformance() As Boolean
-            Return CoreDataLib.GetVisualQuality() = ProgVisOpts.Performance
+        Private Function FetchConfig(objVisConfigItem As VisAdapterConfig) As Boolean
+            Return VisAdapterConfigIdx.First(
+                Function(objVisConfigData)
+                    Return objVisConfigData.Key = objVisConfigItem
+                End Function).Value
+        End Function
+
+        Public Function TriggerApplyVisuals() As Task
+            If isVisPerformance() Then
+                Return If(FetchConfig(UpdateAsync_OnLoad),
+                    ApplyVisuals(True), ApplyVisuals())
+            End If
+        End Function
+
+        Public Function GetQualityConfig(isClose As Boolean) As Boolean
+            Return If(isClose, FetchConfig(UpdateAsync_OnDispose), FetchConfig(UpdateAsync_OnLoad))
+        End Function
+
+        Public Function TriggerApplyVisuals(Optional ByRef isAsync As Boolean = False) As Task
+            If isVisPerformance() Then
+                isAsync = FetchConfig(UpdateAsync_OnLoad)
+
+                Return If(isAsync,
+                    ApplyVisuals(True), ApplyVisuals())
+            End If
+        End Function
+
+        Public Function TriggerApplyVisuals(verifyCloseConfig As Boolean, Optional ByRef isAsync As Boolean = False) As Task
+            If isVisPerformance() Then
+                isAsync = FetchConfig(UpdateAsync_OnDispose)
+
+                Return If(isAsync,
+                    ApplyVisuals(True), ApplyVisuals())
+            End If
         End Function
 
         Public Function ApplyVisuals() As Task
-            If isVisPerformance() Then
-                Dim objTask_SetVisConfig = PrepDispatcher().InvokeAsync(
-                    Sub()
-                        Dim visBitMapCache As New BitmapCache(1.0)
+            Dim objTask_ApplyVisuals = PrepDispatcher().InvokeAsync(
+                Sub()
+                    Dim visBitMapCache As New BitmapCache(1.0)
 
-                        For objVis = 0 To VisObjectCnt
-                            SetVisQuality(VisObjectIdx(objVis), visBitMapCache)
-                        Next
-                    End Sub, DispatcherPriority.Background).Task
-            End If
+                    For objVis = 0 To VisObjectCnt
+                        SetVisQuality(VisObjectIdx(objVis), visBitMapCache)
+                    Next
+                End Sub, DispatcherPriority.Render).Task
 
-            Return Task.CompletedTask
+            Return objTask_ApplyVisuals
         End Function
 
         Public Async Function ApplyVisuals(isAsync As Boolean) As Task
-            If isVisPerformance() Then
-                Await PrepDispatcher().InvokeAsync(
-                    Sub()
-                        Dim visBitMapCache As New BitmapCache(1.0)
+            Await PrepDispatcher().InvokeAsync(
+                Function()
+                    Dim visBitMapCache As New BitmapCache(1.0)
 
-                        For objVis = 0 To VisObjectCnt
-                            SetVisQuality(VisObjectIdx(objVis), visBitMapCache)
-                        Next
-                    End Sub, DispatcherPriority.Render).Task
-            End If
+                    For objVis = 0 To VisObjectCnt
+                        SetVisQuality(VisObjectIdx(objVis), visBitMapCache)
+                    Next
+
+                    Return Task.CompletedTask
+                End Function, DispatcherPriority.Render)
         End Function
 
         Public Sub ApplyVisualReset()
             If isVisPerformance() Then
-                If FetchConfig(VisAdapterConfig.ObjectReset) Then
+                If FetchConfig(ResetVisualSettings) Then
+                    PropertyChangedEventManager.RemoveHandler(VisAdapter_UI,
+                                                              AddressOf OnVisOutlineUpdate,
+                                                              NameOf(VisAdapterUI.VisDataObject))
+
                     PropertyChangedEventManager.AddHandler(VisAdapter_UI,
-                                                       AddressOf OnVisOutlineUpdate,
-                                                       NameOf(VisAdapterUI.VisDataObject))
+                                                           AddressOf OnVisOutlineUpdate,
+                                                           NameOf(VisAdapterUI.VisDataObject))
 
                     OnVisOutlineUpdate(VisAdapter_UI,
                                    New PropertyChangedEventArgs(NameOf(
@@ -406,9 +288,7 @@ Namespace osVisualAdapter
             End If
         End Sub
 
-        Private Sub ResetVisuals(sender As Object, e As EventArgs)
-            '    RemoveHandler VisDataOutline.Completed, evtVisComplete
-
+        Private Sub ResetVisuals()
             Dim objTask_VisComplete = PrepDispatcher().InvokeAsync(
                Sub()
                    For objVis = 0 To VisObjectCnt
@@ -417,15 +297,14 @@ Namespace osVisualAdapter
                End Sub, DispatcherPriority.Background)
         End Sub
 
-        Private Async Sub ResetVisuals_Async(sender As Object, e As EventArgs)
-            '    RemoveHandler VisDataOutline.Completed, evtVisComplete
+        Private Async Function ResetVisuals_Async() As Task
             Await PrepDispatcher().InvokeAsync(
                Sub()
                    For objVis = 0 To VisObjectCnt
                        ResetVisQuality(VisObjectIdx(objVis))
                    Next
                End Sub, DispatcherPriority.Background)
-        End Sub
+        End Function
 
         Public Sub SetVisQuality(objVisTarget As UIElement, objBitMapCache As CacheMode)
             RenderOptions.SetBitmapScalingMode(objVisTarget, BitmapScalingMode.LowQuality)

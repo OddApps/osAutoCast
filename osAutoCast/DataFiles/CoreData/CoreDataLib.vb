@@ -192,20 +192,16 @@ Public NotInheritable Class CoreDataLib
 
     End Function
 
-    Public Shared Function GenerateShaderList(isNew As Boolean) As Task
-        '
-        Return Task.Run(Sub()
-                            ShaderDetailsIdx = osShaderNameList.Select(
-                    Function(shaderRes)
-                        Dim objShaderRec = CreateShaderRecord(shaderRes)
-                        Dim objTask_AddShader = AddShaderToIdx(objShaderRec)
+    Public Shared Async Function GenerateShaderList(isNew As Boolean) As Task
+        Dim list As New List(Of osShaderDetails)
 
-                        Return objShaderRec
-                    End Function).ToList()
+        For Each shaderRes In osShaderNameList
+            Dim objShaderRec = CreateShaderRecord(shaderRes)
+            Await AddShaderToIdx(objShaderRec).ConfigureAwait(False)
+            list.Add(objShaderRec)
+        Next
 
-                        End Sub)
-        '  End Function)
-
+        ShaderDetailsIdx = list
     End Function
 
     Private Shared Function CreateShaderRecord(objShaderRes As String) As osShaderDetails
@@ -343,12 +339,14 @@ Public NotInheritable Class CoreDataLib
     End Function
 
     Public Shared Async Function ExecuteTrigger(tType As TriggerAction) As Task
-        With New TriggerActionData(tType)
-            If .isValidTrigger Then Await .
-                TriggerFunc().Invoke()
+        Dim objTriggerActionData As New TriggerActionData(tType)
 
-            ResolveAction()
-        End With
+        If objTriggerActionData.isValidTrigger Then
+            Await objTriggerActionData.
+                TriggerFunc().Invoke()
+        End If
+
+        ResolveAction()
     End Function
 
     Public Shared Function ValidateTrigger(pType As TriggerAction) As TriggerValidation

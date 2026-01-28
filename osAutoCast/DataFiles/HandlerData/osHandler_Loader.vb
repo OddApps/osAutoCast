@@ -1,4 +1,5 @@
-﻿Imports System.Windows.Media.Animation
+﻿Imports System.ComponentModel
+Imports System.Windows.Media.Animation
 Imports System.Windows.Threading
 Imports osAutoCast.DataTypeLib.LoadTextVisualType
 Imports osAutoCast.osLoadingElements
@@ -429,7 +430,6 @@ End Class
 
 Public Class osHandler_Loader
 
-    Private ReadOnly _fadeTextOut As Func(Of LoadTextVisualType, Task)
     Private ReadOnly _fadeTextIn As Func(Of LoadTextVisualType, Task)
 
     Private _ProgLoadBar As Func(Of osProgLoad)
@@ -451,7 +451,7 @@ Public Class osHandler_Loader
     Private objProgressTimer As DispatcherTimer = Nothing
 
     Public Sub New(objLoadStages As osLoad, objProgBar As osProgLoad, objProg_Load As Func(Of osProgLoad),
-                   objTextVis_Out As Func(Of LoadTextVisualType, Task), objTextVis_In As Func(Of LoadTextVisualType, Task))
+                   objTextVis_In As Func(Of LoadTextVisualType, Task))
 
         _ProgLoadBar = objProg_Load
 
@@ -460,7 +460,6 @@ Public Class osHandler_Loader
 
         ProgMax = _ProgLoad.Maximum
 
-        _fadeTextOut = objTextVis_Out
         _fadeTextIn = objTextVis_In
 
         _LoadStages = objLoadStages.LoadStageIdx
@@ -501,19 +500,17 @@ Public Class osHandler_Loader
                         objLoadStage.StartValue + ((objLoadStage.EndValue - objLoadStage.StartValue) * (percent / 100.0)))
 
                     Dim useToken As CancellationToken = If(percent >= 100.0, CancellationToken.None, token)
-                    Dim animDuration As TimeSpan = If(percent >= 100.0, TimeSpan.FromMilliseconds(275), objLoadStage.Duration)
+                    Dim animDuration = If(percent >= 100.0, VisDuration(275), objLoadStage.Duration)
 
-                    Dim objAniProgress = objAnimator.AnimateToAsync(mapped, animDuration,
-                                                                    New ExponentialEase With {
-                                                                        .EasingMode = EasingMode.EaseOut, .Exponent = 0.75
-                                                                    }, useToken)
+                    Dim objAniProgress = objAnimator.AnimateToAsync(mapped,
+                                                                    animDuration, VisEasing(True), useToken)
 
                 Catch ex As OperationCanceledException
                 Catch ex As Exception : End Try
             End Sub)
     End Function
 
-    Private Sub CalcStageProgress(ByRef valPercent As Double, Optional valStep As Double = 10)
+    Private Sub CalcStageProgress(ByRef valPercent As Double, Optional valStep As Double = 8)
         valPercent = Math.Min(90.0, valPercent + valStep)
     End Sub
 
@@ -524,7 +521,7 @@ Public Class osHandler_Loader
             Throw New InvalidOperationException("StartUiDispatcherTimer must be called on the UI thread.")
         End If
 
-        Dim percent As Double = 0.0
+        Dim percent As Double = 0
         Dim uiProgress As IProgress(Of Double) = CreateStageProgress(animator, objLoadStage, token)
 
         outTimer = New DispatcherTimer(DispatcherPriority.Background) With {
@@ -534,7 +531,7 @@ Public Class osHandler_Loader
         AddHandler outTimer.Tick,
             Sub(sender As Object, e As EventArgs)
                 Try
-                    If token.IsCancellationRequested OrElse percent >= 90.0 Then
+                    If token.IsCancellationRequested OrElse percent >= 90 Then
                         CType(sender, DispatcherTimer).Stop()
                         Return
                     End If
@@ -559,42 +556,52 @@ Public Class osHandler_Loader
 
     Public Async Function BeginLoadProcess() As Task
         Dim objLoadProgressVis As New LoaderProgressAnimator(_ProgLoad)
-        Dim cntStage As Integer = 0
 
-        For Each LoadStage In _LoadStages
-            With LoadStage
-                Dim taskType = .TaskType
+        For Each objLoadStage In _LoadStages
+            Dim objTaskDetails = objLoadStage.TaskDetails
 
-                If _cts IsNot Nothing Then
-                    Await Task.Delay(115)
-                    objProgressStage.Report(100)
-                    Await Task.Delay(115)
+            If _cts IsNot Nothing Then
+                Await Task.Delay(115)
+                objProgressStage.Report(100)
+                Await Task.Delay(100)
 
-                    objProgressTimer?.Stop()
-                    CancelCurrent()
-                End If
+                objProgressTimer?.Stop()
+                CancelCurrent()
+            End If
 
-                _cts = New CancellationTokenSource()
-                Dim objLoadStageToken = _cts.Token
+            _cts = New CancellationTokenSource()
+            Dim objLoadStageToken = _cts.Token
 
-                objLoadStageToken.ThrowIfCancellationRequested()
+            objLoadStageToken.ThrowIfCancellationRequested()
 
-                Await _fadeTextIn(taskType)
+            Dim objTask_FadeText = _fadeTextIn(objLoadStage.TaskType)
 
-                objProgressTimer = Nothing
-                objProgressStage = StartUiDispatcherTimer(objLoadProgressVis, .TaskDetails, objLoadStageToken, objProgressTimer)
+            objProgressTimer = Nothing
+            objProgressStage = StartUiDispatcherTimer(objLoadProgressVis, objTaskDetails, objLoadStageToken, objProgressTimer)
 
-                Dim objLoadTask = .LoadTask(objLoadStageToken)
-                Await objLoadTask
+            Dim objLoadTask = objLoadStage.LoadTask(objLoadStageToken)
+            Await objLoadTask
 
-                Dim objTask_ProgressAnimate = objLoadProgressVis.
-                    AnimateToAsync(.TaskDetails.EndValue, TimeSpan.FromMilliseconds(300),
-                                   New QuadraticEase With {
-                                        .EasingMode = EasingMode.EaseOut
-                                   }, CancellationToken.None)
-            End With
-
+            Dim objTask_ProgressAnimate = objLoadProgressVis.
+                AnimateToAsync(objTaskDetails.EndValue, VisDuration(300), VisEasing(), CancellationToken.None)
         Next
+    End Function
+
+    Private Function VisDuration(msDur As Double) As Duration
+        Return New Duration(TimeSpan.FromMilliseconds(msDur))
+    End Function
+
+    Public Function VisEasing(Optional isProgress As Boolean = False) As EasingFunctionBase
+        If isProgress Then
+            Return New ExponentialEase With {
+                .EasingMode = EasingMode.EaseOut,
+                .Exponent = 0.75
+            }
+        Else
+            Return New QuadraticEase With {
+                .EasingMode = EasingMode.EaseOut
+            }
+        End If
     End Function
 
     Private Sub HoldVisual() : End Sub

@@ -168,8 +168,9 @@ Class Application
     End Function
 
     Public Shared Sub RestartMonitor()
+        Dim uiScheduler As TaskScheduler = TaskScheduler.FromCurrentSynchronizationContext()
         DoInitTriggerMonitor()
-        CoreDataLib.InputMonSvc.LaunchTriggerMonitor()
+        CoreDataLib.InputMonSvc.LaunchTriggerMonitor(uiScheduler)
     End Sub
 
     Private Shared Sub DoInitTriggerMonitor()

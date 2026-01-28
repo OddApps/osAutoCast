@@ -8,6 +8,7 @@ Imports System.ComponentModel
 Imports osPrefBind = System.Windows.Data.Binding
 Imports System.Windows.Threading
 Imports osAutoCast.osControls
+Imports System.Globalization
 
 Namespace osPrefLib
 
@@ -349,11 +350,20 @@ Namespace osPrefLib
         End Property
 
         Public Async Function PreparePrefData() As Task
-            'Await Task.Run(
+            'Await Task.Run(Async Function()
+            '                   objOsPrefIdx = Await BuildPrefIndexAsync().ConfigureAwait(False)
+            '               End Function)
+            ''Await Task.Run(
             '    Async Function()
-            Dim objTask_BuildPrefIdx = BuildPrefIndexAsync()
-            objOsPrefIdx = Await objTask_BuildPrefIdx
+            objOsPrefIdx = Await BuildPrefIndexAsync()
             '    End Function)
+        End Function
+
+        Private Async Function BuildPrefIndexAsyncTask() As Task(Of osPrefIndex)
+            Return Await Task.Run(Function()
+                                      ' CPU-bound work here
+                                      Return BuildPrefIndexAsync()
+                                  End Function).ConfigureAwait(False)
         End Function
 
         Public Async Function BuildPrefIndexAsync() As Task(Of osPrefIndex)
@@ -402,10 +412,63 @@ Namespace osPrefLib
             Return Convert.ChangeType(pRecData.PrefVal, valType)
         End Function
 
+        Public Async Function ApplyPrefs(isN As Boolean, Optional token As CancellationToken = Nothing, Optional progress As IProgress(Of Integer) = Nothing) As Task
+            If token = Nothing Then token = CancellationToken.None
+
+            Dim changes As New List(Of Action)
+
+            For Each pRec In objOsPrefIdx.PrefRecords
+                For Each pRecData In pRec.RecordData
+                    token.ThrowIfCancellationRequested()
+
+                    Dim rec = pRec
+                    Dim data = pRecData
+
+                    changes.Add(Sub()
+                                    ApplySetting2(osPreferenceLib.Data, rec, data)
+                                    progress?.Report(1)
+                                End Sub)
+                Next
+            Next
+
+            For Each apply In changes
+                token.ThrowIfCancellationRequested()
+                Await PrepDispatcher().InvokeAsync(apply, DispatcherPriority.Background)
+            Next
+
+            prefsSet = True
+        End Function
+
+        Private Shared ReadOnly _propCache As New Concurrent.ConcurrentDictionary(Of String, PropertyInfo)
+
+        Private Sub ApplySetting2(target As Object, pRecord As osPrefRecord, pRecData As PrefDataRecord)
+            If target Is Nothing Then Return
+
+            Dim propName = FetchPrefVar(pRecord.RecordType, pRecData.PrefName)
+            If String.IsNullOrWhiteSpace(propName) Then Return
+
+            Dim key = target.GetType().FullName & "|" & propName
+
+            Dim prop = _propCache.GetOrAdd(key, Function()
+                                                    Return target.GetType().GetProperty(propName, BindingFlags.Public Or BindingFlags.Instance)
+                                                End Function)
+
+            If prop Is Nothing OrElse Not prop.CanWrite Then Return
+
+            Dim targetType = Nullable.GetUnderlyingType(prop.PropertyType)
+            If targetType Is Nothing Then targetType = prop.PropertyType
+
+            Dim converted = Convert.ChangeType(pRecData.PrefVal, targetType, CultureInfo.InvariantCulture)
+
+            prop.SetValue(target, converted)
+        End Sub
+
+
         Public Async Function ApplyPrefs(Optional token As CancellationToken = Nothing,
                                  Optional progress As IProgress(Of Integer) = Nothing) As Task
             ' Run everything off the thread-pool and never block the UI.
             ' Limits concurrency to avoid overwhelming the ThreadPool / disk / CPU.
+
             Dim maxConcurrency As Integer = Math.Max(1, Environment.ProcessorCount - 1)
             Dim sem As New SemaphoreSlim(maxConcurrency, maxConcurrency)
             Dim tasks As New List(Of Task)()
@@ -440,6 +503,13 @@ Namespace osPrefLib
 
                 prefsSet = True
             End Try
+        End Function
+
+        Private Function BuildSettingChange(pRecord As osPrefRecord, pRecData As PrefDataRecord) As Action
+
+            Return Sub()
+                       ApplySetting(osPreferenceLib.Data, pRecord, pRecData)
+                   End Sub
         End Function
 
         Private Sub ApplySetting(target As Object, pRecord As osPrefRecord, pRecData As PrefDataRecord)

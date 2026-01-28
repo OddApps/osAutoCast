@@ -36,21 +36,22 @@ Public Class osTrayMenu_GUI
 
     Private Sub SetTrayMenuEvent(objMenuState As TrayMenuState, Optional setTaskRun As Boolean = False)
         If IsTrayMenuOpen(objMenuState) Then
-            RemoveHandler visTrayMenu_Open.Completed,
+            RemoveHandler VisDataObject.Completed,
                                                 evtDisplayTrayMenu
             evtDisplayTrayMenu =
                 Sub()
-                    RemoveHandler visTrayMenu_Open.Completed,
+                    RemoveHandler VisDataObject.Completed,
                                                 evtDisplayTrayMenu
 
-                    visTrayMenu_Close = EstablishVisual(TrayMenu_Close)
+                    Me.Activate()
+                    VisDataObject = EstablishVisual(TrayMenu_Close)
                     '   SetVisualMode(TrayMenu_Open)
                 End Sub
 
             AddHandler visTrayMenu_Open.Completed,
                                     evtDisplayTrayMenu
         Else
-            If visTrayMenu_Close Is Nothing Then
+            If VisDataObject Is Nothing Then
                 visTrayMenu_Close = EstablishVisual(TrayMenu_Close)
             End If
             AddHandler visTrayMenu_Close.Completed,
@@ -64,80 +65,50 @@ Public Class osTrayMenu_GUI
         End If
     End Sub
 
-    Public Sub InitTrayMenuClose(Optional setTaskRun As Boolean = False)
-        SetTrayMenuEvent(TrayMenu_Close, setTaskRun)
-        '    SetVisualMode(VisRenderMode.VisMode_LowQuality)
-        'Dim aa = osVisQualityAdapter.EstablishVisDataSettings(VisTypeAdapter.VisAdapter_TrayMenu, VisRenderMode.VisMode_LowQuality, True)
-        Dim objTask_VisAdapter = objVisAdapt.ApplyVisuals(True)
+    Private Sub InitTrayMenuCloseEvent(Optional setTaskRun As Boolean = False)
+        AddHandler VisDataObject.Completed,
+                 Sub()
+                     If setTaskRun Then
+                         TrayMenuCloseComplete()
+                     End If
 
-        visTrayMenu_Close.Begin(TrayMenuOutline, True)
-        'PrepDispatcher().Invoke(
-        '    Sub()
-        '        visTrayMenu_Close.Begin()
-        '    End Sub, DispatcherPriority.Render)
+                     osHandler_UI.TerminateTrayMenu()
+                 End Sub
     End Sub
 
-    Public Sub DisplayTrayMenu()
-        'CalcTrayPos()
-
-        'With Me
-        '    PresentTrayMenu()
-
-        '    .Left = .TrayMenuPos_X
-        '    .Top = .TrayMenuPos_Y
-
-        '    .Topmost = True
-        'End With
-
-        visTrayMenu_Open.Begin(TrayMenuOutline, True)
-        'If PrepDispatcher().CheckAccess() Then
-        '    ShowTrayMenuCore()
-        ''Else
-        'PrepDispatcher().Invoke(
-        '        AddressOf TriggerVisuals,
-        '        DispatcherPriority.Render)
-        '   End If
-        'EstablishVisual(TrayMenu_Open, visTrayMenu_Open)
-        'InitTrayMenuVis()
-
-        'With Me
-        '    .Width = wTrayMenu
-        '    .Height = hTrayMenu
-
-        '    BufferTrayMenu()
-        'End With
-
-        'Dim a = osVisQualityAdapter.InitAdapter(VisTypeAdapter.VisAdapter_TrayMenu, visTrayMenu_Open,
-        '                                         True, True, TrayMenuOutline, TrayMainContainer)
-        '   TriggerVisuals()
+    Public Sub InitTrayMenuClose(Optional setTaskRun As Boolean = False)
+        InitTrayMenuCloseEvent(setTaskRun)
+        Dim objTask_TriggerClose = TriggerVisuals_Close()
     End Sub
 
     Public Sub InitTrayMenuVis()
-        RemoveHandler visTrayMenu_Open.Completed,
-                                                evtDisplayTrayMenu
         evtDisplayTrayMenu =
-                Sub()
-                    RemoveHandler visTrayMenu_Open.Completed,
+            Sub()
+                RemoveHandler VisDataObject.Completed,
                                                 evtDisplayTrayMenu
+                VisDataObject.Stop()
+                VisDataObject = EstablishVisual(TrayMenu_Close)
 
-                    visTrayMenu_Close = EstablishVisual(TrayMenu_Close)
-                    '  SetVisualMode(VisRenderMode.VisMode_HighQuality)
-                End Sub
+                Me.Activate()
+            End Sub
 
-        AddHandler visTrayMenu_Open.Completed,
+        AddHandler VisDataObject.Completed,
                                     evtDisplayTrayMenu
     End Sub
 
+    Private Function EstablishVisConfig() As VisAdapterConfig
+        Return VisAdapterConfig.EnableAll
+        'Return VisAdapterConfig.ResetVisualSettings Or
+        '   VisAdapterConfig.UpdateAsync_OnReset
+    End Function
+
     Public Sub PrepTrayMenuInit()
-        '  visTrayMenu_Open = TryCast(Me.Resources(GetVisualKey(TrayMenu_Open)), Storyboard)
-        ' InitTrayMenuVis()
-        Dim objVisConfig = VisAdapterConfig.ApplyVisuals Or VisAdapterConfig.UpdateAsync_OnLoad Or
-            VisAdapterConfig.ObjectReset
+        EstablishVisData(TrayMenu_Open)
+        InitTrayMenuVis()
 
-        objVisAdapt = New VisQualityAdapter(Me, objVisConfig, TrayMenuOutline, TrayMainContainer)
+        InitializeVisAdapter(Me, EstablishVisConfig(), TrayMenuOutline, TrayMainContainer)
+        ShowGameMenuItem()
 
-        'Dim objTask_VisAdapter = osVisQualityAdapter.InitAdapter(VisTypeAdapter.VisAdapter_TrayMenu, visTrayMenu_Open,
-        '                                          True, True, TrayMenuOutline, TrayMainContainer)
         With Me
             .Width = wTrayMenu
             .Height = hTrayMenu
@@ -158,50 +129,7 @@ Public Class osTrayMenu_GUI
             .Topmost = True
         End With
 
-        visTrayMenu_Open = TryCast(Me.Resources(GetVisualKey(TrayMenu_Open)), Storyboard)
-        InitTrayMenuVis()
-
         allowTrayClose = True
-    End Sub
-
-    Public Async Function PrepTrayMenuInit(isN As Boolean) As Task
-        Await PrepDispatcher().InvokeAsync(
-                    Sub()
-                        visTrayMenu_Open = EstablishVisual(TrayMenu_Open)
-                        InitTrayMenuVis()
-
-                        With Me
-                            .Width = wTrayMenu
-                            .Height = hTrayMenu
-
-                            '  BufferTrayMenu()
-                        End With
-
-                        Dim a = osVisQualityAdapter.InitAdapter(VisTypeAdapter.VisAdapter_TrayMenu, visTrayMenu_Open,
-                                                 True, True, TrayMenuOutline, TrayMainContainer)
-                    End Sub, DispatcherPriority.Background)
-
-    End Function
-
-    Private Sub TriggerVisuals()
-        'Await Dispatcher.CurrentDispatcher.BeginInvoke(
-        '    Sub()
-        Try
-            CalcTrayPos()
-
-            With Me
-                PresentTrayMenu()
-
-                .Left = .TrayMenuPos_X
-                .Top = .TrayMenuPos_Y
-
-                .Topmost = True
-            End With
-
-            visTrayMenu_Open.Begin(TrayMenuOutline, True)
-
-        Catch ex As Exception : End Try
-        'End Sub, DispatcherPriority.Render)
     End Sub
 
     Private Sub ShowTrayMenuCore()
@@ -218,21 +146,6 @@ Public Class osTrayMenu_GUI
 
 
         visTrayMenu_Open.Begin(TrayMenuOutline)
-    End Sub
-
-    Private Sub osTrayMenu_GUI_ContentRendered(sender As Object, e As EventArgs) Handles Me.Loaded
-        'With Me
-        '    .Width = wTrayMenu
-        '    .Height = hTrayMenu
-
-        '    BufferTrayMenu()
-        'End With
-        'visTrayMenu_Open = EstablishVisual(TrayMenu_Open)
-        'InitTrayMenuVis()
-
-
-        'Dim a = osVisQualityAdapter.InitAdapter(VisTypeAdapter.VisAdapter_TrayMenu, visTrayMenu_Open,
-        '                                         True, True, TrayMenuOutline, TrayMainContainer)
     End Sub
 
 End Class
@@ -292,7 +205,7 @@ Partial Public Class osTrayMenu_GUI
         Set(value As GameMenuItem)
             If _dispGameTrayMenuItem <> value Then
                 _dispGameTrayMenuItem = value
-                OnPropertyChanged()
+                OnDisplayGameTrayMenuChanged()
             End If
         End Set
     End Property
@@ -301,15 +214,6 @@ Partial Public Class osTrayMenu_GUI
         Get
             Return Me.Style
         End Get
-    End Property
-
-    Public Overrides Property VisDataObject As Storyboard
-        Get
-            Return MyBase.VisDataObject
-        End Get
-        Set(value As Storyboard)
-            MyBase.VisDataObject = value
-        End Set
     End Property
 
 #End Region
@@ -458,6 +362,12 @@ Partial Public Class osTrayMenu_GUI
         objVisData = objTrayMenuVis
     End Sub
 
+    Private Sub EstablishVisData(objVisType As TrayMenuState)
+        Dim a = TryCast(Me.Resources(GetVisualKey(objVisType)), Storyboard)
+        '   a.FreezeReturn()
+        Me.VisDataObject = a
+    End Sub
+
     Private Function GetVisualKey(objVisType As TrayMenuState) As String
         Return idxTrayMenuVisuals.First(
             Function(visKey)
@@ -573,7 +483,6 @@ Partial Public Class osTrayMenu_GUI
         Me.Show()
 
         Dim objHwnd = New WindowInteropHelper(Me).Handle
-
         SetWindowPos(objHwnd, HWND_TOPMOST, 0, 0, 0, 0,
                      SWP_NOMOVE Or SWP_NOSIZE Or SWP_NOACTIVATE)
     End Sub
@@ -583,9 +492,7 @@ Partial Public Class osTrayMenu_GUI
     Public Sub New(Optional objLoadTask As TaskCompletionSource(Of Boolean) = Nothing)
         InitializeComponent()
 
-        VisDataObject = visTrayMenu_Open
 
-        ShowGameMenuItem()
 
         If objLoadTask IsNot Nothing Then
             objLoadTask.TrySetResult(True)
@@ -763,9 +670,9 @@ Partial Public Class osTrayMenu_GUI
                                         Y As Integer, cx As Integer, cy As Integer, uFlags As UInteger) As Boolean
     End Function
 
-    Public Event PropertyChanged As PropertyChangedEventHandler Implements INotifyPropertyChanged.PropertyChanged
-    Private Sub OnPropertyChanged(<CallerMemberName> Optional name As String = Nothing)
-        RaiseEvent PropertyChanged(Me, New PropertyChangedEventArgs(name))
+    Public Event DisplayGameTrayMenuChanged As PropertyChangedEventHandler Implements INotifyPropertyChanged.PropertyChanged
+    Private Sub OnDisplayGameTrayMenuChanged(<CallerMemberName> Optional name As String = Nothing)
+        RaiseEvent DisplayGameTrayMenuChanged(Me, New PropertyChangedEventArgs(name))
     End Sub
 
 End Class

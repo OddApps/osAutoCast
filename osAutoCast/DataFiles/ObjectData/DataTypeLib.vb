@@ -31,12 +31,26 @@ Imports pxShader_Vertex = SharpDX.Direct3D11.VertexShader
 Imports osColor = System.Windows.Media.Color
 Imports osVisibility = System.Windows.Visibility
 Imports osAutoCast.osControls
+Imports osAutoCast.osVisualAdapter
 Imports FuncLib_AC = osAutoCast.osFuncLib_AutoCast
 Imports FuncLib_AP = osAutoCast.osFuncLib_AutoPass
 Imports FuncLib_Opts = osAutoCast.osFuncLib_ShowOpts
 Imports FuncLib_Menu = osAutoCast.osFuncLib_PopupMenu
 Imports osStructLayout = System.Runtime.InteropServices.StructLayoutAttribute
 Imports osLayoutKind = System.Runtime.InteropServices.LayoutKind
+Imports osAutoCast.osLoadingObjects
+Imports SharpDX.Direct3D
+Imports SharpDX.Direct3D11
+Imports SharpDX.DXGI
+Imports FactoryDW = SharpDX.DirectWrite.Factory
+Imports osDwFactoryType = SharpDX.DirectWrite.FactoryType
+Imports osFactoryType = SharpDX.Direct2D1.FactoryType
+Imports osProgDevice = SharpDX.Direct3D11.Device
+Imports osProgDeviceContext = SharpDX.Direct3D11.DeviceContext
+Imports osProgDxgiDevice = SharpDX.DXGI.Device1
+Imports osProgDxgiFactory = SharpDX.DXGI.Factory
+Imports osProgDxgiFactory2 = SharpDX.DXGI.Factory2
+Imports osProgFactoryD2D = SharpDX.Direct2D1.Factory
 
 #Disable Warning BC42353
 
@@ -410,7 +424,7 @@ Public Module DataTypeLib
         Load_Shaders
         Load_Actions
         Load_InitActions
-        Load_PopupMenu
+        Load_AllMenus
         Load_PopupMenus
         Load_InitMenus
         Load_ApplyConfig
@@ -487,19 +501,13 @@ Public Module DataTypeLib
     <Flags>
     Public Enum VisAdapterConfig
         None = 0
-        ApplyVisuals = 1
-        ObjectReset = 2
-        UpdateAsync_OnLoad = 4
-        UpdateAsync_OnReset = 8
-        UpdateAsync_OnDispose = 16
-    End Enum
+        ResetVisualSettings = 1
+        UpdateAsync_OnLoad = 2
+        UpdateAsync_OnReset = 4
+        UpdateAsync_OnDispose = 8
 
-    Public Enum VisConfigItem
-        ApplyVisuals = 1
-        ObjectReset = 2
-        UpdateAsync_OnLoad = 4
-        UpdateAsync_OnReset = 8
-        UpdateAsync_OnDispose = 16
+        EnableAll = ResetVisualSettings Or UpdateAsync_OnLoad Or
+            UpdateAsync_OnReset Or UpdateAsync_OnDispose
     End Enum
 
 #End Region
@@ -675,6 +683,30 @@ Public Class osVisRenderMode
 
                 visLayoutSetting = True
         End Select
+    End Sub
+
+End Class
+
+Public Class osGraphicsData
+
+    Public Property osGraphics_ProgFactoryD2D As osProgFactoryD2D
+    Public Property osGraphics_ProgDwFactory As FactoryDW
+    Public Property osGraphics_ProgDxgiFactory2 As osProgDxgiFactory2
+    Public Property osGraphics_ProgDevice As osProgDevice
+    Public Property osGraphics_ProgDeviceContext As osProgDeviceContext
+    Public Property osGraphics_ProgDxgiFactory As osProgDxgiFactory
+
+    Public Sub New()
+    End Sub
+
+    Public Sub New(objProgFactoryD2D As osProgFactoryD2D, objProgDwFactory As FactoryDW, objProgDevice As osProgDevice,
+                   objProgDxgiFactory2 As osProgDxgiFactory2, objProgDeviceContext As osProgDeviceContext, objProgDxgiFactory As osProgDxgiFactory)
+        osGraphics_ProgFactoryD2D = objProgFactoryD2D
+        osGraphics_ProgDwFactory = objProgDwFactory
+        osGraphics_ProgDxgiFactory2 = objProgDxgiFactory2
+        osGraphics_ProgDevice = objProgDevice
+        osGraphics_ProgDeviceContext = objProgDeviceContext
+        osGraphics_ProgDxgiFactory = objProgDxgiFactory
     End Sub
 
 End Class
@@ -922,22 +954,22 @@ Public Class osLoadingObjects
     Public Delegate Function LoadFunction(objTaskAbort As CancellationToken) As Task
 
     Public TaskDataItems As New Dictionary(Of LoadTaskType, TaskData) From {
-        {Load_Init, New TaskData(0, 30, 450)},
-        {Load_PrefPrep, New TaskData(30, 55, 450)},
-        {Load_InitShaders, New TaskData(55, 85, 450)},
-        {Load_PopupMenu, New TaskData(85, 115, 400)},
-        {Load_InitMenus, New TaskData(115, 130, 450)},
-        {Load_InitActions, New TaskData(130, 155, 450)},
-        {Load_Actions, New TaskData(155, 180, 450)},
-        {Load_StartingSvc, New TaskData(180, 190, 450)},
-        {Load_Starting, New TaskData(190, 200, 450, True)}
+        {Load_Init, New TaskData(0, 10, 475)},
+        {Load_PrefPrep, New TaskData(10, 30, 465)},
+        {Load_InitShaders, New TaskData(30, 70, 480)},
+        {Load_AllMenus, New TaskData(70, 100, 475)},
+        {Load_InitMenus, New TaskData(100, 130, 475)},
+        {Load_InitActions, New TaskData(130, 155, 465)},
+        {Load_Actions, New TaskData(155, 170, 450)},
+        {Load_StartingSvc, New TaskData(170, 185, 450)},
+        {Load_Starting, New TaskData(185, 200, 450, True)}
     }
 
     'Public TaskDataItems As New Dictionary(Of LoadTaskType, TaskData) From {
     '    {Load_Init, New TaskData(0, 15, 375)},
     '    {Load_PrefPrep, New TaskData(15, 28, 450)},
     '    {Load_InitShaders, New TaskData(28, 42, 400)},
-    '    {Load_PopupMenu, New TaskData(42, 57, 400)},
+    '    {Load_AllMenus, New TaskData(42, 57, 400)},
     '    {Load_InitMenus, New TaskData(57, 65, 400)},
     '    {Load_InitActions, New TaskData(65, 78, 450)},
     '    {Load_Actions, New TaskData(78, 90, 450)},
@@ -1001,9 +1033,68 @@ Public Class osLoadingObjects
 
     End Class
 
+    Public Class LoadModule_Minimal
+
+        Public Property LoadObject As VisAdapterUI
+
+        Public Property ModHandler_Create As Type
+        Public Property ModHandler_Prepare As Func(Of VisAdapterUI, Task)
+
+        Public Sub New(ByRef objLoadModule As VisAdapterUI,
+                       objModHandler_Create As Type, objModHandler_Prepare As Func(Of VisAdapterUI, Task))
+
+            LoadObject = objLoadModule
+
+            ModHandler_Create = objModHandler_Create
+            ModHandler_Prepare = objModHandler_Prepare
+        End Sub
+
+    End Class
+
+    Public Class LoadModule(Of T As {VisAdapterUI, New})
+
+        Public Property LoadObject As T
+        Public Property PrepHandler As Func(Of T, Task)
+
+        Public Sub New(objModHandler_Prepare As Func(Of T, Task))
+            PrepHandler = objModHandler_Prepare
+        End Sub
+
+    End Class
+
 End Class
 
+Public Module LoadModuleProcessor
 
+    Async Function InitializeModule(moduleDef As LoadModule_Minimal) As Task
+        Dim instance = CType(Activator.CreateInstance(moduleDef.ModHandler_Create), VisAdapterUI)
+        moduleDef.LoadObject = instance
+        If moduleDef.ModHandler_Prepare IsNot Nothing Then
+            Await moduleDef.ModHandler_Prepare(instance)
+        End If
+    End Function
+
+    Async Function InitializeModule(Of T As {VisAdapterUI, New})(moduleDef As LoadModule(Of T)) As Task
+        Dim objNewUI As T = Nothing
+
+        If PrepDispatcher().CheckAccess() Then
+            objNewUI = New T()
+        Else
+            objNewUI = Await PrepDispatcher().InvokeAsync(
+                Function()
+                    Return New T()
+                End Function)
+        End If
+
+        moduleDef.LoadObject = objNewUI
+        Await moduleDef.PrepHandler(objNewUI)
+    End Function
+
+    Async Function LoadAllModules(Of T As {VisAdapterUI, New})(moduleDef As LoadModule(Of T)) As Task
+
+    End Function
+
+End Module
 
 Public Class osLoadStageData
 
