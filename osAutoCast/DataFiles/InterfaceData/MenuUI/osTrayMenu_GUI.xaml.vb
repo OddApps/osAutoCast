@@ -86,7 +86,7 @@ Public Class osTrayMenu_GUI
             Sub()
                 RemoveHandler VisDataObject.Completed,
                                                 evtDisplayTrayMenu
-                VisDataObject.Stop()
+                '  VisDataObject.Stop()
                 VisDataObject = EstablishVisual(TrayMenu_Close)
 
                 Me.Activate()
@@ -94,19 +94,7 @@ Public Class osTrayMenu_GUI
 
         AddHandler VisDataObject.Completed,
                                     evtDisplayTrayMenu
-    End Sub
 
-    Private Function EstablishVisConfig() As VisAdapterConfig
-        Return VisAdapterConfig.EnableAll
-        'Return VisAdapterConfig.ResetVisualSettings Or
-        '   VisAdapterConfig.UpdateAsync_OnReset
-    End Function
-
-    Public Sub PrepTrayMenuInit()
-        EstablishVisData(TrayMenu_Open)
-        InitTrayMenuVis()
-
-        InitializeVisAdapter(Me, EstablishVisConfig(), TrayMenuOutline, TrayMainContainer)
         ShowGameMenuItem()
 
         With Me
@@ -116,6 +104,18 @@ Public Class osTrayMenu_GUI
             BufferTrayMenu()
         End With
     End Sub
+
+    Private Function EstablishVisConfig() As VisAdapterConfig
+        Return VisAdapterConfig.EnableAll
+        'Return VisAdapterConfig.ResetVisualSettings Or
+        '   VisAdapterConfig.UpdateAsync_OnReset
+    End Function
+
+    Public Async Function PrepTrayMenuInit() As Task
+        Dim visDataN = GetVisualKey(TrayMenu_Open)
+        Await InitializeVisAdapter(visDataN, Me, EstablishVisConfig(), AddressOf InitTrayMenuVis,
+                                   TrayMenuOutline, TrayMainContainer)
+    End Function
 
     Public Sub TrayMenuInit()
         CalcTrayPos()

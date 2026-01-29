@@ -198,10 +198,9 @@ Public Class osPopupMenu_GUI
         Me.VisDataObject = GetVisual(objVisType, True)
     End Sub
 
-    Public Sub EstablishVisual(objVisType As PopupVisualType, ByRef objSetVisual As Storyboard)
-        Dim objPopupVis As Storyboard = GetVisual(objVisType, True)
-        objSetVisual = objPopupVis
-    End Sub
+    Public Function EstablishVisual(objVisType As PopupVisualType, isBG As Boolean) As Storyboard
+        Return GetVisual(objVisType, True)
+    End Function
 
     Private Sub SetOpenEvents()
         OpenCompleteEvent =
@@ -250,7 +249,6 @@ Public Class osPopupMenu_GUI
 
             BeginOpenTask(objTask_Open)
 
-            '  InitTransitionVisuals(aniOpen, PopupVisual_Open, VisualStarted)
 
             objAnimation_Open.Begin(Me)
 
@@ -365,8 +363,6 @@ Public Class osPopupMenu_GUI
         osStopApp()
     End Sub
 
-    Public objVisAdapt As VisQualityAdapter
-
     Private Function EstablishVisConfig() As VisAdapterConfig
         Return VisAdapterConfig.EnableAll
     End Function
@@ -377,11 +373,43 @@ Public Class osPopupMenu_GUI
     End Sub
 
     Public Sub PrepPopupMenu()
-        EstablishVisual(PopupVisual_Open)
-        SetOpenEvents()
-
-        InitializeVisAdapter(Me, EstablishVisConfig(), objContainer)
+        ShowGameMenuItem()
     End Sub
+
+    Public Async Function InitPopupMenuVis() As Task
+        Dim visDataN = GetVisualKey(PopupVisual_Open)
+
+        Await InitializeVisAdapter(visDataN, Me, EstablishVisConfig(),
+                                    AddressOf SetOpenEvents, objContainer)
+    End Function
+
+    Private Function PrepPopupMenuVis() As Task
+        SetOpenEvents()
+        Return Task.CompletedTask
+    End Function
+
+    Private Function LoadVisualData() As Task(Of Storyboard)
+        Dim objTask_VisLoadComplete As New TaskCompletionSource(Of Task(Of Storyboard))()
+        Dim objTask_VisLoader As New BackgroundWorker()
+
+        AddHandler objTask_VisLoader.DoWork,
+            Sub(sender As Object, e As DoWorkEventArgs)
+                Dim objVisPrep = PrepDispatcher().InvokeAsync(
+                    Function() As Storyboard
+                        Return EstablishVisual(PopupVisual_Open, True)
+                    End Function, DispatcherPriority.Background).Task
+                e.Result = objVisPrep
+            End Sub
+
+        AddHandler objTask_VisLoader.RunWorkerCompleted,
+            Sub(sender As Object, e As RunWorkerCompletedEventArgs)
+                objTask_VisLoadComplete.SetResult(DirectCast(e.Result, Task(Of Storyboard)))
+                objTask_VisLoader.Dispose()
+            End Sub
+
+        objTask_VisLoader.RunWorkerAsync()
+        Return objTask_VisLoadComplete.Task.Unwrap()
+    End Function
 
     Private Async Function ExitPopupMenu(popupCloseAction As PopupCloseAction, objMenuCmd As Action) As Task
         Await osHandler_UI.ClosePopupMenu(popupCloseAction)
@@ -441,9 +469,7 @@ Public Class osPopupMenu_GUI
         End With
     End Sub
 
-    Private Sub osPopupMenu_GUI_Loaded(sender As Object, e As RoutedEventArgs) Handles Me.Loaded
-        ShowGameMenuItem()
-    End Sub
+
 
 End Class
 

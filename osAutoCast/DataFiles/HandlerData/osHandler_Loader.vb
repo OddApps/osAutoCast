@@ -450,8 +450,8 @@ Public Class osHandler_Loader
     Private objProgressStage As IProgress(Of Double)
     Private objProgressTimer As DispatcherTimer = Nothing
 
-    Public Sub New(objLoadStages As osLoad, objProgBar As osProgLoad, objProg_Load As Func(Of osProgLoad),
-                   objTextVis_In As Func(Of LoadTextVisualType, Task))
+    Public Sub New(objLoadStages As osLoad, objProgBar As osProgLoad, objProg_Load As Func(
+                   Of osProgLoad), objTextVis_In As Func(Of LoadTextVisualType, Task))
 
         _ProgLoadBar = objProg_Load
 
@@ -461,7 +461,6 @@ Public Class osHandler_Loader
         ProgMax = _ProgLoad.Maximum
 
         _fadeTextIn = objTextVis_In
-
         _LoadStages = objLoadStages.LoadStageIdx
 
         _stageCnt = _LoadStages.Count
@@ -476,7 +475,7 @@ Public Class osHandler_Loader
         End If
     End Sub
 
-    Private Function CreateStageProgress(objAnimator As LoaderProgressAnimator,
+    Private Function CreateStageProgress(objAnimator As LoadProgressAnimator,
                                          objLoadStage As TaskData, token As CancellationToken) As IProgress(Of Double)
 
         If Not Application.Current.Dispatcher.CheckAccess() Then
@@ -514,7 +513,7 @@ Public Class osHandler_Loader
         valPercent = Math.Min(90.0, valPercent + valStep)
     End Sub
 
-    Public Function StartUiDispatcherTimer(animator As LoaderProgressAnimator, objLoadStage As TaskData,
+    Public Function StartUiDispatcherTimer(animator As LoadProgressAnimator, objLoadStage As TaskData,
                                            token As CancellationToken, ByRef outTimer As DispatcherTimer) As Progress(Of Double)
 
         If Not Application.Current.Dispatcher.CheckAccess() Then
@@ -555,14 +554,14 @@ Public Class osHandler_Loader
     End Function
 
     Public Async Function BeginLoadProcess() As Task
-        Dim objLoadProgressVis As New LoaderProgressAnimator(_ProgLoad)
+        Dim objLoadProgAni As New LoadProgressAnimator(_ProgLoad)
 
         For Each objLoadStage In _LoadStages
             Dim objTaskDetails = objLoadStage.TaskDetails
 
             If _cts IsNot Nothing Then
                 Await Task.Delay(115)
-                objProgressStage.Report(100)
+                objProgressStage.Report(95)
                 Await Task.Delay(100)
 
                 objProgressTimer?.Stop()
@@ -574,16 +573,17 @@ Public Class osHandler_Loader
 
             objLoadStageToken.ThrowIfCancellationRequested()
 
-            Dim objTask_FadeText = _fadeTextIn(objLoadStage.TaskType)
-
             objProgressTimer = Nothing
-            objProgressStage = StartUiDispatcherTimer(objLoadProgressVis, objTaskDetails, objLoadStageToken, objProgressTimer)
+            objProgressStage = StartUiDispatcherTimer(objLoadProgAni, objTaskDetails, objLoadStageToken, objProgressTimer)
+
+            Dim objTask_FadeText = _fadeTextIn(objLoadStage.TaskType)
+            Await Task.Delay(85)
 
             Dim objLoadTask = objLoadStage.LoadTask(objLoadStageToken)
             Await objLoadTask
 
-            Dim objTask_ProgressAnimate = objLoadProgressVis.
-                AnimateToAsync(objTaskDetails.EndValue, VisDuration(300), VisEasing(), CancellationToken.None)
+            Dim objTask_AnimateProgress = objLoadProgAni.AnimateToAsync(
+                objTaskDetails.EndValue, VisDuration(300), VisEasing(), CancellationToken.None)
         Next
     End Function
 

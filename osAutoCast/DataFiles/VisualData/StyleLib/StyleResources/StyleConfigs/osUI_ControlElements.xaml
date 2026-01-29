@@ -3,6 +3,7 @@
                     xmlns:osEffects="clr-namespace:osAutoCast.osEffectManager"
                     xmlns:osCtrl="clr-namespace:osAutoCast.osControls"
                     xmlns:osStyle="clr-namespace:osAutoCast.osStyle">
+    
 
     <Style TargetType="{x:Type osCtrl:osUpDownTextBox}">
         <Setter Property="BorderBrush" Value="#571F1F1F" />

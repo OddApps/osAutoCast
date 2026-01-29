@@ -494,10 +494,9 @@ Namespace osControls
         Public Sub New()
             With Me
                 Me.EasingFunction = New ExponentialEase() With {
-                .EasingMode = EasingMode.EaseOut
-            }
+                    .EasingMode = EasingMode.EaseOut
+                }
             End With
-
         End Sub
 
 #Region "Fields for fast/slow animation & cancellation"
@@ -886,30 +885,12 @@ Namespace osControls
         End Sub
 
         Private Sub DisplayMsg(txtMsg As String, pType As TriggerType)
-
-            '  If pType = TriggerType.AutoCast Then
             DisplayProgressText = True
-                ProgressText = New ProgMsg(txtMsg, pType, False)
-            '     Else
-
-            '    Try
-            '        PrepDispatcher().
-            '        BeginInvoke(DispatcherPriority.Render,
-            '                    ComposeMsgRender(MsgRenderType.msgDisplay, txtMsg, pType))
-            '    Finally
-
-            '    End Try
-            '    End If
-
+            ProgressText = New ProgMsg(txtMsg, pType, False)
         End Sub
 
         Private Sub ClearMsg(Optional pType As TriggerType = Nothing)
-            '    SuspendPriming()
-
             DisplayProgressText = False
-
-
-            'End Try
         End Sub
 
         Protected Overrides Sub OnRender(dc As DrawingContext)
@@ -946,16 +927,8 @@ Namespace osControls
                 If fillP >= 100.0 - 2.5 Then
                     progFill_CornerRadius = GetClampedCornerRadius(Me.FillCornerRadius, fillWidth, h)
                 Else
-                    'If IsAutoPass Then
-                    '    ' Partial fill starting from the right -> round the right corners
-                    '    progFill_CornerRadius = New CornerRadius(0.0, Me.FillCornerRadius.TopRight,
-                    '                                     Me.FillCornerRadius.BottomRight, 0.0)
-                    'Else
-                    ' Partial fill starting from the left -> round the left corners
                     progFill_CornerRadius = New CornerRadius(Me.FillCornerRadius.TopLeft, 0.0,
-                                                         0.0, Me.FillCornerRadius.BottomLeft)
-                    '     End If
-
+                                                             0.0, Me.FillCornerRadius.BottomLeft)
                     progFill_CornerRadius = GetClampedCornerRadius(progFill_CornerRadius, fillWidth, h)
                 End If
 
@@ -1017,107 +990,12 @@ Namespace osControls
         End Sub
 
         Public Sub SetProgColor(pColor As osColor.Color, Optional pUpdate As Boolean = False)
-            'ActiveBrush = New SolidColorBrush(pColor)
-            'ActiveBrushColor = pColor
-
             If pUpdate Then InvalidateVisual()
         End Sub
 
         Public Sub SetProgress(setProgVal As Double)
 
         End Sub
-
-        'Private Function GetProgRatio() As Double
-        '    Dim valProgRatio = (Progress - Minimum) / (Maximum - Minimum)
-        '    Return Math.Max(0.0, Math.Min(1.0, valProgRatio))
-        'End Function
-
-        'Protected Overrides Sub OnRender(dc As DrawingContext)
-        '    MyBase.OnRender(dc)
-
-        '    Dim w = Me.RenderSize.Width
-        '    Dim h = Me.RenderSize.Height
-
-        '    Dim pMax = Me.Maximum
-
-        '    If w <= 0 OrElse h <= 0 Then Return
-
-        '    Dim progTrack_Rect As New Rect(0, 0, w, h)
-        '    Dim progTrack_CornerRadius = GetClampedCornerRadius(Me.TrackCornerRadius, w, h)
-
-        '    Dim progTrack_Geometry = CreateRoundRectGeometry(progTrack_Rect, progTrack_CornerRadius)
-        '    dc.DrawGeometry(If(TrackBrush, Brushes.LightGray), Nothing, progTrack_Geometry)
-
-        '    EstablishProgFreeze(TryCast(progTrack_Geometry, Freezable))
-        '    dc.PushClip(progTrack_Geometry)
-
-        '    Dim progressRatio = GetProgRatio()
-
-        '    Dim fillWidth = ActualWidth * progressRatio
-        '    Dim fillP = progressRatio * 100
-
-        '    If fillWidth > 0.0001 Then
-        '        Dim progFill_Rect As New Rect(0, 0, fillWidth, h)
-        '        Dim progFill_CornerRadius As CornerRadius
-
-        '        If fillP >= 100.0 - 2.5 Then
-        '            progFill_CornerRadius = GetClampedCornerRadius(Me.FillCornerRadius, fillWidth, h)
-        '        Else
-        '            progFill_CornerRadius = New CornerRadius(Me.FillCornerRadius.TopLeft, Me.FillCornerRadius.TopRight,
-        '                                                     0.0, Me.FillCornerRadius.BottomLeft)
-
-        '            progFill_CornerRadius = GetClampedCornerRadius(progFill_CornerRadius, fillWidth, h)
-        '        End If
-
-        '        Dim progFill_Geometry = CreateRoundRectGeometry(progFill_Rect, progFill_CornerRadius)
-        '        dc.DrawGeometry(If(FillBrush, Brushes.DodgerBlue), Nothing, progFill_Geometry)
-
-        '        dc.Pop()
-        '    End If
-
-        '    If BorderBrush IsNot Nothing AndAlso
-        '        (BorderThickness.Left > 0 OrElse BorderThickness.Top > 0 OrElse
-        '        BorderThickness.Right > 0 OrElse BorderThickness.Bottom > 0) Then
-
-        '        Dim objBorder_Thickness = BorderThickness
-        '        Dim objBorder_Width = ActualWidth
-        '        Dim objBorder_Height = ActualHeight
-
-        '        If objBorder_Thickness.Left > 0 Then
-        '            Dim objBorder_Left = ApplyPen(BorderBrush, objBorder_Thickness.Left)
-        '            EstablishProgFreeze(TryCast(objBorder_Left, Freezable))
-
-        '            dc.DrawLine(objBorder_Left, New Point(objBorder_Thickness.Left / 2, 0),
-        '                        New Point(objBorder_Thickness.Left / 2, objBorder_Height))
-        '        End If
-
-        '        If objBorder_Thickness.Top > 0 Then
-        '            Dim objBorder_Top = ApplyPen(BorderBrush, objBorder_Thickness.Top)
-        '            EstablishProgFreeze(TryCast(objBorder_Top, Freezable))
-
-        '            dc.DrawLine(objBorder_Top, New Point(0, objBorder_Thickness.Top / 2),
-        '                        New Point(objBorder_Width, objBorder_Thickness.Top / 2))
-        '        End If
-
-        '        If objBorder_Thickness.Right > 0 Then
-        '            Dim objBorder_Right = ApplyPen(BorderBrush, objBorder_Thickness.Right)
-        '            EstablishProgFreeze(TryCast(objBorder_Right, Freezable))
-
-        '            dc.DrawLine(objBorder_Right, New Point(objBorder_Width - (objBorder_Thickness.Right / 2), 0),
-        '                        New Point(objBorder_Width - (objBorder_Thickness.Right / 2), objBorder_Height))
-        '        End If
-
-        '        If objBorder_Thickness.Bottom > 0 Then
-        '            Dim objBorder_Bottom = ApplyPen(BorderBrush, objBorder_Thickness.Bottom)
-        '            EstablishProgFreeze(TryCast(objBorder_Bottom, Freezable))
-
-        '            dc.DrawLine(objBorder_Bottom, New Point(0, objBorder_Height - (objBorder_Thickness.Bottom / 2)),
-        '                        New Point(objBorder_Width, objBorder_Height - (objBorder_Thickness.Bottom / 2)))
-        '        End If
-        '    End If
-
-        '    CheckAndRaiseFilled(fillWidth)
-        'End Sub
 
         Private Function ApplyPen(brdrBrush As osColor.Brush, brdrThick As Double) As osColor.Pen
             Return New osColor.Pen(brdrBrush, brdrThick)
@@ -1180,12 +1058,118 @@ Namespace osControls
             End Using
 
             g.Freeze()
-
             Return g
         End Function
 
 #End Region
 
+    End Class
+
+    Partial Public Class osRestartProgress
+        Inherits UserControl
+
+        Public Sub New()
+            InitializeComponent()
+
+            AddHandler Me.Loaded, AddressOf Spinner_Loaded
+            AddHandler Me.Unloaded, AddressOf Spinner_Unloaded
+        End Sub
+
+        Private Sub Spinner_Loaded(sender As Object, e As RoutedEventArgs)
+            UpdateStoryboardState()
+        End Sub
+
+        Private Sub Spinner_Unloaded(sender As Object, e As RoutedEventArgs)
+            StopStoryboard()
+        End Sub
+
+        ' DependencyProperty: IsActive (start/stop animation)
+        Public Shared ReadOnly IsActiveProperty As DependencyProperty =
+                DependencyProperty.Register("IsActive", GetType(Boolean), GetType(osRestartProgress),
+                                            New PropertyMetadata(True, AddressOf OnIsActiveChanged))
+
+        Public Property IsActive As Boolean
+            Get
+                Return CBool(GetValue(IsActiveProperty))
+            End Get
+            Set(value As Boolean)
+                SetValue(IsActiveProperty, value)
+            End Set
+        End Property
+
+        Private Shared Sub OnIsActiveChanged(d As DependencyObject, e As DependencyPropertyChangedEventArgs)
+            Dim ctrl = DirectCast(d, osRestartProgress)
+            ctrl.UpdateStoryboardState()
+        End Sub
+
+        ' DependencyProperty: SpinnerSize
+        Public Shared ReadOnly SpinnerSizeProperty As DependencyProperty =
+                DependencyProperty.Register("SpinnerSize", GetType(Double), GetType(osRestartProgress),
+                                            New PropertyMetadata(24.0))
+
+        Public Property SpinnerSize As Double
+            Get
+                Return CDbl(GetValue(SpinnerSizeProperty))
+            End Get
+            Set(value As Double)
+                SetValue(SpinnerSizeProperty, value)
+            End Set
+        End Property
+
+        ' DependencyProperty: StrokeThickness
+        Public Shared ReadOnly StrokeThicknessProperty As DependencyProperty =
+                DependencyProperty.Register("StrokeThickness", GetType(Double), GetType(osRestartProgress),
+                                            New PropertyMetadata(6.0))
+
+        Public Property StrokeThickness As Double
+            Get
+                Return CDbl(GetValue(StrokeThicknessProperty))
+            End Get
+            Set(value As Double)
+                SetValue(StrokeThicknessProperty, value)
+            End Set
+        End Property
+
+        ' DependencyProperty: SpinnerBrush
+        Public Shared ReadOnly SpinnerBrushProperty As DependencyProperty =
+                DependencyProperty.Register("SpinnerBrush", GetType(Brush), GetType(osRestartProgress),
+                                            New PropertyMetadata(Brushes.DodgerBlue))
+
+        Public Property SpinnerBrush As Brush
+            Get
+                Return CType(GetValue(SpinnerBrushProperty), Brush)
+            End Get
+            Set(value As Brush)
+                SetValue(SpinnerBrushProperty, value)
+            End Set
+        End Property
+
+        Private Function GetRotateStoryboard() As Storyboard
+            Return TryCast(Me.Resources("RotateStoryboard"), Storyboard)
+        End Function
+
+        Private Sub UpdateStoryboardState()
+            If Not Me.IsLoaded Then Return
+            If IsActive Then
+                StartStoryboard()
+            Else
+                StopStoryboard()
+            End If
+        End Sub
+
+        Private Sub StartStoryboard()
+            Dim sb = GetRotateStoryboard()
+            If sb IsNot Nothing Then
+                sb.Begin(Me, True) ' controllable
+            End If
+        End Sub
+
+        Private Sub StopStoryboard()
+            Dim sb = GetRotateStoryboard()
+            If sb IsNot Nothing Then
+                sb.Stop(Me)
+            End If
+        End Sub
     End Class
 
 End Namespace

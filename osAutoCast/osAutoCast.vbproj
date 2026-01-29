@@ -209,6 +209,9 @@
     <Compile Include="DataFiles\VisualData\AdapterLib\osVisualAdapter.vb" />
     <Compile Include="DataFiles\VisualData\StyleLib\osStyleManager.vb" />
     <Compile Include="DataFiles\VisualData\EffectsLib\osEffectManager.vb" />
+    <Compile Include="DataFiles\VisualData\StyleLib\StyleResources\StyleConfigs\osUI_ServProgControl.xaml.vb">
+      <DependentUpon>osUI_ServProgControl.xaml</DependentUpon>
+    </Compile>
     <Compile Include="GlobalSuppressions.vb" />
     <Compile Include="DataFiles\HandlerData\osHandler_Prefs.vb" />
     <Compile Include="DataFiles\InterfaceData\PrefsUI\osPrefs.Designer.vb">
@@ -290,6 +293,10 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Page Include="DataFiles\VisualData\StyleLib\StyleResources\StyleConfigs\osUI_StyleVisuals.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="DataFiles\VisualData\StyleLib\StyleResources\StyleConfigs\osUI_ServProgControl.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

@@ -513,6 +513,7 @@ Public NotInheritable Class osFuncLib_AutoCast
 
     Private Shared Async Function FinalizeAutoCast() As Task
         Await Task.Delay(750)
+
         Dim objTask_ResetAC = PrepDispatcher().InvokeAsync(
             Sub()
                 osHandler_UI.ResetUI(TriggerAutoCast)
@@ -556,13 +557,10 @@ Public NotInheritable Class osFuncLib_ShowOpts
             AddHandler .Closed,
               Async Sub(sender, e)
                   osFuncLib_InputScan.isActionComplete = True
-
-                  '   DisposeUI_Prefs.Invoke(osPrefsWindow)
                   _osPrefsWindow = Nothing
 
-                  Await osHandler_UI.ResetOptsUI()
-
                   osHandler_UI.InitResourceAlloc()
+                  Await osHandler_UI.ResetOptsUI()
               End Sub
 
             Await PrepDispatcher().InvokeAsync(
@@ -701,10 +699,10 @@ Public NotInheritable Class osFuncLib_AutoPass
     Private Shared Async Function FinalizeAutoPass() As Task
         Await Task.Delay(750)
 
-        PrepDispatcher(True).Invoke(
-            Sub()
-                osHandler_UI.ResetUI(TriggerAutoPass, True)
-            End Sub)
+        Await PrepDispatcher().InvokeAsync(
+            Function()
+                Return osHandler_UI.ResetUI(TriggerAutoPass)
+            End Function)
     End Function
 
 End Class
@@ -1365,7 +1363,7 @@ Public Class osPrefExpandEase
     End Function
 End Class
 
-Public Class LoaderProgressAnimator
+Public Class LoadProgressAnimator
 
     Private ReadOnly ProgLoadBar As osLoadingProgressBar
 
@@ -1435,9 +1433,6 @@ Public Module osUI_Loader
                 _osPopupMenuOverlay = New osPopupMenuOverlay_GUI
                 _osPopupMenu = New osPopupMenu_GUI
             End Sub, visPriority)
-
-        Await PrepDispatcher().InvokeAsync(
-            Sub() YieldVisuals(), DispatcherPriority.Render)
     End Function
 
     Public Async Function LoadUI_PrefTrayMenus() As Task
@@ -1446,9 +1441,6 @@ Public Module osUI_Loader
                 _osPrefsWindow = New osPrefs_GUI
                 _osTrayMenu = New osTrayMenu_GUI
             End Sub, visPriority)
-
-        Await PrepDispatcher().InvokeAsync(
-            Sub() YieldVisuals(), visPriority)
     End Function
 
     Public Async Function LoadUI_InitMenus() As Task
@@ -1459,27 +1451,47 @@ Public Module osUI_Loader
             End Sub, visPriority)
 
         Await PrepDispatcher().InvokeAsync(
-            Sub() YieldVisuals(), visPriority)
+           Sub() YieldVisuals(), visPriority)
+
+        Await PrepDispatcher().InvokeAsync(
+             Function()
+                 Return osPopupMenuOverlay.PrepPopupMenuOverlay()
+             End Function, visPriority)
+
+        Await PrepDispatcher().InvokeAsync(
+           Sub() YieldVisuals(), visPriority)
+
+        Await PrepDispatcher().InvokeAsync(
+             Function()
+                 Return osPopupMenu.InitPopupMenuVis()
+             End Function, visPriority)
     End Function
 
     Public Async Function LoadUI_InitPrefTrayMenus() As Task
         Await PrepDispatcher().InvokeAsync(
-            Sub()
-                osPrefsWindow.PrepPrefVis()
-                osTrayMenu.PrepTrayMenuInit()
-            End Sub, visPriority)
+             Function()
+                 Return osPrefsWindow.PrepPrefVis()
+             End Function, visPriority)
 
         Await PrepDispatcher().InvokeAsync(
             Sub() YieldVisuals(), visPriority)
+
+        Await PrepDispatcher().InvokeAsync(
+            Function()
+                Return osTrayMenu.PrepTrayMenuInit()
+            End Function, visPriority)
     End Function
 
     Public Async Function LoadUI_TriggerHandlers() As Task
+        Await osHandler_AutoCast.StartAutoCastAsync()
+
         Await PrepDispatcher().InvokeAsync(
-            Sub()
-                osHandler_AutoCast.StartAutoCast()
-                '   osHandler_AutoCast.InitializeAutoCastUI()
-                osHandler_UI._autoPass2 = osHandler_UI.PrepUI_AutoPass()
-            End Sub, visPriority)
+            Sub() YieldVisuals(), visPriority)
+
+        Await PrepDispatcher().InvokeAsync(
+             Sub()
+                 osHandler_UI._autoPass2 = osHandler_UI.PrepUI_AutoPass()
+             End Sub, visPriority)
     End Function
 
     Public Async Function LoadUI_PrepHandlers() As Task
@@ -1491,6 +1503,7 @@ Public Module osUI_Loader
 
     Public Async Function InitializeTriggerMonitor() As Task
         Dim uiScheduler As TaskScheduler = TaskScheduler.FromCurrentSynchronizationContext()
+
         Await Task.Run(
             Sub()
                 objLoadUI.InitTriggerMonitor()
@@ -1673,10 +1686,10 @@ Public Module LoadTaskTimer
 
     Public Async Function ProcessLoadSequence(delayWeights() As Integer,
                                                 TaskList() As Func(Of Task)) As Task
-        Dim a As New Stopwatch()
-        '    a.Start()
+
         Dim nActions As Integer = TaskList.Length
         Dim nDelays As Integer = delayWeights.Length
+
         Dim sumWeights As Integer = 0
 
         For Each w In delayWeights
@@ -1688,50 +1701,53 @@ Public Module LoadTaskTimer
 
         If nActions = 1 Then
             Dim valSplitDelay = totalDelayMs / 2
-            'debug.WriteLine($"Thread count: { Process.GetCurrentProcess().Threads.Count} - {a.ElapsedMilliseconds}ms")
+            Await PrepDispatcher().InvokeAsync(
+                Sub() YieldVisuals(), visPriority)
 
             Await Task.Delay(valSplitDelay)
             Await TaskList(0).Invoke()
+
+            Await PrepDispatcher().InvokeAsync(
+                Sub() YieldVisuals(), visPriority)
+
             Await Task.Delay(valSplitDelay)
             Return
         End If
 
-        Dim running As Integer = 0
+        Dim runDuration As Integer = 0
 
         For i As Integer = 0 To nDelays - 1
             Dim raw As Double = totalDelayMs * (CDbl(delayWeights(i)) / CDbl(sumWeights))
             Dim thisMs As Integer = CInt(Math.Round(raw))
 
             allocatedDelays(i) = Math.Max(0, thisMs)
-            'debug.WriteLine($"{raw}ms - {allocatedDelays(i)}ms")
-            running += allocatedDelays(i)
+            runDuration += allocatedDelays(i)
         Next
 
-        Dim drift As Integer = totalDelayMs - running
+        Dim msDrift As Integer = totalDelayMs - runDuration
 
         If nDelays > 0 Then
-            allocatedDelays(nDelays - 1) += drift
+            allocatedDelays(nDelays - 1) += msDrift
             If allocatedDelays(nDelays - 1) < 0 Then allocatedDelays(nDelays - 1) = 0
         End If
 
         For i As Integer = 0 To nActions - 1
-            'debug.WriteLine($"Thread count: { Process.GetCurrentProcess().Threads.Count} - {a.ElapsedMilliseconds}ms")
+            Await PrepDispatcher().InvokeAsync(
+                Sub() YieldVisuals(), visPriority)
 
             Await TaskList(i).Invoke()
 
+            Await PrepDispatcher().InvokeAsync(
+                Sub() YieldVisuals(), visPriority)
+
             If i <= nDelays Then
-                Dim ms As Integer = allocatedDelays(i)
-                'debug.WriteLine($"{ms}ms")
-                If ms > 0 Then
-                    Await Task.Delay(ms)
+                Dim msDelay = allocatedDelays(i)
+
+                If msDelay > 0 Then
+                    Await Task.Delay(msDelay)
                 End If
             End If
-            'debug.WriteLine($"Thread count: { Process.GetCurrentProcess().Threads.Count} - {a.ElapsedMilliseconds}ms")
-
         Next
-        'debug.WriteLine($"Thread count: { Process.GetCurrentProcess().Threads.Count} - {a.ElapsedMilliseconds}ms")
-        '     a.Stop()
-
     End Function
 
     Public Function SetLoadSequence(ParamArray tasks() As Func(Of Task)) As Func(Of Task)()
@@ -1770,6 +1786,11 @@ Public Module LoadTaskTimer
                                        Return objLoadTask.Key = objTaskType
                                    End Function).Value
     End Function
+
+    Private Sub YieldVisuals() : End Sub
+
+    Private visPriority As DispatcherPriority =
+        DispatcherPriority.Render
 
 End Module
 

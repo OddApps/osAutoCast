@@ -23,7 +23,8 @@
                             <StackPanel Style="{StaticResource LoadingDataContentStyle}">
                                 <Grid x:Name="LoadingTextHost" CacheMode="BitmapCache">
                                     <TextBlock x:Name="LoadingText" Width="432" Style="{StaticResource LoadingTextStyle}"
-                                               CacheMode="BitmapCache" />    
+                                               CacheMode="BitmapCache" SnapsToDevicePixels="True" UseLayoutRounding="True"
+                                               TextOptions.TextFormattingMode="Ideal" TextOptions.TextRenderingMode="ClearType" />    
                                 </Grid>
                                 <osLoadProg:osLoadingProgressBar x:Name="uiLoad_ProgressBar"
 								    RenderOptions.BitmapScalingMode="LowQuality"

@@ -20,123 +20,62 @@ Imports System.Windows.Interop
 Imports osColor = System.Windows.Media.Color
 Imports repTS = osAutoCast.TaskStatusReport
 Imports System.ComponentModel
+Imports osKeyTime = System.Windows.Media.Animation.KeyTime
 
 #Disable Warning BC42353
 #Disable Warning BC42104
 
 Public Class osLoader_UI
 
-    Private Sub ImplementLoadVisEvents(ByRef objVisTask As TaskCompletionSource(Of Boolean))
-        Dim _objVisTask = objVisTask
-
-        With objVis_TextFadeIn
-            evtLoadText_FadeIn =
-                Sub()
-                    RemoveHandler .Completed, evtLoadText_FadeIn
-
-                    objTextBrush.BeginAnimation(SolidColorBrush.ColorProperty, Nothing)
-
-                    With _objVisTask
-                        .TrySetResult(True) : .ResetTask()
-                    End With
-                End Sub
-
-            AddHandler .Completed, evtLoadText_FadeIn
-        End With
-    End Sub
-
-    Private Sub ImplementLoadVisEvents()
-        With objVis_TextFadeOut
-            evtLoadText_FadeOutComplete =
-                Sub()
-                    RemoveHandler .Completed, evtLoadText_FadeOutComplete
-                    objTextBrush.BeginAnimation(SolidColorBrush.ColorProperty, Nothing)
-                End Sub
-
-            AddHandler .Completed, evtLoadText_FadeOutComplete
-        End With
-    End Sub
-
     Private Function FetchLoadText(valTaskType As LoadTaskType) As String
-        Return GetLoadTaskMsg(valTaskType)
-    End Function
-
-    Private Function VerifyTextUpdate(valTaskType As LoadTaskType, ByRef txtMsg As String) As Boolean
-        txtMsg = GetLoadTaskMsg(valTaskType)
-        Return Not txtMsg = "skip"
+        Return idxLoadStageMsg.First(
+            Function(objLoadTask)
+                Return objLoadTask.Key = valTaskType
+            End Function).Value
     End Function
 
     Public Function FadeLoadTextIn(valTaskType As LoadTaskType) As Task
         Dim objWorker_FadeText As New BackgroundWorker()
-        Dim uiScheduler As TaskScheduler = TaskScheduler.FromCurrentSynchronizationContext()
+
+        Dim uiScheduler = TaskScheduler.FromCurrentSynchronizationContext()
+        Dim uiTaskFactory = New TaskFactory(uiScheduler)
 
         AddHandler objWorker_FadeText.DoWork,
             Sub(sender As Object, e As DoWorkEventArgs)
                 Dim taskTypeLocal = DirectCast(e.Argument, LoadTaskType)
+                Dim txtMsg = FetchLoadText(taskTypeLocal)
 
-                Dim objTask_LoadTextFactory As New TaskFactory(uiScheduler)
-                Dim aa = objTask_LoadTextFactory.StartNew(
-                    Function()
-                        Dim txtMsg = FetchLoadText(taskTypeLocal)
-                        With objTextBrush
-                            visLoadTextEventTask.ResetAndInitTask()
-                            ImplementLoadVisEvents(visLoadTextEventTask)
+                uiTaskFactory.StartNew(
+                    Sub()
+                        Dim objTask_RenderLoadText = PrepDispatcher().InvokeAsync(
+                            Sub()
+                                ApplyLoadText(txtMsg)
 
-                            Dim aab = PrepDispatcher().InvokeAsync(
-                                Sub()
-                                    ApplyLoadText(txtMsg)
-                                    .BeginAnimation(objVisTxtColor, objVis_TextFadeIn)
-                                End Sub, DispatcherPriority.Render)
-                        End With
-                    End Function)
+                                objAnimation_LoadTextVis.Stop(objLoadText)
+                                objAnimation_LoadTextVis.Begin(objLoadText, True)
+                            End Sub, DispatcherPriority.Render)
+                    End Sub)
+
+                e.Result = True
+            End Sub
+
+        AddHandler objWorker_FadeText.RunWorkerCompleted,
+            Sub(sender As Object, e As RunWorkerCompletedEventArgs)
+                objWorker_FadeText.Dispose()
             End Sub
 
         objWorker_FadeText.RunWorkerAsync(valTaskType)
-
         Return Task.CompletedTask
     End Function
 
-    Public Function FadeLoadTextOut(valTaskType As LoadTaskType) As Task
-        Dim txtMsg As String = ""
-
-        If VerifyTextUpdate(valTaskType, txtMsg) Then
-            With objTextBrush
-                ImplementLoadVisEvents()
-
-                PrepDispatcher().InvokeAsync(
-                    Sub()
-                        .BeginAnimation(objVisTxtColor, objVis_TextFadeOut)
-                    End Sub, DispatcherPriority.Render)
-            End With
-        End If
-    End Function
-
-    Public Sub DumpThreads()
-        For Each t As ProcessThread In Process.GetCurrentProcess().Threads
-            Try
-                Debug.WriteLine(
-            $"TID={t.Id}, State={t.ThreadState}, Wait={t.WaitReason}")
-            Catch ex As Exception
-                Debug.WriteLine(
-            $"TID={t.Id}, State={t.ThreadState}")
-            End Try
-        Next
-    End Sub
-
     Public Async Function ProvisionApp() As Task
         osLoadTaskLib.objLoadUI = Me
-
         objProcessLoadStages = InitLoadHandler()
 
         AddHandler objLoadProgBar.LoadProgComplete,
             evtLoaderComplete
 
-        ' uiScheduler = TaskScheduler.FromCurrentSynchronizationContext()
-        '  uiTaskFactory = New TaskFactory(Nothing, TaskCreationOptions.RunContinuationsAsynchronously, TaskContinuationOptions.None, uiScheduler)
-
         Await objProcessLoadStages.BeginLoadProcess()
-
-        '       DumpThreads()
     End Function
 
     Public Sub InitTriggerMonitor()
@@ -158,21 +97,13 @@ Partial Class osLoader_UI
     Public Event osLoaderComplete(sender As Object, e As EventArgs)
 
     Public evtLoaderComplete As EventHandler = AddressOf TriggerCompleteEvent
-
-    Public objAnimation_LoadTextVis As Storyboard = Nothing
     Public visLoadTextEventTask As TaskCompletionSource(Of Boolean)
 
-    Private evtLoadText_FadeIn As EventHandler
-    Private evtLoadText_FadeOutComplete As EventHandler
+    Public objAnimation_LoadTextVis As Storyboard = Nothing
 
     Public objTextBrush As SolidColorBrush
 
     Private Const ContentBorder_Radius As Double = 11
-
-    Private uiTaskFactory As TaskFactory
-    'Private uiScheduler As TaskScheduler
-
-    Public osPrefManager As osHandler_Prefs
 
     Private idxLoadStageMsg As New Dictionary(Of LoadTaskType, String) From {
         {Load_Init, "Initializing Data"},
@@ -214,28 +145,9 @@ Partial Class osLoader_UI
         End Get
     End Property
 
-
     Public ReadOnly Property objOutline As Grid
         Get
             Return Me.LoadingContainerOutline
-        End Get
-    End Property
-
-    Public ReadOnly Property objVis_TextFadeOut As Timeline
-        Get
-            Return objAnimation_LoadTextVis.Children(0)
-        End Get
-    End Property
-
-    Public ReadOnly Property objVis_TextFadeIn As Timeline
-        Get
-            Return objAnimation_LoadTextVis.Children(1)
-        End Get
-    End Property
-
-    Public ReadOnly Property objVisTxtColor As DependencyProperty
-        Get
-            Return SolidColorBrush.ColorProperty
         End Get
     End Property
 
@@ -283,7 +195,6 @@ Partial Class osLoader_UI
     End Function
 
     Private Function InitLoadHandler() As osHandler_Loader
-
         Return New osHandler_Loader(ConstructLoadIdx(), objLoadProgBar, AddressOf GetObjLoadProgBar,
                                     AddressOf FadeLoadTextIn)
     End Function
@@ -295,20 +206,59 @@ Partial Class osLoader_UI
             End Function).Value
     End Function
 
-    Private Function CreateVisArray() As TimelineCollection
+    Private Function CreateVisData() As Storyboard
         With New osLoadTextColors(objLoadText, objTextBrush)
-            Return New TimelineCollection() From {
-                {New ColorAnimation(.txtShown, .txtHidden,
-                                    TimeSpan.FromMilliseconds(50), FillBehavior.HoldEnd)},
-                {New ColorAnimation(.txtHidden, .txtShown,
-                                    TimeSpan.FromMilliseconds(75), FillBehavior.HoldEnd)}}
+            Dim objVisFrameArray As New ColorKeyFrameCollection() From {
+                ComposeFrame_Start(.txtHidden), ComposeFrame_End(.txtShown)
+            }
+
+            Dim objVisFrameData As New ColorAnimationUsingKeyFrames() With {
+                .KeyFrames = objVisFrameArray, .FillBehavior = FillBehavior.HoldEnd,
+                .Duration = SetVisDuration(), .BeginTime = SetVisStart()
+            }
+
+            Dim objLoadTextVisData As New Storyboard()
+            objLoadTextVisData.Children.Add(objVisFrameData)
+
+            Storyboard.SetTarget(objVisFrameData, objLoadText)
+            Storyboard.SetTargetProperty(objVisFrameData, SetVisAttr())
+
+            Return objLoadTextVisData
         End With
     End Function
 
-    Private Sub ComposeVisual()
-        objAnimation_LoadTextVis = New Storyboard() With {
-            .Children = CreateVisArray()
+    Private Function SetVisAttr() As PropertyPath
+        Return New PropertyPath("(TextBlock.Foreground).(SolidColorBrush.Color)")
+    End Function
+
+    Private Function ComposeFrame_Start(valColorData As osColor) As ColorKeyFrame
+        Return New EasingColorKeyFrame(valColorData, SetVisDuration(0))
+    End Function
+
+    Private Function ComposeFrame_End(valColorData As osColor) As ColorKeyFrame
+        Return New EasingColorKeyFrame(valColorData, SetVisDuration(75), SetVisEasing())
+    End Function
+
+    Private Function SetVisStart() As TimeSpan
+        Return TimeSpan.FromMilliseconds(0)
+    End Function
+
+    Private Function SetVisDuration(valDur As Double) As osKeyTime
+        Return osKeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(valDur))
+    End Function
+
+    Private Function SetVisDuration() As Duration
+        Return New Duration(TimeSpan.FromMilliseconds(75))
+    End Function
+
+    Private Function SetVisEasing() As IEasingFunction
+        Return New QuadraticEase With {
+            .EasingMode = EasingMode.EaseIn
         }
+    End Function
+
+    Private Sub ComposeVisual()
+        objAnimation_LoadTextVis = CreateVisData()
     End Sub
 
     Private Sub TriggerCompleteEvent(s As Object, e As EventArgs)
@@ -318,14 +268,6 @@ Partial Class osLoader_UI
 
     Private Sub ApplyLoadText(txtLoad As String)
         objLoadText.Text = txtLoad
-    End Sub
-
-    Private Sub SetLoadText(valTaskType As LoadTaskType)
-        Dim txtMsg As String = ""
-
-        If VerifyTextUpdate(valTaskType, txtMsg) Then
-            objLoadText.Text = txtMsg
-        End If
     End Sub
 
     Private Sub ComposeOutline(sender As Object, e As RoutedEventArgs) Handles LoadingContainerOutline.Loaded

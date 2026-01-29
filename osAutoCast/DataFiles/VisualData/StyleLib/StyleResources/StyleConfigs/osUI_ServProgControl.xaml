@@ -1,0 +1,38 @@
+﻿<UserControl x:Class="osControls.osRestartProgress" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:local="clr-namespace:osAutoCast"
+             x:Name="root" Width="{Binding SpinnerSize, ElementName=root}" Height="{Binding SpinnerSize, ElementName=root}">
+    <UserControl.Resources>
+        <Storyboard x:Key="RotateStoryboard" RepeatBehavior="Forever">
+            <DoubleAnimation Storyboard.TargetName="SpinnerRotate"
+                             Storyboard.TargetProperty="Angle"
+                             From="0" To="360"
+                             Duration="0:0:1.0" />
+        </Storyboard>
+    </UserControl.Resources>
+
+    <Grid>
+        <!-- Use Viewbox so the spinner scales nicely with SpinnerSize -->
+        <Viewbox>
+            <Canvas Width="100" Height="100">
+                <!-- dashed ring -->
+                <Ellipse x:Name="Ring"
+                         Width="100" Height="100"
+                         Stroke="{Binding SpinnerBrush, ElementName=root}"
+                         StrokeThickness="{Binding StrokeThickness, ElementName=root}"
+                         StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                         StrokeDashArray="1.8 6"
+                         RenderTransformOrigin="0.5,0.5">
+                    <Ellipse.RenderTransform>
+                        <RotateTransform x:Name="SpinnerRotate" Angle="0" />
+                    </Ellipse.RenderTransform>
+                </Ellipse>
+
+                <!-- optional center dot (comment out if you want pure ring) -->
+                <Ellipse Width="10" Height="10"
+                         Canvas.Left="45" Canvas.Top="45"
+                         Fill="{Binding SpinnerBrush, ElementName=root}"
+                         Opacity="0.9"/>
+            </Canvas>
+        </Viewbox>
+    </Grid>
+</UserControl>

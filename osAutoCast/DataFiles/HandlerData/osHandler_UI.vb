@@ -94,34 +94,26 @@ Public NotInheritable Class osHandler_UI
             End Sub, DispatcherPriority.Background)
 
         Await PrepDispatcher().InvokeAsync(
-            Sub()
-                osPopupMenuOverlay.PrepTrayMenuOverlay()
-                osPopupMenu.PrepPopupMenu()
-            End Sub, DispatcherPriority.Background)
+            Async Function()
+                Await osPopupMenu.InitPopupMenuVis()
+                Await osPopupMenuOverlay.PrepPopupMenuOverlay()
+            End Function, DispatcherPriority.Background).Task.Unwrap()
     End Function
 
     Public Shared Async Function RestoreUI_TrayMenu() As Task
         Await PrepDispatcher().InvokeAsync(
-            Sub()
-                _osTrayMenu = PrepUI_TrayMenu()
-                osTrayMenu.PrepTrayMenuInit()
-            End Sub, DispatcherPriority.Background)
-        'Await Task.Run(
-        '    Sub()
-        '        PrepDispatcher().Invoke(
-        '            Sub()
-        '                _osTrayMenu = PrepUI_TrayMenu()
-        '                osTrayMenu.PrepTrayMenuInit()
-        '            End Sub, DispatcherPriority.Background)
-        '    End Sub)
+            Function()
+                _osTrayMenu = New osTrayMenu_GUI()
+                Return osTrayMenu.PrepTrayMenuInit()
+            End Function, DispatcherPriority.Background)
     End Function
 
     Public Shared Async Function RestoreUI_Prefs() As Task
         Await PrepDispatcher().InvokeAsync(
-          Sub()
+          Function()
               _osPrefsWindow = PrepUI_Opts()
-              osPrefsWindow.PrepPrefVis()
-          End Sub, DispatcherPriority.Background)
+              Return osPrefsWindow.PrepPrefVis()
+          End Function, DispatcherPriority.Background)
 
         AuthorizeInputMonitor()
     End Function
@@ -193,27 +185,6 @@ Public NotInheritable Class osHandler_UI
         RemoveHandler objPopupMenuOverlayWindow.MouseUp, pmFunc_TerminatePopupMenu
     End Sub
 
-    'Public Shared Function CreateUI_AutoPass() As Task(Of Lazy(Of progUI_AutoPass))
-    '    Return Task.Run(
-    '        Sub()
-    '            _autoPass2 = New Lazy(Of progUI_AutoPass)(
-    '            Function()
-    '                Return PrepDispatcher().
-    '                    Invoke(Function()
-    '                               Dim objPrefWin As New progUI_AutoPass()
-    '                               objPrefWin.PrepAutoPass()
-
-    '                               Return objPrefWin
-    '                           End Function, DispatcherPriority.Background)
-    '            End Function, LazyThreadSafetyMode.ExecutionAndPublication)
-    '            PrepDispatcher().
-    '                    Invoke(Sub()
-    '                               Dim guiReset = _autoPass2.Value
-    '                               guiReset.BeginPrep()
-    '                           End Sub, DispatcherPriority.Background)
-    '        End Sub)
-    'End Function
-
     Public Shared Function CreateUI_AutoPass() As Lazy(Of progUI_AutoPass)
         Return New Lazy(Of progUI_AutoPass)(
             Function()
@@ -227,34 +198,12 @@ Public NotInheritable Class osHandler_UI
             End Function, LazyThreadSafetyMode.ExecutionAndPublication)
     End Function
 
-    'Public Shared Function CreateUI_AutoCast() As Task(Of ProgBarGui_AutoCast)
-    '    Return Task.Run(
-    '        Function()
-    '            Return PrepDispatcher().Invoke(
-    '                Function()
-    '                    With CoreDataLib.GetProgSizeReport(TriggerType.AutoCast)
-    '                        SetProgBlockData(TriggerType.AutoCast)
-
-    '                        Dim objWin_AC As New ProgBarGui_AutoCast(.pWidth, .pHeight,
-    '                                                                 ProgTimeSpan_AC, AddressOf EaseProgress)
-    '                        Dim guiLoad = objWin_AC.Handle
-    '                        guiLoad = Nothing
-
-    '                        Return objWin_AC
-    '                    End With
-
-    '                End Function, DispatcherPriority.Background)
-    '        End Function)
-    'End Function
-
-    Public Shared Function ComposeAP() As Task
-        Return PrepDispatcher().Invoke(
-            Function()
-                _autoPass2 = CreateUI_AutoPass()
-                Dim guiReset = _autoPass2.Value
-
-                guiReset.BeginPrep()
-            End Function, DispatcherPriority.Background)
+    Public Shared Function ComposeAP() As DispatcherOperation
+        Return PrepDispatcher().InvokeAsync(
+            Sub()
+                osHandler_UI._autoPass2 = osHandler_UI.PrepUI_AutoPass()
+                osHandler_UI.osGui_AutoPass2.PrepAutoPass()
+            End Sub, DispatcherPriority.Background)
     End Function
 
     Public Shared Function GenerateUI_AutoPass() As Task
@@ -375,13 +324,16 @@ Public NotInheritable Class osHandler_UI
 
         Select Case popupCloseAction
             Case ClosePopup_Default
-                Await PrepDispatcher().Invoke(
-                    Function()
+                Dim af = Await PrepDispatcher().InvokeAsync(
+                    Async Function()
                         CloseUI_PopupMenu(True, PopupVisual_Close)
 
-                        Dim objTask_ClosePopupMenu = osPopupMenu.TriggerVisuals_Close()
+                        ' Dim objTask_ClosePopupMenu = osPopupMenu.TriggerVisuals_Close()
+                        Await osPopupMenu.TriggerVisuals_Close()
                         Return osPopupMenu.objTask_Closing.Task
-                    End Function, DispatcherPriority.Render)
+                    End Function, DispatcherPriority.Render).Task
+
+                Await af.Unwrap()
 
                 Await PrepDispatcher().InvokeAsync(
                     Function()
@@ -570,10 +522,10 @@ Public NotInheritable Class osHandler_UI
         End If
 
         Await PrepDispatcher().InvokeAsync(
-           Sub()
+           Function()
                _osPrefsWindow = New osPrefs_GUI
-               osPrefsWindow.PrepPrefVis()
-           End Sub, DispatcherPriority.Render)
+               Return osPrefsWindow.PrepPrefVis()
+           End Function, DispatcherPriority.Render)
 
         AuthorizeInputMonitor()
     End Function
@@ -595,7 +547,7 @@ Public NotInheritable Class osHandler_UI
     End Function
 
     Private Shared Function DismissAutoPassUI() As Task
-        PrepDispatcher().Invoke(
+        Return PrepDispatcher().InvokeAsync(
             Sub()
                 With osGui_AutoPass2
                     If .IsLoaded Then
@@ -608,43 +560,30 @@ Public NotInheritable Class osHandler_UI
                 End With
 
                 _autoPass2 = Nothing
-            End Sub)
+            End Sub).Task
     End Function
 
-    Public Shared Function CloseAndResetAutoCast(isTask As Boolean) As Task
+    Public Shared Async Function CloseAndResetAutoCast() As Task
         osHandler_AutoCast.StopAutoCastGui()
-        osHandler_AutoCast.InitializeAutoCastUI()
-
-        Return Task.CompletedTask
+        Await osHandler_AutoCast.StartAutoCastAsync()
     End Function
 
-    Public Shared Sub CloseAndResetAutoCast()
-        osHandler_AutoCast.StopAutoCastGui()
-        osHandler_AutoCast.InitializeAutoCastUI()
-    End Sub
-
-    Public Shared Sub ResetUI(guiType As TriggerAction, Optional forceCreateNew As Boolean = False)
-        Dim guiReset As Object
-
+    Public Shared Async Function ResetUI(guiType As TriggerAction) As Task
         Select Case guiType
             Case TriggerAutoCast
-                Dim objTask_ResetAutoCast = CloseAndResetAutoCast(True)
+                Await CloseAndResetAutoCast()
             Case TriggerAutoPass
-                DismissAutoPassUI()
-                Dim objTask_ComposeAutoPass = ComposeAP()
+                Await DismissAutoPassUI()
+                Await ComposeAP()
             Case TriggerShowOpts
 
             Case TriggerShowMenu
-                Dim objTask_GenPopupMenu = RestoreUI_PopupMenu()
-            Case TriggerShowTrayMenu
-                '      PrepUI_PopupMenuOverlay()
+                Await RestoreUI_PopupMenu()
         End Select
-
-        guiReset = Nothing
 
         RecaptureResources()
         AuthorizeInputMonitor()
-    End Sub
+    End Function
 
     Public Shared Sub RecaptureResources()
         InitResourceAlloc()
@@ -663,14 +602,13 @@ Public NotInheritable Class osHandler_UI
         AllocResources()
     End Sub
 
-    <DllImport("psapi.dll", EntryPoint:="EmptyWorkingSet")>
-    Private Shared Function ProcessAlloc(hProcess As IntPtr) As Boolean
-    End Function
-
     Private Shared Sub AllocResources()
         Try
             ProcessAlloc(Process.GetCurrentProcess().Handle)
         Catch : End Try
     End Sub
+
+    <DllImport("psapi.dll", EntryPoint:="EmptyWorkingSet")>
+    Private Shared Function ProcessAlloc(hProcess As IntPtr) As Boolean : End Function
 
 End Class

@@ -950,7 +950,6 @@ Public Class osLoadingObjects
 
     Public Property LoadStageIdx As LoadStage()
 
-    'Public Delegate Function LoadFunction(objTaskProgress As IProgress(Of Double), objTaskAbort As CancellationToken) As Task
     Public Delegate Function LoadFunction(objTaskAbort As CancellationToken) As Task
 
     Public TaskDataItems As New Dictionary(Of LoadTaskType, TaskData) From {

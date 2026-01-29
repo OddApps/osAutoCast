@@ -8,6 +8,7 @@ Imports System.Runtime.InteropServices
 Imports System.Windows.Media.Animation
 Imports System.Windows.Threading
 Imports osBrushColor = System.Windows.Media.Brushes
+Imports System.ComponentModel
 
 Public Class osPopupMenuOverlay_GUI
 
@@ -73,20 +74,47 @@ Public Class osPopupMenuOverlay_GUI
             .Focusable = False
         End With
 
-        PrepPopupMenuOverlay()
+        '  PrepPopupMenuOverlay()
     End Sub
 
     Private Sub EstablishVisual(objVisType As OverlayVisualType)
         Me.VisDataObject = TryCast(Me.Resources(GetVisualKey(objVisType)), Storyboard)
     End Sub
 
-    Private Sub PrepPopupMenuOverlay()
-        EstablishVisual(OverlayVisual_Open)
+    Public Async Function PrepPopupMenuOverlay() As Task
+        Dim visDataN = GetVisualKey(OverlayVisual_Open)
+        Await InitializeVisAdapter(visDataN, Me, EstablishVisConfig(),
+                                    AddressOf SetOpenEvents, osOverlay)
+    End Function
+
+    Private Function InitOpenEvents() As Task
         SetOpenEvents()
+        Return Task.CompletedTask
+    End Function
 
-        InitializeVisAdapter(Me, EstablishVisConfig(), osOverlay)
-    End Sub
+    Private Function LoadVisualData() As Task(Of Storyboard)
+        Dim objTask_GraphicsData As New TaskCompletionSource(Of Task(Of Storyboard))()
+        Dim objTask_InitGraphics As New BackgroundWorker()
 
+        AddHandler objTask_InitGraphics.DoWork,
+            Sub(sender As Object, e As DoWorkEventArgs)
+                Dim iff = PrepDispatcher().InvokeAsync(
+            Function()
+                Return EstablishVisual(OverlayVisual_Open, True)
+            End Function, DispatcherPriority.Render).task
+                e.Result = iff
+            End Sub
+
+        AddHandler objTask_InitGraphics.RunWorkerCompleted,
+            Sub(sender As Object, e As RunWorkerCompletedEventArgs)
+                objTask_GraphicsData.SetResult(DirectCast(e.Result, Task(Of Storyboard)))
+                objTask_InitGraphics.Dispose()
+            End Sub
+
+        objTask_InitGraphics.RunWorkerAsync()
+
+        Return objTask_GraphicsData.Task.Unwrap()
+    End Function
 
     Private Function EstablishVisConfig() As VisAdapterConfig
         Return VisAdapterConfig.EnableAll
@@ -125,10 +153,7 @@ Public Class osPopupMenuOverlay_GUI
     Private Sub PrepTransitionVisuals(objAniType As AnimationType, objVisType As OverlayVisualType)
         Select Case objAniType
             Case AnimationType.aniOpen
-                objAnimation_Open = EstablishVisual(osOverlay, objVisType)
 
-                AddHandler objAnimation_Open.Completed,
-                    OpenCompleteEvent
             Case aniClose
                 EstablishVisual(objVisType)
 
@@ -136,9 +161,8 @@ Public Class osPopupMenuOverlay_GUI
         End Select
     End Sub
 
-    Private Function EstablishVisual(objContainer As FrameworkElement, objVisType As OverlayVisualType) As Storyboard
+    Private Function EstablishVisual(objVisType As OverlayVisualType, isBG As Boolean) As Storyboard
         Dim objOverlayVis = TryCast(Me.Resources(GetVisualKey(objVisType)), Storyboard)
-        Timeline.SetDesiredFrameRate(objOverlayVis, 45)
 
         Return objOverlayVis
     End Function

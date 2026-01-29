@@ -1,4 +1,5 @@
-﻿Imports System.Runtime.InteropServices
+﻿Imports System.ComponentModel
+Imports System.Runtime.InteropServices
 Imports System.Windows.Interop
 Imports System.Windows.Media.Animation
 Imports System.Windows.Threading
@@ -27,7 +28,7 @@ Public Class osPrefs_GUI
         Return TryCast(visObject, Storyboard)
     End Function
 
-    Private Function FetchPrefVis(objVisType As PrefUI_State) As Storyboard
+    Public Function FetchPrefVis(objVisType As PrefUI_State) As Storyboard
         Return AllocVis(Me.Resources(GetVisualState(objVisType)))
     End Function
 
@@ -38,7 +39,7 @@ Public Class osPrefs_GUI
     Private Sub InitVisual(objVisType As PrefUI_State)
         Select Case objVisType
             Case PrefUI_Open
-                EstablishVisual(PrefUI_Open)
+                '    EstablishVisual(PrefUI_Open)
 
                 SetOpenEvents()
                 BufferPrefWin()
@@ -54,17 +55,19 @@ Public Class osPrefs_GUI
 
     Private Function EstablishVisConfig() As VisAdapterConfig
         Return VisAdapterConfig.EnableAll
-        'Return VisAdapterConfig.ResetVisualSettings Or VisAdapterConfig.UpdateAsync_OnDispose Or
-        '    VisAdapterConfig.UpdateAsync_OnReset
     End Function
 
-    Public Sub PrepPrefVis()
+    Public Sub PrepPrefVis2()
         InitVisual(PrefUI_Open)
-        InitializeVisAdapter(Me, EstablishVisConfig(),
-                             prefContainer, osTitleCover, osContentContainer)
-
         ApplyExpanderSize()
     End Sub
+
+    Public Async Function PrepPrefVis() As Task
+        Dim visDataN = GetVisualState(PrefUI_Open)
+
+        Await InitializeVisAdapter(visDataN, Me, EstablishVisConfig(), AddressOf PrepPrefVis2,
+                                    prefContainer, osTitleCover, osContentContainer)
+    End Function
 
     Public Sub SetCloseMonitor(objAwaitClose As TaskCompletionSource(Of Boolean))
         objCloseMonitor = objAwaitClose
@@ -140,7 +143,7 @@ Public Class osPrefs_GUI
         evtComplete_Open =
             Sub()
                 RemoveHandler VisDataObject.Completed, evtComplete_Open
-                VisDataObject.Stop()
+                '  VisDataObject.Stop()
 
                 SetVisualMode(PrefUI_Open)
                 ActivatePrefTracker()
@@ -159,6 +162,8 @@ Public Class osPrefs_GUI
     End Sub
 
     Private Sub SetCloseEvents()
+        RemoveHandler VisDataObject.Completed,
+                                            evtComplete_Open
         InitVisual(PrefUI_Close)
 
         evtComplete_Close =
@@ -198,7 +203,9 @@ Public Class osPrefs_GUI
         isSaved = True
         osPrefDataIdx.SavePrefsFile()
 
-        Dim objTask_ResetAutoCast = osHandler_UI.CloseAndResetAutoCast(True)
+        Dim objTask_ResetAutoCast = osHandler_UI.CloseAndResetAutoCast()
+        _VisQualitySetting = "n/a"
+        OnPropertyChanged(NameOf(VisQualitySetting))
     End Sub
 
     Private Sub osPrefs_InitClose()
@@ -226,6 +233,8 @@ Public Class osPrefs_GUI
 End Class
 
 Partial Public Class osPrefs_GUI
+    Implements INotifyPropertyChanged
+
 
     Private objCloseMonitor As TaskCompletionSource(Of Boolean)
 
@@ -347,5 +356,11 @@ Partial Public Class osPrefs_GUI
     Private Shared Function SetWindowPos(hWnd As IntPtr, hWndInsertAfter As IntPtr, X As Integer,
                                          Y As Integer, cx As Integer, cy As Integer, uFlags As UInteger) As Boolean
     End Function
+
+    Public Event PropertyChanged As PropertyChangedEventHandler Implements INotifyPropertyChanged.PropertyChanged
+
+    Private Sub OnPropertyChanged(Optional propertyName As String = Nothing)
+        RaiseEvent PropertyChanged(Me, New PropertyChangedEventArgs(propertyName))
+    End Sub
 
 End Class

@@ -18,6 +18,110 @@ Public NotInheritable Class osHandler_AutoCast
     Private Shared ReadOnly _startupLock As New Object()
     Private Shared ReadOnly _startupEvent As New ManualResetEvent(False)
 
+    Private Shared _autoCastTcs As TaskCompletionSource(Of Boolean) = Nothing
+
+    Public Shared Function StartAutoCastAsync() As Task(Of Boolean)
+        ' Pre-fetch UI size on caller thread (avoid doing this while holding the lock / on the STA thread).
+        Dim progSize = CoreDataLib.FetchProgSizeReport(TriggerType.AutoCast, True)
+        Dim pW As Integer = CInt(progSize.Item("pW"))
+        Dim pH As Integer = CInt(progSize.Item("pH"))
+
+        SyncLock _startupLock
+            ' If already running, return the same Task so callers can await it
+            If _autoCastThread IsNot Nothing AndAlso _autoCastThread.IsAlive Then
+                If _autoCastTcs IsNot Nothing Then
+                    Return _autoCastTcs.Task
+                Else
+                    Return Task.FromResult(False)
+                End If
+            End If
+
+            ' Dispose old CTS safely
+            Try
+                _autoCastCts?.Dispose()
+            Catch : End Try
+
+            _autoCastCts = New CancellationTokenSource()
+            _autoCastTcs = New TaskCompletionSource(Of Boolean)(TaskCreationOptions.RunContinuationsAsynchronously)
+
+            ' Create and start STA thread, pass the pre-fetched sizes to the thread proc
+            _autoCastThread = New Thread(Sub() AutoCastThreadProc(pW, pH, _autoCastTcs)) With {
+            .IsBackground = True
+        }
+            _autoCastThread.SetApartmentState(ApartmentState.STA)
+            _autoCastThread.Start()
+
+            Return _autoCastTcs.Task
+        End SyncLock
+    End Function
+
+    ' The STA thread body now accepts the pre-fetched pW/pH
+    Private Shared Sub AutoCastThreadProc(pW As Integer, pH As Integer, tcs As TaskCompletionSource(Of Boolean))
+        Dim localCts As CancellationTokenSource = Nothing
+        Dim objWin_AC As ProgBarGui_AutoCast = Nothing
+        Dim objContextAC As ApplicationContext = Nothing
+
+        Try
+            _autoCastThreadId = GetCurrentThreadId()
+            localCts = _autoCastCts ' local reference
+
+            ' Application context & UI creation
+            objContextAC = New ApplicationContext()
+
+            objWin_AC = New ProgBarGui_AutoCast(pW, pH, osFuncLib_Progress.ProgTimeSpan_AC, AddressOf EaseProgress)
+
+            _osGui_AutoCastProgress = New AutoCastGui()
+            ProgBarGui_AutoCast.Instance = objWin_AC
+
+            ' Use named handler if you need to remove it later; inline is OK if you never remove.
+            AddHandler objWin_AC.FormClosed, Sub()
+                                                 Try
+                                                     objContextAC.ExitThread()
+                                                 Catch : End Try
+                                             End Sub
+
+            ' Signal success to awaiters: UI is created and message loop will start.
+            If tcs IsNot Nothing Then
+                tcs.TrySetResult(True)
+            End If
+
+            ' Run the message loop (blocks until ExitThread/Application.Exit)
+            osRunForm.Run(objContextAC)
+
+        Catch ex As Exception
+            ' Make the exception visible to awaiting callers
+            If tcs IsNot Nothing Then
+                tcs.TrySetException(ex)
+            End If
+        Finally
+            ' Clean-up UI references and thread state
+            Try
+                If objWin_AC IsNot Nothing Then
+                    Try
+                        If Not objWin_AC.IsDisposed Then
+                            objWin_AC.Close()
+                            objWin_AC.Dispose()
+                        End If
+                    Catch : End Try
+                End If
+            Catch : End Try
+
+            ProgBarGui_AutoCast.Instance = Nothing
+            _osGui_AutoCastProgress = Nothing
+
+            _autoCastThreadId = 0
+
+            SyncLock _startupLock
+                _autoCastThread = Nothing
+            End SyncLock
+
+            ' If the TCS hasn't been completed (e.g., thread ended before UI created), ensure it completes.
+            If tcs IsNot Nothing AndAlso Not tcs.Task.IsCompleted Then
+                tcs.TrySetResult(False)
+            End If
+        End Try
+    End Sub
+
     ' Call this to start the background UI/thread
     Public Shared Sub StartAutoCast()
         SyncLock _startupLock
@@ -34,7 +138,7 @@ Public NotInheritable Class osHandler_AutoCast
             _startupEvent.Reset()
 
             ' Create the thread but don't run heavy work inside the lock.
-            _autoCastThread = New Thread(AddressOf AutoCastThreadProc) With {
+            _autoCastThread = New Thread(AddressOf AutoCastThreadProc1) With {
             .IsBackground = True
         }
             _autoCastThread.SetApartmentState(ApartmentState.STA)
@@ -43,7 +147,7 @@ Public NotInheritable Class osHandler_AutoCast
     End Sub
 
     ' The actual thread body is a named method (no outer captures)
-    Private Shared Sub AutoCastThreadProc()
+    Private Shared Sub AutoCastThreadProc1()
         ' Remember thread id for outside usage (GetCurrentThreadId is assumed defined elsewhere)
         Try
             _autoCastThreadId = GetCurrentThreadId()
