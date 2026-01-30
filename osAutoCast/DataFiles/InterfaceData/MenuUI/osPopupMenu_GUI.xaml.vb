@@ -423,7 +423,7 @@ Public Class osPopupMenu_GUI
 
     Private Async Function ExitPopupMenu(popupCloseAction As PopupCloseAction, objMenuCmd As Func(Of Task)) As Task
         Await osHandler_UI.ClosePopupMenu(popupCloseAction)
-        Await Task.Delay(200)
+        Await Task.Delay(275)
 
         Dim objTask_MenuCmd = PrepDispatcher().
             InvokeAsync(Function()

@@ -315,7 +315,7 @@ Public Class osPrefTracker(Of T As {Class, INotifyPropertyChanged})
 
     Public Sub New(target As T)
         _prefTarget = target
-        '  PreservePrefs()
+        Dim a = PreservePrefs(True)
     End Sub
 
     Public Sub PreservePrefs()

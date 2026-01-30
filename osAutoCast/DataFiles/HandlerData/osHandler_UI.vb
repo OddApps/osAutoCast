@@ -112,7 +112,7 @@ Public NotInheritable Class osHandler_UI
         Await PrepDispatcher().InvokeAsync(
           Function()
               _osPrefsWindow = PrepUI_Opts()
-              Return osPrefsWindow.PrepPrefVis()
+              Return osPrefsWindow.osPrefs_InitUi()
           End Function, DispatcherPriority.Background)
 
         AuthorizeInputMonitor()
@@ -324,7 +324,7 @@ Public NotInheritable Class osHandler_UI
 
         Select Case popupCloseAction
             Case ClosePopup_Default
-                Dim af = Await PrepDispatcher().InvokeAsync(
+                Dim visFadeAwayOverlay = Await PrepDispatcher().InvokeAsync(
                     Async Function()
                         CloseUI_PopupMenu(True, PopupVisual_Close)
 
@@ -333,7 +333,7 @@ Public NotInheritable Class osHandler_UI
                         Return osPopupMenu.objTask_Closing.Task
                     End Function, DispatcherPriority.Render).Task
 
-                Await af.Unwrap()
+                Await visFadeAwayOverlay.Unwrap()
 
                 Await PrepDispatcher().InvokeAsync(
                     Function()
@@ -341,13 +341,15 @@ Public NotInheritable Class osHandler_UI
                         Return osPopupMenuOverlay.TriggerVisuals_Close()
                     End Function, DispatcherPriority.Render)
             Case ClosePopup_ByBtn
-                Await PrepDispatcher().Invoke(
-                    Function()
+                Dim visFadeAwayOverlay = Await PrepDispatcher().InvokeAsync(
+                    Async Function()
                         CloseUI_PopupMenu(True, PopupVisual_CloseByBtn, True)
 
-                        Dim objTask_ClosePopupMenu = osPopupMenu.TriggerVisuals_Close()
+                        Await osPopupMenu.TriggerVisuals_Close()
                         Return osPopupMenu.objTask_Closing.Task
                     End Function, DispatcherPriority.Render)
+
+                Await visFadeAwayOverlay.Unwrap()
 
                 Await PrepDispatcher().InvokeAsync(
                     Function()
@@ -355,13 +357,15 @@ Public NotInheritable Class osHandler_UI
                         Return osPopupMenuOverlay.TriggerVisuals_Close()
                     End Function, DispatcherPriority.Render)
             Case ClosePopup_ByCmd
-                Await PrepDispatcher().Invoke(
-                    Function()
+                Dim visFadeAwayOverlay = Await PrepDispatcher().InvokeAsync(
+                    Async Function()
                         CloseUI_PopupMenu(True, PopupVisual_CloseByCmd)
 
-                        Dim objTask_ClosePopupMenu = osPopupMenu.TriggerVisuals_Close()
+                        Await osPopupMenu.TriggerVisuals_Close()
                         Return osPopupMenu.objTask_Closing.Task
                     End Function, DispatcherPriority.Render)
+
+                Await visFadeAwayOverlay.Unwrap()
 
                 Await PrepDispatcher().InvokeAsync(
                     Function()
@@ -369,78 +373,7 @@ Public NotInheritable Class osHandler_UI
                         Return osPopupMenuOverlay.TriggerVisuals_Close()
                     End Function, DispatcherPriority.Render)
         End Select
-
-        '   Await objTask_Terminate
-        '   Await DisposePopupMenu()
     End Function
-
-    'Private Shared Async Function TerminatePopupMenu(popupCloseAction As PopupCloseAction) As Task
-    '    Dim objTask_Terminate As Task = Nothing
-
-    '    Select Case popupCloseAction
-    '        Case ClosePopup_Default
-    '            Await PrepDispatcher().Invoke(
-    '                Function()
-    '                    Return CloseUI_PopupMenu(True, PopupVisual_Close)
-    '                End Function, DispatcherPriority.Render)
-
-    '            Await PrepDispatcher().Invoke(
-    '                Function()
-    '                    Return CloseUI_PopupMenuOverlay(True, OverlayVisual_Close)
-    '                End Function, DispatcherPriority.Render)
-    '        Case ClosePopup_ByBtn
-    '            Await PrepDispatcher().Invoke(
-    '                Function()
-    '                    Return CloseUI_PopupMenu(True, PopupVisual_CloseByBtn, True)
-    '                End Function, DispatcherPriority.Render)
-
-    '            Await PrepDispatcher().Invoke(
-    '                Function()
-    '                    Return CloseUI_PopupMenuOverlay(True, OverlayVisual_CloseByBtn)
-    '                End Function, DispatcherPriority.Render)
-    '        Case ClosePopup_ByCmd
-    '            Await PrepDispatcher().Invoke(
-    '                Function()
-    '                    Return CloseUI_PopupMenu(True, PopupVisual_CloseByCmd)
-    '                End Function, DispatcherPriority.Render)
-
-    '            Await PrepDispatcher().Invoke(
-    '                Function()
-    '                    Return CloseUI_PopupMenuOverlay(True, OverlayVisual_CloseByCmd)
-    '                End Function, DispatcherPriority.Render)
-    '    End Select
-
-    '    '   Await objTask_Terminate
-    '    Await DisposePopupMenu()
-    'End Function
-
-    'Private Shared Async Function TerminatePopupMenu(popupCloseAction As PopupCloseAction) As Task
-    '    Dim objTask_Terminate As Task = Nothing
-
-    '    Select Case popupCloseAction
-    '        Case ClosePopup_Default
-    '            objTask_Terminate = Task.Run(
-    '               Async Function()
-    '                   Await CloseUI_PopupMenu(PopupVisual_Close)
-    '                   Await CloseUI_PopupMenuOverlay(OverlayVisual_Close)
-    '               End Function)
-    '        Case ClosePopup_ByBtn
-    '            objTask_Terminate = Task.Run(
-    '                Async Function()
-    '                    Await CloseUI_PopupMenu(PopupVisual_CloseByBtn, True)
-    '                    Await CloseUI_PopupMenuOverlay(OverlayVisual_CloseByBtn)
-    '                End Function)
-    '        Case ClosePopup_ByCmd
-    '            objTask_Terminate = Task.Run(
-    '                Async Function()
-    '                    Await CloseUI_PopupMenu(PopupVisual_CloseByCmd)
-    '                    Await CloseUI_PopupMenuOverlay(OverlayVisual_CloseByCmd)
-    '                End Function)
-    '    End Select
-
-    '    Await objTask_Terminate
-    '    Await DisposePopupMenu()
-    'End Function
 
     Private Shared Sub LiftPopupMenu(Optional KillOwner As Boolean = False)
         osPopupMenu.Topmost = True
@@ -497,15 +430,15 @@ Public NotInheritable Class osHandler_UI
             End Sub).Task
     End Function
 
-    Public Shared Sub TerminateTrayMenu()
+    Public Shared Async Function TerminateTrayMenu() As Task
         Try
             osTrayMenu.Close()
         Catch : End Try
 
         _osTrayMenu = Nothing
 
-        Dim objTask_GenTrayMenu = GenerateUI_TrayMenu()
-    End Sub
+        Await RestoreUI_TrayMenu()
+    End Function
 
     Public Shared Sub PrepDispatch_Prefs(sender As Object, e As EventArgs)
         Dim objOsTrayMenu_GUI = TryCast(sender, osPrefs_GUI)
@@ -524,7 +457,7 @@ Public NotInheritable Class osHandler_UI
         Await PrepDispatcher().InvokeAsync(
            Function()
                _osPrefsWindow = New osPrefs_GUI
-               Return osPrefsWindow.PrepPrefVis()
+               Return osPrefsWindow.osPrefs_InitUi()
            End Function, DispatcherPriority.Render)
 
         AuthorizeInputMonitor()

@@ -9,6 +9,7 @@ Imports osPrefBind = System.Windows.Data.Binding
 Imports System.Windows.Threading
 Imports osAutoCast.osControls
 Imports System.Globalization
+Imports osWriter = System.IO.StreamWriter
 
 Namespace osPrefLib
 
@@ -24,60 +25,6 @@ Namespace osPrefLib
             New osPref_DataVQ(1, "Quality")
         }
 
-        Public osPrefBindPrefIdx As Dictionary(Of PrefBinder, osPref_BindDef)
-        Public osPrefDataBindings As Dictionary(Of String, Binding)
-
-        Public Sub osPref_GenBinding()
-            osPrefDataBindings = New Dictionary(Of String, Binding) From {
-            {"acFuse", PopulateBinding(AC_Fuse)},
-            {"apSafetyTimer", PopulateBinding(AP_SafetyTimer)},
-            {"acRTC", PopulateBinding(AC_RTC)},
-            {"goVisualQuality", PopulateBinding(GO_VisualQuality)}
-        }
-        End Sub
-
-        Public idxPrefBindDeps As New Dictionary(Of String, DependencyProperty) From {
-                {"acFuse", osControls.osUpDownTextBox.ValueProperty},
-                {"acRTC", CheckBox.IsCheckedProperty},
-                {"apSafetyTimer", osControls.osUpDownTextBox.ValueProperty},
-                {"goVisualQuality", ComboBox.SelectedValueProperty}
-            }
-
-        Public idxPrefBindRecords As New Dictionary(Of PrefBinder, osPref_BindRecord) From {
-                {AC_Fuse, New osPref_BindRecord(osControls.osUpDownTextBox.ValueProperty, "AutoCast_Fuse")},
-                {AC_RTC, New osPref_BindRecord(CheckBox.IsCheckedProperty, "AutoCast_RTC")},
-                {AP_SafetyTimer, New osPref_BindRecord(osControls.osUpDownTextBox.ValueProperty, "AutoPass_SafetyTimer")},
-                {GO_VisualQuality, New osPref_BindRecord(ComboBox.SelectedValueProperty, "GenOpts_VisualQuality")}
-            }
-
-        Private Function FetchBindRecord(pBinder As PrefBinder) As osPref_BindRecord
-            Return idxPrefBindRecords.First(
-                Function(bRec)
-                    Return bRec.Key = pBinder
-                End Function).Value
-        End Function
-
-        Public Sub SetBindDef(pBinder As PrefBinder, objBindCtrl As Control)
-            With FetchBindRecord(pBinder)
-                Dim objPrefB = ComposeBinding(.BindPrefName)
-
-                osPrefBindPrefIdx.Add(pBinder, New osPref_BindDef(.BindProperty, objBindCtrl, objPrefB))
-                objBindCtrl.SetBinding(.BindProperty, objPrefB)
-            End With
-        End Sub
-
-        Private PrefBinderIdx As New Dictionary(Of PrefBinder, osPref_BindDef)
-
-        Private Function PopulateBinding(pBinder As PrefBinder) As osPrefBind
-            With idxPrefBindRecords(pBinder)
-                Return New osPrefBind(.BindPrefName) With {
-                    .Source = Me.Data,
-                    .Mode = BindingMode.TwoWay,
-                    .UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged
-                }
-            End With
-        End Function
-
         Private Function ComposeBinding(pBindName As String) As osPrefBind
             Return New osPrefBind() With {
                 .Source = Me.Data,
@@ -85,8 +32,6 @@ Namespace osPrefLib
                 .UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged
             }
         End Function
-
-        Public Shared idxPrefRecords As PrefRecordIndex
 
         Private Shared _Data As osPreferenceLib
         Public Shared ReadOnly Property Data As osPreferenceLib
@@ -105,6 +50,16 @@ Namespace osPrefLib
             End Get
             Set(ByVal value As Boolean)
                 _prefsSet = value
+            End Set
+        End Property
+
+        Private Shared _objOsPrefIdx As osPrefIndex
+        Public Property objOsPrefIdx As osPrefIndex
+            Get
+                Return _objOsPrefIdx
+            End Get
+            Set(newStatus As osPrefIndex)
+                _objOsPrefIdx = newStatus
             End Set
         End Property
 
@@ -339,31 +294,8 @@ Namespace osPrefLib
             SetPreference(GetPrefDetails(prefType), pVal)
         End Sub
 
-        Private Shared _objOsPrefIdx As osPrefIndex
-        Public Property objOsPrefIdx As osPrefIndex
-            Get
-                Return _objOsPrefIdx
-            End Get
-            Set(newStatus As osPrefIndex)
-                _objOsPrefIdx = newStatus
-            End Set
-        End Property
-
         Public Async Function PreparePrefData() As Task
-            'Await Task.Run(Async Function()
-            '                   objOsPrefIdx = Await BuildPrefIndexAsync().ConfigureAwait(False)
-            '               End Function)
-            ''Await Task.Run(
-            '    Async Function()
             objOsPrefIdx = Await BuildPrefIndexAsync()
-            '    End Function)
-        End Function
-
-        Private Async Function BuildPrefIndexAsyncTask() As Task(Of osPrefIndex)
-            Return Await Task.Run(Function()
-                                      ' CPU-bound work here
-                                      Return BuildPrefIndexAsync()
-                                  End Function).ConfigureAwait(False)
         End Function
 
         Public Async Function BuildPrefIndexAsync() As Task(Of osPrefIndex)
@@ -408,8 +340,40 @@ Namespace osPrefLib
             Return pRecIdxObj
         End Function
 
-        Private Function PrepPref(pRecData As PrefDataRecord, valType As Type) As Object
-            Return Convert.ChangeType(pRecData.PrefVal, valType)
+        Public Async Function ApplyPrefs(Optional token As CancellationToken = Nothing,
+                                 Optional progress As IProgress(Of Integer) = Nothing) As Task
+
+            Dim maxConcurrency As Integer = Math.Max(1, Environment.ProcessorCount - 1)
+            Dim sem As New SemaphoreSlim(maxConcurrency, maxConcurrency)
+            Dim tasks As New List(Of Task)()
+
+            Try
+                For Each pRec In objOsPrefIdx.PrefRecords
+                    For Each pRecData In pRec.RecordData
+                        token.ThrowIfCancellationRequested()
+                        Await sem.WaitAsync(token).ConfigureAwait(False)
+
+                        Dim taskr = Task.Run(Sub()
+                                                 Try
+                                                     ApplySetting(osPreferenceLib.Data, pRec, pRecData)
+
+                                                     progress?.Report(1) ' you can aggregate on caller side
+                                                 Finally
+                                                     sem.Release()
+                                                 End Try
+                                             End Sub, token)
+
+                        tasks.Add(taskr)
+                    Next
+                Next
+
+                Await Task.WhenAll(tasks).ConfigureAwait(False)
+
+            Finally
+                sem.Dispose()
+
+                prefsSet = True
+            End Try
         End Function
 
         Public Async Function ApplyPrefs(isN As Boolean, Optional token As CancellationToken = Nothing, Optional progress As IProgress(Of Integer) = Nothing) As Task
@@ -440,6 +404,7 @@ Namespace osPrefLib
         End Function
 
         Private Shared ReadOnly _propCache As New Concurrent.ConcurrentDictionary(Of String, PropertyInfo)
+        Private Const osBindFlags As BindingFlags = BindingFlags.Public Or BindingFlags.Instance
 
         Private Sub ApplySetting2(target As Object, pRecord As osPrefRecord, pRecData As PrefDataRecord)
             If target Is Nothing Then Return
@@ -449,9 +414,10 @@ Namespace osPrefLib
 
             Dim key = target.GetType().FullName & "|" & propName
 
-            Dim prop = _propCache.GetOrAdd(key, Function()
-                                                    Return target.GetType().GetProperty(propName, BindingFlags.Public Or BindingFlags.Instance)
-                                                End Function)
+            Dim prop = _propCache.GetOrAdd(key,
+                                           Function()
+                                               Return target.GetType().GetProperty(propName, osBindFlags)
+                                           End Function)
 
             If prop Is Nothing OrElse Not prop.CanWrite Then Return
 
@@ -463,48 +429,6 @@ Namespace osPrefLib
             prop.SetValue(target, converted)
         End Sub
 
-
-        Public Async Function ApplyPrefs(Optional token As CancellationToken = Nothing,
-                                 Optional progress As IProgress(Of Integer) = Nothing) As Task
-            ' Run everything off the thread-pool and never block the UI.
-            ' Limits concurrency to avoid overwhelming the ThreadPool / disk / CPU.
-
-            Dim maxConcurrency As Integer = Math.Max(1, Environment.ProcessorCount - 1)
-            Dim sem As New SemaphoreSlim(maxConcurrency, maxConcurrency)
-            Dim tasks As New List(Of Task)()
-
-            Try
-                For Each pRec In objOsPrefIdx.PrefRecords
-                    For Each pRecData In pRec.RecordData
-                        token.ThrowIfCancellationRequested()
-                        Await sem.WaitAsync(token).ConfigureAwait(False)
-
-                        Dim taskr = Task.Run(Sub()
-                                                 Try
-                                                     ' Do the heavy/IO-bound work here on a background thread:
-                                                     ApplySetting(osPreferenceLib.Data, pRec, pRecData)
-
-                                                     ' Optionally report progress (percent or count)
-                                                     progress?.Report(1) ' you can aggregate on caller side
-                                                 Finally
-                                                     sem.Release()
-                                                 End Try
-                                             End Sub, token)
-
-                        tasks.Add(taskr)
-                    Next
-                Next
-
-                ' Wait for all background tasks to finish (still off UI thread)
-                Await Task.WhenAll(tasks).ConfigureAwait(False)
-
-            Finally
-                sem.Dispose()
-
-                prefsSet = True
-            End Try
-        End Function
-
         Private Function BuildSettingChange(pRecord As osPrefRecord, pRecData As PrefDataRecord) As Action
 
             Return Sub()
@@ -514,7 +438,7 @@ Namespace osPrefLib
 
         Private Sub ApplySetting(target As Object, pRecord As osPrefRecord, pRecData As PrefDataRecord)
 
-            Dim prop = target.GetType().GetProperty(FetchPrefVar(pRecord.RecordType, pRecData.PrefName), BindingFlags.Public Or BindingFlags.Instance)
+            Dim prop = target.GetType().GetProperty(FetchPrefVar(pRecord.RecordType, pRecData.PrefName), osBindFlags)
             If prop Is Nothing OrElse Not prop.CanWrite Then Return
 
             Dim targetType = Nullable.GetUnderlyingType(prop.PropertyType)
@@ -628,18 +552,6 @@ Namespace osPrefLib
                 Me.PrefRecords.Add(New osPrefRecord(pRecType, pRecord.ToArray()))
             End Sub
 
-            Public Sub UpdatePrefStore()
-                Try
-                    For Each pBind As Binding In Data.osPrefDataBindings.Values
-                        With GenPrefObj(pBind)
-                            Data.objOsPrefIdx.SavePref(.pType, .pName, Convert.ToString(.pVal))
-                        End With
-                    Next
-                Catch ex As Exception
-
-                End Try
-            End Sub
-
             Public Function GetBindingValue(pBind As osPrefBind) As Object
                 If pBind.Source Is Nothing OrElse pBind.Path Is Nothing Then
                     Return Nothing
@@ -700,8 +612,35 @@ Namespace osPrefLib
                     End Function)
             End Function
 
+            Public Async Function SavePrefsFileAsync() As Task
+                Try
+                    Using pWriter As New osWriter(CoreDataLib.osPrefFile, False)
+                        Await pWriter.WriteLineAsync("PrefCatalog_").ConfigureAwait(False)
+
+                        For Each prefRec As osPrefRecord In Me.PrefRecords
+                            Await WritePrefRecordsAsync(prefRec, pWriter).ConfigureAwait(False)
+                        Next
+
+                        Await pWriter.WriteLineAsync("_PrefCatalog").ConfigureAwait(False)
+                    End Using
+                Catch ex As Exception
+                    Debug.WriteLine($"SavePrefsFileAsync failed: {ex}")
+                    Throw
+                End Try
+            End Function
+
+            Private Async Function WritePrefRecordsAsync(pRecord As osPrefRecord, objPrefWriter As osWriter) As Task
+                Await objPrefWriter.WriteLineAsync($"|{GetPrefType(pRecord.RecordType)}-").ConfigureAwait(False)
+
+                For Each prefRec In pRecord.RecordData
+                    Await objPrefWriter.WriteLineAsync(FormatPrefData(prefRec)).ConfigureAwait(False)
+                Next
+
+                Await objPrefWriter.WriteLineAsync($"-{GetPrefType(pRecord.RecordType)}|").ConfigureAwait(False)
+            End Function
+
             Public Sub SavePrefsFile()
-                Using pWriter As New System.IO.StreamWriter(CoreDataLib.osPrefFile, False)
+                Using pWriter As New osWriter(CoreDataLib.osPrefFile, False)
                     pWriter.WriteLine("PrefCatalog_")
 
                     For Each prefRec As osPrefRecord In Me.PrefRecords
@@ -733,6 +672,7 @@ Namespace osPrefLib
         End Class
 
         Public Class osPref_BindRecord
+
             Public Property BindProperty As DependencyProperty
             Public Property BindPrefName As String
 
@@ -742,22 +682,6 @@ Namespace osPrefLib
             Public Sub New(objBProp As DependencyProperty, objBPrefN As String)
                 BindProperty = objBProp
                 BindPrefName = objBPrefN
-            End Sub
-
-        End Class
-
-        Public Class osPref_BindDef
-            Public Property BindProperty As DependencyProperty
-            Public Property BindCtrl As Control
-            Public Property BindPref As osPrefBind
-
-            Public Sub New()
-            End Sub
-
-            Public Sub New(objBProp As DependencyProperty, objBC As Control, objBPref As osPrefBind)
-                BindProperty = objBProp
-                BindCtrl = objBC
-                BindPref = objBPref
             End Sub
 
         End Class
@@ -809,86 +733,13 @@ Namespace osPrefLib
 
     End Class
 
-    Public Class RevertibleDirtyTracker(Of T As Class)
-        Private _target As T
-        Private ReadOnly _originalValues As New Dictionary(Of String, Object)
-        Private _isDirty As Boolean
-
-        Public ReadOnly Property IsDirty As Boolean
-            Get
-                Return _isDirty
-            End Get
-        End Property
-
-        Public Sub Attach(target As T)
-            If target Is Nothing Then Throw New ArgumentNullException(NameOf(target))
-            _target = target
-            _isDirty = False
-            _originalValues.Clear()
-
-            ' Capture original values
-            For Each prop In GetTrackableProperties()
-                _originalValues(prop.Name) = prop.GetValue(_target)
-            Next
-
-            Dim inpc = TryCast(_target, INotifyPropertyChanged)
-            If inpc Is Nothing Then
-                Throw New InvalidOperationException("Target must implement INotifyPropertyChanged.")
-            End If
-
-            AddHandler inpc.PropertyChanged, AddressOf OnPropertyChanged
-        End Sub
-
-        Public Sub Detach()
-            Dim inpc = TryCast(_target, INotifyPropertyChanged)
-            If inpc IsNot Nothing Then
-                RemoveHandler inpc.PropertyChanged, AddressOf OnPropertyChanged
-            End If
-            _target = Nothing
-            _originalValues.Clear()
-        End Sub
-
-        Public Sub ResetBaseline()
-            If _target Is Nothing Then Return
-            _originalValues.Clear()
-            For Each prop In GetTrackableProperties()
-                _originalValues(prop.Name) = prop.GetValue(_target)
-            Next
-            _isDirty = False
-        End Sub
-
-        Public Sub RevertChanges()
-            If _target Is Nothing Then Return
-
-            For Each prop In GetTrackableProperties()
-                If Not _originalValues.ContainsKey(prop.Name) Then Continue For
-
-                Dim original = _originalValues(prop.Name)
-                Dim current = prop.GetValue(_target)
-
-                If Not Object.Equals(original, current) Then
-                    prop.SetValue(_target, original)
-                End If
-            Next
-
-            _isDirty = False
-        End Sub
-
-        Private Sub OnPropertyChanged(sender As Object, e As PropertyChangedEventArgs)
-            _isDirty = True
-        End Sub
-
-        Private Function GetTrackableProperties() As IEnumerable(Of PropertyInfo)
-            Return GetType(T).
-            GetProperties(BindingFlags.Public Or BindingFlags.Instance).
-            Where(Function(p) p.CanRead AndAlso p.CanWrite AndAlso p.GetIndexParameters().Length = 0)
-        End Function
-    End Class
-
     Public Class osPrefMonitor(Of T As Class)
+        Implements IDisposable
 
         Private _prefsChanged As Boolean
         Private _target As T
+        Private _snapshot As Dictionary(Of String, Object)
+        Private _disposed As Boolean
 
         Public ReadOnly Property prefsChanged As Boolean
             Get
@@ -897,11 +748,14 @@ Namespace osPrefLib
         End Property
 
         Public Sub Attach(target As T)
+            If _disposed Then Throw New ObjectDisposedException(NameOf(osPrefMonitor(Of T)))
+
+            Detach() ' detach previous if any
             _target = target
             _prefsChanged = False
+            CaptureSnapshot()
 
             Dim inpc = TryCast(_target, INotifyPropertyChanged)
-
             If inpc IsNot Nothing Then
                 AddHandler inpc.PropertyChanged, AddressOf OnPropertyChanged
             Else
@@ -913,24 +767,86 @@ Namespace osPrefLib
             If _target Is Nothing Then Return
 
             Dim inpc = TryCast(_target, INotifyPropertyChanged)
-
             If inpc IsNot Nothing Then
                 RemoveHandler inpc.PropertyChanged, AddressOf OnPropertyChanged
             End If
 
             _target = Nothing
+            _snapshot = Nothing
+            _prefsChanged = False
         End Sub
 
         Public Sub ResetDirty()
             _prefsChanged = False
         End Sub
 
+        Public Sub Revert()
+            If _target Is Nothing OrElse _snapshot Is Nothing Then Return
+
+            Dim tType = GetType(T)
+            For Each kvp In _snapshot
+                Try
+                    Dim pi As PropertyInfo = tType.GetProperty(kvp.Key, BindingFlags.Instance Or BindingFlags.Public)
+                    If pi IsNot Nothing AndAlso pi.CanWrite AndAlso pi.GetIndexParameters().Length = 0 Then
+                        pi.SetValue(_target, kvp.Value)
+                    End If
+                Catch ex As Exception
+                End Try
+            Next
+
+            _prefsChanged = False
+
+            CaptureSnapshot()
+        End Sub
+
+        Public Sub RevertProperty(propName As String)
+            If _target Is Nothing OrElse _snapshot Is Nothing Then Return
+            If Not _snapshot.ContainsKey(propName) Then Return
+
+            Dim tType = GetType(T)
+            Try
+                Dim pi As PropertyInfo = tType.GetProperty(propName, BindingFlags.Instance Or BindingFlags.Public)
+                If pi IsNot Nothing AndAlso pi.CanWrite AndAlso pi.GetIndexParameters().Length = 0 Then
+                    pi.SetValue(_target, _snapshot(propName))
+                    _prefsChanged = False
+                    _snapshot(propName) = _snapshot(propName)
+                End If
+            Catch
+            End Try
+        End Sub
+
+        Public Sub UpdateSnapshot()
+            If _target Is Nothing Then Return
+            CaptureSnapshot()
+            _prefsChanged = False
+        End Sub
+
+        Private Sub CaptureSnapshot()
+            _snapshot = New Dictionary(Of String, Object)()
+            If _target Is Nothing Then Return
+
+            Dim tType = GetType(T)
+            For Each pi In tType.GetProperties(BindingFlags.Instance Or BindingFlags.Public)
+                If pi.CanRead AndAlso pi.GetIndexParameters().Length = 0 Then
+                    Try
+                        Dim val = pi.GetValue(_target)
+                        _snapshot(pi.Name) = val
+                    Catch
+                    End Try
+                End If
+            Next
+        End Sub
+
         Private Sub OnPropertyChanged(sender As Object, e As PropertyChangedEventArgs)
             _prefsChanged = True
         End Sub
 
+        Public Sub Dispose() Implements IDisposable.Dispose
+            If _disposed Then Return
+            Detach()
+            _disposed = True
+            GC.SuppressFinalize(Me)
+        End Sub
     End Class
 
 End Namespace
-
-

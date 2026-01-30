@@ -2,7 +2,7 @@
 
 Namespace osControls
 
-    Public Class osRestartProgress
+    Public Class osLoadSpinner
 
     End Class
 

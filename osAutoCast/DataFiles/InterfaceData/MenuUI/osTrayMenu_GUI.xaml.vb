@@ -78,7 +78,8 @@ Public Class osTrayMenu_GUI
 
     Public Sub InitTrayMenuClose(Optional setTaskRun As Boolean = False)
         InitTrayMenuCloseEvent(setTaskRun)
-        Dim objTask_TriggerClose = TriggerVisuals_Close()
+        objCloseMonitor.TrySetResult(True)
+        '  Dim objTask_TriggerClose = TriggerVisuals_Close()
     End Sub
 
     Public Sub InitTrayMenuVis()
@@ -87,7 +88,8 @@ Public Class osTrayMenu_GUI
                 RemoveHandler VisDataObject.Completed,
                                                 evtDisplayTrayMenu
                 '  VisDataObject.Stop()
-                VisDataObject = EstablishVisual(TrayMenu_Close)
+                Dim visDataN = GetVisualKey(TrayMenu_Close)
+                SetCloseVisualData(visDataN)
 
                 Me.Activate()
             End Sub
@@ -116,6 +118,12 @@ Public Class osTrayMenu_GUI
         Await InitializeVisAdapter(visDataN, Me, EstablishVisConfig(), AddressOf InitTrayMenuVis,
                                    TrayMenuOutline, TrayMainContainer)
     End Function
+
+    Private objCloseMonitor As TaskCompletionSource(Of Boolean)
+
+    Public Sub SetCloseMonitor(objAwaitClose As TaskCompletionSource(Of Boolean))
+        objCloseMonitor = objAwaitClose
+    End Sub
 
     Public Sub TrayMenuInit()
         CalcTrayPos()
@@ -355,18 +363,6 @@ Partial Public Class osTrayMenu_GUI
     Private Function EstablishVisual(objVisType As TrayMenuState) As Storyboard
         Return LoadVis_Set(TrayMenuRes, objVisType)
     End Function
-
-    Private Sub EstablishVisual(objVisType As TrayMenuState, ByRef objVisData As Storyboard)
-        Dim objTrayMenuVis = LoadVis_Set(objVisType) '.Clone()
-
-        objVisData = objTrayMenuVis
-    End Sub
-
-    Private Sub EstablishVisData(objVisType As TrayMenuState)
-        Dim a = TryCast(Me.Resources(GetVisualKey(objVisType)), Storyboard)
-        '   a.FreezeReturn()
-        Me.VisDataObject = a
-    End Sub
 
     Private Function GetVisualKey(objVisType As TrayMenuState) As String
         Return idxTrayMenuVisuals.First(

@@ -24,27 +24,14 @@ Public Class osPrefs_GUI
             End Function).Value
     End Function
 
-    Private Function AllocVis(visObject As Object) As Storyboard
-        Return TryCast(visObject, Storyboard)
-    End Function
-
-    Public Function FetchPrefVis(objVisType As PrefUI_State) As Storyboard
-        Return AllocVis(Me.Resources(GetVisualState(objVisType)))
-    End Function
-
-    Private Sub EstablishVisual(objVisType As PrefUI_State)
-        Me.VisDataObject = FetchPrefVis(objVisType)
-    End Sub
-
     Private Sub InitVisual(objVisType As PrefUI_State)
         Select Case objVisType
             Case PrefUI_Open
-                '    EstablishVisual(PrefUI_Open)
-
                 SetOpenEvents()
                 BufferPrefWin()
             Case PrefUI_Close
-                EstablishVisual(PrefUI_Close)
+                Dim visDataN = GetVisualState(PrefUI_Close)
+                SetCloseVisualData(visDataN)
         End Select
     End Sub
 
@@ -57,93 +44,23 @@ Public Class osPrefs_GUI
         Return VisAdapterConfig.EnableAll
     End Function
 
-    Public Sub PrepPrefVis2()
-        InitVisual(PrefUI_Open)
-        ApplyExpanderSize()
-    End Sub
+    Public Async Function osPrefs_InitUi() As Task
+        Await InitializeVisAdapter(GetVisualState(PrefUI_Open), Me, EstablishVisConfig(),
+                                   Sub() InitVisual(PrefUI_Open), SetVisTargets())
+    End Function
 
-    Public Async Function PrepPrefVis() As Task
-        Dim visDataN = GetVisualState(PrefUI_Open)
-
-        Await InitializeVisAdapter(visDataN, Me, EstablishVisConfig(), AddressOf PrepPrefVis2,
-                                    prefContainer, osTitleCover, osContentContainer)
+    Private Function SetVisTargets() As UIElement()
+        Return {Me, prefContainer, osTitleCover, osContentContainer}
     End Function
 
     Public Sub SetCloseMonitor(objAwaitClose As TaskCompletionSource(Of Boolean))
         objCloseMonitor = objAwaitClose
     End Sub
 
-    Private Function FetchExpandVisual() As DoubleKeyFrameCollection
-        Return CType(osVisDataArray().First(
-            Function(objVis)
-                With VerifyVisData(objVis)
-                    Return .VisTarget = "BottomContainer" AndAlso
-                        .VisProperty = "Height"
-                End With
-            End Function).KeyFrames, DoubleKeyFrameCollection)
-    End Function
-
-    Private Function FetchCloseVisual() As DoubleKeyFrameCollection
-        Return CType(osVisDataArray().First(
-            Function(objVis)
-                With VerifyVisData(objVis)
-                    Return .VisTarget = "BottomContainer" AndAlso
-                        .VisProperty = "Height"
-                End With
-            End Function).KeyFrames, DoubleKeyFrameCollection)
-    End Function
-
-    Private Function VerifyVisData(objVisData As DoubleAnimationUsingKeyFrames) As VisDataDetails
-        Return New VisDataDetails(objVisData)
-    End Function
-
-    Private Function SetVisDuration(valDur As Double) As osKeyTime
-        Return osKeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(valDur))
-    End Function
-
-    Private Sub ApplyExpanderSize()
-        With FetchExpandVisual()
-            .Add(ComposeVisObjectKeyFrame())
-        End With
-    End Sub
-
-    Private Sub ApplyCloserSize(objCloseVisData As Storyboard)
-        With FetchCloseVisual()
-            .Insert(0, ComposeVisObjectKeyFrame(False))
-        End With
-    End Sub
-
-    Private Function ComposeVisObjectKeyFrame(Optional isOpenVis As Boolean = True) As EasingDoubleKeyFrame
-        If isOpenVis Then
-            With osContentContainer
-                .Height = Double.NaN
-                .Measure(New Size(.ActualWidth, Double.PositiveInfinity))
-
-                objExpandH = .DesiredSize.Height
-                .Height = 0
-
-                Return New EasingDoubleKeyFrame() With {
-                    .KeyTime = SetVisDuration(1600),
-                    .Value = objExpandH,
-                    .EasingFunction = New osPrefExpandEase() With {
-                        .EasingMode = EasingMode.EaseIn
-                    }}
-            End With
-        Else
-            Return New EasingDoubleKeyFrame() With {
-                    .KeyTime = SetVisDuration(100),
-                    .Value = objExpandH,
-                    .EasingFunction = New QuadraticEase() With {
-                        .EasingMode = EasingMode.EaseIn
-                    }}
-        End If
-    End Function
-
     Private Sub SetOpenEvents()
         evtComplete_Open =
             Sub()
                 RemoveHandler VisDataObject.Completed, evtComplete_Open
-                '  VisDataObject.Stop()
 
                 SetVisualMode(PrefUI_Open)
                 ActivatePrefTracker()
@@ -179,6 +96,15 @@ Public Class osPrefs_GUI
         SetVisualMode(PrefUI_Close)
     End Sub
 
+    Private Async Function SetCloseEvents(isN As Boolean) As Task
+        Await SetCloseVisualData_WithTask(
+            GetVisualState(PrefUI_Close), Sub()
+                                              Me.Close()
+                                          End Sub)
+
+        SetVisualMode(PrefUI_Close)
+    End Function
+
     Public Sub osPrefsIU_Present()
         Me.Show()
 
@@ -189,44 +115,211 @@ Public Class osPrefs_GUI
         Me.Topmost = True
     End Sub
 
-    Private Sub osPrefsBtnClk_SavePrefs(sender As Object, e As RoutedEventArgs) Handles osPrefsBtn_Save.Click
+    Private Async Sub osPrefsBtnClk_SavePrefs(sender As Object, e As RoutedEventArgs) Handles osPrefsBtn_Save.Click
         If objOsPrefTracker.prefsChanged Then
             Dim chkDoSave = GetResponse(PromptType.Prefs_Save)
 
             If chkDoSave = isYes Then
-                TriggerPrefSave()
+                Await TriggerPrefSave()
             End If
         End If
     End Sub
 
-    Private Sub TriggerPrefSave()
-        isSaved = True
-        osPrefDataIdx.SavePrefsFile()
+    Private Function GenerateLoadSpinOverlay() As Border
+        If objLoadSpinContainer IsNot Nothing Then Return objLoadSpinContainer
 
-        Dim objTask_ResetAutoCast = osHandler_UI.CloseAndResetAutoCast()
+        Dim objLoadSpinner As New osControls.osLoadSpinner With {
+            .SpinnerSize = 50, .StrokeThickness = 16, .IsActive = False,
+            .SpinnerBrush = New SolidColorBrush(Color.FromRgb(&H5F, &H12, &H12))
+        }
+
+        Dim objLoadText As New TextBlock With {
+            .Text = "Please Wait", .FontSize = 16,
+            .Foreground = Brushes.White,
+            .Margin = New Thickness(0, 2, 0, 0),
+            .HorizontalAlignment = HorizontalAlignment.Center
+        }
+
+        Dim objLoadSpinContent As New StackPanel With {
+            .Orientation = Orientation.Vertical,
+            .VerticalAlignment = VerticalAlignment.Center,
+            .Margin = New Thickness(8, 4, 8, 2)
+        }
+
+        objLoadSpinContent.Children.Add(objLoadSpinner)
+        objLoadSpinContent.Children.Add(objLoadText)
+
+        objLoadSpinContainer = New Border With {
+            .Background = New SolidColorBrush(Color.FromArgb(&HB4, &H22, &H22, &H22)),
+            .Child = objLoadSpinContent, .Opacity = 0, .Visibility = Visibility.Collapsed,
+            .HorizontalAlignment = HorizontalAlignment.Center, .VerticalAlignment = VerticalAlignment.Center,
+            .Margin = New Thickness(0, 0, 0, 20), .Padding = New Thickness(4, 8, 4, 4),
+            .CornerRadius = New CornerRadius(8), .IsHitTestVisible = True
+        }
+
+        Return objLoadSpinContainer
+    End Function
+
+    Public Async Function ComposeLoadOverlay() As Task
+        Await Dispatcher.InvokeAsync(AddressOf ShowOverlay_UI)
+        Await Dispatcher.Yield(DispatcherPriority.Render)
+    End Function
+
+    Private Sub ShowOverlay_UI()
+        SetVisualMode(PrefUI_Close)
+
+        SyncLock objLoadSpinLock
+
+            osSpinLoadContainer = New Grid With {
+                .Name = "osSpinLoadContainer",
+                .Visibility = Visibility.Visible,
+                .Opacity = 0,
+                .IsHitTestVisible = True,
+                .Background = New SolidColorBrush(Color.FromArgb(&HC4, 0, 0, 0)),
+                .HorizontalAlignment = HorizontalAlignment.Stretch,
+                .VerticalAlignment = VerticalAlignment.Stretch
+            }
+
+            Grid.SetRow(osSpinLoadContainer, 0)
+            Grid.SetRowSpan(osSpinLoadContainer, 4)
+
+            Panel.SetZIndex(osSpinLoadContainer, 999)
+            osContentContainer.Children.Add(osSpinLoadContainer)
+
+            Dim objLoadOverlay = GenerateLoadSpinOverlay()
+            osSpinLoadContainer.Children.Add(objLoadOverlay)
+
+            objLoadOverlay.Visibility = Visibility.Visible
+
+            Dim objLoadSpinner = DirectCast(DirectCast(objLoadOverlay.Child, StackPanel).
+                Children(0), osControls.osLoadSpinner)
+
+            objLoadSpinner.IsActive = True
+
+            osSpinLoadContainer.BeginAnimation(
+                Grid.OpacityProperty, New DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(115)) With
+                    {.EasingFunction = New QuadraticEase()
+                })
+
+            objLoadOverlay.BeginAnimation(
+                Border.OpacityProperty, New DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(115)) With
+                    {.EasingFunction = New QuadraticEase()
+                })
+
+            Dispatcher.BeginInvoke(Sub() YieldVisuals(),
+                                   DispatcherPriority.Render, Nothing)
+        End SyncLock
+    End Sub
+
+    Private Sub YieldVisuals() : End Sub
+
+    Public Async Function HideOverlay() As Task
+        Await Dispatcher.InvokeAsync(AddressOf HideOverlay_UI)
+        Await Dispatcher.Yield(DispatcherPriority.Render)
+    End Function
+
+    Private Sub HideOverlay_UI()
+        SyncLock objLoadSpinLock
+            If objLoadSpinContainer Is Nothing Then Return
+
+            Dim objLoadSpinner = DirectCast(DirectCast(objLoadSpinContainer.Child, StackPanel).Children(0),
+                                 osControls.osLoadSpinner)
+            objLoadSpinner.IsActive = False
+
+            Dim visFadeOut As New DoubleAnimation(0, TimeSpan.FromMilliseconds(150))
+
+            AddHandler visFadeOut.Completed,
+                Sub()
+                    objLoadSpinContainer.Visibility = Visibility.Collapsed
+                    osSpinLoadContainer.Children.Clear()
+                    osContentContainer.Children.Remove(osSpinLoadContainer)
+
+                    SetVisualMode(PrefUI_Open)
+                End Sub
+
+            osSpinLoadContainer.BeginAnimation(Grid.OpacityProperty, visFadeOut)
+        End SyncLock
+    End Sub
+
+    Public Async Function DisplayLoadTask(taskReload As Func(Of Task)) As Task
+        Await ComposeLoadOverlay()
+
+        Await Task.Delay(75)
+        Await taskReload()
+
+        Await HideOverlay()
+    End Function
+
+    Private Async Function TriggerPrefSave(Optional closeOnSave As Boolean = False) As Task
+        Await DisplayLoadTask(AddressOf ReloadPrefs)
+
+        If closeOnSave Then
+            Await osPrefs_InitClose()
+        End If
+    End Function
+
+    Private Async Function ReloadPrefs() As Task
+        Await osPrefDataIdx.SavePrefsFileAsync()
+
+        Await Task.Run(
+            Async Function()
+                Await osHandler_UI.CloseAndResetAutoCast()
+            End Function)
+
+        SetSaveState(PrefSaveState.Prefs_Saved)
+
+        ActivatePrefTracker(True)
+        RefreshVisQuality()
+    End Function
+
+    Private Sub RefreshVisQuality()
         _VisQualitySetting = "n/a"
         OnPropertyChanged(NameOf(VisQualitySetting))
     End Sub
 
-    Private Sub osPrefs_InitClose()
-        SetCloseEvents()
+    Private Async Function osPrefs_InitClose() As Task
+        Await SetCloseEvents(True)
         objCloseMonitor.TrySetResult(True)
-    End Sub
+    End Function
 
-    Private Sub osPrefsBtnClk_Close(sender As Object, e As RoutedEventArgs) Handles osPrefsBtn_Close.Click
+    Private Async Sub osPrefsBtnClk_Close(sender As Object, e As RoutedEventArgs) Handles osPrefsBtn_Close.Click
         Select Case GetPrefSaveState()
             Case Prefs_NoChanges
-                osPrefs_InitClose()
+                Await osPrefs_InitClose()
             Case Prefs_Saved
-                osPrefs_InitClose()
+                Await osPrefs_InitClose()
             Case Prefs_NotSaved
                 Select Case GetResponse(PromptType.Prefs_Close)
                     Case isYes
-                        TriggerPrefSave()
-                        osPrefs_InitClose()
-                    Case isNo Or isCancel
+                        Await TriggerPrefSave(True)
+                    Case isNo
+                        RevertPrefSettings()
+                    Case isCancel
                         Exit Sub
                 End Select
+        End Select
+    End Sub
+
+    Private Sub osPreferenceLib_PropertyChanged(sender As Object, e As PropertyChangedEventArgs)
+        If prefsReverted Then
+            SetSaveState(PrefSaveState.Prefs_NoChanges)
+            prefsReverted = False
+        Else
+            SetSaveState(PrefSaveState.Prefs_NotSaved)
+        End If
+    End Sub
+
+    Private Sub SetSaveState(valSaveState As PrefSaveState)
+        Select Case valSaveState
+            Case PrefSaveState.Prefs_NotSaved
+                isSaved = False
+                IsSaveEnabled = True
+            Case PrefSaveState.Prefs_Saved
+                isSaved = True
+                IsSaveEnabled = False
+            Case PrefSaveState.Prefs_NoChanges
+                isSaved = True
+                IsSaveEnabled = False
         End Select
     End Sub
 
@@ -235,13 +328,13 @@ End Class
 Partial Public Class osPrefs_GUI
     Implements INotifyPropertyChanged
 
-
     Private objCloseMonitor As TaskCompletionSource(Of Boolean)
 
     Private evtComplete_Open As EventHandler
     Private evtComplete_Close As EventHandler
 
     Private isSaved As Boolean = False
+    Private prefsReverted As Boolean = False
 
     Private objExpandH As Double
 
@@ -251,6 +344,11 @@ Partial Public Class osPrefs_GUI
     Private Const SWP_NOMOVE As UInteger = &H2
     Private Const SWP_NOSIZE As UInteger = &H1
     Private Const SWP_NOACTIVATE As UInteger = &H10
+
+    Private objLoadSpinContainer As Border
+    Private osSpinLoadContainer As Grid
+
+    Private ReadOnly objLoadSpinLock As New Object()
 
     Private idxOsPrefVisuals As New Dictionary(Of PrefUI_State, String) From {
         {PrefUI_Open, "osPrefsVis_Disp"},
@@ -272,13 +370,24 @@ Partial Public Class osPrefs_GUI
         End Get
     End Property
 
+    Private _saveEnabled As Boolean = False
+    Public Property IsSaveEnabled As Boolean
+        Get
+            Return _saveEnabled
+        End Get
+        Set(ByVal canSave As Boolean)
+            _saveEnabled = canSave
+            OnPropertyChanged(NameOf(IsSaveEnabled))
+        End Set
+    End Property
+
     Public ReadOnly Property prefContainer As osBorder
         Get
             Return Me.osPrefsMainContainer
         End Get
     End Property
 
-    Public ReadOnly Property osContentContainer As StackPanel
+    Public ReadOnly Property osContentContainer As Grid
         Get
             Return Me.BottomContainer
         End Get
@@ -287,6 +396,12 @@ Partial Public Class osPrefs_GUI
     Public ReadOnly Property osTitleCover As Border
         Get
             Return Me.osPrefsTitlePanel
+        End Get
+    End Property
+
+    Public ReadOnly Property osScaleRender As ScaleTransform
+        Get
+            Return Me.osPrefsOutlineRender
         End Get
     End Property
 
@@ -310,9 +425,19 @@ Partial Public Class osPrefs_GUI
         objOsPrefTracker.Attach(DirectCast(Me.DataContext, osPrefData))
     End Sub
 
-    Public Sub ActivatePrefTracker()
+    Public Sub ActivatePrefTracker(Optional doReset As Boolean = False)
+        If doReset Then
+            objOsPrefTracker.Detach()
+            objOsPrefTracker = Nothing
+        End If
+
         objOsPrefTracker = CreatePrefMonitor()
         InitializePrefMonitor()
+    End Sub
+
+    Public Sub RevertPrefSettings()
+        prefsReverted = True
+        objOsPrefTracker.Revert()
     End Sub
 
     Private Function isMouseDown(e As MouseButtonEventArgs) As Boolean

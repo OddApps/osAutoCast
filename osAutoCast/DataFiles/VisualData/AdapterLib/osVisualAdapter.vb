@@ -12,7 +12,7 @@ Namespace osVisualAdapter
         Private VisAdapaterInitiated As Boolean = False
 
         Private VisDataOutlineBuffer As Storyboard
-        Private VisDataOutline_onComplete As EventHandler
+        Private VisDataOutline_OnComplete As EventHandler
 
         Private _visDataObject As Storyboard
         Public Overridable Property VisDataObject As Storyboard
@@ -55,7 +55,7 @@ Namespace osVisualAdapter
             PrepareVisAdapter(objVisAdapterUI, setVisConfig, lstVisTargets)
 
             Await VisAdapter.ProcessVisConfig()
-            Await Task.Delay(50)
+            Await Task.Delay(85)
 
             postLoadTask.Invoke()
         End Function
@@ -76,6 +76,11 @@ Namespace osVisualAdapter
         End Sub
 
         Private Async Function InitVisualDataOutline(visDataName As String) As Task
+            Dim objVisOutline = Await LoadVisualDataOutline(visDataName)
+            VisDataObject = objVisOutline
+        End Function
+
+        Private Async Function UpdateVisualDataOutline(visDataName As String) As Task
             Dim objVisOutline = Await LoadVisualDataOutline(visDataName)
             VisDataObject = objVisOutline
         End Function
@@ -108,16 +113,40 @@ Namespace osVisualAdapter
             Return Await objVis_DataOutline
         End Function
 
-        Private Function ComposeVisData(visObject As Object) As Task(Of Storyboard)
-            Return DirectCast(visObject, Task(Of Storyboard))
+        Public Async Function ApplyCloseVisualData(visDataName As String) As Task
+            Dim objVisOutline = Await LoadVisualDataOutline(visDataName)
+            VisDataObject = objVisOutline
         End Function
 
-        Private Function AllocVis(visObject As Object) As Storyboard
-            Return TryCast(visObject, Storyboard)
+        Public Async Function ApplyCloseVisualData(visDataName As String, Optional closeTask As Action = Nothing, Optional evtCloseHandler As EventHandler = Nothing) As Task
+            Await UpdateVisualDataOutline(visDataName)
+
+            If closeTask IsNot Nothing Then
+                VisDataOutline_OnComplete =
+                    Sub()
+                        RemoveHandler VisDataObject.Completed,
+                                                                VisDataOutline_OnComplete
+                        closeTask.Invoke()
+                    End Sub
+
+                AddHandler VisDataObject.Completed, VisDataOutline_OnComplete
+            End If
+
+            If evtCloseHandler IsNot Nothing Then
+                AddHandler VisDataObject.Completed, evtCloseHandler
+            End If
         End Function
 
-        Private Function FetchPrefVis(objVisType As String) As Storyboard
-            Return AllocVis(Me.Resources(objVisType))
+        Public Sub SetCloseVisualData(visDataName As String)
+            Dim objVisOutline = ApplyCloseVisualData(visDataName)
+        End Sub
+
+        Public Async Function SetCloseVisualData_WithTask(visDataName As String, closeTask As Action) As Task
+            Await ApplyCloseVisualData(visDataName, closeTask:=closeTask)
+        End Function
+
+        Public Async Function SetCloseVisualData_WithEvent(visDataName As String, evtCloseHandler As EventHandler) As Task
+            Await ApplyCloseVisualData(visDataName, evtCloseHandler:=evtCloseHandler)
         End Function
 
         Public Overridable Async Function TriggerVisuals_Open() As Task
@@ -127,6 +156,10 @@ Namespace osVisualAdapter
             Dim objTask_SetVisuals = VisAdapter.TriggerApplyVisuals(isTaskAsync)
 
             Await objTask_SetVisuals
+
+            If isTaskAsync Then
+                Await Task.Delay(85)
+            End If
 
             VisDataObject.Begin(VisRootObject, True)
         End Function
@@ -142,6 +175,18 @@ Namespace osVisualAdapter
             End If
 
             VisDataObject.Begin(VisRootObject, True)
+        End Function
+
+        Private Function ComposeVisData(visObject As Object) As Task(Of Storyboard)
+            Return DirectCast(visObject, Task(Of Storyboard))
+        End Function
+
+        Private Function AllocVis(visObject As Object) As Storyboard
+            Return TryCast(visObject, Storyboard)
+        End Function
+
+        Private Function FetchPrefVis(objVisType As String) As Storyboard
+            Return AllocVis(Me.Resources(objVisType))
         End Function
 
         Public Event VisDataOutlineChanged As _
@@ -312,15 +357,13 @@ Namespace osVisualAdapter
 
         Public Async Function ApplyVisuals(isAsync As Boolean) As Task
             Await PrepDispatcher().InvokeAsync(
-                Function()
+                Sub()
                     Dim visBitMapCache As New BitmapCache(1.0)
 
                     For objVis = 0 To VisObjectCnt
                         SetVisQuality(VisObjectIdx(objVis), visBitMapCache)
                     Next
-
-                    Return Task.CompletedTask
-                End Function, DispatcherPriority.Render)
+                End Sub, DispatcherPriority.Render)
         End Function
 
         Public Sub ApplyVisualReset()
@@ -371,7 +414,7 @@ Namespace osVisualAdapter
             Dim objVisElement = TryCast(objVisTarget, FrameworkElement)
 
             If objVisElement IsNot Nothing Then
-                objVisElement.UseLayoutRounding = True
+                '   objVisElement.UseLayoutRounding = True
                 objVisElement.SnapsToDevicePixels = True
             End If
         End Sub
@@ -388,7 +431,7 @@ Namespace osVisualAdapter
             Dim objVisElement = TryCast(objVis, FrameworkElement)
 
             If objVisElement IsNot Nothing Then
-                objVisElement.UseLayoutRounding = False
+                '        objVisElement.UseLayoutRounding = False
                 objVisElement.SnapsToDevicePixels = False
             End If
         End Sub

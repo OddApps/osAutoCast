@@ -927,20 +927,35 @@ End Class
 Public Module osFuncLib_TrayMenu
 
     Public Property isAppLoaded As Boolean = False
+    Private chkCloseTrayMenu As TaskCompletionSource(Of Boolean)
 
     Public Async Sub DisplayTrayMenu(sender As Object, e As EventArgs)
         If Not isAppLoaded Then Exit Sub
-
-        Await PrepDispatcher().InvokeAsync(
-            Function()
-                With osHandler_UI.osTrayMenu
-                    .TrayMenuInit()
-                    Return .TriggerVisuals_Open()
-                End With
-            End Function, DispatcherPriority.Render)
-
         PrepUtilityTrigger(TriggerType.ShowTrayMenu)
+
+        chkCloseTrayMenu.ResetAndInitTask()
+        With osHandler_UI.osTrayMenu
+
+            Await PrepDispatcher().InvokeAsync(
+                Function()
+                    .TrayMenuInit()
+                    .SetCloseMonitor(chkCloseTrayMenu)
+                    Return .TriggerVisuals_Open()
+                End Function, DispatcherPriority.Render)
+
+            Await AnticipateExit()
+
+            Await PrepDispatcher().InvokeAsync(
+    Function()
+        Return .TriggerVisuals_Close()
+    End Function, DispatcherPriority.Render)
+        End With
+
     End Sub
+
+    Private Function AnticipateExit() As Task
+        Return chkCloseTrayMenu.Task
+    End Function
 
     Private Sub UpdateTrayIcon(chkStatus As Boolean)
         osTrayIcon.Icon = If(chkStatus, My.Resources.osIcon,
@@ -1284,15 +1299,13 @@ Module osFuncLib_UI
 
 End Module
 
-
-
 Public Class osPrefExpandEase
     Inherits EasingFunctionBase
 
-    Public Property X1 As Double = 0.64
-    Public Property Y1 As Double = 0.37
-    Public Property X2 As Double = 0.34
-    Public Property Y2 As Double = 1.44
+    Public Property X1 As Double = 0.75
+    Public Property Y1 As Double = 0.0
+    Public Property X2 As Double = 0.57
+    Public Property Y2 As Double = 1.45
 
     Protected Overrides Function CreateInstanceCore() As Freezable
         Return New osPrefExpandEase With {
@@ -1470,7 +1483,7 @@ Public Module osUI_Loader
     Public Async Function LoadUI_InitPrefTrayMenus() As Task
         Await PrepDispatcher().InvokeAsync(
              Function()
-                 Return osPrefsWindow.PrepPrefVis()
+                 Return osPrefsWindow.osPrefs_InitUi()
              End Function, visPriority)
 
         Await PrepDispatcher().InvokeAsync(

@@ -41,8 +41,8 @@ Public Class osLoader_UI
         Dim uiTaskFactory = New TaskFactory(uiScheduler)
 
         AddHandler objWorker_FadeText.DoWork,
-            Sub(sender As Object, e As DoWorkEventArgs)
-                Dim taskTypeLocal = DirectCast(e.Argument, LoadTaskType)
+            Sub(sender As Object, evtWork As DoWorkEventArgs)
+                Dim taskTypeLocal = DirectCast(evtWork.Argument, LoadTaskType)
                 Dim txtMsg = FetchLoadText(taskTypeLocal)
 
                 uiTaskFactory.StartNew(
@@ -56,7 +56,7 @@ Public Class osLoader_UI
                             End Sub, DispatcherPriority.Render)
                     End Sub)
 
-                e.Result = True
+                evtWork.Result = True
             End Sub
 
         AddHandler objWorker_FadeText.RunWorkerCompleted,
@@ -151,6 +151,10 @@ Partial Class osLoader_UI
         End Get
     End Property
 
+    Private Function GetObjLoadProgBar() As osProgLoad
+        Return Me.objLoadProgBar
+    End Function
+
     Public Function ConstructLoadIdx() As osLoad
         Dim objLoadIdx As New osLoad
 
@@ -182,21 +186,13 @@ Partial Class osLoader_UI
         objLoadProgBar.Progress = pVal
     End Sub
 
-    Private Function CreateLoadStageData(valStart As Double, valEnd As Double, intDuration As Double) As osLoadStageData
-        Return New osLoadStageData(valStart, valEnd, intDuration)
-    End Function
-
     Private Function CreateLoadTaskData(objLoadTaskType As LoadTaskType, objTask As Func(Of TaskStatusReport, Task)) As osLoadTaskData
         Return New osLoadTaskData(objLoadTaskType, objTask)
     End Function
 
-    Private Function GetObjLoadProgBar() As osProgLoad
-        Return Me.objLoadProgBar
-    End Function
-
     Private Function InitLoadHandler() As osHandler_Loader
-        Return New osHandler_Loader(ConstructLoadIdx(), objLoadProgBar, AddressOf GetObjLoadProgBar,
-                                    AddressOf FadeLoadTextIn)
+        Return New osHandler_Loader(ConstructLoadIdx(), objLoadProgBar,
+                                    AddressOf GetObjLoadProgBar, AddressOf FadeLoadTextIn)
     End Function
 
     Private Function GetLoadTaskMsg(valTaskType As LoadTaskType) As String

@@ -1065,7 +1065,7 @@ Namespace osControls
 
     End Class
 
-    Partial Public Class osRestartProgress
+    Partial Public Class osLoadSpinner
         Inherits UserControl
 
         Public Sub New()
@@ -1083,10 +1083,9 @@ Namespace osControls
             StopStoryboard()
         End Sub
 
-        ' DependencyProperty: IsActive (start/stop animation)
-        Public Shared ReadOnly IsActiveProperty As DependencyProperty =
-                DependencyProperty.Register("IsActive", GetType(Boolean), GetType(osRestartProgress),
-                                            New PropertyMetadata(True, AddressOf OnIsActiveChanged))
+        Public Shared ReadOnly IsActiveProperty As DependencyProperty = DependencyProperty.
+            Register("IsActive", GetType(Boolean), GetType(osLoadSpinner),
+                     New PropertyMetadata(True, AddressOf OnIsActiveChanged))
 
         Public Property IsActive As Boolean
             Get
@@ -1098,14 +1097,14 @@ Namespace osControls
         End Property
 
         Private Shared Sub OnIsActiveChanged(d As DependencyObject, e As DependencyPropertyChangedEventArgs)
-            Dim ctrl = DirectCast(d, osRestartProgress)
-            ctrl.UpdateStoryboardState()
+            Dim ctrl = TryCast(d, osLoadSpinner)
+            If ctrl IsNot Nothing Then
+                ctrl.UpdateStoryboardState()
+            End If
         End Sub
 
-        ' DependencyProperty: SpinnerSize
-        Public Shared ReadOnly SpinnerSizeProperty As DependencyProperty =
-                DependencyProperty.Register("SpinnerSize", GetType(Double), GetType(osRestartProgress),
-                                            New PropertyMetadata(24.0))
+        Public Shared ReadOnly SpinnerSizeProperty As DependencyProperty = DependencyProperty.
+            Register("SpinnerSize", GetType(Double), GetType(osLoadSpinner), New PropertyMetadata(48.0))
 
         Public Property SpinnerSize As Double
             Get
@@ -1116,10 +1115,8 @@ Namespace osControls
             End Set
         End Property
 
-        ' DependencyProperty: StrokeThickness
-        Public Shared ReadOnly StrokeThicknessProperty As DependencyProperty =
-                DependencyProperty.Register("StrokeThickness", GetType(Double), GetType(osRestartProgress),
-                                            New PropertyMetadata(6.0))
+        Public Shared ReadOnly StrokeThicknessProperty As DependencyProperty = DependencyProperty.
+            Register("StrokeThickness", GetType(Double), GetType(osLoadSpinner), New PropertyMetadata(6.0))
 
         Public Property StrokeThickness As Double
             Get
@@ -1130,10 +1127,8 @@ Namespace osControls
             End Set
         End Property
 
-        ' DependencyProperty: SpinnerBrush
-        Public Shared ReadOnly SpinnerBrushProperty As DependencyProperty =
-                DependencyProperty.Register("SpinnerBrush", GetType(Brush), GetType(osRestartProgress),
-                                            New PropertyMetadata(Brushes.DodgerBlue))
+        Public Shared ReadOnly SpinnerBrushProperty As DependencyProperty = DependencyProperty.
+            Register("SpinnerBrush", GetType(Brush), GetType(osLoadSpinner), New PropertyMetadata(Brushes.DodgerBlue))
 
         Public Property SpinnerBrush As Brush
             Get
@@ -1158,18 +1153,21 @@ Namespace osControls
         End Sub
 
         Private Sub StartStoryboard()
-            Dim sb = GetRotateStoryboard()
-            If sb IsNot Nothing Then
-                sb.Begin(Me, True) ' controllable
+            Dim visLoadSpinner = GetRotateStoryboard()
+
+            If visLoadSpinner IsNot Nothing Then
+                visLoadSpinner.Begin(Me, True)
             End If
         End Sub
 
         Private Sub StopStoryboard()
-            Dim sb = GetRotateStoryboard()
-            If sb IsNot Nothing Then
-                sb.Stop(Me)
+            Dim visLoadSpinner = GetRotateStoryboard()
+
+            If visLoadSpinner IsNot Nothing Then
+                visLoadSpinner.Stop(Me)
             End If
         End Sub
+
     End Class
 
 End Namespace
