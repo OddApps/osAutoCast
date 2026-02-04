@@ -42,11 +42,17 @@ Public Class osPrefs_GUI
 
     Private Function EstablishVisConfig() As VisAdapterConfig
         Return VisAdapterConfig.EnableAll
+        'Dim a = VisAdapterConfig.EnableAll
+        'a = a And Not VisAdapterConfig.ModifyLayout
+        'Return a
     End Function
 
     Public Async Function osPrefs_InitUi() As Task
         Await InitializeVisAdapter(GetVisualState(PrefUI_Open), Me, EstablishVisConfig(),
-                                   Sub() InitVisual(PrefUI_Open), SetVisTargets())
+                                   Sub() BufferPrefWin(), Sub()
+                                                              SetVisualMode(PrefUI_Open)
+                                                              ActivatePrefTracker()
+                                                          End Sub, SetVisTargets())
     End Function
 
     Private Function SetVisTargets() As UIElement()
@@ -263,7 +269,12 @@ Public Class osPrefs_GUI
 
         Await Task.Run(
             Async Function()
-                Await osHandler_UI.CloseAndResetAutoCast()
+                Await osHandler_AutoCast.StopAutoCastAsync()
+
+                Await Task.Delay(2750)
+                Await osHandler_AutoCast.StartAutoCastAsync()
+                Await Task.Delay(1500)
+                '    Await osHandler_UI.CloseAndResetAutoCast()
             End Function)
 
         SetSaveState(PrefSaveState.Prefs_Saved)

@@ -127,7 +127,7 @@ Public Class osPopupMenuOverlay_GUI
             Sub()
                 RemoveHandler Me.VisDataObject.Completed, OpenCompleteEvent
 
-                VisDataObject.Stop()
+                '   VisDataObject.Stop()
                 OverlayOpenComplete(objTask_Open)
             End Sub
 

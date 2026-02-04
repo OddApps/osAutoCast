@@ -13,6 +13,7 @@ Imports System.Windows.Data
 Imports System.Windows.Media
 Imports System.ComponentModel
 Imports System.Collections.Generic
+Imports System.Collections.ObjectModel
 
 Namespace osStyle
 
@@ -129,6 +130,18 @@ Namespace osStyle
             Return CType(objSeparator.GetValue(SeparatorBrushProperty), Brush)
         End Function
 
+        Public Shared ReadOnly SeparatorBrushesProperty As DependencyProperty = DependencyProperty.
+            RegisterAttached("SeparatorBrushes", GetType(Brush()), GetType(osContainerLayout),
+                              New FrameworkPropertyMetadata(Nothing, FrameworkPropertyMetadataOptions.AffectsRender, AddressOf UpdateContentSeperator))
+
+        Public Shared Sub SetSeparatorBrushes(obj As DependencyObject, value As Brush())
+            obj.SetValue(SeparatorBrushesProperty, value)
+        End Sub
+
+        Public Shared Function GetSeparatorBrushes(obj As DependencyObject) As Brush()
+            Return CType(obj.GetValue(SeparatorBrushesProperty), Brush())
+        End Function
+
         Public Shared ReadOnly SeparatorThicknessProperty As DependencyProperty = DependencyProperty.
             RegisterAttached("SeparatorThickness", GetType(Double), GetType(osContainerLayout),
                              New PropertyMetadata(1.0, AddressOf UpdateContentSeperator))
@@ -187,6 +200,23 @@ Namespace osStyle
 
         Public Shared Function GetRows(objRows As DependencyObject) As String
             Return CType(objRows.GetValue(RowsProperty), String)
+        End Function
+
+        Private Shared Function ResolveSeparatorBrushes(grid As Grid, separatorCount As Integer) As IList(Of Brush)
+            Dim arr = GetSeparatorBrushes(grid)
+
+            ' No array → single brush fallback
+            If arr Is Nothing OrElse arr.Length = 0 Then
+                Return Enumerable.Repeat(GetSeparatorBrush(grid), separatorCount).ToList()
+            End If
+
+            Dim result As New List(Of Brush)
+
+            For i = 0 To separatorCount - 1
+                result.Add(arr(Math.Min(i, arr.Length - 1)))
+            Next
+
+            Return result
         End Function
 
         Private Shared Sub GenerateContainer(grid As Grid)
@@ -299,7 +329,8 @@ Namespace osStyle
                 Grid.SetRowSpan(ch, newSpan)
             Next
 
-            Dim sepBrush = GetSeparatorBrush(grid)
+            'Dim sepBrush = GetSeparatorBrush(grid)
+            Dim sepBrushes = ResolveSeparatorBrushes(grid, contentCount - 1) ' ResolveSeparatorBrushes(grid, contentCount - 1)
             Dim sepThicknessFinal = GetSeparatorThickness(grid)
 
             If sepThicknessFinal > 0 AndAlso contentCount > 1 Then
@@ -311,7 +342,7 @@ Namespace osStyle
                     Dim rect As New Rectangle() With {
                         .HorizontalAlignment = HorizontalAlignment.Stretch,
                         .VerticalAlignment = VerticalAlignment.Stretch,
-                        .Fill = If(sepBrush, Brushes.LightGray),
+                        .Fill = If(sepBrushes(i), Brushes.LightGray),
                         .IsHitTestVisible = False,
                         .Tag = SeparatorTag,
                         .SnapsToDevicePixels = True

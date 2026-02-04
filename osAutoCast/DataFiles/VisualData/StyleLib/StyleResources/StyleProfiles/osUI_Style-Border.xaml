@@ -70,49 +70,30 @@
         </Style.Triggers>
     </Style>
     
-    <Style x:Key="MainContainerStyle" TargetType="{x:Type Border}">
+    <Style x:Key="MainContainerStyle" TargetType="{x:Type osCtrl:osBorder}">
         <Setter Property="BorderBrush" Value="#FF521212" />
         <Setter Property="Background" Value="#FF1F1F1F" />
         <Setter Property="BorderThickness" Value="4,4,4,4" />
         <Setter Property="CornerRadius" Value="8,8,8,8" />
         <Setter Property="ClipToBounds" Value="True" />
-        <Setter Property="MaxWidth" Value="265" />
+        <!--<Setter Property="MaxWidth" Value="265" />-->
         <Setter Property="VerticalAlignment" Value="Center" />
         <Setter Property="RenderTransformOrigin" Value="0.5,0.5" />
         <Setter Property="Opacity" Value="0" />
-        <!--<Setter Property="osStyle:osPopupScale.PopupScale" Value="0.00" />-->        
     </Style>
     
         <Style x:Key="MainBrdrContainerStyle" TargetType="{x:Type osCtrl:osBorder}">
         <Setter Property="BorderBrush" Value="#FF521212" />
         <Setter Property="Background" Value="#FF1F1F1F" />
-        <Setter Property="BorderThickness" Value="6" />
+        <Setter Property="BorderThickness" Value="8" />
         <Setter Property="CornerRadius" Value="8" />
-        <!--<Setter Property="ClipToBounds" Value="True" />-->
-        <!--<Setter Property="MaxWidth" Value="265" />-->
-        <Setter Property="Width" Value="265" />
+        <Setter Property="ClipToBounds" Value="True" />
+        <Setter Property="MaxWidth" Value="270" />
+        <Setter Property="Width" Value="270" />
         <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="HorizontalAlignment" Value="Center" />
         <Setter Property="RenderTransformOrigin" Value="0.5,0.5" />
         <!--<Setter Property="Opacity" Value="0" />-->
-        <!--<Setter Property="osStyle:osPopupScale.PopupScale" Value="0.00" />-->        
-    </Style>
-    
-    <!--<Style x:Key="PopupMainContainerStyle" TargetType="FrameworkElement"
-           BasedOn="{StaticResource MainContainerStyle}">
-    --><!-- optional: default opacity so it's hidden until animation runs --><!--
-    <Style.Triggers>
-        <Trigger Property="Visibility" Value="Visible">
-            <Trigger.EnterActions>
-                <BeginStoryboard x:Name="BeginPopupOpen" Storyboard="{StaticResource PopupVisual_Open}" />
-            </Trigger.EnterActions>
-            <Trigger.ExitActions>
-                --><!-- stop the storyboard when it becomes non-visible --><!--
-                <StopStoryboard BeginStoryboardName="BeginPopupOpen" />
-            </Trigger.ExitActions>
-        </Trigger>
-    </Style.Triggers>
-</Style>-->
+    </Style>    
 
-</ResourceDictionary>
-
-    
+</ResourceDictionary>    

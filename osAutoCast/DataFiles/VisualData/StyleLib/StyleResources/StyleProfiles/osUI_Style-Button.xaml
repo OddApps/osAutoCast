@@ -8,6 +8,8 @@
 
     <Style x:Key="pmBtnGameMenuItemStyle" TargetType="{x:Type Button}"
            BasedOn="{StaticResource StyleBase_Btn}">
+        <Setter Property="MinWidth" Value="258" />
+        <Setter Property="Width" Value="258" />
         <Setter Property="Background" Value="#A1101010" />
         <Setter Property="osStyle:osStyles.CornerRadius" Value="0,0,0,0" />
         <Setter Property="osStyle:osStyles.BorderThickness" Value="0,0,0,0" />
@@ -82,6 +84,7 @@
 
     <Style x:Key="pmBtnMainStyle" TargetType="{x:Type Button}"
            BasedOn="{StaticResource StyleBase_Btn}">
+        <Setter Property="Width" Value="258" />
         <Setter Property="osStyle:osStyles.CornerRadius" Value="0,0,0,0" />
         <Setter Property="osStyle:osStyles.BorderThickness" Value="0,0,0,0" />
         <Setter Property="osStyle:osStyles.BorderBrush" Value="#FF2B2828" />
@@ -90,6 +93,7 @@
 
     <Style x:Key="pmBtnBrdrStyle" TargetType="{x:Type Button}"
            BasedOn="{StaticResource StyleBase_Btn}">
+        <Setter Property="Width" Value="258" />
         <Setter Property="osStyle:osStyles.CornerRadius" Value="0,0,8,8" />
         <Setter Property="osStyle:osStyles.BorderThickness" Value="0,0,0,0" />
         <Setter Property="osStyle:osStyles.BorderBrush" Value="#FF222222" />

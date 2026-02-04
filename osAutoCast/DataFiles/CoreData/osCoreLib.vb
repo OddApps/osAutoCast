@@ -514,11 +514,7 @@ Public NotInheritable Class osFuncLib_AutoCast
     Private Shared Async Function FinalizeAutoCast() As Task
         Await Task.Delay(750)
 
-        Dim objTask_ResetAC = PrepDispatcher().InvokeAsync(
-            Sub()
-                osHandler_UI.ResetUI(TriggerAutoCast)
-
-            End Sub)
+        Await osHandler_UI.ResetUI(TriggerAutoCast)
     End Function
 
     Private Shared Async Sub HoldInputs(doAsync As Boolean)
@@ -552,31 +548,49 @@ Public NotInheritable Class osFuncLib_ShowOpts
     Public Shared Async Function ExecuteDispOpts() As Task
         With osPrefsWindow
             PrepUtilityTrigger(TriggerType.ShowPrefs)
-            chkCloseSettings.ResetAndInitTask()
 
             AddHandler .Closed,
-              Async Sub(sender, e)
-                  osFuncLib_InputScan.isActionComplete = True
-                  _osPrefsWindow = Nothing
+                Async Sub(sender, e)
+                    osFuncLib_InputScan.isActionComplete = True
+                    _osPrefsWindow = Nothing
 
-                  osHandler_UI.InitResourceAlloc()
-                  Await osHandler_UI.ResetOptsUI()
-              End Sub
+                    osHandler_UI.InitResourceAlloc()
+                    Await osHandler_UI.ResetOptsUI()
+                End Sub
 
-            Await PrepDispatcher().InvokeAsync(
-               Function()
-                   .osPrefsIU_Present()
-                   .SetCloseMonitor(chkCloseSettings)
+            chkCloseSettings.ResetAndInitTask()
 
-                   Return .TriggerVisuals_Open()
-               End Function, DispatcherPriority.Render)
+            Await ValidateDispatch(
+                 Sub()
+                     .osPrefsIU_Present()
+                     .SetCloseMonitor(chkCloseSettings)
+
+                     'Await .TriggerVisuals_Open()
+
+                     'Await AnticipateExit()
+
+                     'Await .TriggerVisuals_Close()
+                 End Sub)
+            Await .TriggerVisuals_Open()
 
             Await AnticipateExit()
 
-            Await PrepDispatcher().InvokeAsync(
-                Function()
-                    Return .TriggerVisuals_Close()
-                End Function, DispatcherPriority.Render)
+            Await .TriggerVisuals_Close()
+            'Await PrepDispatcher().InvokeAsync(
+            '   Async Function()
+            '       .osPrefsIU_Present()
+            '       .SetCloseMonitor(chkCloseSettings)
+
+            '       Await .TriggerVisuals_Open()
+
+            '       Await AnticipateExit()
+
+            '       '   Await PrepDispatcher().InvokeAsync(
+            '       'Function()
+            '       Await .TriggerVisuals_Close()
+            '   End Function, DispatcherPriority.Render)
+
+
         End With
     End Function
 
@@ -804,26 +818,22 @@ Public NotInheritable Class osFuncLib_PopupMenu
         InitCloseMonitor(objPopupTaskPending)
 
         chkOverlayDisplay.ResetAndInitTask()
-
-        Dim objTask_PrepOverlay = PrepDispatcher().InvokeAsync(
-            Function()
+        Await ValidateDispatch(
+            Async Function()
                 With ui_MenuOverlay
                     osHandler_UI.PresentPopupMenuOverlay(True)
                     .InitPopupMenuOverlay(chkOverlayDisplay)
 
-                    Return .TriggerVisuals_Open()
+                    Await .TriggerVisuals_Open()
                 End With
-            End Function, DispatcherPriority.Render)
 
-        Await chkOverlayDisplay.Task
+                Await chkOverlayDisplay.Task
 
-        Await PrepDispatcher().InvokeAsync(
-            Function()
                 ui_PopupMenu.Show()
                 osHandler_UI.PresentPopupMenu(True)
 
-                Return ui_PopupMenu.TriggerVisuals_Open()
-            End Function, DispatcherPriority.Render)
+                Await ui_PopupMenu.TriggerVisuals_Open()
+            End Function, True)
 
         Dim objPopupResult = Await PopupCloseDetect(
             objPopupTaskMonitor, objPopupTaskPending)
@@ -855,12 +865,12 @@ Public NotInheritable Class osFuncLib_PopupMenu
         objTaskS.TrySetResult(setRes)
     End Sub
 
-    Private Shared Sub PopupCloseEvent_Cmd(sender As Object, e As EventArgs)
+    Public Shared Sub PopupCloseEvent_Cmd(sender As Object, e As EventArgs)
         objPopupTaskRunning = False
         SetMonitorResult(True, objPopupTaskPending)
     End Sub
 
-    Private Shared Sub PopupCloseEvent_Click(sender As Object, e As EventArgs)
+    Public Shared Sub PopupCloseEvent_Click(sender As Object, e As EventArgs)
         objPopupTaskRunning = False
         SetMonitorResult(False, objPopupTaskPending)
     End Sub
@@ -871,7 +881,7 @@ Public NotInheritable Class osFuncLib_PopupMenu
         PrepDispatcher().InvokeAsync(
             Sub()
                 AddHandler ui_PopupMenu.EvCloseByClick,
-                AddressOf PopupCloseEvent_Click
+                                    AddressOf PopupCloseEvent_Click
             End Sub)
     End Sub
 
@@ -934,23 +944,28 @@ Public Module osFuncLib_TrayMenu
         PrepUtilityTrigger(TriggerType.ShowTrayMenu)
 
         chkCloseTrayMenu.ResetAndInitTask()
-        With osHandler_UI.osTrayMenu
 
-            Await PrepDispatcher().InvokeAsync(
-                Function()
-                    .TrayMenuInit()
-                    .SetCloseMonitor(chkCloseTrayMenu)
-                    Return .TriggerVisuals_Open()
-                End Function, DispatcherPriority.Render)
+        With osHandler_UI.osTrayMenu
+            Await ValidateDispatch(Sub()
+                                       .TrayMenuInit()
+                                       .SetCloseMonitor(chkCloseTrayMenu)
+                                   End Sub)
+            'Await PrepDispatcher().InvokeAsync(
+            '   Sub()
+            '       .TrayMenuInit()
+            '       .SetCloseMonitor(chkCloseTrayMenu)
+
+            '       'Await .TriggerVisuals_Open()
+
+            '       'Await AnticipateExit()
+            '       'Await .TriggerVisuals_Close()
+            '   End Sub, DispatcherPriority.Render)
+
+            Await .TriggerVisuals_Open()
 
             Await AnticipateExit()
-
-            Await PrepDispatcher().InvokeAsync(
-    Function()
-        Return .TriggerVisuals_Close()
-    End Function, DispatcherPriority.Render)
+            Await .TriggerVisuals_Close()
         End With
-
     End Sub
 
     Private Function AnticipateExit() As Task
@@ -1048,7 +1063,7 @@ Module osFuncLib_UI
 
     Public ReadOnly Property ui_AutoPass As progUI_AutoPass
         Get
-            Return osHandler_UI.osGui_AutoPass2
+            Return osHandler_UI.osGui_AutoPass
         End Get
     End Property
 
@@ -1072,13 +1087,50 @@ Module osFuncLib_UI
 
     Public ReadOnly Property apHandler As osHandler_ProgressBar
         Get
-            Return osHandler_UI.osGui_AutoPass2.objHandlerAP
+            Return osHandler_UI.osGui_AutoPass.objHandlerAP
         End Get
     End Property
 
     Public Function PrepDispatcher(Optional IsAutoPass As Boolean = False) As Dispatcher
-        Return If(IsAutoPass, osHandler_UI.osGui_AutoPass2.Dispatcher,
+        Return If(IsAutoPass, osHandler_UI.osGui_AutoPass.Dispatcher,
             Application.Current.Dispatcher)
+    End Function
+
+    Public Async Function ValidateDispatch(objTask As Action) As Task
+        If PrepDispatcher().CheckAccess() Then
+            objTask()
+        Else
+            Await PrepDispatcher().InvokeAsync(
+                Sub()
+                    objTask()
+                End Sub, DispatcherPriority.Render)
+        End If
+    End Function
+
+    Public Async Function ValidateDispatch(objTask As Func(Of Task), isAsync As Boolean) As Task
+        If PrepDispatcher().CheckAccess() Then
+            Await objTask()
+        Else
+            Await PrepDispatcher().InvokeAsync(
+                 Function()
+                     Return objTask()
+                 End Function, DispatcherPriority.Render)
+        End If
+    End Function
+
+    Public Async Function ValidateDispatch(objTask As Func(Of Task), isAsync As Boolean, Optional objPostTask As Func(Of Task) = Nothing) As Task
+        If PrepDispatcher().CheckAccess() Then
+            Await objTask()
+        Else
+            Await PrepDispatcher().InvokeAsync(
+                Function()
+                    Return objTask()
+                End Function, DispatcherPriority.Render).Task
+        End If
+
+        If objPostTask IsNot Nothing Then
+            Await objPostTask()
+        End If
     End Function
 
     Public Function GetResponse(pType As PromptType) As PromptResponse
@@ -1299,6 +1351,93 @@ Module osFuncLib_UI
 
 End Module
 
+Public Class osPopupGrowInEase
+    Inherits EasingFunctionBase
+
+    Public Property X1 As Double = 0.75
+    Public Property Y1 As Double = 0.12
+    Public Property X2 As Double = 0.38
+    Public Property Y2 As Double = 1.8
+
+    Public Property RecoilIntensity As Double = 1.0
+
+    Protected Overrides Function CreateInstanceCore() As Freezable
+        Return New osPopupGrowInEase With {
+            .X1 = X1,
+            .Y1 = Y1,
+            .X2 = X2,
+            .Y2 = Y2,
+            .RecoilIntensity = RecoilIntensity
+        }
+    End Function
+
+    Protected Overrides Function EaseInCore(normalizedTime As Double) As Double
+        ' early-out: linear
+        If X1 = X2 AndAlso Y1 = Y2 AndAlso X1 = 0 AndAlso Y1 = 0 Then
+            Return normalizedTime
+        End If
+
+        ' Keep X control points unchanged, but adjust Y control points around 1.0
+        ' This makes "overshoot" increase when Amplitude > 1
+        Dim adjY1 As Double = Y1 * RecoilIntensity
+        Dim adjY2 As Double = 1.0 + (Y2 - 1.0) * RecoilIntensity
+
+        Dim cx As Double = 3.0 * X1
+        Dim bx As Double = 3.0 * (X2 - X1) - cx
+        Dim ax As Double = 1.0 - cx - bx
+
+        Dim cy As Double = 3.0 * adjY1
+        Dim by As Double = 3.0 * (adjY2 - adjY1) - cy
+        Dim ay As Double = 1.0 - cy - by
+
+        Dim t As Double = SolveForT(normalizedTime, ax, bx, cx)
+
+        Dim result As Double = ((ay * t + by) * t + cy) * t
+        Return result
+    End Function
+
+    Private Function SampleCurveX(t As Double, ax As Double, bx As Double, cx As Double) As Double
+        Return ((ax * t + bx) * t + cx) * t
+    End Function
+
+    Private Function SampleCurveDerivativeX(t As Double, ax As Double, bx As Double, cx As Double) As Double
+        Return (3.0 * ax * t * t) + (2.0 * bx * t) + cx
+    End Function
+
+    Private Function SolveForT(x As Double, ax As Double, bx As Double, cx As Double) As Double
+        Dim t As Double = x
+        Const NEWTON_ITERATIONS As Integer = 8
+        Const EPS As Double = 0.0000001
+
+        For i As Integer = 0 To NEWTON_ITERATIONS - 1
+            Dim xAtT As Double = SampleCurveX(t, ax, bx, cx) - x
+            Dim dx As Double = SampleCurveDerivativeX(t, ax, bx, cx)
+            If Math.Abs(dx) < 0.000001 Then Exit For
+            Dim tNext As Double = t - xAtT / dx
+            If Double.IsNaN(tNext) OrElse tNext < 0 OrElse tNext > 1 Then Exit For
+            t = tNext
+        Next
+
+        Dim lo As Double = 0.0
+        Dim hi As Double = 1.0
+        t = x
+        For i As Integer = 0 To 30
+            Dim xAtT As Double = SampleCurveX(t, ax, bx, cx)
+            If Math.Abs(xAtT - x) < EPS Then Exit For
+            If x > xAtT Then
+                lo = t
+                t = (t + hi) / 2.0
+            Else
+                hi = t
+                t = (t + lo) / 2.0
+            End If
+        Next
+
+        Return Math.Min(1.0, Math.Max(0.0, t))
+    End Function
+
+End Class
+
 Public Class osPrefExpandEase
     Inherits EasingFunctionBase
 
@@ -1344,7 +1483,7 @@ Public Class osPrefExpandEase
     End Function
 
     Private Function SolveForT(x As Double, ax As Double, bx As Double, cx As Double) As Double
-        Dim t As Double = x ' good initial guess
+        Dim t As Double = x
         Const NEWTON_ITERATIONS As Integer = 8
         Const EPS As Double = 0.0000001
 
@@ -1374,6 +1513,7 @@ Public Class osPrefExpandEase
 
         Return Math.Min(1.0, Math.Max(0.0, t))
     End Function
+
 End Class
 
 Public Class LoadProgressAnimator
@@ -1496,21 +1636,25 @@ Public Module osUI_Loader
     End Function
 
     Public Async Function LoadUI_TriggerHandlers() As Task
-        Await osHandler_AutoCast.StartAutoCastAsync()
+        '      Await osHandler_AutoCast.StartAutoCastAsync()
+        Await Task.Run(
+            Async Function()
+                Await osHandler_AutoCast.StartAutoCastAsync()
+            End Function)
 
         Await PrepDispatcher().InvokeAsync(
             Sub() YieldVisuals(), visPriority)
 
         Await PrepDispatcher().InvokeAsync(
              Sub()
-                 osHandler_UI._autoPass2 = osHandler_UI.PrepUI_AutoPass()
+                 osHandler_UI._autoPass = osHandler_UI.PrepUI_AutoPass()
              End Sub, visPriority)
     End Function
 
     Public Async Function LoadUI_PrepHandlers() As Task
         Await PrepDispatcher().InvokeAsync(
             Sub()
-                osHandler_UI.osGui_AutoPass2.PrepAutoPass()
+                osHandler_UI.osGui_AutoPass.PrepAutoPass()
             End Sub, visPriority)
     End Function
 

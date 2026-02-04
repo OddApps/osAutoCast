@@ -7,8 +7,11 @@
 
     <Style x:Key="pmBtnEnabledStatusStyle" TargetType="{x:Type ToggleButton}"
            BasedOn="{StaticResource StyleBase_Toggle}">
-        <Setter Property="Background" Value="#FF101010" />
-        <Setter Property="Width" Value="257" />
+        <Setter Property="MinWidth" Value="258" />
+        <Setter Property="Width" Value="258" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+		<Setter Property="Background" Value="#FF101010" />
         <Setter Property="osStyle:osStyles.CornerRadius" Value="8,8,0,0" />
         <Setter Property="osStyle:osStyles.BorderThickness" Value="0,0,0,0" />
         <Setter Property="osStyle:osStyles.BorderBrush" Value="#FF222222" />
@@ -18,8 +21,9 @@
     
     <Style x:Key="pmBtnGameMenuStyle" TargetType="{x:Type ToggleButton}"
            BasedOn="{StaticResource StyleBase_Toggle}">
-        <Setter Property="Width" Value="257" />
-        <Setter Property="osStyle:osStyles.CornerRadius" Value="0,0,0,0" />
+         <Setter Property="MinWidth" Value="258" />
+        <Setter Property="Width" Value="258" />
+       <Setter Property="osStyle:osStyles.CornerRadius" Value="0,0,0,0" />
         <Setter Property="osStyle:osStyles.BorderThickness" Value="0,0,0,0" />
         <Setter Property="osStyle:osStyles.BorderBrush" Value="#FF222222" />
         <Setter Property="osStyle:osStyles.Background" Value="#FF575757" />

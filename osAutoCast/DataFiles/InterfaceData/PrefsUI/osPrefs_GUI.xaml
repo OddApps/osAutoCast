@@ -10,12 +10,12 @@
         <Storyboard x:Key="osPrefsVis_Disp" Duration="00:00:1.6" BeginTime="00:00:00">
             <DoubleAnimationUsingKeyFrames Storyboard.TargetName="osPrefsTitlePanel"
                                            Storyboard.TargetProperty="Opacity" FillBehavior="HoldEnd">
-                <DiscreteDoubleKeyFrame KeyTime="00:00:1.2" Value="1" />
+                <EasingDoubleKeyFrame KeyTime="00:00:1.2" Value="1" />
                 <EasingDoubleKeyFrame KeyTime="00:00:1.6" Value="0" />
             </DoubleAnimationUsingKeyFrames>
             <DoubleAnimationUsingKeyFrames Storyboard.TargetName="osPrefsOutlineRender"
                                            Storyboard.TargetProperty="ScaleX" FillBehavior="HoldEnd">
-                <DiscreteDoubleKeyFrame KeyTime="00:00:0.005" Value="0" />
+                <EasingDoubleKeyFrame KeyTime="00:00:0.05" Value="0" />
                 <EasingDoubleKeyFrame KeyTime="00:00:0.6" Value="1">
                     <EasingDoubleKeyFrame.EasingFunction>
                         <CubicEase EasingMode="EaseIn" />
@@ -25,7 +25,7 @@
             <DoubleAnimationUsingKeyFrames Storyboard.TargetName="osPrefsExpandRender"
                                            Storyboard.TargetProperty="ScaleY"
                                            FillBehavior="HoldEnd">
-                <DiscreteDoubleKeyFrame KeyTime="00:00:0.80" Value="0" />
+                <EasingDoubleKeyFrame KeyTime="00:00:0.80" Value="0" />
                 <EasingDoubleKeyFrame KeyTime="00:00:1.6" Value="1">
                     <EasingDoubleKeyFrame.EasingFunction>
                         <local:osPrefExpandEase EasingMode="EaseIn" />
@@ -40,23 +40,23 @@
 							 Duration="00:00:0.550" FillBehavior="HoldEnd">
             </DoubleAnimation>
             <DoubleAnimationUsingKeyFrames Storyboard.TargetName="osPrefsExpandRender"
-                                           Storyboard.TargetProperty="ScaleY"
-                                           FillBehavior="HoldEnd">
-                <DiscreteDoubleKeyFrame KeyTime="00:00:0.1" Value="1" />
+                                           Storyboard.TargetProperty="ScaleY" FillBehavior="HoldEnd">
+                <EasingDoubleKeyFrame KeyTime="00:00:00" Value="1" />
                 <EasingDoubleKeyFrame KeyTime="00:00:0.750" Value="0">
                     <EasingDoubleKeyFrame.EasingFunction>
                         <QuadraticEase EasingMode="EaseInOut" />
                     </EasingDoubleKeyFrame.EasingFunction>
                 </EasingDoubleKeyFrame>
             </DoubleAnimationUsingKeyFrames>
-            <DoubleAnimation Storyboard.TargetName="osPrefsOutlineRender" 
-                             Storyboard.TargetProperty="ScaleX"
-							 BeginTime="00:00:0.850" From="1" To="0"
-							 Duration="0:0:0.575" FillBehavior="HoldEnd">
-                <DoubleAnimation.EasingFunction>
-                    <QuadraticEase EasingMode="EaseOut" />
-                </DoubleAnimation.EasingFunction>
-            </DoubleAnimation>
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="osPrefsOutlineRender"
+                                           Storyboard.TargetProperty="ScaleX" FillBehavior="HoldEnd">
+                <EasingDoubleKeyFrame KeyTime="00:00:0.850" Value="1" />
+                <EasingDoubleKeyFrame KeyTime="00:00:1.6" Value="0">
+                    <EasingDoubleKeyFrame.EasingFunction>
+                        <QuadraticEase EasingMode="EaseOut" />
+                    </EasingDoubleKeyFrame.EasingFunction>
+                </EasingDoubleKeyFrame>
+            </DoubleAnimationUsingKeyFrames>
         </Storyboard>
     </osVis:VisAdapterUI.Resources>
 
@@ -76,9 +76,8 @@
                             <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
                 <Border CornerRadius="0" BorderBrush="#FF1A1A1A"  Grid.Row="0"
-                        BorderThickness="0,0,0,2" Background="#FF282828" 
-                        SnapsToDevicePixels="True" VerticalAlignment="Center">
-                    <Grid x:Name="osPrefs_TitleBarContainer" ClipToBounds="True" 
+                        BorderThickness="0,0,0,2" Background="#FF282828" >
+                    <Grid x:Name="osPrefs_TitleBarContainer" ClipToBounds="True" MinHeight="34"
                           SnapsToDevicePixels="True" VerticalAlignment="Center">
                         <Grid x:Name="osPrefs_TitleBar">
                             <Grid.ColumnDefinitions>
@@ -109,7 +108,7 @@
                         </Border>                       
                     </Grid>
                 </Border>
-                <Grid x:Name="BottomContainer" Grid.Row="1" Height="284" MaxHeight="284"
+                <Grid x:Name="BottomContainer" Grid.Row="1" Height="284" VerticalAlignment="Bottom"
                       RenderTransformOrigin="0.5,0" Background="#FF3C3C3C">
                     <Grid.LayoutTransform>
                         <ScaleTransform x:Name="osPrefsExpandRender" ScaleX="1" ScaleY="0" />
@@ -191,7 +190,7 @@
                             </Grid>
                         </osCtrl:osPanel>
                     <Button x:Name="osPrefsBtn_Save" Content="Save" Style="{StaticResource osPrefsSaveBtnStyle}"
-                                Margin="8,6,8,7" FontSize="18" Padding="0,8" Grid.Row="3" 
+                                Margin="8,6,8,7" FontSize="18" Padding="0,8" Grid.Row="3" Height="44"
 								IsEnabled="{Binding IsSaveEnabled, RelativeSource={RelativeSource AncestorType=Window}}"
                                 FontWeight="Bold" FontFamily="Segoe UI" />
 

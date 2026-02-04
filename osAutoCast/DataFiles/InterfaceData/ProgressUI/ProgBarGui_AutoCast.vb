@@ -630,20 +630,20 @@ Public Class ProgBarGui_AutoCast
         PrepAbortToken()
         InitiateProgress()
 
-        ResetProgressTimer()
+        'ResetProgressTimer()
         ClearAccumToBackground()
 
         DrawBorderToAccum()
         RenderBorder(True)
-
-        ProgressTask = StartProgression()
 
         Using CancelStateReg As CancellationTokenRegistration =
             CoreDataLib.objCancelState.Register(Sub()
                                                     ProgressStatus = ProgStatus.Fail
                                                 End Sub)
 
-            Dim objProgStatus = Await ProgressTask
+            ' ProgressTask = StartProgression()
+            Dim objProgStatus = Await StartProgression()
+            'Dim objProgStatus = Await ProgressTask
 
             SetProgressResult(objProgStatus)
 
@@ -744,6 +744,7 @@ Public Class ProgBarGui_AutoCast
 
         'DrawBorderToAccum()
         ''     RenderBorder()
+        ResetProgressTimer()
 
         Dim objTask_Progress = Task.Run(
             Async Function() As Task(Of ProgStatus)

@@ -1,26 +1,12 @@
-﻿Imports System.Windows.Media.Animation
+﻿Imports System.ComponentModel
+Imports System.Windows.Media.Animation
 Imports System.Windows.Threading
-Imports System
-Imports System.Threading.Tasks
-Imports System.Windows
-Imports System.Windows.Controls
-Imports osProgLoad = osAutoCast.osLoadingElements.osLoadingProgressBar
-Imports osAutoCast.DataTypeLib.LoadStep
-Imports osAutoCast.DataTypeLib.LoadTextVisual
-Imports osAutoCast.DataTypeLib.LoadContentData
-Imports osAutoCast.DataTypeLib.LoadingProgStatus
-Imports osAutoCast.DataTypeLib.LoadTextVisualType
-Imports osAutoCast.DataTypeLib.LoaderEasing
 Imports osAutoCast.DataTypeLib.LoadTaskType
-Imports osAutoCast.osHandler_UI
 Imports osAutoCast.osLoadingObjects
-Imports osLoad = osAutoCast.osLoadingObjects
-Imports System.Runtime.InteropServices
-Imports System.Windows.Interop
 Imports osColor = System.Windows.Media.Color
-Imports repTS = osAutoCast.TaskStatusReport
-Imports System.ComponentModel
 Imports osKeyTime = System.Windows.Media.Animation.KeyTime
+Imports osLoad = osAutoCast.osLoadingObjects
+Imports osProgLoad = osAutoCast.osLoadingElements.osLoadingProgressBar
 
 #Disable Warning BC42353
 #Disable Warning BC42104
@@ -119,7 +105,7 @@ Partial Class osLoader_UI
 
     Public objProcessLoadStages As osHandler_Loader
 
-    Public Property osAutoCastVersion As String = "Ver 3.1"
+    Public Property osAutoCastVersion As String = "Ver 3.2"
 
     Public ReadOnly Property osAutoCastTitle As String
         Get
@@ -219,6 +205,7 @@ Partial Class osLoader_UI
             Storyboard.SetTarget(objVisFrameData, objLoadText)
             Storyboard.SetTargetProperty(objVisFrameData, SetVisAttr())
 
+            Storyboard.SetDesiredFrameRate(objVisFrameData, 55)
             Return objLoadTextVisData
         End With
     End Function

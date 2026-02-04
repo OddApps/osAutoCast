@@ -13,6 +13,7 @@ Imports osProgDevice = SharpDX.Direct3D11.Device
 Imports osRegEx = System.Text.RegularExpressions.Regex
 Imports osStatus = osAutoCast.osEnabledStatusConfig
 Imports osAutoCast.osControls
+Imports osPrefData = osAutoCast.osPrefLib.osPreferenceLib
 
 #Disable Warning IDE0060 ' Remove unused parameter
 #Disable Warning BC42353
@@ -36,6 +37,7 @@ Public NotInheritable Class CoreDataLib
     End Function
 
     Private Shared ReadOnly isDebug As Boolean = False
+    Public Shared ReadOnly UtilizeTestShader As Boolean = False
 
     Public Shared osTrayIcon As Forms.NotifyIcon
 
@@ -92,11 +94,11 @@ Public NotInheritable Class CoreDataLib
     End Function
 
     Public Shared Function GetFuse() As Integer
-        Return osPrefLib.osPreferenceLib.Data.AutoCast_Fuse
+        Return osPrefData.Data.AutoCast_Fuse
     End Function
 
     Public Shared Function isRTC() As Boolean
-        Return osPrefLib.osPreferenceLib.Data.AutoCast_RTC
+        Return osPrefData.Data.AutoCast_RTC
     End Function
 
     Public Shared Function GetWinHwnd(objWin As Window) As IntPtr
@@ -115,9 +117,9 @@ Public NotInheritable Class CoreDataLib
     Public Shared Function GetProgSize(isProgType As TriggerType, Optional getH As Boolean = False) As Integer
         Select Case isProgType
             Case AutoCast
-                Return If(getH, osPrefLib.osPreferenceLib.Data.MainOpts_acProgH, osPrefLib.osPreferenceLib.Data.MainOpts_acProgW)
+                Return If(getH, osPrefData.Data.MainOpts_acProgH, osPrefData.Data.MainOpts_acProgW)
             Case AutoPass
-                Return If(getH, osPrefLib.osPreferenceLib.Data.MainOpts_apProgH, osPrefLib.osPreferenceLib.Data.MainOpts_apProgW)
+                Return If(getH, osPrefData.Data.MainOpts_apProgH, osPrefData.Data.MainOpts_apProgW)
         End Select
     End Function
 
@@ -125,13 +127,13 @@ Public NotInheritable Class CoreDataLib
         Select Case isProgType
             Case AutoCast
                 Return New Dictionary(Of String, Integer) From {
-                        {"pH", osPrefLib.osPreferenceLib.Data.MainOpts_acProgH},
-                        {"pW", osPrefLib.osPreferenceLib.Data.MainOpts_acProgW}
+                        {"pH", osPrefData.Data.MainOpts_acProgH},
+                        {"pW", osPrefData.Data.MainOpts_acProgW}
                     }
             Case AutoPass
                 Return New Dictionary(Of String, Integer) From {
-                        {"pH", osPrefLib.osPreferenceLib.Data.MainOpts_apProgH},
-                        {"pW", osPrefLib.osPreferenceLib.Data.MainOpts_apProgW}
+                        {"pH", osPrefData.Data.MainOpts_apProgH},
+                        {"pW", osPrefData.Data.MainOpts_apProgW}
                     }
         End Select
     End Function
@@ -141,7 +143,7 @@ Public NotInheritable Class CoreDataLib
             Case AutoCast
                 osFuncLib_Progress.SetProgBlockData(TriggerType.AutoCast)
 
-                With osPrefLib.osPreferenceLib.Data
+                With osPrefData.Data
                     Dim progW = .MainOpts_acProgW
                     Dim progH = .MainOpts_acProgH
 
@@ -155,8 +157,8 @@ Public NotInheritable Class CoreDataLib
                 End With
             Case AutoPass
                 Return New Dictionary(Of String, Integer) From {
-                        {"pH", osPrefLib.osPreferenceLib.Data.MainOpts_apProgH},
-                        {"pW", osPrefLib.osPreferenceLib.Data.MainOpts_apProgW}
+                        {"pH", osPrefData.Data.MainOpts_apProgH},
+                        {"pW", osPrefData.Data.MainOpts_apProgW}
                     }
         End Select
     End Function
@@ -164,11 +166,11 @@ Public NotInheritable Class CoreDataLib
     Public Shared Function GetProgSizeReport(isProgType As TriggerType) As ProgSizeReport
         Select Case isProgType
             Case AutoCast
-                Return New ProgSizeReport(osPrefLib.osPreferenceLib.Data.MainOpts_acProgW,
-                                          osPrefLib.osPreferenceLib.Data.MainOpts_acProgH)
+                Return New ProgSizeReport(osPrefData.Data.MainOpts_acProgW,
+                                          osPrefData.Data.MainOpts_acProgH)
             Case AutoPass
-                Return New ProgSizeReport(osPrefLib.osPreferenceLib.Data.MainOpts_apProgW,
-                                          osPrefLib.osPreferenceLib.Data.MainOpts_apProgH)
+                Return New ProgSizeReport(osPrefData.Data.MainOpts_apProgW,
+                                          osPrefData.Data.MainOpts_apProgH)
         End Select
     End Function
 
@@ -208,74 +210,25 @@ Public NotInheritable Class CoreDataLib
         Return New osShaderDetails(objShaderRes, GetShaderType(objShaderRes))
     End Function
 
-
     Public Shared Async Function ComposeShaderIdx() As Task
         Await GenerateShaderList(True)
-
     End Function
-
-    '    Private Shared Async Function GenerateShaderListAsync(
-    '    isNew As Boolean
-    ') As Task(Of List(Of osShaderDetails))
-
-    '        Dim tasks = osShaderNameList.Select(
-    '        Async Function(shaderRes)
-    '            Dim shaderRec = CreateShaderRecord(shaderRes)
-
-    '            Await AddShaderToIdxAsync(shaderRec).ConfigureAwait(False)
-
-    '            Return shaderRec
-    '        End Function)
-
-    '        Return (Await Task.WhenAll(tasks).ConfigureAwait(False)).ToList()
-    '    End Function
-
-    '    Public Shared Async Function ComposeShaderIdxAsync(
-    '    objTaskStatus As TaskStatusReport
-    ') As Task
-
-    '        ShaderDetailsIdx = Await GenerateShaderListAsync(True).ConfigureAwait(False)
-
-    '    End Function
-
-    'Private Shared Function GenerateShaderList(isNew As Boolean) As List(Of osShaderDetails)
-    '    '
-    '    Return osShaderNameList.Select(
-    '                Function(shaderRes)
-    '                    Dim objShaderRec = CreateShaderRecord(shaderRes)
-    '                    Dim objTask_AddShader = AddShaderToIdx(objShaderRec)
-
-    '                    Return objShaderRec
-    '                End Function).ToList()
-    'End Function
-
-    'Private Shared Function CreateShaderRecord(objShaderRes As String) As osShaderDetails
-    '    Return New osShaderDetails(objShaderRes, GetShaderType(objShaderRes))
-    'End Function
-
-    'Public Shared Function ComposeShaderIdx(objTaskStatus As TaskStatusReport) As Task
-    '    Return Task.Run(
-    '        Sub()
-    '            ShaderDetailsIdx = GenerateShaderList(True)
-    '        End Sub)
-
-    'End Function
 
     Public Shared Function GetShaderDevice() As osProgDevice
         Return osHandler_Graphics.pDevice
     End Function
 
     Public Shared Function GetSafetyTimer() As Integer
-        Return osPrefLib.osPreferenceLib.Data.AutoPass_SafetyTimer
+        Return osPrefData.Data.AutoPass_SafetyTimer
     End Function
 
     Public Shared Function GetVisualQuality() As ProgVisOpts
-        Dim objVQ = osPrefLib.osPreferenceLib.Data.GenOpts_VisualQuality
+        Dim objVQ = osPrefData.Data.GenOpts_VisualQuality
         Return If(objVQ = 0, ProgVisOpts.Performance, ProgVisOpts.Quality)
     End Function
 
     Public Shared Function VerifyVisQualityPref() As Boolean
-        Dim objVQ = osPrefLib.osPreferenceLib.Data.GenOpts_VisualQuality
+        Dim objVQ = osPrefData.Data.GenOpts_VisualQuality
         Return If(objVQ = 0, False, True)
     End Function
 

@@ -9,7 +9,7 @@
 
     <ControlTemplate x:Key="ToggleView_EnabledStatus" TargetType="{x:Type ToggleButton}">
         <Border x:Name="enView_Border" Background="{TemplateBinding Background}" 
-                Width="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=Width}"
+				Width="258" 
                 CornerRadius="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=(osStyle:osStyles.CornerRadius)}"
                 BorderThickness="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=(osStyle:osStyles.BorderThickness)}"
                 BorderBrush="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=(osStyle:osStyles.BorderBrush)}">
@@ -17,36 +17,68 @@
                               VerticalAlignment="Center" HorizontalAlignment="Center" Margin="{StaticResource osBtn_ContentPadding}" />
         </Border>
         <ControlTemplate.Triggers>
-            <Trigger Property="IsMouseOver" Value="True">
-                <Setter TargetName="enView_Border" Property="Background"
-                        Value="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=(osStyle:osStyles.Background)}" />
-            </Trigger>
-            <Trigger Property="IsMouseOver" Value="False">
-                <Setter TargetName="enView_Border" Property="Background"
-                        Value="{Binding RelativeSource={RelativeSource AncestorType=ToggleButton}, Path=Background}" />
-            </Trigger>
-            <Trigger Property="IsChecked" Value="False">
-                <Setter Property="Content" Value="Disabled" />
-                <Setter Property="Background" Value="#FF0F0F0F" />
-                <Setter Property="Foreground" Value="#FF373636" />
-                <Setter TargetName="toggleContent" Property="Effect">
-                    <Setter.Value>
-                        <BlurEffect Radius="4" />
-                    </Setter.Value>
-                </Setter>
-            </Trigger>
-            <Trigger Property="IsChecked" Value="True">
-                <Setter Property="Content" Value="Enabled" />
-                <Setter Property="Background" Value="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=Background}" />
-                <Setter Property="Foreground" Value="#FF8C8A8A" />
-                <Setter TargetName="toggleContent" Property="Effect" Value="{x:Null}" />
-            </Trigger>
+           
+        <!-- ========================= -->
+        <!-- UNCHECKED (Disabled) -->
+        <!-- ========================= -->
+        <Trigger Property="IsChecked" Value="False">
+            <Setter Property="Content" Value="Disabled"/>
+            <Setter Property="Background" Value="#FF0F0F0F"/>
+            <Setter Property="Foreground" Value="#FF373636"/>
+            <Setter TargetName="toggleContent" Property="Effect">
+                <Setter.Value>
+                    <BlurEffect Radius="4"/>
+                </Setter.Value>
+            </Setter>
+        </Trigger>
+
+        <!-- ========================= -->
+        <!-- CHECKED (Enabled) -->
+        <!-- ========================= -->
+        <Trigger Property="IsChecked" Value="True">
+            <Setter Property="Content" Value="Enabled"/>
+            <Setter Property="Background" 
+                    Value="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=Background}"/>
+            <Setter Property="Foreground" Value="#FF8C8A8A"/>
+            <Setter TargetName="toggleContent" Property="Effect" Value="{x:Null}"/>
+        </Trigger>
+
+        <!-- ========================= -->
+        <!-- HOVER + UNCHECKED -->
+        <!-- ========================= -->
+        <MultiTrigger>
+            <MultiTrigger.Conditions>
+                <Condition Property="IsChecked" Value="False"/>
+                <Condition Property="IsMouseOver" Value="True"/>
+            </MultiTrigger.Conditions>
+
+            <Setter TargetName="enView_Border"
+                    Property="Background"
+                    Value="#FF1A1A1A"/>
+            <Setter Property="Foreground" Value="#FF5A5A5A"/>
+        </MultiTrigger>
+
+        <!-- ========================= -->
+        <!-- HOVER + CHECKED -->
+        <!-- ========================= -->
+        <MultiTrigger>
+            <MultiTrigger.Conditions>
+                <Condition Property="IsChecked" Value="True"/>
+                <Condition Property="IsMouseOver" Value="True"/>
+            </MultiTrigger.Conditions>
+
+            <Setter TargetName="enView_Border"
+                    Property="Background"
+                    Value="{Binding RelativeSource={RelativeSource TemplatedParent},
+                                    Path=(osStyle:osStyles.Background)}"/>
+            <Setter Property="Foreground" Value="#FFCFCFCF"/>
+        </MultiTrigger>
         </ControlTemplate.Triggers>
     </ControlTemplate>
 
     <ControlTemplate x:Key="BtnView_GameMenu" TargetType="{x:Type ToggleButton}">
-        <Border x:Name="enBorderGameMnu" Background="{TemplateBinding Background}"
-                Width="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=Width}"
+        <Border x:Name="enBorderGameMnu" Background="{TemplateBinding Background}" HorizontalAlignment="Stretch"
+				Width="258"
                 CornerRadius="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=(osStyle:osStyles.CornerRadius)}"
                 BorderThickness="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=(osStyle:osStyles.BorderThickness)}"
                 BorderBrush="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=(osStyle:osStyles.BorderBrush)}">
@@ -89,7 +121,7 @@
                             BorderThickness="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=(osStyle:osStyles.BorderThickness)}"
                             BorderBrush="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=(osStyle:osStyles.BorderBrush)}">
             <ContentPresenter x:Name="TrayMenuItemToggleContentEn" Content="{TemplateBinding Content}"
-                                          ContentTemplate="{TemplateBinding ContentTemplate}" Margin="0,2"
+                                          ContentTemplate="{TemplateBinding ContentTemplate}" Margin="0"
                                           VerticalAlignment="Center" HorizontalAlignment="Center" />
         </Border>
         <ControlTemplate.Triggers>
@@ -171,7 +203,7 @@
                             BorderThickness="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=(osStyle:osStyles.BorderThickness)}"
                             BorderBrush="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=(osStyle:osStyles.BorderBrush)}">
             <ContentPresenter x:Name="mnuGameContent" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"
-                                          VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,2" />
+                                          VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0" />
         </Border>
         <ControlTemplate.Triggers>
             <Trigger Property="IsMouseOver" Value="True">

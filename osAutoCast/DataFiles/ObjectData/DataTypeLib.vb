@@ -358,13 +358,6 @@ Public Module DataTypeLib
         GameMenu_Open
     End Enum
 
-    Public Enum GameMenuVisuals
-        GameMenuVis_Height
-        GameMenuVis_Opacity
-        GameMenuVis_Visible
-        GameMenuVis_Position
-    End Enum
-
     Public Enum LoadingProgStatus
         LoadStatus_StartUp
         LoadStatus_Init
@@ -489,25 +482,18 @@ Public Module DataTypeLib
         UnhookRender
     End Enum
 
-    'Public Enum VisAdapterConfig
-    '    EnableLayoutVisuals
-    '    DisableLayoutVisuals
-    '    EnableUpdateAsync_OnLoad
-    '    DisableUpdateAsync_OnLoad
-    '    EnableVisualReset
-    '    DisableVisualReset
-    'End Enum
-
     <Flags>
     Public Enum VisAdapterConfig
         None = 0
         ResetVisualSettings = 1
-        UpdateAsync_OnLoad = 2
-        UpdateAsync_OnReset = 4
-        UpdateAsync_OnDispose = 8
+        ModifyLayout = 2
+        UpdateAsync_OnLoad = 4
+        UpdateAsync_OnReset = 8
+        UpdateAsync_OnDispose = 16
+        UpdateAsync_OnSideboard = 32
 
-        EnableAll = ResetVisualSettings Or UpdateAsync_OnLoad Or
-            UpdateAsync_OnReset Or UpdateAsync_OnDispose
+        EnableAll = ResetVisualSettings Or ModifyLayout Or UpdateAsync_OnLoad Or
+            UpdateAsync_OnReset Or UpdateAsync_OnDispose Or UpdateAsync_OnSideboard
     End Enum
 
 #End Region
@@ -648,11 +634,13 @@ Public Class osVisRenderMode
 
     Public Property visEdges As EdgeMode
     Public Property visBitMap As BitmapScalingMode
-    Public Property visCache As CacheMode
-    Public Property visLayoutSetting As Boolean
 
-    'Public Property visTextRender As TextRenderingMode
-    'Public Property visTextFormat As TextFormattingMode
+    Public Property visTextRender As TextRenderingMode
+    Public Property visTextFormat As TextFormattingMode
+
+    Public Property visCache As CacheMode
+
+    Public Property visLayoutSetting As Boolean
 
     Public Sub New()
     End Sub
@@ -673,12 +661,20 @@ Public Class osVisRenderMode
             Case VisMode_HighQuality
                 visBitMap = BitmapScalingMode.HighQuality
                 visEdges = EdgeMode.Unspecified
+
+                visTextRender = TextRenderingMode.Auto
+                visTextFormat = TextFormattingMode.Ideal
+
                 visCache = Nothing
 
                 visLayoutSetting = False
             Case VisMode_LowQuality
                 visBitMap = BitmapScalingMode.LowQuality
                 visEdges = EdgeMode.Aliased
+
+                visTextRender = TextRenderingMode.Aliased
+                visTextFormat = TextFormattingMode.Display
+
                 visCache = New BitmapCache(1.0)
 
                 visLayoutSetting = True
@@ -1176,6 +1172,62 @@ Public Class osLoadTextColors
     End Sub
 
 End Class
+
+'Public Class osContainerSeperatorColors
+
+'    Public Property txtHidden As osColor
+'    Public Property txtShown As osColor
+
+'    Public Property visStart As osColor
+'    Public Property visTarget As osColor
+
+'    Public Sub New()
+'    End Sub
+
+'    Private Const SeparatorTag As String = "Content_Separator"
+
+'    Public Sub New(ByRef objTextArea As Grid, ByRef objTextBrush As LinearGradientBrush)
+'        Dim separators = objTextArea.Children.OfType(Of Rectangle)().
+'            Where(Function(r) Equals(r.Tag, "Content_Separator")).
+'                OrderBy(Function(r)
+'                            Return Grid.GetRow(r)
+'                        End Function).ToList()
+
+'        If separators.Count > 1 Then
+'            Dim sepRect = separators(1)
+'            objTextBrush = TryCast(sepRect.Fill, LinearGradientBrush)
+'        End If
+
+'        With objTextBrush
+'            If .IsFrozen Then
+'                objTextBrush = .CloneCurrentValue()
+'                objTextArea.Foreground = objTextBrush
+'            End If
+
+'            With .Color
+'                txtHidden = osColor.FromArgb(0, .R, .G, .B)
+'                txtShown = osColor.FromArgb(255, .R, .G, .B)
+'            End With
+'        End With
+'    End Sub
+
+'    Public Sub New(LoadVisType As LoadTextVisualType, ByRef objTextArea As TextBlock, ByRef objTextBrush As SolidColorBrush)
+'        objTextBrush = TryCast(objTextArea.Foreground, SolidColorBrush)
+
+'        With objTextBrush
+'            If .IsFrozen Then
+'                objTextBrush = .CloneCurrentValue()
+'                objTextArea.Foreground = objTextBrush
+'            End If
+
+'            With .Color
+'                visStart = osColor.FromArgb(If(LoadVisType = LoadTextFade_In, 0, 255), .R, .G, .B)
+'                visTarget = osColor.FromArgb(If(LoadVisType = LoadTextFade_In, 255, 0), .R, .G, .B)
+'            End With
+'        End With
+'    End Sub
+
+'End Class
 
 Public Class LoadDataObject
 

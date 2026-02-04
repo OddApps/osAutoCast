@@ -561,8 +561,8 @@ Public Class osHandler_Loader
 
             If _cts IsNot Nothing Then
                 Await Task.Delay(115)
-                objProgressStage.Report(95)
-                Await Task.Delay(100)
+                objProgressStage.Report(100)
+                Await Task.Delay(115)
 
                 objProgressTimer?.Stop()
                 CancelCurrent()
@@ -577,7 +577,7 @@ Public Class osHandler_Loader
             objProgressStage = StartUiDispatcherTimer(objLoadProgAni, objTaskDetails, objLoadStageToken, objProgressTimer)
 
             Dim objTask_FadeText = _fadeTextIn(objLoadStage.TaskType)
-            Await Task.Delay(85)
+            Await Task.Delay(110)
 
             Dim objLoadTask = objLoadStage.LoadTask(objLoadStageToken)
             Await objLoadTask
@@ -607,4 +607,3 @@ Public Class osHandler_Loader
     Private Sub HoldVisual() : End Sub
 
 End Class
-

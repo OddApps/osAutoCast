@@ -10,51 +10,6 @@
         <Setter Property="SizeToContent" Value="Width" />
         <Setter Property="VerticalAlignment" Value="Center" />
         <Setter Property="VerticalContentAlignment" Value="Center" />
-        <!--<Style.Resources>
-            <Storyboard x:Key="osPrefsVis_Disp">
-                <DoubleAnimation Storyboard.TargetName="osPrefsMainContainer" Storyboard.TargetProperty="Opacity" BeginTime="{StaticResource osPrefsStartTime_OpenOpacity}" Duration="{StaticResource osPrefsDuration_OpenOpacity}" From="0" To="1" FillBehavior="HoldEnd">
-                    <DoubleAnimation.EasingFunction>
-                        <QuadraticEase EasingMode="EaseIn" />
-                    </DoubleAnimation.EasingFunction>
-                </DoubleAnimation>
-                <DoubleAnimation Storyboard.TargetName="osPrefsTitlePanel" Storyboard.TargetProperty="Opacity" BeginTime="{StaticResource osPrefsStartTime_OpenTitle}" Duration="{StaticResource osPrefsDuration_OpenTitle}" From="1" To="0" FillBehavior="HoldEnd">
-                </DoubleAnimation>
-                <DoubleAnimation Storyboard.TargetName="osPrefsOutlineRender" Storyboard.TargetProperty="ScaleX" BeginTime="{StaticResource osPrefsStartTime_OpenScaleX}" Duration="{StaticResource osPrefsDuration_OpenScaleX}" From="0.025" To="1" FillBehavior="HoldEnd">
-                    <DoubleAnimation.EasingFunction>
-                        <QuadraticEase EasingMode="EaseInOut" />
-                    </DoubleAnimation.EasingFunction>
-                </DoubleAnimation>
-                <DoubleAnimation x:Name="osPrefExpandVis" Storyboard.TargetName="BottomContainer" Storyboard.TargetProperty="Height" BeginTime="{StaticResource osPrefsStartTime_ExpandHeight}" Duration="{StaticResource osPrefsDuration_ExpandHeight}" From="0" FillBehavior="HoldEnd">
-                    <DoubleAnimation.EasingFunction>
-                        <local:osPrefExpandEase EasingMode="EaseIn" />
-                    </DoubleAnimation.EasingFunction>
-                </DoubleAnimation>
-                <DoubleAnimation Storyboard.TargetName="BottomContainer" Storyboard.TargetProperty="Opacity" BeginTime="{StaticResource osPrefsStartTime_ExpandOpacity}" Duration="{StaticResource osPrefsDuration_ExpandOpacity}" From="0" To="1" FillBehavior="HoldEnd">
-                    <DoubleAnimation.EasingFunction>
-                        <QuadraticEase EasingMode="EaseOut" />
-                    </DoubleAnimation.EasingFunction>
-                </DoubleAnimation>
-            </Storyboard>
-            <Storyboard x:Key="osPrefsVis_Close">
-                <DoubleAnimation Storyboard.TargetName="osPrefsMainContainer" Storyboard.TargetProperty="Opacity" BeginTime="00:00:0.850" From="1" To="0" Duration="0:0:0.575" FillBehavior="HoldEnd">
-                    <DoubleAnimation.EasingFunction>
-                        <QuadraticEase EasingMode="EaseOut" />
-                    </DoubleAnimation.EasingFunction>
-                </DoubleAnimation>
-                <DoubleAnimation Storyboard.TargetName="osPrefsTitlePanel" Storyboard.TargetProperty="Opacity" BeginTime="00:00:0.00" From="0" To="1" Duration="00:00:0.550" FillBehavior="HoldEnd">
-                </DoubleAnimation>
-                <DoubleAnimation Storyboard.TargetName="BottomContainer" Storyboard.TargetProperty="Height" To="0" BeginTime="00:00:00" Duration="00:00:0.750" FillBehavior="HoldEnd">
-                    <DoubleAnimation.EasingFunction>
-                        <QuadraticEase EasingMode="EaseInOut" />
-                    </DoubleAnimation.EasingFunction>
-                </DoubleAnimation>
-                <DoubleAnimation Storyboard.TargetName="osPrefsOutlineRender" Storyboard.TargetProperty="ScaleX" BeginTime="00:00:0.850" From="1" To="0" Duration="0:0:0.575" FillBehavior="HoldEnd">
-                    <DoubleAnimation.EasingFunction>
-                        <QuadraticEase EasingMode="EaseOut" />
-                    </DoubleAnimation.EasingFunction>
-                </DoubleAnimation>
-            </Storyboard>
-        </Style.Resources>-->
     </Style>
 
     <Style x:Key="osPrefsMainContainerStyle" TargetType="{x:Type osCtrl:osBorder}">
@@ -67,9 +22,6 @@
         <Setter Property="CornerRadius" Value="12" />
         <Setter Property="Margin" Value="2" />
         <Setter Property="RenderTransformOrigin" Value="0.5,0.5" />
-        <!--<Setter Property="Opacity" Value="0" />
-       <Setter Property="CacheMode" Value="BitmapCache" />
-        <Setter Property="RenderOptions.BitmapScalingMode" Value="LowQuality" />-->
     </Style>
 
     <DataTemplate x:Key="osEffectPrefsText" DataType="{x:Type sys:String}">

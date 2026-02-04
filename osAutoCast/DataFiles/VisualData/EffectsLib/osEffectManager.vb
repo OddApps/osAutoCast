@@ -15,8 +15,11 @@ Namespace osEffectManager
 
         Public Sub New()
             With Me
-                '  .PixelShader = GetTestShader(True)
-                .PixelShader = FetchShader(sTypeText_S).sText_S
+                If CoreDataLib.UtilizeTestShader Then
+                    .PixelShader = GetTestShader(True)
+                Else
+                    .PixelShader = FetchShader(sTypeText_S).sText_S
+                End If
 
                 .PaddingLeft = 6
                 .PaddingRight = 6
@@ -136,8 +139,11 @@ Namespace osEffectManager
 
         Public Sub New()
             With Me
-                '    .PixelShader = GetTestShader(False)
-                .PixelShader = FetchShader(sTypeText_G).sText_G
+                If CoreDataLib.UtilizeTestShader Then
+                    .PixelShader = GetTestShader(False)
+                Else
+                    .PixelShader = FetchShader(sTypeText_G).sText_G
+                End If
 
                 .PaddingLeft = 6
                 .PaddingRight = 6
@@ -258,12 +264,15 @@ Namespace osEffectManager
 
         Public Function Convert(values() As Object, targetType As Type,
                                 parameter As Object, culture As CultureInfo) As Object Implements IMultiValueConverter.Convert
-            Dim w As Double = 0.0
-            Dim h As Double = 0.0
+
+            Dim w As Double = 0.0 : Dim h As Double = 0.0
 
             If values IsNot Nothing AndAlso values.Length >= 2 Then
-                If values(0) IsNot Nothing Then Double.TryParse(values(0).ToString(), w)
-                If values(1) IsNot Nothing Then Double.TryParse(values(1).ToString(), h)
+                If values(0) IsNot Nothing Then
+                    Double.TryParse(values(0).ToString(), w) : End If
+
+                If values(1) IsNot Nothing Then
+                    Double.TryParse(values(1).ToString(), h) : End If
             End If
 
             If w <= 0 OrElse h <= 0 Then

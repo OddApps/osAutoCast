@@ -13,7 +13,6 @@ Imports osAutoCast.DataTypeLib.PromptResponse
 Imports osAutoCast.DataTypeLib.PopupVisualType
 Imports osAutoCast.DataTypeLib.PopupCloseAction
 Imports osAutoCast.DataTypeLib.GameMenuState
-Imports osAutoCast.DataTypeLib.GameMenuVisuals
 Imports osAutoCast.DataTypeLib.TrayMenuState
 Imports osToggle = System.Windows.Controls.Primitives.ToggleButton
 Imports osVisibility = System.Windows.Visibility
@@ -22,6 +21,7 @@ Imports osForms = System.Windows.Forms
 Imports osCursor = System.Drawing.Point
 Imports System.Windows.Interop
 Imports osAutoCast.osVisualAdapter
+Imports osAutoCast.osControls
 
 #Disable Warning BC42353
 #Disable Warning BC42024
@@ -29,97 +29,49 @@ Imports osAutoCast.osVisualAdapter
 
 Public Class osTrayMenu_GUI
 
-    Private Async Function TriggerShowOpts() As Task
-        osFuncLib_InputScan.SetMonitorState(MonitorStatus.InCmd)
-        Await osFuncLib_ShowOpts.ExecuteDispOpts()
+    Public Async Function InitTrayMenuClose(isAsync As Boolean, Optional setTaskRun As Boolean = False) As Task
+        Await SetCloseVisualData_WithTask(
+            GetVisualKey(TrayMenu_Close),
+                Async Sub()
+                    If setTaskRun Then
+                        TrayMenuCloseComplete()
+                    End If
+
+                    Await osHandler_UI.TerminateTrayMenu()
+                End Sub)
+
+        objCloseMonitor.TrySetResult(True)
     End Function
 
-    Private Sub SetTrayMenuEvent(objMenuState As TrayMenuState, Optional setTaskRun As Boolean = False)
-        If IsTrayMenuOpen(objMenuState) Then
-            RemoveHandler VisDataObject.Completed,
-                                                evtDisplayTrayMenu
-            evtDisplayTrayMenu =
-                Sub()
-                    RemoveHandler VisDataObject.Completed,
-                                                evtDisplayTrayMenu
-
-                    Me.Activate()
-                    VisDataObject = EstablishVisual(TrayMenu_Close)
-                    '   SetVisualMode(TrayMenu_Open)
-                End Sub
-
-            AddHandler visTrayMenu_Open.Completed,
-                                    evtDisplayTrayMenu
-        Else
-            If VisDataObject Is Nothing Then
-                visTrayMenu_Close = EstablishVisual(TrayMenu_Close)
-            End If
-            AddHandler visTrayMenu_Close.Completed,
-                 Sub()
-                     If setTaskRun Then
-                         TrayMenuCloseComplete()
-                     End If
-
-                     osHandler_UI.TerminateTrayMenu()
-                 End Sub
-        End If
-    End Sub
-
-    Private Sub InitTrayMenuCloseEvent(Optional setTaskRun As Boolean = False)
-        AddHandler VisDataObject.Completed,
-                 Sub()
-                     If setTaskRun Then
-                         TrayMenuCloseComplete()
-                     End If
-
-                     osHandler_UI.TerminateTrayMenu()
-                 End Sub
-    End Sub
-
-    Public Sub InitTrayMenuClose(Optional setTaskRun As Boolean = False)
-        InitTrayMenuCloseEvent(setTaskRun)
-        objCloseMonitor.TrySetResult(True)
-        '  Dim objTask_TriggerClose = TriggerVisuals_Close()
-    End Sub
-
-    Public Sub InitTrayMenuVis()
-        evtDisplayTrayMenu =
-            Sub()
-                RemoveHandler VisDataObject.Completed,
-                                                evtDisplayTrayMenu
-                '  VisDataObject.Stop()
-                Dim visDataN = GetVisualKey(TrayMenu_Close)
-                SetCloseVisualData(visDataN)
-
-                Me.Activate()
-            End Sub
-
-        AddHandler VisDataObject.Completed,
-                                    evtDisplayTrayMenu
-
-        ShowGameMenuItem()
-
-        With Me
-            .Width = wTrayMenu
-            .Height = hTrayMenu
-
-            BufferTrayMenu()
-        End With
-    End Sub
+    Public Async Function InitTrayMenuVis() As Task
+        Await SetVisSideboard("TrayGameMenuVis_Expand", True)
+    End Function
 
     Private Function EstablishVisConfig() As VisAdapterConfig
         Return VisAdapterConfig.EnableAll
-        'Return VisAdapterConfig.ResetVisualSettings Or
-        '   VisAdapterConfig.UpdateAsync_OnReset
     End Function
 
     Public Async Function PrepTrayMenuInit() As Task
         Dim visDataN = GetVisualKey(TrayMenu_Open)
-        Await InitializeVisAdapter(visDataN, Me, EstablishVisConfig(), AddressOf InitTrayMenuVis,
-                                   TrayMenuOutline, TrayMainContainer)
-    End Function
 
-    Private objCloseMonitor As TaskCompletionSource(Of Boolean)
+        Await InitializeVisAdapter(
+            visDataN, Me, EstablishVisConfig(),
+                Sub()
+                    ShowGameMenuItem()
+
+                    With Me
+                        .Width = wTrayMenu
+                        .Height = hTrayMenu
+
+                        BufferTrayMenu()
+                    End With
+                End Sub,
+                Sub()
+                    Me.Activate()
+                End Sub,
+                Function() SetVisSideboard(GetVisualKey(GameMenu_Open, True)),
+                TrayMenuContainer, TrayMenuContent, TrayGameMenuContainer)
+    End Function
 
     Public Sub SetCloseMonitor(objAwaitClose As TaskCompletionSource(Of Boolean))
         objCloseMonitor = objAwaitClose
@@ -140,22 +92,6 @@ Public Class osTrayMenu_GUI
         allowTrayClose = True
     End Sub
 
-    Private Sub ShowTrayMenuCore()
-        CalcTrayPos()
-
-        With Me
-            PresentTrayMenu()
-
-            .Left = .TrayMenuPos_X
-            .Top = .TrayMenuPos_Y
-
-            .Topmost = True
-        End With
-
-
-        visTrayMenu_Open.Begin(TrayMenuOutline)
-    End Sub
-
 End Class
 
 Partial Public Class osTrayMenu_GUI
@@ -166,39 +102,29 @@ Partial Public Class osTrayMenu_GUI
     Private Const SWP_NOSIZE As UInteger = &H1
     Private Const SWP_NOACTIVATE As UInteger = &H10
 
-    Private idxTrayMenuVis As New List(Of GameMenuVisuals) From {
-        {GameMenuVis_Height}, {GameMenuVis_Opacity},
-        {GameMenuVis_Visible}, {GameMenuVis_Position}
-    }
-
     Private idxTrayMenuVisuals As New Dictionary(Of TrayMenuState, String) From {
         {TrayMenuState.TrayMenu_Open, "TrayMenuVis_Display"},
         {TrayMenuState.TrayMenu_Close, "TrayMenuVis_Close"}
     }
 
-    Private visGameMenu_Open As Storyboard = Nothing
-    Private visGameMenu_Close As Storyboard = Nothing
+    Private idxTrayGameMenuVisuals As New Dictionary(Of GameMenuState, String) From {
+        {GameMenuState.GameMenu_Open, "TrayGameMenuVis_Expand"},
+        {GameMenuState.GameMenu_Close, "TrayGameMenuVis_Collapse"}
+    }
 
-    Private visTrayMenu_Open As New Storyboard
-    Private visTrayMenu_Close As New Storyboard
-
-    Private evtDispTrayMenuTask As Action = AddressOf ShowTrayMenuCore
-
-    Private evtCloseTrayGameMenu As EventHandler
-    Private evtDisplayTrayMenu As EventHandler
+    Private isGameMenuStateResolved As Boolean = True
 
     Private objTask_Closing As TaskCompletionSource(Of Boolean) = Nothing
+    Private objCloseMonitor As TaskCompletionSource(Of Boolean)
 
-    Public objVisAdapt As VisQualityAdapter
-
-    Private hTrayMenu As Double = 152
-    Private hTrayMenu_GameMenu As Double = 184
-
+    Private hTrayMenu As Double = 220
     Private wTrayMenu As Double = 196
 
     Private objCurPos As osCursor
 
     Public allowTrayClose As Boolean
+
+    Private SeperatorVisDuration As TimeSpan = TimeSpan.FromMilliseconds(750)
 
 #Region "Properties"
 
@@ -224,148 +150,41 @@ Partial Public Class osTrayMenu_GUI
         End Get
     End Property
 
+    Public ReadOnly Property TrayMenuContainer As osBorder
+        Get
+            Return Me.TrayMainContainer
+        End Get
+    End Property
+
+    Public ReadOnly Property TrayMenuContent As Grid
+        Get
+            Return Me.TrayContentContainer
+        End Get
+    End Property
+
+    Public ReadOnly Property TrayGameMenuContainer As Border
+        Get
+            Return Me.TrayMenuGamePanel
+        End Get
+    End Property
+
 #End Region
 
 #Region "Visual Data"
-
-    Private Sub ResetVisuals(chkMenuState As GameMenuState)
-        If GetGameMenuState(chkMenuState) Then
-            If visGameMenu_Open IsNot Nothing Then
-                visGameMenu_Open.Children.Clear()
-                visGameMenu_Open = Nothing
-            End If
-
-            visGameMenu_Open = New Storyboard()
-        Else
-            If visGameMenu_Close IsNot Nothing Then
-                visGameMenu_Close.Children.Clear()
-                visGameMenu_Close = Nothing
-            End If
-
-            visGameMenu_Close = New Storyboard()
-        End If
-    End Sub
 
     Private Function SetVisDuration() As Duration
         Return New Duration(TimeSpan.FromMilliseconds(650))
     End Function
 
-    Private Function SetVisDuration(chkMenuState As GameMenuState, isVis As Boolean) As osKeyTime
-        Dim valDur = If(GetGameMenuState(chkMenuState), 0, 649)
-        Return osKeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(valDur))
-    End Function
-
-    Private Function GetVisValues(visMenuType As GameMenuVisuals, chkMenuState As GameMenuState) As GameMenuVisData
-        Dim visValStart As Double = Nothing
-        Dim visValEnd As Double = Nothing
-        Dim visValVisibility As osVisibility = Nothing
-
-        Dim valState = GetGameMenuState(chkMenuState)
-
-        Select Case visMenuType
-            Case GameMenuVis_Height
-                visValStart = If(valState, 0, 64)
-                visValEnd = If(valState, 64, 0)
-            Case GameMenuVis_Opacity
-                visValStart = If(valState, 0, 1)
-                visValEnd = If(valState, 1, 0)
-            Case GameMenuVis_Visible
-                visValVisibility = If(valState,
-                    osVisibility.Visible, osVisibility.Collapsed)
-            Case GameMenuVis_Position
-                visValStart = Me.Top
-                visValEnd = If(valState,
-                    Me.Top - 64, Me.Top + 64)
-        End Select
-
-        Return New GameMenuVisData(visValStart, visValEnd, visValVisibility)
-    End Function
-
-    Private Sub EstablishGameMenuVisual(visMenuType As GameMenuVisuals, chkMenuState As GameMenuState)
-        Dim objVisualData = GetVisValues(visMenuType, chkMenuState)
-        Dim objMenuVis As Object
-
-        Dim _objVis = If(chkMenuState = GameMenu_Open,
-            visGameMenu_Open, visGameMenu_Close)
-
-        If visMenuType <> GameMenuVis_Visible Then
-            objMenuVis = TryCast(objMenuVis, DoubleAnimation)
-
-            objMenuVis = New DoubleAnimation() With {
-                    .From = objVisualData.visStart, .To = objVisualData.visEnd,
-                    .Duration = SetVisDuration(),
-                    .EasingFunction = New QuadraticEase With {
-                        .EasingMode = EasingMode.EaseInOut
-                    }
-                }
-        Else
-            objMenuVis = TryCast(objMenuVis, ObjectAnimationUsingKeyFrames)
-            objMenuVis = New ObjectAnimationUsingKeyFrames()
-
-            objMenuVis.KeyFrames.Add(
-                New DiscreteObjectKeyFrame() With {
-                    .KeyTime = SetVisDuration(chkMenuState, True),
-                    .Value = objVisualData.visVisibility
-                })
-        End If
-
-        Select Case visMenuType
-            Case GameMenuVis_Height
-                Storyboard.SetTarget(objMenuVis, TrayMenuGamePanel)
-                Storyboard.SetTargetProperty(objMenuVis, SetVisAttr(visMenuType))
-            Case GameMenuVis_Opacity
-                Storyboard.SetTarget(objMenuVis, TrayMenuGamePanel)
-                Storyboard.SetTargetProperty(objMenuVis, SetVisAttr(visMenuType))
-            Case GameMenuVis_Position
-                Storyboard.SetTarget(objMenuVis, Me)
-                Storyboard.SetTargetProperty(objMenuVis, SetVisAttr(visMenuType))
-            Case GameMenuVis_Visible
-                Storyboard.SetTarget(objMenuVis, TrayMenuGamePanel)
-                Storyboard.SetTargetProperty(objMenuVis, SetVisAttr(visMenuType))
-        End Select
-
-        _objVis.Children.Add(objMenuVis)
-    End Sub
-
-    Private Function SetVisAttr(visMenuType As GameMenuVisuals) As PropertyPath
-        Select Case visMenuType
-            Case GameMenuVis_Height
-                Return New PropertyPath("Height")
-            Case GameMenuVis_Opacity
-                Return New PropertyPath("Opacity")
-            Case GameMenuVis_Visible
-                Return New PropertyPath("Visibility")
-            Case GameMenuVis_Position
-                Return New PropertyPath(Window.TopProperty)
-        End Select
-    End Function
-
-    Private Sub SetGameMenuVisuals(setMenuState As GameMenuState)
-        ResetVisuals(setMenuState)
-
-        For Each visType In idxTrayMenuVis
-            EstablishGameMenuVisual(visType, setMenuState)
-        Next
-    End Sub
-
-    Private Function LoadVis_Select() As Style
-        Return TrayMenuRes
-    End Function
-
-    Private Function LoadVis_Set(objVisType As TrayMenuState) As Storyboard
-        Return TryCast(Me.Resources(GetVisualKey(objVisType)), Storyboard)
-    End Function
-
-    Private Function LoadVis_Set(objVisResource As Style, objVisType As TrayMenuState) As Storyboard
-        Return TryCast(Me.Resources(GetVisualKey(objVisType)), Storyboard)
-    End Function
-
-    Private Function EstablishVisual(objVisType As TrayMenuState) As Storyboard
-        Return LoadVis_Set(TrayMenuRes, objVisType)
-    End Function
-
     Private Function GetVisualKey(objVisType As TrayMenuState) As String
         Return idxTrayMenuVisuals.First(
+            Function(visKey)
+                Return visKey.Key = objVisType
+            End Function).Value
+    End Function
+
+    Private Function GetVisualKey(objVisType As GameMenuState, isGameMenu As Boolean) As String
+        Return idxTrayGameMenuVisuals.First(
             Function(visKey)
                 Return visKey.Key = objVisType
             End Function).Value
@@ -401,7 +220,7 @@ Partial Public Class osTrayMenu_GUI
     Private Async Function RunTrayMenuCloseTask(objRunTask As Func(Of Task)) As Task
         objTask_Closing.ResetAndInitTask()
 
-        TriggerTrayMenuDispose(True)
+        Await TriggerTrayMenuDispose(True)
 
         Await objTask_Closing.Task
         Await Task.Delay(150)
@@ -412,7 +231,7 @@ Partial Public Class osTrayMenu_GUI
     Private Async Function RunTrayMenuCloseTask(objRunTask As Action) As Task
         objTask_Closing.ResetAndInitTask()
 
-        TriggerTrayMenuDispose(True)
+        Await TriggerTrayMenuDispose(True)
 
         Await objTask_Closing.Task
         Await Task.Delay(150)
@@ -420,12 +239,17 @@ Partial Public Class osTrayMenu_GUI
         Await Task.Run(objRunTask)
     End Function
 
-    Private Sub TriggerTrayMenuDispose(Optional setTaskRun As Boolean = False)
+    Private Async Function TriggerTrayMenuDispose(Optional setTaskRun As Boolean = False) As Task
         PromptResponseState.PreventSecondaryClose()
 
         allowTrayClose = False
-        InitTrayMenuClose(setTaskRun)
-    End Sub
+        Await InitTrayMenuClose(True, setTaskRun)
+    End Function
+
+    Private Async Function TriggerShowOpts() As Task
+        osFuncLib_InputScan.SetMonitorState(MonitorStatus.InCmd)
+        Await osFuncLib_ShowOpts.ExecuteDispOpts()
+    End Function
 
     Private Sub ExecTrayMenuCloseTrigger()
         With New Window With {
@@ -451,13 +275,6 @@ Partial Public Class osTrayMenu_GUI
             GameMenu_Open, GameMenu_Close)
     End Function
 
-    Private Sub ApplyTrayMenuSize(Optional isTrayOpen As Boolean = True)
-        With Me
-            .Width = wTrayMenu : .Height = If(isTrayOpen,
-                hTrayMenu_GameMenu, hTrayMenu)
-        End With
-    End Sub
-
     Private Sub ShowGameMenuItem()
         DisplayGameTrayMenuItem = If(CoreDataLib.IsGameRunning(),
             GameMenuItem.ShowClose, GameMenuItem.ShowStart)
@@ -472,6 +289,7 @@ Partial Public Class osTrayMenu_GUI
     End Function
 
     Private Function GetGameMenuState(chkMenuState As GameMenuState) As Boolean
+        isGameMenuStateResolved = False
         Return chkMenuState = GameMenu_Open
     End Function
 
@@ -488,18 +306,12 @@ Partial Public Class osTrayMenu_GUI
     Public Sub New(Optional objLoadTask As TaskCompletionSource(Of Boolean) = Nothing)
         InitializeComponent()
 
-
-
         If objLoadTask IsNot Nothing Then
             objLoadTask.TrySetResult(True)
         End If
     End Sub
 
-    Private Sub ComposeOutline(sender As Object, e As RoutedEventArgs) Handles TrayMenuOutline.Loaded
-        EstablishOutline(TrayMenuOutline, 6)
-    End Sub
-
-    Protected Overrides Sub OnDeactivated(e As EventArgs)
+    Protected Overrides Async Sub OnDeactivated(e As EventArgs)
         MyBase.OnDeactivated(e)
 
         If Not isAppLoaded Then Exit Sub
@@ -508,22 +320,10 @@ Partial Public Class osTrayMenu_GUI
             If ValidateTrayMenuClose() Then
                 Return
             Else
-                TriggerTrayMenuDispose()
+                Await TriggerTrayMenuDispose()
             End If
         End If
     End Sub
-
-    'Protected Overrides Sub OnDeactivated(e As EventArgs)
-    '    MyBase.OnDeactivated(e)
-
-    '    If Not isAppLoaded Then Exit Sub
-
-    '    If ValidateTrayMenuClose() Then
-    '        Return
-    '    Else
-    '        TriggerTrayMenuDispose()
-    '    End If
-    'End Sub
 
     Private Sub TrayMenuClosed(sender As Object, e As EventArgs) Handles Me.Closed
         Try
@@ -535,16 +335,25 @@ Partial Public Class osTrayMenu_GUI
 
 #Region "Button Event Handlers"
 
-    Private Async Sub TrayMenuBtn_StartGame_Click(sender As Object, e As RoutedEventArgs) Handles TrayMenuBtn_StartGame.Click
-        PromptResponseState.EnterPromptResponse()
+    Private Sub TriggerStartGame()
+        Dim procGameInfo = New ProcessStartInfo With {
+            .FileName = dirMtgaExe, .WorkingDirectory = dirMtga,
+            .WindowStyle = ProcessWindowStyle.Maximized
+        }
 
-        Await RunTrayMenuCloseTask(
-            Sub()
-                Process.Start(New ProcessStartInfo With {
-                              .FileName = dirMtgaExe, .WorkingDirectory = dirMtga,
-                              .WindowStyle = ProcessWindowStyle.Maximized
-                          })
-            End Sub)
+        Process.Start(procGameInfo)
+    End Sub
+
+    Private Async Sub TrayMenuBtn_StartGame_Click(sender As Object, e As RoutedEventArgs) Handles TrayMenuBtn_StartGame.Click
+        '  PromptResponseState.EnterPromptResponse()
+        Await RunTrayMenuCloseTask(AddressOf TriggerStartGame)
+        'Await RunTrayMenuCloseTask(
+        '    Sub()
+        '        Process.Start(New ProcessStartInfo With {
+        '                      .FileName = dirMtgaExe, .WorkingDirectory = dirMtga,
+        '                      .WindowStyle = ProcessWindowStyle.Maximized
+        '                  })
+        '    End Sub)
     End Sub
 
     Private Async Sub TrayMenuBtn_CloseGame_Click(sender As Object, e As RoutedEventArgs) Handles TrayMenuBtn_CloseGame.Click
@@ -611,53 +420,103 @@ Partial Public Class osTrayMenu_GUI
         End If
     End Sub
 
-    Private Async Sub PrepTrayGameMenu(sender As Object, e As RoutedEventArgs) Handles TrayMenuBtn_ToggleGameMenu.Checked
-        Await Task.Run(
-            Sub()
-                ShowGameMenuItem()
-            End Sub)
-    End Sub
-
     Private Async Sub pmCmd_ShowOpts(sender As Object, e As RoutedEventArgs) Handles TrayMenuBtn_ShowOptions.Click
         Await RunTrayMenuCloseTask(AddressOf TriggerShowOpts)
     End Sub
 
     Private Async Sub DetermineTrayGameMenu(sender As Object, e As RoutedEventArgs) Handles TrayMenuBtn_ToggleGameMenu.Click
         Dim chkToggleState = DetermineToggleState(sender)
-        SetGameMenuVisuals(chkToggleState)
 
-        If GetGameMenuState(chkToggleState) Then
-            Storyboard.SetTarget(visGameMenu_Open,
-                                 TrayMenuGamePanel)
-            ApplyTrayMenuSize(True)
+        If isGameMenuStateResolved Then
+            Dim objGameMenuState = GetGameMenuState(chkToggleState)
+            Dim visTask_Seperator = InitializeSeperatorVisuals(Not objGameMenuState)
 
-            TrayMenuGamePanel.UpdateLayout()
-            Await Dispatcher.InvokeAsync(
-                    Sub() HoldTask(),
-                    DispatcherPriority.Render)
-
-            visGameMenu_Open.Begin()
-        Else
-            Storyboard.SetTarget(visGameMenu_Close,
-                                 TrayMenuGamePanel)
-
-            evtCloseTrayGameMenu =
-                Sub()
-                    RemoveHandler visGameMenu_Close.Completed,
-                                                evtCloseTrayGameMenu
-                    ApplyTrayMenuSize()
-                End Sub
-
-            AddHandler visGameMenu_Close.Completed,
-                                    evtCloseTrayGameMenu
-
-            Await Dispatcher.InvokeAsync(Sub() HoldTask(),
-                                         DispatcherPriority.Render)
-
-            TrayMenuGamePanel.UpdateLayout()
-            visGameMenu_Close.Begin()
+            If objGameMenuState Then
+                Await ValidateDispatch(
+                    Function() TriggerVisuals_Sideboard(
+                        GetVisualKey(GameMenu_Close, True),
+                            Sub()
+                                isGameMenuStateResolved = True
+                            End Sub, True), True, Function() Task.WhenAll(visTask_Seperator))
+            Else
+                Await ValidateDispatch(
+                    Function() TriggerVisuals_Sideboard(
+                        GetVisualKey(GameMenu_Open, True),
+                            Sub()
+                                isGameMenuStateResolved = True
+                            End Sub, True), True, Function() Task.WhenAll(visTask_Seperator))
+            End If
         End If
     End Sub
+
+    Private Function InitializeSeperatorVisuals(Optional isCollapse As Boolean = False) As List(Of Task)
+        Dim objSepColorData = PrepSeperatorColorData()
+        Dim objSeperatorColor = GenerateSeperatorColor(isCollapse)
+
+        Return SeperatorArray().Select(
+            Function(objSeperator)
+                Dim objSepColorVisual = ComposeSeperatorVisual(objSeperatorColor)
+                Dim objSepColor = objSepColorData(objSeperator)
+
+                Dim evtSepVisComplete As EventHandler =
+                   Sub()
+                       RemoveHandler objSepColorVisual.Completed, evtSepVisComplete
+
+                       objSepColor.Color = GenerateSeperatorColor(isCollapse)
+                       objSepColor.BeginAnimation(GradientStop.ColorProperty, Nothing)
+                   End Sub
+
+                AddHandler objSepColorVisual.Completed, evtSepVisComplete
+
+                Dim visSeperatorTask =
+                   Async Function() As Task
+                       Await PrepDispatcher().InvokeAsync(
+                           Sub()
+                               objSepColor.BeginAnimation(
+                                   GradientStop.ColorProperty, objSepColorVisual)
+                           End Sub, DispatcherPriority.Render)
+                   End Function
+
+                Return Task.Run(visSeperatorTask)
+            End Function).ToList()
+    End Function
+
+    Private Function SeperatorArray() As IEnumerable(Of Integer)
+        Return Enumerable.Range(1, 2)
+    End Function
+
+    Private Function GenerateSeperatorColor(Optional isCollapse As Boolean = False) As Color
+        Return CType(ColorConverter.ConvertFromString(
+            If(isCollapse, "#A1060606", "#F1AAAAAA")), Color)
+    End Function
+
+    Private Function FetchContainerSeperator() As Rectangle
+        Return TrayMenuContent.Children.OfType(Of Rectangle)().
+            Where(Function(objSep) Equals(objSep.Tag, "Content_Separator")).
+            OrderBy(Function(objSep) Grid.GetRow(objSep))(1)
+    End Function
+
+    Private Function PrepSeperatorColorData() As GradientStopCollection
+        Dim objSeperator = FetchContainerSeperator()
+
+        Dim objSeperatorBrush = TryCast(
+            objSeperator.Fill, LinearGradientBrush)
+
+        objSeperatorBrush = objSeperatorBrush.CloneCurrentValue()
+        objSeperator.Fill = objSeperatorBrush
+
+        Return objSeperatorBrush.GradientStops
+    End Function
+
+    Private Function ComposeSeperatorVisual(visSepColor As Color) As ColorAnimation
+        Return New ColorAnimation(visSepColor, SeperatorVisDuration) With {
+                .FillBehavior = FillBehavior.HoldEnd,
+                .EasingFunction = New ExponentialEase With {
+                    .EasingMode = EasingMode.EaseIn,
+                    .Exponent = 1.25
+                }
+            }
+    End Function
 
 #End Region
 

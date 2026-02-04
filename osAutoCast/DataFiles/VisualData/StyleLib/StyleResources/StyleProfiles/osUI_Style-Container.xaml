@@ -3,8 +3,8 @@
                     xmlns:osStyle="clr-namespace:osAutoCast.osStyle">
 
     <Style x:Key="ContentContainerStyle" TargetType="{x:Type Grid}">
-        <Setter Property="MinWidth" Value="257" />
-        <Setter Property="osStyle:osContainerLayout.Rows" Value="auto,auto,auto,auto" />
+        <Setter Property="Width" Value="258" />
+       <Setter Property="osStyle:osContainerLayout.Rows" Value="auto,auto,auto,auto" />
         <Setter Property="osStyle:osContainerLayout.SeparatorBrush">
                 <Setter.Value>
                 <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">

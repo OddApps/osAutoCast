@@ -42,9 +42,15 @@ Public Class osPopupMenu_GUI
 
     Private Property isVisualConfigured As Boolean
 
-    Public ReadOnly Property objContainer As Border
+    Public ReadOnly Property objContainer As osBorder
         Get
             Return Me.popupMainContainer
+        End Get
+    End Property
+
+    Public ReadOnly Property objContentContainer As Grid
+        Get
+            Return Me.popupContentContainer
         End Get
     End Property
 
@@ -56,22 +62,25 @@ Public Class osPopupMenu_GUI
         objOpenResult.ResetAndInitTask()
     End Sub
 
-    Public Sub InitPopupClose(objVisType As PopupVisualType)
+    Public Async Function InitPopupClose(objVisType As PopupVisualType) As Task
         DetectCloseMethod(objVisType)
-        BeginClosingTask(objTask_Closing)
+        '   BeginClosingTask(objTask_Closing)
 
-        EstablishVisual(objVisType)
-        ProcessVisualEvents(aniClose, VisualStarted)
-    End Sub
+        Await SetCloseVisualData_WithTask(
+            GetVisualKey(objVisType), Sub()
+                                          objTask_Closing.TrySetResult(True)
+
+                                          'ProcessVisualEvents(aniClose, VisualComplete)
+                                          Me.Owner = Nothing
+                                      End Sub)
+
+        'EstablishVisual(objVisType)
+        'ProcessVisualEvents(aniClose, VisualStarted)
+    End Function
 
     Public Async Function InterceptPopupMenuClose() As Task
         Await objTask_Closing.Task
     End Function
-
-    'Public Overrides Async Function TriggerVisuals_Close() As Task
-    '    Await MyBase.TriggerVisuals_Close()
-    '    Await objTask_Closing.Task
-    'End Function
 
     Private Function GetVisualKey(objVisType As PopupVisualType) As String
         Return idxPopupVisuals.
@@ -106,64 +115,10 @@ Public Class osPopupMenu_GUI
         Return TryCast(objVis, Storyboard)
     End Function
 
-    Private Function ConvVisualData(objVisData As Object) As Style
-        Return CType(objVisData, Style)
-    End Function
-
-    Private Function GetVisualData() As ResourceDictionary
-        With objContainer.Style
-            Return .Resources.MergedDictionaries.First()
-        End With
-    End Function
-
-    Private Function SelectVisual() As Style
-        Return ConvVisualData(GetVisualData()("PopupVisuals"))
-    End Function
-
-    Private Async Sub TriggerVisuals(objVisualData As Storyboard)
-        Await objContainer.Dispatcher.BeginInvoke(
-            Sub()
-                Try
-
-                    objVisualData.Begin(objContainer)
-                Catch ex As Exception : End Try
-            End Sub, DispatcherPriority.Render)
-    End Sub
-
-    Private Async Sub TriggerVisuals(objVisualData As Storyboard, isNew As Boolean)
-        Await objContainer.Dispatcher.BeginInvoke(
-            Sub()
-                Try : objVisualData.Begin(objContainer,
-                                          isControllable:=True)
-                Catch ex As Exception : End Try
-            End Sub, DispatcherPriority.Render)
-    End Sub
-
     Private _popupWarmupDone As Boolean = False
-
-    Public Function WarmupPopupMenu() As Task
-        Return Task.Run(Sub()
-                            PrepDispatcher().Invoke(
-                                Sub()
-                                    ConfigureVisual()
-                                End Sub)
-                        End Sub)
-    End Function
 
     Private Function GetVisual(objVisType As PopupVisualType, isNew As Boolean) As Storyboard
         Return ConvVisual(Me.Resources(GetVisualKey(objVisType)))
-    End Function
-
-    Private Function GetVisual(objVisType As PopupVisualType) As Storyboard
-        With ConvVisual(SelectVisual().
-                Resources(GetVisualKey(objVisType)))
-            Return .Clone()
-        End With
-    End Function
-
-    Private Function LoadVis_Set(objVisType As PopupVisualType) As Storyboard
-        Return ConvVisual(SelectVisual().
-                Resources(GetVisualKey(objVisType)))
     End Function
 
     Private Function GetVisual2(objVisType As PopupVisualType) As Storyboard
@@ -212,31 +167,6 @@ Public Class osPopupMenu_GUI
         AddHandler VisDataObject.Completed, OpenCompleteEvent
     End Sub
 
-    Public Sub ConfigureVisual()
-        '    EstablishVisual(PopupVisual_Open)
-        'SetOpenEvents()
-        '   PrepTransitionVisuals(aniOpen, PopupVisual_Open, VisualStarted)
-        '     VisDataObject = objAnimation_Open
-    End Sub
-
-    Private Sub InitTransitionVisuals(objAniType As AnimationType, objVisType As PopupVisualType, objVisAction As VisualAction)
-        Select Case objAniType
-            Case aniOpen
-                PrepTransitionVisuals(aniOpen, PopupVisual_Open, VisualStarted)
-                TriggerVisuals(objAnimation_Open, True)
-            Case aniClose
-                PrepTransitionVisuals(objAniType, objVisType, objVisAction)
-
-                ' Dim objTask_VisAdapter = objVisAdapt.ApplyVisuals(True)
-                objAnimation_Close.Begin(objContainer, True)
-        End Select
-    End Sub
-
-    Private Sub PrepTransitionVisuals(objAniType As AnimationType, objVisType As PopupVisualType, objVisAction As VisualAction)
-        EstablishVisual(objAniType)
-        ProcessVisualEvents(objAniType, objVisAction)
-    End Sub
-
     Public Sub DetectCloseMethod(closeType As PopupVisualType)
         If Not closeType = PopupVisual_CloseByCmd Then
             RaiseEvent EvCloseByClick(Me, EventArgs.Empty)
@@ -267,7 +197,7 @@ Public Class osPopupMenu_GUI
         objDur = New Duration(valDur)
     End Sub
 
-    Private Sub BeginClosingTask(ByRef objCloseResult As TaskCompletionSource(Of Boolean))
+    Public Sub BeginClosingTask(ByRef objCloseResult As TaskCompletionSource(Of Boolean))
         objCloseResult.ResetAndInitTask()
     End Sub
 
@@ -275,8 +205,6 @@ Public Class osPopupMenu_GUI
         objTask_Closing.TrySetResult(True)
 
         ProcessVisualEvents(aniClose, VisualComplete)
-
-        VisDataObject.Stop()
         Me.Owner = Nothing
     End Sub
 
@@ -296,8 +224,8 @@ Public Class osPopupMenu_GUI
     Private Async Sub pmCmd_ShowOpts(sender As Object, e As RoutedEventArgs) Handles pmBtn_ShowOptions.Click
         Await ExitPopupMenu(ClosePopup_ByBtn,
                             Async Function()
-                                osFuncLib_InputScan.SetMonitorState(MonitorStatus.InCmd)
-                                Await osFuncLib_ShowOpts.ExecuteDispOpts()
+                                Await Task.Delay(75)
+                                Return osFuncLib_ShowOpts.ExecuteDispOpts()
                             End Function)
     End Sub
 
@@ -377,43 +305,13 @@ Public Class osPopupMenu_GUI
     End Sub
 
     Public Async Function InitPopupMenuVis() As Task
-        Dim visDataN = GetVisualKey(PopupVisual_Open)
-
-        Await InitializeVisAdapter(visDataN, Me, EstablishVisConfig(),
-                                    AddressOf SetOpenEvents, objContainer)
-    End Function
-
-    Private Function PrepPopupMenuVis() As Task
-        SetOpenEvents()
-        Return Task.CompletedTask
-    End Function
-
-    Private Function LoadVisualData() As Task(Of Storyboard)
-        Dim objTask_VisLoadComplete As New TaskCompletionSource(Of Task(Of Storyboard))()
-        Dim objTask_VisLoader As New BackgroundWorker()
-
-        AddHandler objTask_VisLoader.DoWork,
-            Sub(sender As Object, e As DoWorkEventArgs)
-                Dim objVisPrep = PrepDispatcher().InvokeAsync(
-                    Function() As Storyboard
-                        Return EstablishVisual(PopupVisual_Open, True)
-                    End Function, DispatcherPriority.Background).Task
-                e.Result = objVisPrep
-            End Sub
-
-        AddHandler objTask_VisLoader.RunWorkerCompleted,
-            Sub(sender As Object, e As RunWorkerCompletedEventArgs)
-                objTask_VisLoadComplete.SetResult(DirectCast(e.Result, Task(Of Storyboard)))
-                objTask_VisLoader.Dispose()
-            End Sub
-
-        objTask_VisLoader.RunWorkerAsync()
-        Return objTask_VisLoadComplete.Task.Unwrap()
+        Await InitializeVisAdapter(GetVisualKey(PopupVisual_Open), Me, EstablishVisConfig(),
+                                    Sub() BufferPopupMenu(), objContainer, objContentContainer)
     End Function
 
     Private Async Function ExitPopupMenu(popupCloseAction As PopupCloseAction, objMenuCmd As Action) As Task
         Await osHandler_UI.ClosePopupMenu(popupCloseAction)
-        Await Task.Delay(200)
+        Await Task.Delay(250)
 
         PrepDispatcher().
             Invoke(Sub()
@@ -423,14 +321,19 @@ Public Class osPopupMenu_GUI
 
     Private Async Function ExitPopupMenu(popupCloseAction As PopupCloseAction, objMenuCmd As Func(Of Task)) As Task
         Await osHandler_UI.ClosePopupMenu(popupCloseAction)
-        Await Task.Delay(275)
+        Await Task.Delay(425)
 
-        Dim objTask_MenuCmd = PrepDispatcher().
-            InvokeAsync(Function()
-                            Return objMenuCmd()
-                        End Function)
+        Await ValidateDispatch(objMenuCmd, True)
+        'Await PrepDispatcher().InvokeAsync(
+        '    objMenuCmd, DispatcherPriority.Render).Task.Unwrap()
 
-        Await objTask_MenuCmd.Task.Unwrap()
+        'Dim objTask_MenuCmd = PrepDispatcher().InvokeAsync(
+        '    Function()
+        '        Return objMenuCmd()
+        '    End Function)
+
+        'Await objTask_MenuCmd.Task.Unwrap()
+
     End Function
 
     Protected Overrides Sub OnClosed(e As EventArgs)
@@ -468,7 +371,6 @@ Public Class osPopupMenu_GUI
             .DataContext = Nothing
         End With
     End Sub
-
 
 
 End Class
