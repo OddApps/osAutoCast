@@ -26,8 +26,7 @@
 					</EasingDoubleKeyFrame.EasingFunction>
 				</EasingDoubleKeyFrame>
 			</DoubleAnimationUsingKeyFrames>
-		</Storyboard>
-		
+		</Storyboard>		
 		<Storyboard x:Key="TrayGameMenuVis_Collapse">
 			<DoubleAnimationUsingKeyFrames Storyboard.TargetName="TrayMenuGamePanel"
 										   Storyboard.TargetProperty="Height" FillBehavior="HoldEnd">
@@ -49,11 +48,20 @@
 			</DoubleAnimationUsingKeyFrames>
 		</Storyboard>
 		
-		<Storyboard x:Key="TrayMenuVis_Display" BeginTime="00:00:00" Duration="00:00:0.500">
+		<Storyboard x:Key="TrayMenuVis_Display" Duration="00:00:0.515">
+			<DoubleAnimationUsingKeyFrames Storyboard.TargetName="TrayMainContainer" 
+										   Storyboard.TargetProperty="Opacity" FillBehavior="HoldEnd">
+				<EasingDoubleKeyFrame KeyTime="00:00:00" Value="0" />
+				<EasingDoubleKeyFrame KeyTime="00:00:00.515" Value="1">
+					<EasingDoubleKeyFrame.EasingFunction>
+						<QuadraticEase EasingMode="EaseInOut" />
+					</EasingDoubleKeyFrame.EasingFunction>
+				</EasingDoubleKeyFrame>
+			</DoubleAnimationUsingKeyFrames>
 			<DoubleAnimationUsingKeyFrames Storyboard.TargetName="TrayMenuOutlineRender"
 										   Storyboard.TargetProperty="ScaleX" FillBehavior="HoldEnd">
 				<EasingDoubleKeyFrame KeyTime="00:00:00" Value="0" />
-				<EasingDoubleKeyFrame KeyTime="00:00:00.500" Value="1">
+				<EasingDoubleKeyFrame KeyTime="00:00:00.515" Value="1">
 					<EasingDoubleKeyFrame.EasingFunction>
 						<QuadraticEase EasingMode="EaseInOut" />
 					</EasingDoubleKeyFrame.EasingFunction>
@@ -62,16 +70,7 @@
 			<DoubleAnimationUsingKeyFrames Storyboard.TargetName="TrayMenuOutlineRender"
 										   Storyboard.TargetProperty="ScaleY" FillBehavior="HoldEnd">
 				<EasingDoubleKeyFrame KeyTime="00:00:00" Value="0" />
-				<EasingDoubleKeyFrame KeyTime="00:00:00.500" Value="1">
-					<EasingDoubleKeyFrame.EasingFunction>
-						<QuadraticEase EasingMode="EaseInOut" />
-					</EasingDoubleKeyFrame.EasingFunction>
-				</EasingDoubleKeyFrame>
-			</DoubleAnimationUsingKeyFrames>
-			<DoubleAnimationUsingKeyFrames Storyboard.TargetName="TrayMainContainer"
-										   Storyboard.TargetProperty="Opacity" FillBehavior="HoldEnd">
-				<EasingDoubleKeyFrame KeyTime="00:00:00" Value="0" />
-				<EasingDoubleKeyFrame KeyTime="00:00:00.500" Value="1">
+				<EasingDoubleKeyFrame KeyTime="00:00:00.515" Value="1">
 					<EasingDoubleKeyFrame.EasingFunction>
 						<QuadraticEase EasingMode="EaseInOut" />
 					</EasingDoubleKeyFrame.EasingFunction>
@@ -79,13 +78,13 @@
 			</DoubleAnimationUsingKeyFrames>
 		</Storyboard>
 
-		<Storyboard x:Key="TrayMenuVis_Close" BeginTime="00:00:00" Duration="00:00:0.525">
+		<Storyboard x:Key="TrayMenuVis_Close" Duration="00:00:0.525">
 			<DoubleAnimationUsingKeyFrames Storyboard.TargetName="TrayMenuOutlineRender"
 										   Storyboard.TargetProperty="ScaleX" FillBehavior="HoldEnd">
 				<EasingDoubleKeyFrame KeyTime="00:00:00" Value="1" />
 				<EasingDoubleKeyFrame KeyTime="00:00:00.525" Value="0">
 					<EasingDoubleKeyFrame.EasingFunction>
-						<QuadraticEase EasingMode="EaseOut" />
+						<QuadraticEase EasingMode="EaseInOut" />
 					</EasingDoubleKeyFrame.EasingFunction>
 				</EasingDoubleKeyFrame>
 			</DoubleAnimationUsingKeyFrames>
@@ -94,7 +93,7 @@
 				<EasingDoubleKeyFrame KeyTime="00:00:00" Value="1" />
 				<EasingDoubleKeyFrame KeyTime="00:00:00.525" Value="0">
 					<EasingDoubleKeyFrame.EasingFunction>
-						<QuadraticEase EasingMode="EaseOut" />
+						<QuadraticEase EasingMode="EaseInOut" />
 					</EasingDoubleKeyFrame.EasingFunction>
 				</EasingDoubleKeyFrame>
 			</DoubleAnimationUsingKeyFrames>
@@ -103,66 +102,63 @@
 				<EasingDoubleKeyFrame KeyTime="00:00:00" Value="1" />
 				<EasingDoubleKeyFrame KeyTime="00:00:00.525" Value="0">
 					<EasingDoubleKeyFrame.EasingFunction>
-						<QuadraticEase EasingMode="EaseOut" />
+						<QuadraticEase EasingMode="EaseInOut" />
 					</EasingDoubleKeyFrame.EasingFunction>
 				</EasingDoubleKeyFrame>
 			</DoubleAnimationUsingKeyFrames>
 		</Storyboard>
 	</osVis:VisAdapterUI.Resources>
-
-	<Grid VerticalAlignment="Bottom" Height="220">
-		<osCtrl:osBorder x:Name="TrayMainContainer" CornerRadius="6" Margin="0" 
-					 VerticalAlignment="Bottom" MinHeight="146" Height="NaN"
-					 Opacity="0" BorderBrush="#FF252525" ClipInflation="1" ClipToBounds="True"
-					 Style="{StaticResource TrayMenuContainerBorderStyle}" >
-			<osCtrl:osBorder.RenderTransform> 
-				<ScaleTransform x:Name="TrayMenuOutlineRender" 
-								ScaleX="0" ScaleY="0" /> 
-			</osCtrl:osBorder.RenderTransform>
-			<Grid x:Name="TrayContentContainer"
-				  Style="{StaticResource TrayMenuContentContainerStyle}" VerticalAlignment="Center">
-				<Grid.ColumnDefinitions>
-					<ColumnDefinition/>
-				</Grid.ColumnDefinitions>
-				<ToggleButton x:Name="TrayMenuBtn_EnOptions"
-							  Grid.Row="0" Grid.Column="0" Focusable="False" 
-							  Style="{StaticResource TrayMenuItemEnDisStyle}" />
-				<Grid DataContext="{Binding RelativeSource={RelativeSource AncestorType=Window}}"
-					  Grid.Row="1" Grid.Column="0" >
-					<Grid.RowDefinitions>
-						<RowDefinition Height="Auto" />
-						<RowDefinition Height="Auto" />
-					</Grid.RowDefinitions>
-					<ToggleButton x:Name="TrayMenuBtn_ToggleGameMenu"
-								  Grid.Row="0" Content="Game Menu" IsChecked="False"
-								  Style="{StaticResource TrayMenuItemGameMenuStyle}" />
-					<Border x:Name="TrayMenuGamePanel" Grid.Row="1" Height="0" ClipToBounds="True" 
-							Style="{StaticResource HideShowGameTrayMenu}" Opacity="0">
-							<Grid >
-								<Grid.RowDefinitions>
-									<RowDefinition Height="Auto" />
-									<RowDefinition Height="Auto" />
-								</Grid.RowDefinitions>
-								<Button x:Name="TrayMenuBtn_StartGame" Grid.Row="0"
-									Content="Start MTGA" Focusable="False"
-									Style="{StaticResource GameTrayMenu_ShowStart}" />
-								<Button x:Name="TrayMenuBtn_CloseGame" Grid.Row="0"
-									Content="Close MTGA" Focusable="False"
-									Style="{StaticResource GameTrayMenu_ShowClose}" />
-								<Button x:Name="TrayMenuBtn_RestartGame" Grid.Row="1"
-									Content="Restart MTGA" Focusable="False"
-									Style="{StaticResource GameTrayMenu_ShowRestart}" />
-							</Grid>
-						</Border>
-				</Grid>
-				<Button x:Name="TrayMenuBtn_ShowOptions" Content="Options"
-						Grid.Row="2" Grid.Column="0" Focusable="False" 
-						Style="{StaticResource TrayMenuItemDefaultStyle}" />
-				<Button x:Name="TrayMenuBtn_Exit" Content="Exit" 
-						Grid.Row="3" Grid.Column="0" Focusable="False" 
-						Style="{StaticResource TrayMenuItemBorderStyle}" />
-			</Grid>
-		</osCtrl:osBorder>
-	</Grid>
 	
+	<osCtrl:osBorder x:Name="TrayMainContainer" Height="NaN" Opacity="0"
+					 BorderBrush="#FF252525" ClipInflation="1" ClipToBounds="True"
+					 Style="{StaticResource TrayMenuContainerBorderStyle}" >
+		<osCtrl:osBorder.RenderTransform>
+			<ScaleTransform x:Name="TrayMenuOutlineRender"
+							ScaleX="0" ScaleY="0" />
+		</osCtrl:osBorder.RenderTransform>
+		<Grid x:Name="TrayContentContainer"
+			  Style="{StaticResource TrayMenuContentContainerStyle}" VerticalAlignment="Center">
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition/>
+			</Grid.ColumnDefinitions>
+			<ToggleButton x:Name="TrayMenuBtn_EnOptions"
+						  Grid.Row="0" Grid.Column="0" Focusable="False" 
+						  Style="{StaticResource TrayMenuItemEnDisStyle}" />
+			<Grid DataContext="{Binding RelativeSource={RelativeSource AncestorType=Window}}"
+				  Grid.Row="1" Grid.Column="0" >
+				<Grid.RowDefinitions>
+					<RowDefinition Height="Auto" />
+					<RowDefinition Height="Auto" />
+				</Grid.RowDefinitions>
+				<ToggleButton x:Name="TrayMenuBtn_ToggleGameMenu"
+							  Grid.Row="0" Content="Game Menu" IsChecked="False"
+							  Style="{StaticResource TrayMenuItemGameMenuStyle}" />
+				<Border x:Name="TrayMenuGamePanel" Grid.Row="1" Height="0" ClipToBounds="True" 
+						Style="{StaticResource HideShowGameTrayMenu}" Opacity="0">
+					<Grid>
+						<Grid.RowDefinitions>
+							<RowDefinition Height="Auto" />
+							<RowDefinition Height="Auto" />
+						</Grid.RowDefinitions>
+						<Button x:Name="TrayMenuBtn_StartGame" Grid.Row="0"
+								Content="Start MTGA" Focusable="False"
+								Style="{StaticResource GameTrayMenu_ShowStart}" />
+						<Button x:Name="TrayMenuBtn_CloseGame" Grid.Row="0"
+								Content="Close MTGA" Focusable="False"
+								Style="{StaticResource GameTrayMenu_ShowClose}" />
+						<Button x:Name="TrayMenuBtn_RestartGame" Grid.Row="1"
+								Content="Restart MTGA" Focusable="False"
+								Style="{StaticResource GameTrayMenu_ShowRestart}" />
+					</Grid>
+				</Border>
+			</Grid>
+			<Button x:Name="TrayMenuBtn_ShowOptions" Content="Options"
+					Grid.Row="2" Grid.Column="0" Focusable="False" 
+					Style="{StaticResource TrayMenuItemDefaultStyle}" />
+			<Button x:Name="TrayMenuBtn_Exit" Content="Exit" 
+					Grid.Row="3" Grid.Column="0" Focusable="False" 
+					Style="{StaticResource TrayMenuItemBorderStyle}" />
+		</Grid>
+	</osCtrl:osBorder>
+
 </osVis:VisAdapterUI>

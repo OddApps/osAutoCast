@@ -14,10 +14,8 @@ Public NotInheritable Class osHandler_AutoCast
     Private Shared _autoCastCts As CancellationTokenSource = Nothing
     Private Shared _autoCastTcs As TaskCompletionSource(Of Boolean) = Nothing
 
-    ' Private Shared _autoCastThread As Thread = Nothing
-    '  Private Shared _autoCastThreadId As Integer = 0
-
-    '  Private Shared ReadOnly _startupLock As New Object()
+    Private Shared _autoCastTask As Task = Nothing
+    Private Shared _uiContext As WindowsFormsSynchronizationContext = Nothing
 
     Public Shared ReadOnly Property AutoCast_UI As AutoCastGui
         Get
@@ -25,42 +23,31 @@ Public NotInheritable Class osHandler_AutoCast
         End Get
     End Property
 
-    Private Shared Sub InitAutoCastTask(ByRef objAbortToken As CancellationTokenSource, ByRef objTaskSource As TaskCompletionSource(Of Boolean))
-        objAbortToken = New CancellationTokenSource()
-        objTaskSource = New TaskCompletionSource(Of Boolean)(TaskCreationOptions.RunContinuationsAsynchronously)
-    End Sub
-
-    Private Shared _autoCastTask As Task = Nothing
-    Private Shared _uiContext As WindowsFormsSynchronizationContext = Nothing
-
     Public Shared Async Function StartAutoCastAsync() As Task(Of Boolean)
-        Dim existing = _autoCastTcs
+        Dim chkExisting = _autoCastTcs
 
-        If existing IsNot Nothing Then
-            Return Await existing.Task.ConfigureAwait(False)
+        If chkExisting IsNot Nothing Then
+            Return Await chkExisting.Task.ConfigureAwait(False)
         End If
 
-        Dim progSize = Await Task.Run(
+        Dim objTask_ProgSize = Task.Run(
             Function()
                 Return FetchProgSizeReport(TriggerType.AutoCast, True)
             End Function)
 
-        Dim pW As Integer = CInt(progSize("pW"))
-        Dim pH As Integer = CInt(progSize("pH"))
+        InitAutoCastTask(_autoCastCts, _autoCastTcs)
 
-        Dim cts = New CancellationTokenSource()
-        Dim tcs = New TaskCompletionSource(Of Boolean)(
-            TaskCreationOptions.RunContinuationsAsynchronously)
+        Dim acProgSize = Await objTask_ProgSize
 
-        _autoCastCts = cts
-        _autoCastTcs = tcs
+        Dim pW = acProgSize("pW")
+        Dim pH = acProgSize("pH")
 
         _autoCastTask = Task.Run(
             Sub()
-                RunAutoCastUiLoop(pW, pH, cts, tcs)
+                RunAutoCastUiLoop(pW, pH, _autoCastCts, _autoCastTcs)
             End Sub)
 
-        Return Await tcs.Task.ConfigureAwait(False)
+        Return Await _autoCastTcs.Task.ConfigureAwait(False)
     End Function
 
     Private Shared Sub RunAutoCastUiLoop(pW As Integer, pH As Integer, cts As CancellationTokenSource, tcs As TaskCompletionSource(Of Boolean))
@@ -155,6 +142,11 @@ Public NotInheritable Class osHandler_AutoCast
 
         Return True
     End Function
+
+    Private Shared Sub InitAutoCastTask(ByRef objAbortToken As CancellationTokenSource, ByRef objTaskSource As TaskCompletionSource(Of Boolean))
+        objAbortToken = New CancellationTokenSource()
+        objTaskSource = New TaskCompletionSource(Of Boolean)(TaskCreationOptions.RunContinuationsAsynchronously)
+    End Sub
 
     Private Shared Function ValidateInstance(objInstance As ProgBarGui_AutoCast) As Boolean
         Return objInstance IsNot Nothing AndAlso Not objInstance.IsDisposed

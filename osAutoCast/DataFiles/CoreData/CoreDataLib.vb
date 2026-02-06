@@ -263,10 +263,8 @@ Public NotInheritable Class CoreDataLib
     End Function
 
     Private Shared Sub ResolveAction()
-        'InputMonSvc.SelectState(MonitorStatus.Watching)
         If Not osFuncLib_InputScan.isActionComplete Then Return
-        osFuncLib_InputScan.isActionComplete = False
-
+        osFuncLib_InputScan.isActionComplete = True
     End Sub
 
     Public Shared Sub PrepUtilityTrigger(pType As TriggerType)

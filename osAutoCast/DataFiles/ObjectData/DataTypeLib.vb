@@ -491,9 +491,10 @@ Public Module DataTypeLib
         UpdateAsync_OnReset = 8
         UpdateAsync_OnDispose = 16
         UpdateAsync_OnSideboard = 32
+        KillHoverOnVisuals = 64
 
         EnableAll = ResetVisualSettings Or ModifyLayout Or UpdateAsync_OnLoad Or
-            UpdateAsync_OnReset Or UpdateAsync_OnDispose Or UpdateAsync_OnSideboard
+            UpdateAsync_OnReset Or UpdateAsync_OnDispose Or UpdateAsync_OnSideboard Or KillHoverOnVisuals
     End Enum
 
 #End Region
@@ -511,6 +512,25 @@ Public Class TriggerHandlerData
     Public Sub New(objHandleAction As TriggerAction, objHandleEvent As Func(Of Task))
         HandleAction = objHandleAction
         HandleEvent = objHandleEvent
+    End Sub
+
+End Class
+
+Public Class PopupMenuDisposeAction
+
+    Public Property PopupVisType As PopupVisualType
+    Public Property OverlayVisType As OverlayVisualType
+
+    Public Property DisposeOwner As Boolean
+
+    Public Sub New()
+    End Sub
+
+    Public Sub New(valVisType As PopupVisualType, valOverlayType As OverlayVisualType, Optional valDisposeOwner As Boolean = False)
+        PopupVisType = valVisType
+        OverlayVisType = valOverlayType
+
+        DisposeOwner = valDisposeOwner
     End Sub
 
 End Class
@@ -1770,11 +1790,12 @@ Public Class ProgressMsg
 
     Public Sub New(txtMsg As String, pType As TriggerType,
                    ByRef pWriteFactory As osText.Factory, ByRef pFormat As osText.TextFormat)
+        Dim chkAcH As Integer
 
         MsgText = txtMsg
 
-        Format = ApplyMsgFormat(pWriteFactory)
-        Location = SetMsgLocation(pType)
+        Location = SetMsgLocation(pType, chkAcH)
+        Format = ApplyMsgFormat(chkAcH, pWriteFactory)
 
         pFormat = Format
     End Sub
@@ -1792,10 +1813,40 @@ Public Class ProgressMsg
         End Try
     End Function
 
+    Private Function ApplyMsgFormat(acHeight As Integer, ByRef pWriteFactory As osText.Factory) As osText.TextFormat
+        Try
+            Return New osText.TextFormat(pWriteFactory, "Trebuchet MS",
+                                         osText.FontWeight.Bold, osText.FontStyle.Normal,
+                                         osText.FontStretch.Condensed, CSng(acHeight - 14)) With {
+                                             .TextAlignment = osText.TextAlignment.Center,
+                                             .ParagraphAlignment = osText.ParagraphAlignment.Center
+                                        }
+        Catch ex As Exception
+            Return Nothing
+        End Try
+    End Function
+
     Private Function SetMsgLocation(pType As TriggerType) As osRect.RawRectangleF
         With CoreDataLib.FetchProgSizeReport(pType)
             Dim progW = .Item("pW")
             Dim progH = .Item("pH")
+
+            If pType = TriggerType.AutoCast Then
+                If CoreDataLib.VerifyVisQualityPref() Then
+                    progW += 4 : progH += 4
+                End If
+            End If
+
+            Return New osRect.RawRectangleF(0, 0, progW, progH)
+        End With
+    End Function
+
+    Private Function SetMsgLocation(pType As TriggerType, ByRef acHeight As Integer) As osRect.RawRectangleF
+        With CoreDataLib.FetchProgSizeReport(pType)
+            Dim progW = .Item("pW")
+            Dim progH = .Item("pH")
+
+            acHeight = progH
 
             If pType = TriggerType.AutoCast Then
                 If CoreDataLib.VerifyVisQualityPref() Then
@@ -1974,7 +2025,7 @@ Public Module osPopupMenuLib
 
     Private Sub ExecPrepUI_TrayMenuOverlay(objGui_PopupMenuOverlay As osPopupMenuOverlay_GUI)
         With objGui_PopupMenuOverlay
-            .PrepTrayMenuOverlay()
+            '    .PrepTrayMenuOverlay()
             .Show()
         End With
     End Sub

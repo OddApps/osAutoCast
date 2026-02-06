@@ -35,12 +35,6 @@ Public Class osPopupMenuOverlay_GUI
     Private OverlayOpacity_Tray As Double = 0
     Private OverlayOpacity_Popup As Double = 0
 
-    Private VisualDataLocation As String = "/DataFiles/VisualData/StyleLib/StyleResources/StyleContent/uiStyleContent-Overlay.xaml"
-    Private VisualDataURI As System.Uri = New System.Uri(VisualDataLocation, System.UriKind.Relative)
-
-    Private VisualDataLocation2 As String = "/DataFiles/VisualData/StyleLib/StyleResources/StyleConfigs/osUI_StyleVisuals.xaml"
-    Private VisualDataURI2 As System.Uri = New System.Uri(VisualDataLocation, System.UriKind.Relative)
-
     Private objScreenData As Rectangle = SystemInformation.VirtualScreen
 
     Private idxOverlayVisuals As New Dictionary(Of OverlayVisualType, String) From {
@@ -59,27 +53,16 @@ Public Class osPopupMenuOverlay_GUI
         End With
     End Sub
 
-    Public Async Function InitOverlayOpen(objVisType As OverlayVisualType) As Task
-        InitTransitionVisuals(aniOpen, objVisType)
-        Await objTask_Open.Task
-    End Function
-
-    Public Sub PrepTrayMenuOverlay()
-        With Me
-            .WindowStyle = WindowStyle.None
-            .AllowsTransparency = True
-            .ShowInTaskbar = False
-            .ShowActivated = False
-            .Topmost = True
-            .Focusable = False
-        End With
-
-        '  PrepPopupMenuOverlay()
-    End Sub
-
-    Private Sub EstablishVisual(objVisType As OverlayVisualType)
-        Me.VisDataObject = TryCast(Me.Resources(GetVisualKey(objVisType)), Storyboard)
-    End Sub
+    'Public Sub PrepTrayMenuOverlay()
+    '    With Me
+    '        .WindowStyle = WindowStyle.None
+    '        .AllowsTransparency = True
+    '        .ShowInTaskbar = False
+    '        .ShowActivated = False
+    '        .Topmost = True
+    '        .Focusable = False
+    '    End With
+    'End Sub
 
     Public Async Function PrepPopupMenuOverlay() As Task
         Dim visDataN = GetVisualKey(OverlayVisual_Open)
@@ -87,101 +70,43 @@ Public Class osPopupMenuOverlay_GUI
                                     AddressOf SetOpenEvents, osOverlay)
     End Function
 
-    Private Function InitOpenEvents() As Task
-        SetOpenEvents()
-        Return Task.CompletedTask
-    End Function
-
-    Private Function LoadVisualData() As Task(Of Storyboard)
-        Dim objTask_GraphicsData As New TaskCompletionSource(Of Task(Of Storyboard))()
-        Dim objTask_InitGraphics As New BackgroundWorker()
-
-        AddHandler objTask_InitGraphics.DoWork,
-            Sub(sender As Object, e As DoWorkEventArgs)
-                Dim iff = PrepDispatcher().InvokeAsync(
-            Function()
-                Return EstablishVisual(OverlayVisual_Open, True)
-            End Function, DispatcherPriority.Render).task
-                e.Result = iff
-            End Sub
-
-        AddHandler objTask_InitGraphics.RunWorkerCompleted,
-            Sub(sender As Object, e As RunWorkerCompletedEventArgs)
-                objTask_GraphicsData.SetResult(DirectCast(e.Result, Task(Of Storyboard)))
-                objTask_InitGraphics.Dispose()
-            End Sub
-
-        objTask_InitGraphics.RunWorkerAsync()
-
-        Return objTask_GraphicsData.Task.Unwrap()
-    End Function
-
     Private Function EstablishVisConfig() As VisAdapterConfig
         Return VisAdapterConfig.EnableAll
-        'Return VisAdapterConfig.ResetVisualSettings Or VisAdapterConfig.UpdateAsync_OnDispose Or
-        '    VisAdapterConfig.UpdateAsync_OnReset
+        '    Dim objVisConfig = VisAdapterConfig.EnableAll
+        '    objVisConfig = objVisConfig And Not VisAdapterConfig.ResetVisualSettings
+
+        '    Return objVisConfig
     End Function
 
     Private Sub SetOpenEvents()
         OpenCompleteEvent =
-            Sub()
-                RemoveHandler Me.VisDataObject.Completed, OpenCompleteEvent
+          Async Sub()
+              RemoveHandler Me.VisDataObject.Completed, OpenCompleteEvent
 
-                '   VisDataObject.Stop()
-                OverlayOpenComplete(objTask_Open)
-            End Sub
+              Await Task.Delay(85)
+              OverlayOpenComplete(objTask_Open)
+          End Sub
 
         AddHandler VisDataObject.Completed, OpenCompleteEvent
-    End Sub
-
-    Private Sub BeginClosingTask(ByRef objCloseResult As TaskCompletionSource(Of Boolean))
-        objCloseResult.ResetAndInitTask()
-    End Sub
-
-    Private Sub BeginOpenTask(ByRef objOpenResult As TaskCompletionSource(Of Boolean))
-        objOpenResult.ResetAndInitTask()
     End Sub
 
     Private Sub OverlayOpenComplete(ByRef objTask As TaskCompletionSource(Of Boolean))
         objTask.TrySetResult(True)
     End Sub
 
-    Private Sub OverlayCloseComplete(ByRef objTask As TaskCompletionSource(Of Boolean))
-        objTask.TrySetResult(True)
-    End Sub
-
-    Private Sub PrepTransitionVisuals(objAniType As AnimationType, objVisType As OverlayVisualType)
-        Select Case objAniType
-            Case AnimationType.aniOpen
-
-            Case aniClose
-                EstablishVisual(objVisType)
-
-                AddHandler Me.VisDataObject.Completed, AddressOf osHandler_UI.CloseAndRestorePopupMenu
-        End Select
-    End Sub
-
-    Private Function EstablishVisual(objVisType As OverlayVisualType, isBG As Boolean) As Storyboard
-        Dim objOverlayVis = TryCast(Me.Resources(GetVisualKey(objVisType)), Storyboard)
-
-        Return objOverlayVis
-    End Function
-
     Private Function GetVisualKey(objVisType As OverlayVisualType) As String
-        Return idxOverlayVisuals.First(Function(visKey)
-                                           Return visKey.Key = objVisType
-                                       End Function).Value
+        Return idxOverlayVisuals.First(
+            Function(visKey)
+                Return visKey.Key = objVisType
+            End Function).Value
     End Function
 
-    Public Sub InitTransitionVisuals(objAniType As AnimationType, objVisType As OverlayVisualType)
-        PrepTransitionVisuals(objAniType, objVisType)
+    Public Async Function InitOverlayClose(objVisType As OverlayVisualType) As Task
+        Await SetCloseVisualData_WithEvent(GetVisualKey(objVisType),
+                                           AddressOf osHandler_UI.CloseAndRestorePopupMenu)
 
-    End Sub
-
-    Public Sub InitOverlayClose(objVisType As OverlayVisualType, isN As Boolean)
-        EstablishVisual(objVisType)
-        AddHandler Me.VisDataObject.Completed, AddressOf osHandler_UI.CloseAndRestorePopupMenu
-    End Sub
+        'Await Me.TriggerVisuals_Close()
+    End Function
 
 End Class
 

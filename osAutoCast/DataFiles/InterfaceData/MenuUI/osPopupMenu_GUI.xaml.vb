@@ -64,22 +64,12 @@ Public Class osPopupMenu_GUI
 
     Public Async Function InitPopupClose(objVisType As PopupVisualType) As Task
         DetectCloseMethod(objVisType)
-        '   BeginClosingTask(objTask_Closing)
 
         Await SetCloseVisualData_WithTask(
             GetVisualKey(objVisType), Sub()
                                           objTask_Closing.TrySetResult(True)
-
-                                          'ProcessVisualEvents(aniClose, VisualComplete)
                                           Me.Owner = Nothing
                                       End Sub)
-
-        'EstablishVisual(objVisType)
-        'ProcessVisualEvents(aniClose, VisualStarted)
-    End Function
-
-    Public Async Function InterceptPopupMenuClose() As Task
-        Await objTask_Closing.Task
     End Function
 
     Private Function GetVisualKey(objVisType As PopupVisualType) As String
@@ -225,7 +215,7 @@ Public Class osPopupMenu_GUI
         Await ExitPopupMenu(ClosePopup_ByBtn,
                             Async Function()
                                 Await Task.Delay(75)
-                                Return osFuncLib_ShowOpts.ExecuteDispOpts()
+                                Await osFuncLib_ShowOpts.ExecuteDispOpts()
                             End Function)
     End Sub
 
@@ -320,10 +310,11 @@ Public Class osPopupMenu_GUI
     End Function
 
     Private Async Function ExitPopupMenu(popupCloseAction As PopupCloseAction, objMenuCmd As Func(Of Task)) As Task
-        Await osHandler_UI.ClosePopupMenu(popupCloseAction)
-        Await Task.Delay(425)
+        Await osHandler_UI.ClosePopupMenu(popupCloseAction, objMenuCmd)
+        'Await Task.Delay(425)
 
-        Await ValidateDispatch(objMenuCmd, True)
+        'Await objMenuCmd()
+        ' Await ValidateDispatch(objMenuCmd, True)
         'Await PrepDispatcher().InvokeAsync(
         '    objMenuCmd, DispatcherPriority.Render).Task.Unwrap()
 

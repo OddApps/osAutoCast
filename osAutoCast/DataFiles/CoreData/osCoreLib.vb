@@ -412,22 +412,6 @@ Public NotInheritable Class osFuncLib_AutoCast
 
     Private Shared ptPos As Point
 
-    <DllImport("user32.dll", EntryPoint:="mouse_event", SetLastError:=True)>
-    Private Shared Sub InvokeMouse(dwFlags As UInteger, dx As UInteger, dy As UInteger, cButtons As UInteger, dwExtraInfo As IntPtr)
-    End Sub
-
-    <DllImport("user32.dll", SetLastError:=True)>
-    Private Shared Function EnableWindow(hWnd As IntPtr, bEnable As Boolean) As Boolean
-    End Function
-
-    <DllImport("kernel32.dll", SetLastError:=True)>
-    Private Shared Function GetModuleHandle(lpModuleName As String) As IntPtr
-    End Function
-
-    Public Shared Sub ToggleInputBlock(doBlock As Boolean)
-        EnableWindow(DetectGameUI.FetchHwndMTGA(), Not doBlock)
-    End Sub
-
     Public Shared Async Sub InvokeAutoCast()
         If isRTC() Then
             Await Task.Delay(75)
@@ -458,55 +442,40 @@ Public NotInheritable Class osFuncLib_AutoCast
     Public Shared Async Function ExecuteAutoCast() As Task
         Await osHandler_UI.DisplayGUI(True, TriggerType.AutoCast, ptPos)
 
-        Dim ba = ui_AutoCast.InvokeAsync(Sub(gui)
-                                             gui.Show()
-                                         End Sub)
-        '   ui_AutoCast.Show()
+        'Dim objTask_DisplayAutoCast = ui_AutoCast.
+        '    InvokeAsync(Sub(gui)
+        '                    gui.Show()
+        '                End Sub)
 
-        Dim isTask_AutoCast = ui_AutoCast.InvokeTask(
-            Function(gui)
-                Return gui.LaunchAutoCast()
-            End Function)
-        'Dim isTask_AutoCast = ui_AutoCast.InvokeAsync(Function(gui)
-        '                                                  Return gui.LaunchAutoCast()
-        '                                              End Function)
+        Dim objTask_LaunchAutoCast = Await ui_AutoCast.InvokeAsync(
+            Of Task(Of ProgResult))(Async Function(gui)
+                                        gui.Show()
+                                        Return Await gui.LaunchAutoCast()
+                                    End Function, True)
 
-
-        Dim retProgResult = Await isTask_AutoCast
+        Dim retProgResult = Await objTask_LaunchAutoCast
 
         Await ProcessResult(retProgResult)
-        osFuncLib_InputScan.isActionComplete = True
+        'osFuncLib_InputScan.isActionComplete = True
     End Function
 
     Private Shared Async Function ProcessResult(acResult As ProgResult) As Task
-
-        Dim procTask As DispatcherOperation(Of Task) = Nothing
-
         Select Case acResult
             Case ProgResult.Completed
-                procTask = PrepDispatcher().InvokeAsync(
-                    Async Function()
-                        If isRTC() Then
-                            ProcessProgressEvent(ProgMode_AutoCast, ShowFullMsg, "Release To Cast")
-                            Await InputMonSvc.AnticipateInput(InputAction.AC_RTC)
+                If isRTC() Then
+                    ProcessProgressEvent(ProgMode_AutoCast, ShowFullMsg, "Release To Cast")
+                    Await InputMonSvc.AnticipateInput(InputAction.AC_RTC)
 
-                            Await Task.Delay(100)
-                        End If
+                    Await Task.Delay(100)
+                End If
 
-                        ProcessProgressEvent(ProgMode_AutoCast, ShowFullMsg, "Casting")
+                ProcessProgressEvent(ProgMode_AutoCast, ShowFullMsg, "Casting")
 
-                        EngageAutoCast()
-                    End Function)
+                EngageAutoCast()
             Case ProgResult.Cancelled
-                procTask = PrepDispatcher().InvokeAsync(
-                    Async Function()
-                        ProcessProgressEvent(ProgMode_AutoCast, ShowFullMsg, "Cancelled")
-
-                        Await Task.Delay(10)
-                    End Function)
+                ProcessProgressEvent(ProgMode_AutoCast, ShowFullMsg, "Cancelled")
+                Await Task.Delay(10)
         End Select
-
-        Await procTask.Task.Unwrap()
 
         Await FinalizeAutoCast()
     End Function
@@ -520,6 +489,10 @@ Public NotInheritable Class osFuncLib_AutoCast
     Private Shared Async Sub HoldInputs(doAsync As Boolean)
         Await Task.Delay(1250)
         Await osHandler_Input.RestoreInput()
+    End Sub
+
+    Public Shared Sub ToggleInputBlock(doBlock As Boolean)
+        EnableWindow(DetectGameUI.FetchHwndMTGA(), Not doBlock)
     End Sub
 
     Private Shared Async Sub ExecClicker(Optional doDbl As Boolean = False)
@@ -539,6 +512,18 @@ Public NotInheritable Class osFuncLib_AutoCast
         InvokeMouse(4UI, 0UI, 0UI, 0UI, IntPtr.Zero)
     End Sub
 
+    <DllImport("user32.dll", EntryPoint:="mouse_event", SetLastError:=True)>
+    Private Shared Sub InvokeMouse(dwFlags As UInteger, dx As UInteger, dy As UInteger, cButtons As UInteger, dwExtraInfo As IntPtr)
+    End Sub
+
+    <DllImport("user32.dll", SetLastError:=True)>
+    Private Shared Function EnableWindow(hWnd As IntPtr, bEnable As Boolean) As Boolean
+    End Function
+
+    <DllImport("kernel32.dll", SetLastError:=True)>
+    Private Shared Function GetModuleHandle(lpModuleName As String) As IntPtr
+    End Function
+
 End Class
 
 Public NotInheritable Class osFuncLib_ShowOpts
@@ -546,52 +531,28 @@ Public NotInheritable Class osFuncLib_ShowOpts
     Private Shared chkCloseSettings As TaskCompletionSource(Of Boolean)
 
     Public Shared Async Function ExecuteDispOpts() As Task
-        With osPrefsWindow
-            PrepUtilityTrigger(TriggerType.ShowPrefs)
+        Dim _osPrefsWin = osPrefsWindow
+        PrepUtilityTrigger(TriggerType.ShowPrefs)
 
-            AddHandler .Closed,
+        AddHandler _osPrefsWin.Closed,
                 Async Sub(sender, e)
-                    osFuncLib_InputScan.isActionComplete = True
+                    '           osFuncLib_InputScan.isActionComplete = True
                     _osPrefsWindow = Nothing
 
-                    osHandler_UI.InitResourceAlloc()
+                    ' osHandler_UI.InitResourceAlloc()
                     Await osHandler_UI.ResetOptsUI()
                 End Sub
 
-            chkCloseSettings.ResetAndInitTask()
+        chkCloseSettings.ResetAndInitTask()
 
-            Await ValidateDispatch(
-                 Sub()
-                     .osPrefsIU_Present()
-                     .SetCloseMonitor(chkCloseSettings)
+        _osPrefsWin.SetCloseMonitor(chkCloseSettings)
+        _osPrefsWin.osPrefsIU_Present()
 
-                     'Await .TriggerVisuals_Open()
+        Await _osPrefsWin.TriggerVisuals_Open()
 
-                     'Await AnticipateExit()
-
-                     'Await .TriggerVisuals_Close()
-                 End Sub)
-            Await .TriggerVisuals_Open()
-
-            Await AnticipateExit()
-
-            Await .TriggerVisuals_Close()
-            'Await PrepDispatcher().InvokeAsync(
-            '   Async Function()
-            '       .osPrefsIU_Present()
-            '       .SetCloseMonitor(chkCloseSettings)
-
-            '       Await .TriggerVisuals_Open()
-
-            '       Await AnticipateExit()
-
-            '       '   Await PrepDispatcher().InvokeAsync(
-            '       'Function()
-            '       Await .TriggerVisuals_Close()
-            '   End Function, DispatcherPriority.Render)
-
-
-        End With
+        Await AnticipateExit()
+        Await _osPrefsWin.TriggerVisuals_Close()
+        '  End With
     End Function
 
     Private Shared Function AnticipateExit() As Task
@@ -609,8 +570,6 @@ Public NotInheritable Class osFuncLib_AutoPass
     End Sub
 
     Public Shared Async Function ExecuteAutoPass() As Task
-
-
         ui_AutoPass.Show()
 
         PrepDispatcher(True).Invoke(
@@ -626,7 +585,7 @@ Public NotInheritable Class osFuncLib_AutoPass
         Dim retProgResult = Await objTask_AutoPass
 
         Await ProcessResult(retProgResult)
-        osFuncLib_InputScan.isActionComplete = True
+        '   osFuncLib_InputScan.isActionComplete = True
     End Function
 
     'Public Shared Async Function ExecuteAutoPass(isN As Boolean) As Task
@@ -817,26 +776,29 @@ Public NotInheritable Class osFuncLib_PopupMenu
     Public Shared Async Function ShowPopupMenu() As Task
         InitCloseMonitor(objPopupTaskPending)
 
-        chkOverlayDisplay.ResetAndInitTask()
-        Await ValidateDispatch(
-            Async Function()
-                With ui_MenuOverlay
+        With ui_MenuOverlay
+            chkOverlayDisplay.ResetAndInitTask()
+            Await ValidateDispatch(
+                Sub()
                     osHandler_UI.PresentPopupMenuOverlay(True)
                     .InitPopupMenuOverlay(chkOverlayDisplay)
+                End Sub)
 
-                    Await .TriggerVisuals_Open()
-                End With
+            Await .TriggerVisuals_Open()
+        End With
 
-                Await chkOverlayDisplay.Task
+        Await chkOverlayDisplay.Task
 
+        Await ValidateDispatch(
+            Sub()
                 ui_PopupMenu.Show()
                 osHandler_UI.PresentPopupMenu(True)
+            End Sub)
 
-                Await ui_PopupMenu.TriggerVisuals_Open()
-            End Function, True)
+        Await ui_PopupMenu.TriggerVisuals_Open()
 
         Dim objPopupResult = Await PopupCloseDetect(
-            objPopupTaskMonitor, objPopupTaskPending)
+                objPopupTaskMonitor, objPopupTaskPending)
 
         FinalizePopupMenu(objPopupResult,
                           objPopupTaskMonitor,
@@ -937,39 +899,31 @@ End Class
 Public Module osFuncLib_TrayMenu
 
     Public Property isAppLoaded As Boolean = False
-    Private chkCloseTrayMenu As TaskCompletionSource(Of Boolean)
+
+    Private chkTrayMenu_Close As TaskCompletionSource(Of Boolean)
 
     Public Async Sub DisplayTrayMenu(sender As Object, e As EventArgs)
         If Not isAppLoaded Then Exit Sub
+
         PrepUtilityTrigger(TriggerType.ShowTrayMenu)
 
-        chkCloseTrayMenu.ResetAndInitTask()
+        chkTrayMenu_Close.ResetAndInitTask()
+        ui_TrayMenu.SetCloseMonitor(chkTrayMenu_Close)
 
-        With osHandler_UI.osTrayMenu
-            Await ValidateDispatch(Sub()
-                                       .TrayMenuInit()
-                                       .SetCloseMonitor(chkCloseTrayMenu)
-                                   End Sub)
-            'Await PrepDispatcher().InvokeAsync(
-            '   Sub()
-            '       .TrayMenuInit()
-            '       .SetCloseMonitor(chkCloseTrayMenu)
+        ui_TrayMenu.TrayMenuInit()
 
-            '       'Await .TriggerVisuals_Open()
-
-            '       'Await AnticipateExit()
-            '       'Await .TriggerVisuals_Close()
-            '   End Sub, DispatcherPriority.Render)
-
-            Await .TriggerVisuals_Open()
-
-            Await AnticipateExit()
-            Await .TriggerVisuals_Close()
-        End With
+        Await ShowTrayMenu()
     End Sub
 
+    Public Async Function ShowTrayMenu() As Task
+        Await ui_TrayMenu.TriggerVisuals_Open()
+
+        Await AnticipateExit()
+        Await ui_TrayMenu.TriggerVisuals_Close()
+    End Function
+
     Private Function AnticipateExit() As Task
-        Return chkCloseTrayMenu.Task
+        Return chkTrayMenu_Close.Task
     End Function
 
     Private Sub UpdateTrayIcon(chkStatus As Boolean)
@@ -993,7 +947,8 @@ Public Module osFuncLib_TrayMenu
             .Visible = True
         }
 
-        AddHandler osTrayIcon.Click, AddressOf DisplayTrayMenu
+        AddHandler osTrayIcon.MouseUp, AddressOf DisplayTrayMenu
+
     End Sub
 
 End Module
@@ -1599,7 +1554,7 @@ Public Module osUI_Loader
     Public Async Function LoadUI_InitMenus() As Task
         Await PrepDispatcher().InvokeAsync(
             Sub()
-                osPopupMenuOverlay.PrepTrayMenuOverlay()
+                '      osPopupMenuOverlay.PrepTrayMenuOverlay()
                 osPopupMenu.PrepPopupMenu()
             End Sub, visPriority)
 
@@ -1692,149 +1647,101 @@ End Module
 
 Public NotInheritable Class AutoCastGui
 
-    Friend Sub New()
-    End Sub
+    Friend Sub New() : End Sub
 
-    Public Function Invoke(Of T)(func As Func(Of ProgBarGui_AutoCast, T)) As T
-        Dim f = ProgBarGui_AutoCast.Instance
-        If f Is Nothing OrElse f.IsDisposed Then
-            Return Nothing
-        End If
+    Public Function Invoke(Of T)(objTaskAction As Func(Of ProgBarGui_AutoCast, T)) As T
+        Dim objAutoCastInstance = ProgBarGui_AutoCast.Instance
 
-        If f.InvokeRequired Then
-            Dim wrapper As New Func(Of T)(Function() func(f))
-            Return DirectCast(f.Invoke(wrapper), T)
+        If objAutoCastInstance Is Nothing OrElse
+            objAutoCastInstance.IsDisposed Then
+            Return Nothing : End If
+
+        If objAutoCastInstance.InvokeRequired Then
+            Dim objDoTask As New Func(Of T)(
+                Function()
+                    Return objTaskAction(objAutoCastInstance)
+                End Function)
+
+            Return DirectCast(objAutoCastInstance.
+                Invoke(objDoTask), T)
         Else
-            Return func(f)
+            Return objTaskAction(objAutoCastInstance)
         End If
     End Function
 
-    Public Function InvokeAsync(Of T)(func As Func(Of ProgBarGui_AutoCast, T), isN As Boolean) As Task(Of T)
-        Dim f = ProgBarGui_AutoCast.Instance
-        If f Is Nothing OrElse f.IsDisposed Then
-            Return Task.FromException(Of T)(New InvalidOperationException("AutoCast GUI has not been started."))
-        End If
+    Public Function InvokeAsync(Of T)(objTaskAction As Func(Of ProgBarGui_AutoCast, T), isN As Boolean) As Task(Of T)
+        Dim objAutoCastInstance = ProgBarGui_AutoCast.Instance
 
-        Dim tcs As New TaskCompletionSource(Of T)(TaskCreationOptions.RunContinuationsAsynchronously)
+        Dim tcs As New TaskCompletionSource(Of T)(
+            TaskCreationOptions.RunContinuationsAsynchronously)
 
-        Dim action As Action =
-        Sub()
-            Try
-                Dim result = func(f)
-                tcs.SetResult(result)
-            Catch ex As Exception
-                tcs.SetException(ex)
-            End Try
-        End Sub
+        Dim objDoTask As Action =
+            Sub()
+                Try
+                    Dim objTaskResult = objTaskAction(objAutoCastInstance)
+                    tcs.SetResult(objTaskResult)
+                Catch ex As Exception
+                    tcs.SetException(ex)
+                End Try
+            End Sub
 
-        If f.InvokeRequired Then
-            f.BeginInvoke(action)
+        If objAutoCastInstance.InvokeRequired Then
+            objAutoCastInstance.BeginInvoke(objDoTask)
         Else
-            action()
+            objDoTask()
         End If
 
         Return tcs.Task
     End Function
 
-    Public Async Function InvokeTask(Of T)(
-    func As Func(Of ProgBarGui_AutoCast, Task(Of T))
-) As Task(Of T)
+    Public Async Function InvokeTask(Of T)(objTaskAction As Func(Of ProgBarGui_AutoCast, Task(Of T))) As Task(Of T)
+        Dim objAutoCastInstance = ProgBarGui_AutoCast.Instance
 
-        Dim f = ProgBarGui_AutoCast.Instance
-        If f Is Nothing OrElse f.IsDisposed Then
-            Throw New InvalidOperationException("AutoCast GUI has not been started.")
-        End If
-
-        If Not f.InvokeRequired Then
-            Return Await func(f)
+        If Not objAutoCastInstance.InvokeRequired Then
+            Return Await objTaskAction(objAutoCastInstance)
         End If
 
         Dim tcs As New TaskCompletionSource(Of T)(
             TaskCreationOptions.RunContinuationsAsynchronously)
 
-        f.BeginInvoke(New Action(
-        Async Sub()
-            Try
-                Dim result As T = Await func(f)
-                tcs.SetResult(result)
-            Catch ex As Exception
-                tcs.SetException(ex)
-            End Try
-        End Sub
-    ))
+        objAutoCastInstance.
+            BeginInvoke(New Action(
+                Async Sub()
+                    Try
+                        Dim objTaskResult As T =
+                            Await objTaskAction(objAutoCastInstance)
+                        tcs.SetResult(objTaskResult)
+                    Catch ex As Exception
+                        tcs.SetException(ex)
+                    End Try
+                End Sub))
 
         Return Await tcs.Task
     End Function
 
-    Public Function InvokeAsync(Of T)(func As Func(Of ProgBarGui_AutoCast, Task(Of T))) As Task(Of T)
-        Dim f = ProgBarGui_AutoCast.Instance
-        If f Is Nothing OrElse f.IsDisposed Then
-            Return Task.FromException(Of T)(New InvalidOperationException("AutoCast GUI has not been started."))
-        End If
+    Public Function InvokeAsync(objTaskAction As Action(Of ProgBarGui_AutoCast)) As Task
+        Dim objAutoCastInstance = ProgBarGui_AutoCast.Instance
 
-        Dim tcs As New TaskCompletionSource(Of T)(
+        Dim objTaskSource As New TaskCompletionSource(Of Object)(
             TaskCreationOptions.RunContinuationsAsynchronously)
 
-        Dim action As Action =
-        Sub()
-            Try
-                Dim innerTask As Task(Of T) = func(f)
-                If innerTask Is Nothing Then
-                    tcs.SetException(New InvalidOperationException("Function returned null Task."))
-                    Return
-                End If
+        Dim objDoTask As Action =
+            Sub()
+                Try
+                    objTaskAction(objAutoCastInstance)
+                    objTaskSource.SetResult(Nothing)
+                Catch ex As Exception
+                    objTaskSource.SetException(ex)
+                End Try
+            End Sub
 
-                innerTask.ContinueWith(Sub(tt)
-                                           If tt.IsCanceled Then
-                                               tcs.SetCanceled()
-                                           ElseIf tt.IsFaulted Then
-                                               ' propagate exception(s)
-                                               tcs.SetException(tt.Exception.InnerExceptions)
-                                           Else
-                                               tcs.SetResult(tt.Result)
-                                           End If
-                                       End Sub,
-                                       TaskScheduler.Default) ' Continue on threadpool to avoid re-entering UI sync context
-            Catch ex As Exception
-                tcs.SetException(ex)
-            End Try
-        End Sub
-
-        If f.InvokeRequired Then
-            f.BeginInvoke(action)
+        If objAutoCastInstance.InvokeRequired Then
+            objAutoCastInstance.BeginInvoke(objDoTask)
         Else
-            action()
+            objDoTask()
         End If
 
-        Return tcs.Task
-    End Function
-
-    '' 3) async action (no result) overload
-    Public Function InvokeAsync(action As Action(Of ProgBarGui_AutoCast)) As Task
-        Dim f = ProgBarGui_AutoCast.Instance
-        If f Is Nothing OrElse f.IsDisposed Then
-            Return Task.FromException(New InvalidOperationException("AutoCast GUI has not been started."))
-        End If
-
-        Dim tcs As New TaskCompletionSource(Of Object)(TaskCreationOptions.RunContinuationsAsynchronously)
-
-        Dim wrapper As Action =
-        Sub()
-            Try
-                action(f)
-                tcs.SetResult(Nothing)
-            Catch ex As Exception
-                tcs.SetException(ex)
-            End Try
-        End Sub
-
-        If f.InvokeRequired Then
-            f.BeginInvoke(wrapper)
-        Else
-            wrapper()
-        End If
-
-        Return tcs.Task
+        Return objTaskSource.Task
     End Function
 
 End Class

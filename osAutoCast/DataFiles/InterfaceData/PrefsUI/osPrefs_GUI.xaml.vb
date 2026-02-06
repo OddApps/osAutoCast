@@ -52,11 +52,11 @@ Public Class osPrefs_GUI
                                    Sub() BufferPrefWin(), Sub()
                                                               SetVisualMode(PrefUI_Open)
                                                               ActivatePrefTracker()
-                                                          End Sub, SetVisTargets())
+                                                          End Sub, prefContainer, osTitleCover, osContentContainer)
     End Function
 
     Private Function SetVisTargets() As UIElement()
-        Return {Me, prefContainer, osTitleCover, osContentContainer}
+        Return {prefContainer, osTitleCover, osContentContainer}
     End Function
 
     Public Sub SetCloseMonitor(objAwaitClose As TaskCompletionSource(Of Boolean))

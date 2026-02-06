@@ -32,45 +32,43 @@ Public Class osTrayMenu_GUI
     Public Async Function InitTrayMenuClose(isAsync As Boolean, Optional setTaskRun As Boolean = False) As Task
         Await SetCloseVisualData_WithTask(
             GetVisualKey(TrayMenu_Close),
-                Async Sub()
+                Sub()
+                    objCloseMonitor.TrySetResult(True)
+                End Sub,
+                Async Function()
                     If setTaskRun Then
                         TrayMenuCloseComplete()
                     End If
 
                     Await osHandler_UI.TerminateTrayMenu()
-                End Sub)
-
-        objCloseMonitor.TrySetResult(True)
-    End Function
-
-    Public Async Function InitTrayMenuVis() As Task
-        Await SetVisSideboard("TrayGameMenuVis_Expand", True)
+                End Function)
     End Function
 
     Private Function EstablishVisConfig() As VisAdapterConfig
         Return VisAdapterConfig.EnableAll
     End Function
 
+    Private Sub PrepTrayMenuDisplay()
+        ShowGameMenuItem()
+
+        With Me
+            .Width = wTrayMenu
+            .Height = hTrayMenu
+
+            .Show()
+            .Hide()
+        End With
+    End Sub
+
+    Private Sub InitTrayMenuDisplay()
+        Me.Activate()
+    End Sub
+
     Public Async Function PrepTrayMenuInit() As Task
-        Dim visDataN = GetVisualKey(TrayMenu_Open)
-
-        Await InitializeVisAdapter(
-            visDataN, Me, EstablishVisConfig(),
-                Sub()
-                    ShowGameMenuItem()
-
-                    With Me
-                        .Width = wTrayMenu
-                        .Height = hTrayMenu
-
-                        BufferTrayMenu()
-                    End With
-                End Sub,
-                Sub()
-                    Me.Activate()
-                End Sub,
-                Function() SetVisSideboard(GetVisualKey(GameMenu_Open, True)),
-                TrayMenuContainer, TrayMenuContent, TrayGameMenuContainer)
+        Await InitializeVisAdapter(GetVisualKey(TrayMenu_Open), Me, EstablishVisConfig(),
+                                   Sub() PrepTrayMenuDisplay(), Sub() InitTrayMenuDisplay(),
+                                   Function() SetVisSideboard(GetVisualKey(GameMenu_Open, True)),
+                                   True, TrayMenuContainer, TrayMenuContent, TrayGameMenuContainer)
     End Function
 
     Public Sub SetCloseMonitor(objAwaitClose As TaskCompletionSource(Of Boolean))
@@ -144,12 +142,6 @@ Partial Public Class osTrayMenu_GUI
         End Set
     End Property
 
-    Private ReadOnly Property TrayMenuRes As Style
-        Get
-            Return Me.Style
-        End Get
-    End Property
-
     Public ReadOnly Property TrayMenuContainer As osBorder
         Get
             Return Me.TrayMainContainer
@@ -166,6 +158,18 @@ Partial Public Class osTrayMenu_GUI
         Get
             Return Me.TrayMenuGamePanel
         End Get
+    End Property
+
+    Private _IsTrayMenuOpen As Boolean
+    Public Property VerifyTrayMenuOpen As Boolean
+        Get
+            Return _IsTrayMenuOpen
+        End Get
+        Set(value As Boolean)
+            If _IsTrayMenuOpen <> value Then
+                _IsTrayMenuOpen = value
+            End If
+        End Set
     End Property
 
 #End Region

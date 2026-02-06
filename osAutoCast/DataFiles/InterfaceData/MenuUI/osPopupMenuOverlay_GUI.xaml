@@ -1,9 +1,10 @@
 ﻿<osVis:VisAdapterUI x:Class="osPopupMenuOverlay_GUI" x:Name="winPopupMenuOverlay" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                    xmlns:d="http://schemas.microsoft.com/expression/blend/2008" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Focusable="False"
+                    xmlns:d="http://schemas.microsoft.com/expression/blend/2008" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:osVis="clr-namespace:osAutoCast.osVisualAdapter"
-                    mc:Ignorable="d" Title="" WindowStartupLocation="Manual" WindowStyle="None" AllowsTransparency="True" ShowInTaskbar="False" ResizeMode="NoResize"
-                    Width="{x:Static SystemParameters.VirtualScreenWidth}" Height="{x:Static SystemParameters.VirtualScreenHeight}" Background="Transparent"
-                    Left="{x:Static SystemParameters.VirtualScreenLeft}" Top="{x:Static SystemParameters.VirtualScreenTop}" Topmost="True" Opacity="1">
+					ShowActivated="False" Topmost="True" Focusable="False" ShowInTaskbar="False" ResizeMode="NoResize" Background="Transparent"
+                    mc:Ignorable="d" Title="" WindowStartupLocation="Manual" WindowStyle="None" AllowsTransparency="True" Opacity="1"
+                    Width="{x:Static SystemParameters.VirtualScreenWidth}" Height="{x:Static SystemParameters.VirtualScreenHeight}"
+                    Left="{x:Static SystemParameters.VirtualScreenLeft}" Top="{x:Static SystemParameters.VirtualScreenTop}">
     
     <osVis:VisAdapterUI.Resources>
         <Storyboard x:Key="OverlayVisual_Open">
