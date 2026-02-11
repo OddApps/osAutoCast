@@ -300,8 +300,7 @@ Partial Public Class osTrayMenu_GUI
     Private Sub PresentTrayMenu()
         Me.Show()
 
-        Dim objHwnd = New WindowInteropHelper(Me).Handle
-        SetWindowPos(objHwnd, HWND_TOPMOST, 0, 0, 0, 0,
+        SetWindowPos(VisHwnd, HWND_TOPMOST, 0, 0, 0, 0,
                      SWP_NOMOVE Or SWP_NOSIZE Or SWP_NOACTIVATE)
     End Sub
 

@@ -1,13 +1,26 @@
 ﻿Imports System.ComponentModel
+Imports System.Runtime.InteropServices
 Imports System.Windows.Media.Animation
 Imports System.Windows.Threading
 Imports osAutoCast.DataTypeLib.VisAdapterConfig
+Imports osAutoCast.DataTypeLib.VisAdapterInit
 Imports osNotify = System.ComponentModel.INotifyPropertyChanged
+Imports osWinInterop = System.Windows.Interop.WindowInteropHelper
 
 Namespace osVisualAdapter
 
     Public Class VisAdapterUI
         Inherits Window : Implements osNotify
+
+        Private Const GWL_EXSTYLE As Integer = -20
+        Private Const WS_EX_TRANSPARENT As Integer = &H20
+        Private Const WS_EX_NOACTIVATE As Integer = &H8000000
+
+        Private AdapterinitIdx As New Dictionary(Of VisAdapterInit, IntPtr) From {
+            {InitAdapter, BuildConfig_UI(WS_EX_NOACTIVATE)},
+            {AdapterInput_Allow, BuildConfig_UI(WS_EX_TRANSPARENT, False)},
+            {AdapterInput_Prevent, BuildConfig_UI(WS_EX_TRANSPARENT)}
+        }
 
         Private VisDataOutline_OnComplete As EventHandler
         Private VisDataOutline_SideboardComplete As EventHandler
@@ -68,9 +81,17 @@ Namespace osVisualAdapter
             Set(objVisAdapter As VisQualityAdapter)
                 If objVisAdapter IsNot Nothing Then
                     _visAdapter = objVisAdapter
-                Else
-
                 End If
+            End Set
+        End Property
+
+        Private _visHwnd As IntPtr
+        Public Property VisHwnd As IntPtr
+            Get
+                Return _visHwnd
+            End Get
+            Set(objVisHwnd As IntPtr)
+                _visHwnd = objVisHwnd
             End Set
         End Property
 
@@ -108,10 +129,10 @@ Namespace osVisualAdapter
             Await InitVisualDataOutline(visDataName)
             PrepareVisAdapter(objVisAdapterUI, setVisConfig, lstVisTargets)
 
-            '  Await ApplyVisConfiguration()
-
             Await VisAdapter.ProcessVisConfig()
             Await Task.Delay(85)
+
+            '   Await ApplyVisConfiguration()
 
             If onVisCompleteTask IsNot Nothing Then
 
@@ -213,8 +234,8 @@ Namespace osVisualAdapter
 
             VisAdapter = New VisQualityAdapter(objVisAdapterUI, setVisConfig, lstVisTargets)
 
-            VisQualityDuration_Open = CInt(lstVisTargets.Length * 15)
-            VisQualityDuration_Close = CInt(lstVisTargets.Length * 20)
+            VisQualityDuration_Open = CInt(lstVisTargets.Length * 10)
+            VisQualityDuration_Close = CInt(lstVisTargets.Length * 15)
         End Sub
 
         Private Async Function InitVisualDataOutline(visDataName As String) As Task
@@ -366,10 +387,7 @@ Namespace osVisualAdapter
                 End If
             End If
 
-            'If VisKillOnHover Then VisRootObject.
-            '                IsHitTestVisible = False
             VisQualityPreset = False
-
             Await PerformVisualData()
         End Function
 
@@ -467,19 +485,19 @@ Namespace osVisualAdapter
         Private Async Function PerformVisualData() As Task
             Dim visDispatch = VisRootObject.Dispatcher
 
-            'If VisKillOnHover Then VisRootObject.
-            '                IsHitTestVisible = False
+            If visDispatch.CheckAccess() Then
+                InputUI_Prevent()
 
-            'If visDispatch.CheckAccess() Then
-            '    VisDataObject.Begin(VisRootObject, True)
-            '    Await Task.CompletedTask
-            'Else
-            Await visDispatch.InvokeAsync(
-                Sub()
-                    VisDataObject.Begin(VisRootObject, True)
-                End Sub, DispatcherPriority.Render)
-            '      End If
+                VisDataObject.Begin(VisRootObject, False)
+                Await Task.CompletedTask
+            Else
+                Await visDispatch.InvokeAsync(
+                    Sub()
+                        InputUI_Prevent()
 
+                        VisDataObject.Begin(VisRootObject, False)
+                    End Sub, DispatcherPriority.Render)
+            End If
         End Function
 
         Private Async Function PerformVisualData(isSideboard As Boolean) As Task
@@ -508,12 +526,60 @@ Namespace osVisualAdapter
             Return AllocVis(Me.Resources(objVisType))
         End Function
 
+        Public Sub InputUI_Prevent()
+            ApplyConfig_UI(GetAdapterInit(AdapterInput_Prevent))
+        End Sub
+
+        Public Sub InputUI_Allow()
+            ApplyConfig_UI(GetAdapterInit(AdapterInput_Allow))
+        End Sub
+
+        Private Sub VisAdapterUI_InitializeSource(sender As Object, e As EventArgs) Handles Me.SourceInitialized
+            VisHwnd = New osWinInterop(Me).EnsureHandle
+            ApplyConfig_UI(GetAdapterInit(InitAdapter))
+        End Sub
+
+        Public Function InitDefault() As Integer
+            Return GetWindowLong(VisHwnd, GWL_EXSTYLE)
+        End Function
+
+        Public Sub ApplyConfig_UI(valInitData As IntPtr)
+            SetWindowLong(VisHwnd, GWL_EXSTYLE, valInitData)
+        End Sub
+
+        Private Function BuildConfig_UI(uiConfig As Integer, Optional isAddConfig As Boolean = True) As IntPtr
+            Dim objDefaultConfig = InitDefault()
+
+            If isAddConfig Then
+                objDefaultConfig = objDefaultConfig Or uiConfig
+            Else
+                objDefaultConfig = objDefaultConfig And Not uiConfig
+            End If
+
+            Return IntPtr.op_Explicit(objDefaultConfig)
+        End Function
+
+        Private Function GetAdapterInit(objInitType As VisAdapterInit) As IntPtr
+            Return AdapterinitIdx.First(
+                Function(visInitType)
+                    Return visInitType.Key = objInitType
+                End Function).Value
+        End Function
+
         Public Event VisDataOutlineChanged As _
             PropertyChangedEventHandler Implements osNotify.PropertyChanged
 
         Protected Overridable Sub OnVisDataOutlineChanged(propName As String)
             RaiseEvent VisDataOutlineChanged(Me, New PropertyChangedEventArgs(propName))
         End Sub
+
+        <DllImport("user32.dll")>
+        Private Shared Function SetWindowLong(hWnd As IntPtr, nIndex As Integer,
+                                              dwNewLong As Integer) As Integer : End Function
+
+        <DllImport("user32.dll")>
+        Private Shared Function GetWindowLong(hWnd As IntPtr,
+                                              nIndex As Integer) As Integer : End Function
 
     End Class
 
@@ -545,6 +611,9 @@ Namespace osVisualAdapter
                 {UpdateAsync_OnSideboard, False},
                 {KillHoverOnVisuals, False}
         }
+
+        Private idxTask_ApplyVisuals As IEnumerable(Of Task)
+        Private idxTask_ResetVisuals As IEnumerable(Of Task)
 
         Private ReadOnly Property VisDataOutline As Storyboard
             Get
@@ -637,7 +706,50 @@ Namespace osVisualAdapter
                     For Each visConfig In VisAdapterConfigIdx.Keys.ToList()
                         UpdateConfigSetting(visConfig)
                     Next
-                End Sub, DispatcherPriority.Background)
+                End Sub, DispatcherPriority.Background).Task
+
+            Await EstablishVisTasks()
+        End Function
+
+        Private Async Function EstablishVisTasks() As Task
+            Dim chkModifyLayout = CanModifyLayout()
+            Dim visBitMapCache As New BitmapCache(1.0)
+
+            Dim objTaskSchedule = TaskScheduler.FromCurrentSynchronizationContext()
+
+            Dim InitVisQ_TaskArray As Action() = {
+                Sub()
+                    idxTask_ApplyVisuals = VisObjectIdx.Select(
+                        Function(objVisTarget)
+                            Dim objTask_ApplyVisQ = CreateTask(
+                                Sub()
+                                    SetVisQuality(objVisTarget, visBitMapCache, chkModifyLayout)
+                                End Sub)
+
+                            objTask_ApplyVisQ.Start(objTaskSchedule)
+                            Return objTask_ApplyVisQ
+                        End Function)
+                End Sub,
+                Sub()
+                    idxTask_ResetVisuals = VisObjectIdx.Select(
+                        Function(objVisTarget)
+                            Dim objTask_ResetVisQ = CreateTask(
+                                Sub()
+                                    ResetVisQuality(objVisTarget, chkModifyLayout)
+                                End Sub)
+
+                            objTask_ResetVisQ.Start(objTaskSchedule)
+                            Return objTask_ResetVisQ
+                        End Function)
+                End Sub
+            }
+
+            Dim ApplyVisQ_InitTasks = InitVisQ_TaskArray.Select(
+                Function(objTaskInit)
+                    Return Task.Run(objTaskInit)
+                End Function)
+
+            Await Task.WhenAll(ApplyVisQ_InitTasks)
         End Function
 
         Private Sub UpdateConfigSetting(VisConfigSetting As VisAdapterConfig)
@@ -711,21 +823,21 @@ Namespace osVisualAdapter
                     For objVis = 0 To VisObjectCnt
                         SetVisQuality(VisObjectIdx(objVis), visBitMapCache, chkModifyLayout)
                     Next
+
+                    VisAdapter_UI.InputUI_Prevent()
                 End Sub)
 
             Return Task.CompletedTask
         End Function
 
         Public Async Function ApplyVisuals(isAsync As Boolean) As Task
-            Dim chkModifyLayout = CanModifyLayout()
-            Dim visBitMapCache As New BitmapCache(1.0)
-
             Await ValidateDispatch(
-                Sub()
-                    For objVis = 0 To VisObjectCnt
-                        SetVisQuality(VisObjectIdx(objVis), visBitMapCache, chkModifyLayout)
-                    Next
-                End Sub)
+                Async Function()
+                    Await Task.WhenAll(idxTask_ApplyVisuals)
+                End Function, True, Function() As Task
+                                        VisAdapter_UI.InputUI_Prevent()
+                                        Return Task.CompletedTask
+                                    End Function)
         End Function
 
         Public Sub ApplyVisualReset()
@@ -740,8 +852,8 @@ Namespace osVisualAdapter
                                                            NameOf(VisAdapterUI.VisDataObject))
 
                     OnVisOutlineUpdate(VisAdapter_UI,
-                                   New PropertyChangedEventArgs(NameOf(
-                                   VisAdapterUI.VisDataObject)))
+                                       New PropertyChangedEventArgs(NameOf(
+                                       VisAdapterUI.VisDataObject)))
                 End If
             End If
         End Sub
@@ -754,19 +866,19 @@ Namespace osVisualAdapter
                     For objVis = 0 To VisObjectCnt
                         ResetVisQuality(VisObjectIdx(objVis), chkModifyLayout)
                     Next
+
+                    VisAdapter_UI.InputUI_Allow()
                 End Sub)
         End Sub
 
         Private Async Function ResetVisuals_Async() As Task
-            Dim chkModifyLayout = CanModifyLayout()
-            Dim visBitMapCache As New BitmapCache(1.0)
-
             Await ValidateDispatch(
-                Sub()
-                    For objVis = 0 To VisObjectCnt
-                        ResetVisQuality(VisObjectIdx(objVis), chkModifyLayout)
-                    Next
-                End Sub)
+                Async Function()
+                    Await Task.WhenAll(idxTask_ResetVisuals)
+                End Function, True, Function() As Task
+                                        VisAdapter_UI.InputUI_Allow()
+                                        Return Task.CompletedTask
+                                    End Function)
         End Function
 
         Public Sub SetVisQuality(objVisTarget As UIElement, objBitMapCache As CacheMode, Optional doLayout As Boolean = True)

@@ -680,87 +680,6 @@ Public NotInheritable Class osFuncLib_AutoPass
 
 End Class
 
-Public Class MenuHostWindow
-    Inherits Window
-
-    Private Const GWL_EXSTYLE As Integer = -20
-    Private Const WS_EX_NOACTIVATE As Integer = &H8000000
-    Private Const WS_EX_TOOLWINDOW As Integer = &H80
-
-    Private Const WM_MOUSEACTIVATE As Integer = &H21
-    Private Const MA_NOACTIVATE As Integer = 3
-
-    <DllImport("user32.dll", EntryPoint:="GetWindowLongW", SetLastError:=True)>
-    Private Shared Function GetWindowLong32(hWnd As IntPtr, nIndex As Integer) As Integer
-    End Function
-
-    <DllImport("user32.dll", EntryPoint:="SetWindowLongW", SetLastError:=True)>
-    Private Shared Function SetWindowLong32(hWnd As IntPtr, nIndex As Integer, dwNewLong As Integer) As Integer
-    End Function
-
-    <DllImport("user32.dll", EntryPoint:="GetWindowLongPtrW", SetLastError:=True)>
-    Private Shared Function GetWindowLongPtr64(hWnd As IntPtr, nIndex As Integer) As IntPtr
-    End Function
-
-    <DllImport("user32.dll", EntryPoint:="SetWindowLongPtrW", SetLastError:=True)>
-    Private Shared Function SetWindowLongPtr64(hWnd As IntPtr, nIndex As Integer, dwNewLong As IntPtr) As IntPtr
-    End Function
-
-    Private Shared Function GetWindowLongPtr(hWnd As IntPtr, nIndex As Integer) As IntPtr
-        If IntPtr.Size = 8 Then
-            Return GetWindowLongPtr64(hWnd, nIndex)
-        Else
-            Return New IntPtr(GetWindowLong32(hWnd, nIndex))
-        End If
-    End Function
-
-    Private Shared Function SetWindowLongPtr(hWnd As IntPtr, nIndex As Integer, dwNewLong As IntPtr) As IntPtr
-        If IntPtr.Size = 8 Then
-            Return SetWindowLongPtr64(hWnd, nIndex, dwNewLong)
-        Else
-            Return New IntPtr(SetWindowLong32(hWnd, nIndex, dwNewLong.ToInt32()))
-        End If
-    End Function
-
-    Public Sub New()
-        WindowStyle = WindowStyle.None
-        AllowsTransparency = True
-        ShowInTaskbar = False
-        Opacity = 0.0
-        Width = 1
-        Height = 1
-        Topmost = True
-        ShowActivated = False
-    End Sub
-
-    Protected Overrides Sub OnSourceInitialized(e As EventArgs)
-        MyBase.OnSourceInitialized(e)
-
-        If System.ComponentModel.DesignerProperties.GetIsInDesignMode(Me) Then Return
-
-        Dim objHwnd = New Interop.WindowInteropHelper(Me).Handle
-
-        Dim ex = GetWindowLongPtr(objHwnd, GWL_EXSTYLE)
-        Dim newEx As Integer = ex.ToInt32() Or WS_EX_NOACTIVATE Or WS_EX_TOOLWINDOW
-        SetWindowLongPtr(objHwnd, GWL_EXSTYLE, New IntPtr(newEx))
-
-        Dim objHwndSrc = Interop.HwndSource.FromHwnd(objHwnd)
-        If objHwndSrc IsNot Nothing Then
-            objHwndSrc.AddHook(New Interop.HwndSourceHook(AddressOf WndProcHook))
-        End If
-    End Sub
-
-    Private Function WndProcHook(hwnd As IntPtr, msg As Integer, wParam As IntPtr,
-                                 lParam As IntPtr, ByRef handled As Boolean) As IntPtr
-        If msg = WM_MOUSEACTIVATE Then
-            handled = True
-            Return New IntPtr(MA_NOACTIVATE)
-        End If
-        Return IntPtr.Zero
-    End Function
-
-End Class
-
 Public NotInheritable Class osFuncLib_PopupMenu
 
     Private Shared objPopupTaskMonitor As Task
@@ -1046,9 +965,49 @@ Module osFuncLib_UI
         End Get
     End Property
 
+    Public Function GetSizeReport(isProgType As TriggerType) As ProgSizeReport
+        Dim progW As Integer
+        Dim progH As Integer
+
+        With osPefs.Data
+            Select Case isProgType
+                Case TriggerType.AutoCast
+                    osFuncLib_Progress.SetProgBlockData(TriggerType.AutoCast)
+
+                    progW = .MainOpts_acProgW
+                    progH = .MainOpts_acProgH
+
+                    If CoreDataLib.VerifyVisQualityPref() Then
+                        progW += 4 : progH += 4
+                    End If
+
+                Case TriggerType.AutoPass
+                    progH = .MainOpts_apProgH
+                    progW = .MainOpts_apProgW
+            End Select
+        End With
+
+        Return New ProgSizeReport(progW, progH)
+    End Function
+
     Public Function PrepDispatcher(Optional IsAutoPass As Boolean = False) As Dispatcher
         Return If(IsAutoPass, osHandler_UI.osGui_AutoPass.Dispatcher,
             Application.Current.Dispatcher)
+    End Function
+
+    Public Function InitializeTask(objTask As Action) As Task
+        Return New Task(objTask, TaskCreationOptions.RunContinuationsAsynchronously)
+    End Function
+
+    Public Function CreateTask(objTask As Action) As Task
+        Return New Task(objTask, TaskCreationOptions.RunContinuationsAsynchronously)
+    End Function
+
+    Public Function CreateTask(objTask As Func(Of Task), isAsync As Boolean) As Task
+        Return New Task(
+            Sub()
+                objTask().GetAwaiter().GetResult()
+            End Sub, TaskCreationOptions.RunContinuationsAsynchronously)
     End Function
 
     Public Async Function ValidateDispatch(objTask As Action) As Task

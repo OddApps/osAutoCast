@@ -1,4 +1,5 @@
 ﻿Imports System.ComponentModel
+Imports System.Runtime.InteropServices
 Imports System.Windows.Media.Animation
 Imports System.Windows.Threading
 Imports osAutoCast.DataTypeLib.LoadTaskType
@@ -76,6 +77,9 @@ Public Class osLoader_UI
         CoreDataLib.InputMonSvc = New InputMonitorService()
     End Sub
 
+    Private Sub osLoader_UI_Loaded(sender As Object, e As RoutedEventArgs) Handles Me.Loaded
+        MakeWindowClickThrough()
+    End Sub
 End Class
 
 Partial Class osLoader_UI
@@ -255,6 +259,23 @@ Partial Class osLoader_UI
 
     Private Sub ComposeOutline(sender As Object, e As RoutedEventArgs) Handles LoadingContainerOutline.Loaded
         EstablishOutline(objOutline, ContentBorder_Radius)
+    End Sub
+
+    <DllImport("user32.dll")>
+    Private Shared Function SetWindowLong(hWnd As IntPtr, nIndex As Integer, dwNewLong As Integer) As Integer
+    End Function
+
+    <DllImport("user32.dll")>
+    Private Shared Function GetWindowLong(hWnd As IntPtr, nIndex As Integer) As Integer
+    End Function
+
+    Private Const GWL_EXSTYLE As Integer = -20
+    Private Const WS_EX_TRANSPARENT As Integer = &H20
+
+    Public Sub MakeWindowClickThrough()
+        Dim hwnd As IntPtr = New System.Windows.Interop.WindowInteropHelper(Me).Handle
+        Dim extendedStyle As Integer = GetWindowLong(hwnd, GWL_EXSTYLE)
+        SetWindowLong(hwnd, GWL_EXSTYLE, extendedStyle Or WS_EX_TRANSPARENT)
     End Sub
 
 End Class

@@ -1068,43 +1068,70 @@ Namespace osControls
     Partial Public Class osLoadSpinner
         Inherits UserControl
 
+        Private chkLoadSpinStart As TaskCompletionSource(Of Boolean) = Nothing
+
+        Private visLoadSpinner As Storyboard
+        Private visLoadSpinner_Start As Storyboard
+
         Public Sub New()
             InitializeComponent()
 
-            AddHandler Me.Loaded, AddressOf Spinner_Loaded
-            AddHandler Me.Unloaded, AddressOf Spinner_Unloaded
+            AddHandler Me.Loaded, AddressOf InitLoadSpinner
+            AddHandler Me.Unloaded, AddressOf DisposeLoadSpinner
         End Sub
 
-        Private Sub Spinner_Loaded(sender As Object, e As RoutedEventArgs)
-            UpdateStoryboardState()
-        End Sub
+        Public Shared ReadOnly LoadProgressProperty As DependencyProperty = DependencyProperty.
+            Register("LoadProgress", GetType(Double), GetType(osLoadSpinner),
+                      New PropertyMetadata(0.0, AddressOf OnLoadProgressChanged))
 
-        Private Sub Spinner_Unloaded(sender As Object, e As RoutedEventArgs)
-            StopStoryboard()
-        End Sub
-
-        Public Shared ReadOnly IsActiveProperty As DependencyProperty = DependencyProperty.
-            Register("IsActive", GetType(Boolean), GetType(osLoadSpinner),
-                     New PropertyMetadata(True, AddressOf OnIsActiveChanged))
-
-        Public Property IsActive As Boolean
+        Public Property LoadProgress As Double
             Get
-                Return CBool(GetValue(IsActiveProperty))
+                Return CDbl(GetValue(LoadProgressProperty))
             End Get
-            Set(value As Boolean)
-                SetValue(IsActiveProperty, value)
+            Set(value As Double)
+                SetValue(LoadProgressProperty, value)
             End Set
         End Property
 
-        Private Shared Sub OnIsActiveChanged(d As DependencyObject, e As DependencyPropertyChangedEventArgs)
-            Dim ctrl = TryCast(d, osLoadSpinner)
-            If ctrl IsNot Nothing Then
-                ctrl.UpdateStoryboardState()
+        Private Shared Sub OnLoadProgressChanged(d As DependencyObject, e As DependencyPropertyChangedEventArgs)
+            Dim objOsLoadSpinner = TryCast(d, osLoadSpinner)
+
+            If objOsLoadSpinner IsNot Nothing Then
+                objOsLoadSpinner.SetLoadProgress()
+            End If
+        End Sub
+
+        Public Shared ReadOnly IsSpinningProperty As DependencyProperty = DependencyProperty.
+            Register("IsSpinning", GetType(Boolean), GetType(osLoadSpinner),
+                      New PropertyMetadata(False, AddressOf UpdateSpinState))
+
+        Public Property IsSpinning As Boolean
+            Get
+                Return CBool(GetValue(IsSpinningProperty))
+            End Get
+            Set(value As Boolean)
+                SetValue(IsSpinningProperty, value)
+            End Set
+        End Property
+
+        Private Shared Sub UpdateSpinState(d As DependencyObject, e As DependencyPropertyChangedEventArgs)
+            Dim objOsLoadSpinner = TryCast(d, osLoadSpinner)
+
+            If objOsLoadSpinner IsNot Nothing Then
+                With objOsLoadSpinner
+                    If .IsSpinning Then
+                        .TriggerSpinStart()
+                    Else
+                        .LoadSpin_Stop()
+                        .LoadProgress = 0
+                    End If
+                End With
             End If
         End Sub
 
         Public Shared ReadOnly SpinnerSizeProperty As DependencyProperty = DependencyProperty.
-            Register("SpinnerSize", GetType(Double), GetType(osLoadSpinner), New PropertyMetadata(48.0))
+            Register("SpinnerSize", GetType(Double), GetType(osLoadSpinner),
+                     New PropertyMetadata(48.0))
 
         Public Property SpinnerSize As Double
             Get
@@ -1116,7 +1143,8 @@ Namespace osControls
         End Property
 
         Public Shared ReadOnly StrokeThicknessProperty As DependencyProperty = DependencyProperty.
-            Register("StrokeThickness", GetType(Double), GetType(osLoadSpinner), New PropertyMetadata(6.0))
+            Register("StrokeThickness", GetType(Double), GetType(osLoadSpinner),
+                     New PropertyMetadata(6.0))
 
         Public Property StrokeThickness As Double
             Get
@@ -1128,7 +1156,8 @@ Namespace osControls
         End Property
 
         Public Shared ReadOnly SpinnerBrushProperty As DependencyProperty = DependencyProperty.
-            Register("SpinnerBrush", GetType(Brush), GetType(osLoadSpinner), New PropertyMetadata(Brushes.DodgerBlue))
+            Register("SpinnerBrush", GetType(SolidColorBrush), GetType(osLoadSpinner),
+                     New PropertyMetadata(New SolidColorBrush(Colors.DodgerBlue)))
 
         Public Property SpinnerBrush As Brush
             Get
@@ -1139,34 +1168,208 @@ Namespace osControls
             End Set
         End Property
 
-        Private Function GetRotateStoryboard() As Storyboard
-            Return TryCast(Me.Resources("RotateStoryboard"), Storyboard)
+        Public Function GetSpinnerBrush() As Path
+            Return Me.ProgressPath
         End Function
 
-        Private Sub UpdateStoryboardState()
-            If Not Me.IsLoaded Then Return
-            If IsActive Then
-                StartStoryboard()
-            Else
-                StopStoryboard()
+        Private Sub SetLoadProgress()
+            ProgressPath.Data = BuildArcGeometry(LoadProgress)
+
+            If LoadProgress = 100 Then
+                LoadSpin_Complete()
             End If
         End Sub
 
-        Private Sub StartStoryboard()
-            Dim visLoadSpinner = GetRotateStoryboard()
+        Public Sub SetLoadSpinStartMonitor(ByRef objLoadSpinMonitor As TaskCompletionSource(Of Boolean))
+            chkLoadSpinStart = objLoadSpinMonitor
+        End Sub
 
-            If visLoadSpinner IsNot Nothing Then
-                visLoadSpinner.Begin(Me, True)
+        Private Sub InitLoadSpinner(sender As Object, e As RoutedEventArgs)
+            If Not IsLoaded Then Return
+
+            visLoadSpinner = GetVisual_LoadSpin()
+
+            visLoadSpinner_Start = GetVisual_LoadStart(GetLoadSpinner(sender))
+            SetLoadStartEvent()
+
+            FreezeBrushes()
+
+            RenderOptions.SetCachingHint(SpinnerRoot, CachingHint.Cache)
+        End Sub
+
+        Private Function GetLoadSpinner(sObj As Object) As osLoadSpinner
+            Return TryCast(sObj, osLoadSpinner)
+        End Function
+
+        Private Sub TriggerSpinStart()
+            visLoadSpinner_Start.Begin(Me, True)
+        End Sub
+
+        Public Sub TriggerLoadComplete(objOsLoadSpinner As osLoadSpinner)
+            Dim objLoadCompVis As New DoubleAnimation() With {
+                .From = 0, .To = 100, .FillBehavior = FillBehavior.HoldEnd,
+                .Duration = TimeSpan.FromSeconds(1.15),
+                .EasingFunction = New QuadraticEase With {
+                    .EasingMode = EasingMode.EaseInOut
+                }
+            }
+
+            objOsLoadSpinner.BeginAnimation(
+                osLoadSpinner.LoadProgressProperty, objLoadCompVis)
+        End Sub
+
+        Private Sub DisposeLoadSpinner(sender As Object, e As RoutedEventArgs)
+            LoadSpin_Stop()
+        End Sub
+
+        'Private Function GetVisual_LoadSpin() As Storyboard
+        '    Return TryCast(Me.Resources("osLoadVis_Spin"), Storyboard)
+        'End Function
+
+        Private Function GetVisual_LoadSpin() As Storyboard
+            Dim objLoadSpinVis As New DoubleAnimation() With {
+                .From = 0, .To = 360,
+                .Duration = TimeSpan.FromSeconds(1),
+                .RepeatBehavior = RepeatBehavior.Forever
+            }
+
+            Dim objLoadSpinVisOutline As New Storyboard() With {
+                .RepeatBehavior = RepeatBehavior.Forever
+            }
+
+            objLoadSpinVisOutline.Children.Add(objLoadSpinVis)
+
+            Storyboard.SetTargetName(objLoadSpinVis, "SpinnerRotate")
+            Storyboard.SetTargetProperty(objLoadSpinVis, New PropertyPath(RotateTransform.AngleProperty))
+            Storyboard.SetDesiredFrameRate(objLoadSpinVis, 30)
+
+            Return objLoadSpinVisOutline
+        End Function
+
+        Private Function GetVisual_LoadStart(objOsLoadSpinner As osLoadSpinner) As Storyboard
+            Dim objLoadStartVis As New DoubleAnimation() With {
+                .From = 0, .To = 20, .FillBehavior = FillBehavior.HoldEnd,
+                .Duration = TimeSpan.FromMilliseconds(235),
+                .EasingFunction = New ExponentialEase With {
+                    .EasingMode = EasingMode.EaseIn,
+                    .Exponent = 3.8
+                }
+            }
+
+            Dim objVisLoadSpinner_Start As New Storyboard()
+            objVisLoadSpinner_Start.Children.Add(objLoadStartVis)
+
+            Storyboard.SetTarget(objLoadStartVis, objOsLoadSpinner)
+            Storyboard.SetTargetProperty(objLoadStartVis, New PropertyPath(
+                                         osLoadSpinner.LoadProgressProperty))
+
+            Return objVisLoadSpinner_Start
+        End Function
+
+        Private Sub SetLoadStartEvent()
+            Dim evtLoadStart As EventHandler = Nothing
+            evtLoadStart =
+                Sub()
+                    RemoveHandler visLoadSpinner_Start.Completed, evtLoadStart
+                    If chkLoadSpinStart IsNot Nothing Then
+                        chkLoadSpinStart.SetResult(True)
+                    End If
+
+                    LoadSpin_Start()
+                End Sub
+
+            AddHandler visLoadSpinner_Start.Completed, evtLoadStart
+        End Sub
+
+        Private Function GetVisual_LoadComplete() As Storyboard
+            Return TryCast(Me.Resources("osLoadVis_Complete"), Storyboard)
+        End Function
+
+        Private Sub FreezeBrushes()
+            ' SpinnerBrush
+            Dim b As Brush = SpinnerBrush
+            If b IsNot Nothing AndAlso b.CanFreeze Then
+                b.Freeze()
+            End If
+
+            Dim bgBrush As Brush = ProgressTrack.Stroke
+            If bgBrush IsNot Nothing AndAlso bgBrush.CanFreeze Then
+                bgBrush.Freeze()
+            End If
+
+            ' Progress path stroke
+            Dim fgBrush As Brush = ProgressPath.Stroke
+            If fgBrush IsNot Nothing AndAlso fgBrush.CanFreeze Then
+                fgBrush.Freeze()
             End If
         End Sub
 
-        Private Sub StopStoryboard()
-            Dim visLoadSpinner = GetRotateStoryboard()
+        Private Sub LoadSpin_Start()
+            ' If visLoadSpinner IsNot Nothing Then
+            visLoadSpinner.Begin(Me, True)
+        End Sub
 
+        Private Sub LoadSpin_Stop()
             If visLoadSpinner IsNot Nothing Then
                 visLoadSpinner.Stop(Me)
             End If
+
+            SpinnerRotate.Angle = 0
         End Sub
+
+        Private Sub LoadSpin_Complete()
+            Dim visLoadSpinnerComplete = GetVisual_LoadComplete()
+
+            If visLoadSpinnerComplete IsNot Nothing Then
+                visLoadSpinnerComplete.Begin(Me, True)
+            End If
+        End Sub
+
+        Private Function BuildArcGeometry(progressValue As Double) As Geometry
+            Dim progVal = Math.Max(0.0, Math.Min(100.0, progressValue))
+            If progVal <= 0 Then Return Nothing
+
+            Dim w As Double = 100.0 : Dim h As Double = 100.0
+            Dim cx = w / 2.0 : Dim cy = h / 2.0
+
+            Dim strokeThick = StrokeThickness
+
+            Dim rx = Math.Max(0.0, (w - strokeThick) / 2.0)
+            Dim ry = Math.Max(0.0, (h - strokeThick) / 2.0)
+
+            Dim center As New Point(cx, cy)
+            Dim startPoint As New Point(cx, cy - ry)
+
+            If progVal >= 100.0 Then
+                Return New EllipseGeometry(center, rx, ry)
+            End If
+
+            Dim angleDeg = (progVal / 100.0) * 360.0
+            Dim theta = (angleDeg - 90.0) * Math.PI / 180.0
+
+            Dim endPoint As New Point(
+                cx + rx * Math.Cos(theta),
+                cy + ry * Math.Sin(theta))
+
+            Dim arc As New ArcSegment With {
+                .Point = endPoint, .Size = New Size(rx, ry),
+                .RotationAngle = 0, .IsStroked = True,
+                .IsLargeArc = angleDeg > 180.0,
+                .SweepDirection = SweepDirection.Clockwise
+            }
+
+            Dim fig As New PathFigure With {
+                .StartPoint = startPoint,
+                .IsClosed = False
+            }
+
+            fig.Segments.Add(arc)
+
+            Dim geom As New PathGeometry()
+            geom.Figures.Add(fig)
+
+            Return geom
+        End Function
 
     End Class
 

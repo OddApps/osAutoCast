@@ -126,7 +126,6 @@ Public Class OddLib_ProgressBar
         End Set
     End Property
 
-
     Public Shared ReadOnly ProgressValueProperty As DependencyProperty =
         DependencyProperty.Register("ProgressValue", GetType(Double), GetType(OddLib_ProgressBar),
                                     New PropertyMetadata(0.0, AddressOf OnProgressValueChanged))

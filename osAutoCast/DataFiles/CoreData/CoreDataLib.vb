@@ -14,6 +14,10 @@ Imports osRegEx = System.Text.RegularExpressions.Regex
 Imports osStatus = osAutoCast.osEnabledStatusConfig
 Imports osAutoCast.osControls
 Imports osPrefData = osAutoCast.osPrefLib.osPreferenceLib
+Imports osAutoCast.osFuncLib_AutoCast
+Imports osAutoCast.osFuncLib_AutoPass
+Imports osAutoCast.osFuncLib_ShowOpts
+Imports osAutoCast.osFuncLib_PopupMenu
 
 #Disable Warning IDE0060 ' Remove unused parameter
 #Disable Warning BC42353
@@ -79,10 +83,10 @@ Public NotInheritable Class CoreDataLib
     Public Shared InputMonSvc As InputMonitorService = Nothing
 
     Private Shared ReadOnly TriggerHandlers As (HandleAction As TriggerAction, HandleEvent As Func(Of Task))() = {
-        (TriggerAutoCast, Function() osFuncLib_AutoCast.ExecuteAutoCast()),
-        (TriggerAutoPass, Function() osFuncLib_AutoPass.ExecuteAutoPass()),
-        (TriggerShowOpts, Function() osFuncLib_ShowOpts.ExecuteDispOpts()),
-        (TriggerShowMenu, Function() osFuncLib_PopupMenu.ShowPopupMenu())
+        (TriggerAutoCast, Function() ExecuteAutoCast()),
+        (TriggerAutoPass, Function() ExecuteAutoPass()),
+        (TriggerShowOpts, Function() ExecuteDispOpts()),
+        (TriggerShowMenu, Function() ShowPopupMenu())
     }
 
     Public Shared Function osStatus_Fetch() As Boolean
@@ -123,22 +127,7 @@ Public NotInheritable Class CoreDataLib
         End Select
     End Function
 
-    Public Shared Function FetchProgSizeReport(isProgType As TriggerType) As Dictionary(Of String, Integer)
-        Select Case isProgType
-            Case AutoCast
-                Return New Dictionary(Of String, Integer) From {
-                        {"pH", osPrefData.Data.MainOpts_acProgH},
-                        {"pW", osPrefData.Data.MainOpts_acProgW}
-                    }
-            Case AutoPass
-                Return New Dictionary(Of String, Integer) From {
-                        {"pH", osPrefData.Data.MainOpts_apProgH},
-                        {"pW", osPrefData.Data.MainOpts_apProgW}
-                    }
-        End Select
-    End Function
-
-    Public Shared Function FetchProgSizeReport(isProgType As TriggerType, chkVisQ As Boolean) As Dictionary(Of String, Integer)
+    Public Shared Function FetchProgSizeReport(isProgType As TriggerType, Optional chkVisQ As Boolean = False) As Dictionary(Of String, Integer)
         Select Case isProgType
             Case AutoCast
                 osFuncLib_Progress.SetProgBlockData(TriggerType.AutoCast)
@@ -163,14 +152,28 @@ Public NotInheritable Class CoreDataLib
         End Select
     End Function
 
-    Public Shared Function GetProgSizeReport(isProgType As TriggerType) As ProgSizeReport
+    Public Shared Function GetProgSizeReport(isProgType As TriggerType, chkVisQ As Boolean) As Dictionary(Of String, Integer)
         Select Case isProgType
             Case AutoCast
-                Return New ProgSizeReport(osPrefData.Data.MainOpts_acProgW,
-                                          osPrefData.Data.MainOpts_acProgH)
+                osFuncLib_Progress.SetProgBlockData(TriggerType.AutoCast)
+
+                With osPrefData.Data
+                    Dim progW = .MainOpts_acProgW
+                    Dim progH = .MainOpts_acProgH
+
+                    If CoreDataLib.VerifyVisQualityPref() Then
+                        progW += 4 : progH += 4
+                    End If
+
+                    Return New Dictionary(Of String, Integer) From {
+                        {"pH", progH}, {"pW", progW}
+                    }
+                End With
             Case AutoPass
-                Return New ProgSizeReport(osPrefData.Data.MainOpts_apProgW,
-                                          osPrefData.Data.MainOpts_apProgH)
+                Return New Dictionary(Of String, Integer) From {
+                        {"pH", osPrefData.Data.MainOpts_apProgH},
+                        {"pW", osPrefData.Data.MainOpts_apProgW}
+                    }
         End Select
     End Function
 
@@ -188,10 +191,11 @@ Public NotInheritable Class CoreDataLib
         Return osRegEx.Match(objShaderName, "_(.*?)\.ps",
                              RegexOptions.IgnoreCase).Groups(1).Value
     End Function
-    Private Shared Function GenerateShaderList() As List(Of osShaderDetails) 'Task(Of List(Of osShaderDetails))
+    Private Shared Function GenerateShaderList() As List(Of osShaderDetails)
         Return osShaderNameList.Select(
-                    Function(shaderRes) CreateShaderRecord(shaderRes)).ToList()
-
+            Function(shaderRes)
+                Return CreateShaderRecord(shaderRes)
+            End Function).ToList()
     End Function
 
     Public Shared Async Function GenerateShaderList(isNew As Boolean) As Task
@@ -377,28 +381,24 @@ Public NotInheritable Class CoreDataLib
     Public Shared Sub ProcessProgressEvent(pMode As ProgressMode, pEvent As ProgEvent, ParamArray pEventData() As Object)
         Dim strEventData As String = ""
 
-        Dim objProgEventType = If(pMode = ProgMode_AutoCast,
-            AutoCast, AutoPass)
+        Dim objProgEventType = If(pMode =
+            ProgMode_AutoCast, AutoCast, AutoPass)
 
         If pMode = ProgMode_AutoCast Then
             If pEventData.Length > 0 Then
                 strEventData = pEventData(0).ToString()
             End If
-            'With PrepareProgEvent(osHandler_UI._autoCastProgress)
-            osHandler_UI.osGui_AutoCastProgress.InvokeAsync(Sub(gui)
-                                                                With PrepareProgEvent(ProgBarGui_AutoCast.Instance)
-                                                                    .evDispatch.Invoke(Sub()
-                                                                                           .evAction(GenerateProgEventData(pEvent, objProgEventType,
-                                                                                                                           strEventData))
-                                                                                       End Sub)
 
-                                                                    '            gui.PerformProgressEvent(GenerateProgEventData(pEvent, objProgEventType,
-                                                                    'strEventData))
-                                                                End With
-                                                            End Sub)
-
-
-            '      End With
+            ui_AutoCast.InvokeAsync(
+                Sub(gui)
+                    With PrepareProgEvent(ProgBarGui_AutoCast.Instance)
+                        .evDispatch.Invoke(
+                            Sub()
+                                .evAction(GenerateProgEventData(
+                                          pEvent, objProgEventType, strEventData))
+                            End Sub)
+                    End With
+                End Sub)
         Else
             Dim osProgElement = ui_AutoPass.OddProgBar_AP
 
@@ -416,9 +416,8 @@ Public NotInheritable Class CoreDataLib
         End If
     End Sub
 
-    Private Shared Function GenerateProgEventData(pEvent As ProgEvent,
-                                                      pType As TriggerType,
-                                                      Optional pDispText As String = "") As ProgressEventData
+    Private Shared Function GenerateProgEventData(pEvent As ProgEvent, pType As TriggerType,
+                                                  Optional pDispText As String = "") As ProgressEventData
         Return New ProgressEventData(pEvent, pType, pDispText)
     End Function
 

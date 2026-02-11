@@ -420,11 +420,6 @@ Partial Public Class osPopupMenu_GUI
             GameMenuItem.ShowClose, GameMenuItem.ShowStart)
     End Sub
 
-    Protected Overrides Sub OnSourceInitialized(e As EventArgs)
-        MyBase.OnSourceInitialized(e)
-        SetWinOpts(GetWinHwnd(Me))
-    End Sub
-
     Public Event DisplayGameMenuChanged As PropertyChangedEventHandler Implements INotifyPropertyChanged.PropertyChanged
     Private Sub OnDisplayGameMenuChanged(<CallerMemberName> Optional name As String = Nothing)
         RaiseEvent DisplayGameMenuChanged(Me, New PropertyChangedEventArgs(name))

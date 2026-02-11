@@ -358,6 +358,14 @@ Public Module DataTypeLib
         GameMenu_Open
     End Enum
 
+    Public Enum LoadSpinColors
+        LoadColor_Spinner
+        LoadColor_Container
+        LoadColor_SpinContainer
+        LoadColor_SpinContainerBorder
+        LoadColor_SpinnerLoadComplete
+    End Enum
+
     Public Enum LoadingProgStatus
         LoadStatus_StartUp
         LoadStatus_Init
@@ -480,6 +488,18 @@ Public Module DataTypeLib
     Public Enum RenderStateAction
         HookRender
         UnhookRender
+    End Enum
+
+    Public Enum VisAdapterInit
+        InitAdapter
+        AdapterInput_Prevent
+        AdapterInput_Allow
+    End Enum
+
+    Public Enum TriggerLoadSpinVis
+        TriggerVis_Display
+        TriggerVis_DisplayMsg
+        TriggerVis_DisplaySpinner
     End Enum
 
     <Flags>

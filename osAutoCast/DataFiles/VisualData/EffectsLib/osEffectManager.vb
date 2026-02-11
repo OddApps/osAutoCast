@@ -383,27 +383,20 @@ Namespace osLoaderConv
     Public Class CornerRadiusMinusThicknessConverter
         Implements IValueConverter
 
-        Public Function Convert(value As Object,
-                                targetType As Type,
-                                parameter As Object,
-                                culture As Globalization.CultureInfo) As Object _
-                                Implements IValueConverter.Convert
+        Public Function Convert(value As Object, targetType As Type, parameter As Object,
+                                culture As Globalization.CultureInfo) As Object Implements IValueConverter.Convert
 
-            ' ---- SAFETY: Always initialize variables first ----
             Dim cr As New CornerRadius(0)
             Dim thickness As Double = 0
 
-            ' ---- Safely read CornerRadius ----
             If value IsNot Nothing AndAlso TypeOf value Is CornerRadius Then
                 cr = CType(value, CornerRadius)
             End If
 
-            ' ---- Safely read thickness (from parameter or binding) ----
             If parameter IsNot Nothing Then
                 Double.TryParse(parameter.ToString(), thickness)
             End If
 
-            ' ---- Subtract safely & clamp to 0 ----
             Return New CornerRadius(
                 Math.Max(0, cr.TopLeft - thickness),
                 Math.Max(0, cr.TopRight - thickness),
@@ -412,11 +405,8 @@ Namespace osLoaderConv
             )
         End Function
 
-        Public Function ConvertBack(value As Object,
-                                    targetType As Type,
-                                    parameter As Object,
-                                    culture As Globalization.CultureInfo) As Object _
-                                    Implements IValueConverter.ConvertBack
+        Public Function ConvertBack(value As Object, targetType As Type, parameter As Object,
+                                    culture As Globalization.CultureInfo) As Object Implements IValueConverter.ConvertBack
             Throw New NotImplementedException()
         End Function
     End Class

@@ -39,6 +39,7 @@ Imports osRect = SharpDX.Mathematics.Interop
 Imports osRenderBlendOpts = SharpDX.Direct3D11.RenderTargetBlendDescription
 Imports osViewPort = SharpDX.Mathematics.Interop.RawViewportF
 Imports osProgBorder = SharpDX.Mathematics.Interop.RawVector4
+Imports System.Runtime.InteropServices
 
 Public Class ProgBarGui_AutoCast
 
@@ -1309,6 +1310,8 @@ Public Class ProgBarGui_AutoCast
     Protected Overrides Sub OnShown(e As EventArgs)
         MyBase.OnShown(e)
         TopMost = True
+
+        MakeWindowClickThrough()
     End Sub
 
     Protected Overrides Sub OnFormClosed(e As FormClosedEventArgs)
@@ -1342,4 +1345,20 @@ Public Class ProgBarGui_AutoCast
     Private Shared Function WaitForSingleObjectEx(hHandle As IntPtr, dwMilliseconds As Integer, bAlertable As Boolean) As UInteger
     End Function
 
+    <DllImport("user32.dll")>
+    Private Shared Function SetWindowLong(hWnd As IntPtr, nIndex As Integer, dwNewLong As Integer) As Integer
+    End Function
+
+    <DllImport("user32.dll")>
+    Private Shared Function GetWindowLong(hWnd As IntPtr, nIndex As Integer) As Integer
+    End Function
+
+    Private Const GWL_EXSTYLE As Integer = -20
+    Private Const WS_EX_TRANSPARENT As Integer = &H20
+
+    Public Sub MakeWindowClickThrough()
+        Dim hwnd As IntPtr = Me.Handle
+        Dim extendedStyle As Integer = GetWindowLong(hwnd, GWL_EXSTYLE)
+        SetWindowLong(hwnd, GWL_EXSTYLE, extendedStyle Or WS_EX_TRANSPARENT)
+    End Sub
 End Class
