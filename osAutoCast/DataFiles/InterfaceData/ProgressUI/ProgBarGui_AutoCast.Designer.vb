@@ -31,7 +31,9 @@ Partial Class ProgBarGui_AutoCast
             .Name = "ProgBarGui_AutoCast"
             .ClientSize = New System.Drawing.Size(pW, pH)
 
-            Me.ResumeLayout(False)
+            .Margin = New Forms.Padding(0)
+
+            .ResumeLayout(False)
         End With
 
     End Sub

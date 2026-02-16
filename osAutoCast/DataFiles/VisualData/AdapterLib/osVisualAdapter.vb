@@ -22,6 +22,9 @@ Namespace osVisualAdapter
             {AdapterInput_Prevent, BuildConfig_UI(WS_EX_TRANSPARENT)}
         }
 
+        Private VisData_CompleteMonitor As TaskCompletionSource(Of Boolean)
+        Private VisData_CompleteEvt As EventHandler
+
         Private VisDataOutline_OnComplete As EventHandler
         Private VisDataOutline_SideboardComplete As EventHandler
 
@@ -95,6 +98,13 @@ Namespace osVisualAdapter
             End Set
         End Property
 
+        Private _chkVisQuality As Boolean
+        Public ReadOnly Property chkVisQuality As Boolean
+            Get
+                Return _chkVisQuality
+            End Get
+        End Property
+
         Public ReadOnly Property VisRootObject As FrameworkElement
             Get
                 Return Me.VisAdapter.VisRootElement
@@ -102,10 +112,10 @@ Namespace osVisualAdapter
         End Property
 
         Private Async Function ApplyVisConfiguration() As Task
+            _chkVisQuality = CoreDataLib.GetVisualQuality() = ProgVisOpts.Quality
+
             Await VisAdapter.ProcessVisConfig()
             Await Task.Delay(85)
-
-            '   VisKillOnHover = VisAdapter.AuthHoverKill()
         End Function
 
         Public Async Function InitializeVisAdapter(visDataName As String, objVisAdapterUI As VisAdapterUI, setVisConfig As VisAdapterConfig,
@@ -114,9 +124,7 @@ Namespace osVisualAdapter
             Await InitVisualDataOutline(visDataName)
             PrepareVisAdapter(objVisAdapterUI, setVisConfig, lstVisTargets)
 
-            '           Await ApplyVisConfiguration()
-            Await VisAdapter.ProcessVisConfig()
-            Await Task.Delay(85)
+            Await ApplyVisConfiguration()
 
             If postLoadTask IsNot Nothing Then
                 Await PrepDispatcher().InvokeAsync(
@@ -129,13 +137,9 @@ Namespace osVisualAdapter
             Await InitVisualDataOutline(visDataName)
             PrepareVisAdapter(objVisAdapterUI, setVisConfig, lstVisTargets)
 
-            Await VisAdapter.ProcessVisConfig()
-            Await Task.Delay(85)
-
-            '   Await ApplyVisConfiguration()
+            Await ApplyVisConfiguration()
 
             If onVisCompleteTask IsNot Nothing Then
-
                 VisDataOutline_OnComplete =
                     Async Sub()
                         RemoveHandler VisDataObject.Completed, VisDataOutline_OnComplete
@@ -150,8 +154,8 @@ Namespace osVisualAdapter
 
             If postLoadTask IsNot Nothing Then
                 Await PrepDispatcher().InvokeAsync(
-                    postLoadTask, DispatcherPriority.Background) : End If
-
+                    postLoadTask, DispatcherPriority.Background)
+            End If
         End Function
 
         Public Async Function InitializeVisAdapter(visDataName As String, objVisAdapterUI As VisAdapterUI, setVisConfig As VisAdapterConfig,
@@ -160,10 +164,7 @@ Namespace osVisualAdapter
             Await InitVisualDataOutline(visDataName)
             PrepareVisAdapter(objVisAdapterUI, setVisConfig, lstVisTargets)
 
-            '     Await ApplyVisConfiguration()
-
-            Await VisAdapter.ProcessVisConfig()
-            Await Task.Delay(85)
+            Await ApplyVisConfiguration()
 
             If onVisCompleteTask IsNot Nothing Then
                 VisDataOutline_OnComplete =
@@ -183,8 +184,8 @@ Namespace osVisualAdapter
                     postLoadTask, DispatcherPriority.Background) : End If
 
             If onVisCompleteFunc IsNot Nothing Then
-                Await onVisCompleteFunc() : End If
-
+                Await onVisCompleteFunc()
+            End If
         End Function
 
         Public Async Function InitializeVisAdapter(visDataName As String, objVisAdapterUI As VisAdapterUI, setVisConfig As VisAdapterConfig,
@@ -194,10 +195,7 @@ Namespace osVisualAdapter
             Await InitVisualDataOutline(visDataName)
             PrepareVisAdapter(objVisAdapterUI, setVisConfig, lstVisTargets)
 
-            ' Await ApplyVisConfiguration()
-
-            Await VisAdapter.ProcessVisConfig()
-            Await Task.Delay(85)
+            Await ApplyVisConfiguration()
 
             If onVisCompleteTask IsNot Nothing Then
                 VisDataOutline_OnComplete =
@@ -245,9 +243,9 @@ Namespace osVisualAdapter
 
         Private Async Function UpdateVisualDataOutline(visDataName As String) As Task
             Dim objVisOutline = Await LoadVisualDataOutline(visDataName)
-            Dim b = objVisOutline.FreezeReturn()
+            Dim objVisOutline_Freeze = objVisOutline.FreezeReturn()
 
-            VisDataObject = b
+            VisDataObject = objVisOutline_Freeze
         End Function
 
         Private Async Function LoadVisualDataOutline(visDataName As String) As Task(Of Storyboard)
@@ -294,7 +292,6 @@ Namespace osVisualAdapter
                     Async Sub()
                         RemoveHandler VisDataObject.Completed,
                                                                 VisDataOutline_OnComplete
-                        '   closeTask()
                         Await ValidateDispatch(closeTask)
                     End Sub
 
@@ -376,19 +373,37 @@ Namespace osVisualAdapter
         End Function
 
         Public Async Function TriggerVisuals_Open() As Task
-            If Not VisQualityPreset Then
-                Dim isTaskAsync As Boolean
-                Dim objTask_SetVisuals = VisAdapter.TriggerApplyVisuals(isTaskAsync)
+            If chkVisQuality Then
+                VisData_CompleteMonitor.ResetAndInitTask()
 
-                Await objTask_SetVisuals
+                VisData_CompleteEvt = Nothing
+                VisData_CompleteEvt =
+                    Sub()
+                        RemoveHandler VisDataObject.Completed, VisData_CompleteEvt
+                        VisData_CompleteMonitor.SetResult(True)
+                    End Sub
 
-                If isTaskAsync Then
-                    Await Task.Delay(VisQualityDuration_Open)
-                End If
+                AddHandler VisDataObject.Completed, VisData_CompleteEvt
             End If
+
+            If Not VisQualityPreset Then
+                    Dim isTaskAsync As Boolean
+                    Dim objTask_SetVisuals = VisAdapter.TriggerApplyVisuals(isTaskAsync)
+
+                    Await objTask_SetVisuals
+
+                    If isTaskAsync Then
+                        Await Task.Delay(VisQualityDuration_Open)
+                    End If
+                End If
 
             VisQualityPreset = False
             Await PerformVisualData()
+
+            If chkVisQuality Then
+                Await VisData_CompleteMonitor.Task
+                InputUI_Allow()
+            End If
         End Function
 
         Public Async Function TriggerVisuals_Close() As Task
@@ -404,10 +419,6 @@ Namespace osVisualAdapter
             End If
 
             VisQualitySet = False
-
-            'If VisKillOnHover Then VisRootObject.
-            '                IsHitTestVisible = False
-
             Await PerformVisualData()
         End Function
 
@@ -486,14 +497,16 @@ Namespace osVisualAdapter
             Dim visDispatch = VisRootObject.Dispatcher
 
             If visDispatch.CheckAccess() Then
-                InputUI_Prevent()
+                If chkVisQuality Then
+                    InputUI_Prevent() : End If
 
                 VisDataObject.Begin(VisRootObject, False)
                 Await Task.CompletedTask
             Else
                 Await visDispatch.InvokeAsync(
                     Sub()
-                        InputUI_Prevent()
+                        If chkVisQuality Then
+                            InputUI_Prevent() : End If
 
                         VisDataObject.Begin(VisRootObject, False)
                     End Sub, DispatcherPriority.Render)
@@ -565,6 +578,7 @@ Namespace osVisualAdapter
                     Return visInitType.Key = objInitType
                 End Function).Value
         End Function
+
 
         Public Event VisDataOutlineChanged As _
             PropertyChangedEventHandler Implements osNotify.PropertyChanged

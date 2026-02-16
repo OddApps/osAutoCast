@@ -126,7 +126,7 @@ Public NotInheritable Class osHandler_UI
 
         Dim a = ResetUI(TriggerShowMenu)
 
-        InitResourceAlloc()
+        RecaptureResources()
     End Sub
 
     Private Shared Sub ClearHandlers(objPopupMenu As osPopupMenu_GUI)
@@ -353,7 +353,7 @@ Public NotInheritable Class osHandler_UI
         Await Task.WhenAll(DismissPopupMenu(),
                            DismissPopupMenuOverlay()).ConfigureAwait(False)
 
-        InitResourceAlloc()
+        RecaptureResources()
         Await RestoreUI_PopupMenu()
 
         AuthorizeInputMonitor()
@@ -427,7 +427,7 @@ Public NotInheritable Class osHandler_UI
         DisposeUI_Prefs.Invoke(objOsTrayMenu_GUI)
         objOsTrayMenu_GUI = Nothing
 
-        InitResourceAlloc()
+        RecaptureResources()
     End Sub
 
     Public Shared Async Function ResetOptsUI() As Task
@@ -493,10 +493,7 @@ Public NotInheritable Class osHandler_UI
 
     Public Shared Sub RecaptureResources()
         InitResourceAlloc()
-
-        GC.Collect()
-        GC.WaitForPendingFinalizers()
-        GC.Collect()
+        AllocResources()
     End Sub
 
     Public Shared Sub InitResourceAlloc()
@@ -504,8 +501,6 @@ Public NotInheritable Class osHandler_UI
 
         GC.Collect()
         GC.WaitForPendingFinalizers()
-
-        AllocResources()
     End Sub
 
     Private Shared Sub AllocResources()

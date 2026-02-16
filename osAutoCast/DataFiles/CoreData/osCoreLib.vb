@@ -536,7 +536,6 @@ Public NotInheritable Class osFuncLib_ShowOpts
 
         AddHandler _osPrefsWin.Closed,
                 Async Sub(sender, e)
-                    '           osFuncLib_InputScan.isActionComplete = True
                     _osPrefsWindow = Nothing
 
                     ' osHandler_UI.InitResourceAlloc()
@@ -552,7 +551,6 @@ Public NotInheritable Class osFuncLib_ShowOpts
 
         Await AnticipateExit()
         Await _osPrefsWin.TriggerVisuals_Close()
-        '  End With
     End Function
 
     Private Shared Function AnticipateExit() As Task
@@ -968,6 +966,7 @@ Module osFuncLib_UI
     Public Function GetSizeReport(isProgType As TriggerType) As ProgSizeReport
         Dim progW As Integer
         Dim progH As Integer
+        Dim progB As Integer = 0
 
         With osPefs.Data
             Select Case isProgType
@@ -977,8 +976,13 @@ Module osFuncLib_UI
                     progW = .MainOpts_acProgW
                     progH = .MainOpts_acProgH
 
+                    progB = .MainOpts_acProgB
+
+                    Dim progBrdrOffset = progB * 1.75
+                    Dim progBrdrWidth = progBrdrOffset * 3
+
                     If CoreDataLib.VerifyVisQualityPref() Then
-                        progW += 4 : progH += 4
+                        progW += (progBrdrOffset + progBrdrWidth) : progH += progBrdrOffset
                     End If
 
                 Case TriggerType.AutoPass
@@ -987,7 +991,8 @@ Module osFuncLib_UI
             End Select
         End With
 
-        Return New ProgSizeReport(progW, progH)
+        Return If(progB = 0, New ProgSizeReport(progW, progH),
+            New ProgSizeReport(progW, progH, progB))
     End Function
 
     Public Function PrepDispatcher(Optional IsAutoPass As Boolean = False) As Dispatcher
@@ -2270,6 +2275,17 @@ Public Module ControlExtensions
     End Sub
 
     <Runtime.CompilerServices.Extension>
+    Public Sub KilllTask(Of T As {Class, IDisposable})(ByRef obj As T)
+        If obj IsNot Nothing Then
+            Try
+                obj.Dispose()
+            Finally
+                obj = Nothing
+            End Try
+        End If
+    End Sub
+
+    <Runtime.CompilerServices.Extension>
     Public Sub DisposeMonitor(Of T As {Class, IDisposable})(ByRef obj As T)
         If obj IsNot Nothing Then
             Try
@@ -2298,6 +2314,11 @@ Public Module ControlExtensions
         If objTask IsNot Nothing Then
             objTask = Nothing : End If
     End Sub
+
+    <Runtime.CompilerServices.Extension>
+    Public Function GetObj(Of T)(objPref As T) As T
+        Return objPref
+    End Function
 
     <Runtime.CompilerServices.Extension>
     Public Function PrefVal(ByRef objPref As Object) As String

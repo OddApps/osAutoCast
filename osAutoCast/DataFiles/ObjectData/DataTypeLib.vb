@@ -21,6 +21,7 @@ Imports osDraw = System.Drawing
 Imports osForms = System.Windows.Forms
 Imports osIcons = System.Drawing.SystemIcons
 Imports osProgBlendState = SharpDX.Direct3D11.BlendState
+Imports osFormat = SharpDX.DXGI.Format
 Imports osProgColor = SharpDX.Mathematics.Interop.RawColor4
 Imports osProgBorder = SharpDX.Mathematics.Interop.RawVector4
 Imports osRect = SharpDX.Mathematics.Interop
@@ -51,6 +52,7 @@ Imports osProgDxgiDevice = SharpDX.DXGI.Device1
 Imports osProgDxgiFactory = SharpDX.DXGI.Factory
 Imports osProgDxgiFactory2 = SharpDX.DXGI.Factory2
 Imports osProgFactoryD2D = SharpDX.Direct2D1.Factory
+Imports SharpDX
 
 #Disable Warning BC42353
 
@@ -358,12 +360,23 @@ Public Module DataTypeLib
         GameMenu_Open
     End Enum
 
+    Public Enum TerminateUiType
+        TerminateUi_Visuals
+        TerminateUi_Monitors
+        TerminateUi_Objects
+    End Enum
+
     Public Enum LoadSpinColors
         LoadColor_Spinner
         LoadColor_Container
         LoadColor_SpinContainer
+        LoadColor_SpinContentContainer
         LoadColor_SpinContainerBorder
         LoadColor_SpinnerLoadComplete
+        LoadColor_MsgText
+        LoadColor_MsgTextGlow
+        LoadColor_MsgTextStroke
+        LoadColor_SpinContainerBorderGlow
     End Enum
 
     Public Enum LoadingProgStatus
@@ -680,8 +693,6 @@ Public Class osVisRenderMode
 
     Public Property visCache As CacheMode
 
-    Public Property visLayoutSetting As Boolean
-
     Public Sub New()
     End Sub
 
@@ -706,8 +717,6 @@ Public Class osVisRenderMode
                 visTextFormat = TextFormattingMode.Ideal
 
                 visCache = Nothing
-
-                visLayoutSetting = False
             Case VisMode_LowQuality
                 visBitMap = BitmapScalingMode.LowQuality
                 visEdges = EdgeMode.Aliased
@@ -716,8 +725,6 @@ Public Class osVisRenderMode
                 visTextFormat = TextFormattingMode.Display
 
                 visCache = New BitmapCache(1.0)
-
-                visLayoutSetting = True
         End Select
     End Sub
 
@@ -1610,9 +1617,12 @@ Public Class ProgVisualQuality
 
     Public Property Flag As Single
     Public Property BlendState As osProgBlendState
+    Public Property FormatSetting As osFormat
+    Public Property AliasSetting As Direct2D1.AntialiasMode
+    Public Property DoMultiSample As Boolean
+    Public Property UseProgressClipping As Boolean
 
     Public Sub New()
-
     End Sub
 
     Public Sub New(vQualitySetting As ProgVisOpts, ByRef objBlendState As osProgBlendState)
@@ -1620,9 +1630,17 @@ Public Class ProgVisualQuality
             Case ProgVisOpts.Performance
                 Flag = 0.0F
                 BlendState = objBlendState
+                FormatSetting = osFormat.B8G8R8A8_UNorm
+                AliasSetting = Direct2D1.AntialiasMode.Aliased
+                DoMultiSample = False
+                UseProgressClipping = True
             Case ProgVisOpts.Quality
                 Flag = 4.0F
                 BlendState = objBlendState
+                FormatSetting = osFormat.R16G16B16A16_Float
+                AliasSetting = Direct2D1.AntialiasMode.PerPrimitive
+                DoMultiSample = True
+                UseProgressClipping = False
         End Select
     End Sub
 
@@ -1726,8 +1744,10 @@ Public Class ProgTextPos
 End Class
 
 Public Class ProgSizeReport
+
     Public Property pWidth As Integer
     Public Property pHeight As Integer
+    Public Property pBorder As Integer
 
     Public Sub New()
 
@@ -1736,6 +1756,15 @@ Public Class ProgSizeReport
     Public Sub New(pW As Integer, pH As Integer)
         pWidth = pW
         pHeight = pH
+
+        pBorder = 0
+    End Sub
+
+    Public Sub New(pW As Integer, pH As Integer, pB As Integer)
+        pWidth = pW
+        pHeight = pH
+
+        pBorder = pB
     End Sub
 
 End Class
@@ -1820,6 +1849,16 @@ Public Class ProgressMsg
         pFormat = Format
     End Sub
 
+    Public Sub New(txtMsg As String, pType As TriggerType, acWidth As Integer, acHeight As Integer,
+                   ByRef pWriteFactory As osText.Factory, ByRef pFormat As osText.TextFormat)
+        MsgText = txtMsg
+
+        Location = SetMsgLocation(pType, acWidth, acHeight)
+        Format = ApplyMsgFormat(acHeight, pWriteFactory)
+
+        pFormat = Format
+    End Sub
+
     Private Function ApplyMsgFormat(ByRef pWriteFactory As osText.Factory) As osText.TextFormat
         Try
             Return New osText.TextFormat(pWriteFactory, "Trebuchet MS",
@@ -1834,10 +1873,14 @@ Public Class ProgressMsg
     End Function
 
     Private Function ApplyMsgFormat(acHeight As Integer, ByRef pWriteFactory As osText.Factory) As osText.TextFormat
+        Dim txtSize As Single = If(
+            CoreDataLib.VerifyVisQualityPref(),
+            acHeight - 18, acHeight - 14)
+
         Try
             Return New osText.TextFormat(pWriteFactory, "Trebuchet MS",
                                          osText.FontWeight.Bold, osText.FontStyle.Normal,
-                                         osText.FontStretch.Condensed, CSng(acHeight - 14)) With {
+                                         osText.FontStretch.Condensed, txtSize) With {
                                              .TextAlignment = osText.TextAlignment.Center,
                                              .ParagraphAlignment = osText.ParagraphAlignment.Center
                                         }
@@ -1876,6 +1919,10 @@ Public Class ProgressMsg
 
             Return New osRect.RawRectangleF(0, 0, progW, progH)
         End With
+    End Function
+
+    Private Function SetMsgLocation(pType As TriggerType, acWidth As Integer, acHeight As Integer) As osRect.RawRectangleF
+        Return New osRect.RawRectangleF(0, 0, acWidth, acHeight)
     End Function
 
 End Class

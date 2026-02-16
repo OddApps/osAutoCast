@@ -41,24 +41,25 @@ Public NotInheritable Class osHandler_AutoCast
 
         _autoCastTask = Task.Run(
             Sub()
-                RunAutoCastUiLoop(acProgSize.pWidth, acProgSize.pHeight,
+                RunAutoCastUiLoop(acProgSize.pWidth, acProgSize.pHeight, acProgSize.pBorder,
                                   _autoCastCts, _autoCastTcs)
             End Sub)
 
-        Return Await _autoCastTcs.Task.ConfigureAwait(False)
+        Return Await _autoCastTcs.
+            Task.ConfigureAwait(False)
     End Function
 
-    Private Shared Sub RunAutoCastUiLoop(pW As Integer, pH As Integer, cts As CancellationTokenSource, tcs As TaskCompletionSource(Of Boolean))
+    Private Shared Sub RunAutoCastUiLoop(pW As Integer, pH As Integer, pB As Integer, cts As CancellationTokenSource, tcs As TaskCompletionSource(Of Boolean))
         Dim syncContext = New WindowsFormsSynchronizationContext()
-
         SynchronizationContext.SetSynchronizationContext(syncContext)
+
         _uiContext = syncContext
 
-        Dim context As New ApplicationContext()
+        Dim objUiContext As New ApplicationContext()
         Dim objAcInstance As ProgBarGui_AutoCast = Nothing
 
         Try
-            objAcInstance = New ProgBarGui_AutoCast(pW, pH,
+            objAcInstance = New ProgBarGui_AutoCast(pW, pH, pB,
                                           ProgTimeSpan_AC, AddressOf EaseProgress)
 
             _osGui_AutoCastProgress = New AutoCastGui()
@@ -67,24 +68,21 @@ Public NotInheritable Class osHandler_AutoCast
             AddHandler objAcInstance.FormClosed,
                 Sub()
                     Try
-                        context.ExitThread()
+                        objUiContext.ExitThread()
                     Catch : End Try
                 End Sub
 
             tcs.TrySetResult(True)
 
-            osRunForm.Run(context)
-
+            osRunForm.Run(objUiContext)
         Catch ex As Exception
             tcs.TrySetException(ex)
-
         Finally
             Try
                 If objAcInstance IsNot Nothing AndAlso Not objAcInstance.IsDisposed Then
                     objAcInstance.Dispose()
                 End If
-            Catch
-            End Try
+            Catch : End Try
 
             ProgBarGui_AutoCast.Instance = Nothing
             _osGui_AutoCastProgress = Nothing
@@ -100,9 +98,8 @@ Public NotInheritable Class osHandler_AutoCast
     End Sub
 
     Public Shared Async Function StopAutoCastAsync() As Task(Of Boolean)
-
-        Dim task = _autoCastTask
-        If task Is Nothing Then Return True
+        Dim objAutoCastTask = _autoCastTask
+        If objAutoCastTask Is Nothing Then Return True
 
         Dim ctx = _uiContext
         Dim cts = _autoCastCts
@@ -121,17 +118,15 @@ Public NotInheritable Class osHandler_AutoCast
                         If objAcInstance IsNot Nothing AndAlso Not objAcInstance.IsDisposed Then
                             objAcInstance.Close()
                         End If
-                    Catch
-                    End Try
+                    Catch : End Try
                 End Sub, Nothing)
         End If
 
-        Await task.ConfigureAwait(False)
+        Await objAutoCastTask.ConfigureAwait(False)
 
         Try
             cts?.Dispose()
-        Catch
-        End Try
+        Catch : End Try
 
         Return True
     End Function

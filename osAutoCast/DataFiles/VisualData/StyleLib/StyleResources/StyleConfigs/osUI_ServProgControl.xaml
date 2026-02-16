@@ -3,33 +3,102 @@
 			 Width="{Binding SpinnerSize, ElementName=osCtrl_LoadSpinner}" Height="{Binding SpinnerSize, ElementName=osCtrl_LoadSpinner}">
 	
 	<UserControl.Resources>
-		<Storyboard x:Key="osLoadVis_Complete">	
-			<DoubleAnimationUsingKeyFrames Storyboard.TargetName="SpinnerScale"
+		 <Storyboard x:Key="osLoadSpinVis_Complete" FillBehavior="Stop">
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="ProgressScale"
 										   Storyboard.TargetProperty="ScaleX">
-				<EasingDoubleKeyFrame KeyTime="0:0:0" Value="1"/>
-				<EasingDoubleKeyFrame KeyTime="0:0:0.1925" Value="1.151">
-					<EasingDoubleKeyFrame.EasingFunction>
-						<BackEase Amplitude="0.57" EasingMode="EaseOut"/>
-					</EasingDoubleKeyFrame.EasingFunction>
-				</EasingDoubleKeyFrame>
-				<EasingDoubleKeyFrame KeyTime="0:0:0.385" Value="1" />
-			</DoubleAnimationUsingKeyFrames>
-			<DoubleAnimationUsingKeyFrames Storyboard.TargetName="SpinnerScale"
-										   Storyboard.TargetProperty="ScaleY">
-				<EasingDoubleKeyFrame KeyTime="0:0:0" Value="1"/>
-				<EasingDoubleKeyFrame KeyTime="0:0:0.1925" Value="1.151">
-					<EasingDoubleKeyFrame.EasingFunction>
-						<BackEase Amplitude="0.57" EasingMode="EaseOut"/>
-					</EasingDoubleKeyFrame.EasingFunction>
-				</EasingDoubleKeyFrame>
-				<EasingDoubleKeyFrame KeyTime="0:0:0.385" Value="1" />
-			</DoubleAnimationUsingKeyFrames>
-		</Storyboard>
+                <EasingDoubleKeyFrame KeyTime="00:00:00" Value="1" />
+                <EasingDoubleKeyFrame KeyTime="00:00:0.08" Value="1.2">
+                    <EasingDoubleKeyFrame.EasingFunction>
+                        <ExponentialEase EasingMode="EaseOut"/>
+                    </EasingDoubleKeyFrame.EasingFunction>
+                </EasingDoubleKeyFrame>
+                <EasingDoubleKeyFrame KeyTime="00:00:0.36" Value="1">
+                    <EasingDoubleKeyFrame.EasingFunction>
+                        <ExponentialEase Exponent="0.57" EasingMode="EaseIn"/>
+                    </EasingDoubleKeyFrame.EasingFunction>
+                </EasingDoubleKeyFrame>
+            </DoubleAnimationUsingKeyFrames>
+
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="ProgressScale"
+                                           Storyboard.TargetProperty="ScaleY">
+                <EasingDoubleKeyFrame KeyTime="00:00:00" Value="1" />
+                <EasingDoubleKeyFrame KeyTime="00:00:0.08" Value="1.2">
+                    <EasingDoubleKeyFrame.EasingFunction>
+                        <ExponentialEase EasingMode="EaseOut"/>
+                    </EasingDoubleKeyFrame.EasingFunction>
+                </EasingDoubleKeyFrame>
+                <EasingDoubleKeyFrame KeyTime="00:00:0.36" Value="1">
+                    <EasingDoubleKeyFrame.EasingFunction>
+                        <ExponentialEase Exponent="0.57" EasingMode="EaseIn"/>
+                    </EasingDoubleKeyFrame.EasingFunction>
+                </EasingDoubleKeyFrame>
+            </DoubleAnimationUsingKeyFrames>
+
+			    <DoubleAnimationUsingKeyFrames Storyboard.TargetName="ProgressTrackScale"
+                                           Storyboard.TargetProperty="ScaleX">
+                <EasingDoubleKeyFrame KeyTime="00:00:00" Value="1" />
+                <EasingDoubleKeyFrame KeyTime="00:00:0.08" Value="1.2">
+                    <EasingDoubleKeyFrame.EasingFunction>
+                        <ExponentialEase EasingMode="EaseOut"/>
+                    </EasingDoubleKeyFrame.EasingFunction>
+                </EasingDoubleKeyFrame>
+                <EasingDoubleKeyFrame KeyTime="00:00:0.36" Value="1">
+                    <EasingDoubleKeyFrame.EasingFunction>
+                        <ExponentialEase Exponent="0.57" EasingMode="EaseIn"/>
+                    </EasingDoubleKeyFrame.EasingFunction>
+                </EasingDoubleKeyFrame>
+            </DoubleAnimationUsingKeyFrames>
+
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="ProgressTrackScale"
+                                           Storyboard.TargetProperty="ScaleY">
+                <EasingDoubleKeyFrame KeyTime="00:00:00" Value="1" />
+                <EasingDoubleKeyFrame KeyTime="00:00:0.08" Value="1.2">
+                    <EasingDoubleKeyFrame.EasingFunction>
+                        <ExponentialEase EasingMode="EaseOut"/>
+                    </EasingDoubleKeyFrame.EasingFunction>
+                </EasingDoubleKeyFrame>
+                <EasingDoubleKeyFrame KeyTime="00:00:0.36" Value="1">
+                    <EasingDoubleKeyFrame.EasingFunction>
+                        <ExponentialEase Exponent="0.57" EasingMode="EaseIn"/>
+                    </EasingDoubleKeyFrame.EasingFunction>
+                </EasingDoubleKeyFrame>
+            </DoubleAnimationUsingKeyFrames>
+
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="SpinnerScale"
+                                           Storyboard.TargetProperty="ScaleX">
+                <EasingDoubleKeyFrame KeyTime="00:00:00" Value="1" />
+                <EasingDoubleKeyFrame KeyTime="00:00:0.08" Value="1.05">
+                    <EasingDoubleKeyFrame.EasingFunction>
+                        <ExponentialEase EasingMode="EaseOut"/>
+                    </EasingDoubleKeyFrame.EasingFunction>
+                </EasingDoubleKeyFrame>
+                <EasingDoubleKeyFrame KeyTime="00:00:0.36" Value="1">
+                    <EasingDoubleKeyFrame.EasingFunction>
+                        <ExponentialEase Exponent="0.57" EasingMode="EaseIn"/>
+                    </EasingDoubleKeyFrame.EasingFunction>
+                </EasingDoubleKeyFrame>
+            </DoubleAnimationUsingKeyFrames>
+
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="SpinnerScale"
+                                           Storyboard.TargetProperty="ScaleY">
+                <EasingDoubleKeyFrame KeyTime="00:00:00" Value="1" />
+                <EasingDoubleKeyFrame KeyTime="00:00:0.08" Value="1.05">
+                    <EasingDoubleKeyFrame.EasingFunction>
+                        <ExponentialEase EasingMode="EaseOut"/>
+                    </EasingDoubleKeyFrame.EasingFunction>
+                </EasingDoubleKeyFrame>
+                <EasingDoubleKeyFrame KeyTime="00:00:0.36" Value="1">
+                    <EasingDoubleKeyFrame.EasingFunction>
+                        <ExponentialEase Exponent="0.57" EasingMode="EaseIn"/>
+                    </EasingDoubleKeyFrame.EasingFunction>
+                </EasingDoubleKeyFrame>
+            </DoubleAnimationUsingKeyFrames>
+        </Storyboard>
 	</UserControl.Resources>
 	
 	<Grid>
 		<Viewbox Stretch="Uniform">
-			<Canvas x:Name="SpinnerRoot" Width="100" Height="100"
+			<Canvas x:Name="SpinnerRoot" Width="100" Height="100"					
 					RenderTransformOrigin="0.5,0.5">
 				<Canvas.RenderTransform>
 					<TransformGroup>
@@ -38,12 +107,25 @@
 					</TransformGroup>
 				</Canvas.RenderTransform>
 				<Ellipse x:Name="ProgressTrack" Canvas.Left="0" Canvas.Top="0" Fill="Transparent"
-						 Width="100" Height="100" Stroke="#383838" CacheMode="BitmapCache"
-						 StrokeThickness="{Binding StrokeThickness, ElementName=osCtrl_LoadSpinner, FallbackValue=18}" />
+						 Width="100" Height="100" Stroke="#383838" CacheMode="BitmapCache" 
+						 RenderOptions.BitmapScalingMode="LowQuality" RenderOptions.EdgeMode="Aliased"
+						 HorizontalAlignment="Center" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5"
+						 StrokeThickness="{Binding StrokeThickness, ElementName=osCtrl_LoadSpinner, FallbackValue=18}">
+					<Ellipse.RenderTransform>
+                <ScaleTransform x:Name="ProgressTrackScale" ScaleX="1" ScaleY="1"/>
+            </Ellipse.RenderTransform>
+				</Ellipse>
                 <Path x:Name="ProgressPath" Canvas.Left="0" Canvas.Top="0"
 					  StrokeStartLineCap="Round" StrokeEndLineCap="Round" Fill="Transparent"
+					  HorizontalAlignment="Center" VerticalAlignment="Center" CacheMode="BitmapCache"
+					  RenderOptions.BitmapScalingMode="LowQuality" RenderTransformOrigin="0.5,0.5"
                       Stroke="{Binding SpinnerBrush, ElementName=osCtrl_LoadSpinner, FallbackValue=#FFA10000}"
-                      StrokeThickness="{Binding StrokeThickness, ElementName=osCtrl_LoadSpinner, FallbackValue=18}" />
+                      StrokeThickness="{Binding StrokeThickness, ElementName=osCtrl_LoadSpinner, FallbackValue=18}">
+					            <Path.RenderTransform>
+                <ScaleTransform x:Name="ProgressScale" ScaleX="1" ScaleY="1"/>
+            </Path.RenderTransform>
+
+				</Path>
             </Canvas>
         </Viewbox>
     </Grid>

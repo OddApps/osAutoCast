@@ -24,8 +24,8 @@ Namespace osEffectManager
                 .PaddingLeft = 6
                 .PaddingRight = 6
 
-                .PaddingTop = 3
-                .PaddingBottom = 3
+                .PaddingTop = 4
+                .PaddingBottom = 4
             End With
 
             UpdateShaderValue(InputProperty)
@@ -148,8 +148,8 @@ Namespace osEffectManager
                 .PaddingLeft = 6
                 .PaddingRight = 6
 
-                .PaddingTop = 3
-                .PaddingBottom = 3
+                .PaddingTop = 4
+                .PaddingBottom = 4
             End With
 
             UpdateShaderValue(InputProperty)

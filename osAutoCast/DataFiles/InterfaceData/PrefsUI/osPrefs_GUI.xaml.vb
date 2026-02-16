@@ -8,11 +8,15 @@ Imports osAutoCast.DataTypeLib.PrefUI_State
 Imports osAutoCast.DataTypeLib.PromptResponse
 Imports osAutoCast.DataTypeLib.LoadSpinColors
 Imports osAutoCast.DataTypeLib.TriggerLoadSpinVis
+Imports osAutoCast.DataTypeLib.TerminateUiType
 Imports osAutoCast.osControls
+Imports osAutoCast.osHandler_UI
 Imports osAutoCast.osVisualAdapter
+Imports osAutoCast.osEffectManager
 Imports osKeyTime = System.Windows.Media.Animation.KeyTime
 Imports osPrefData = osAutoCast.osPrefLib.osPreferenceLib
 Imports osColor = System.Windows.Media.Color
+Imports System.Windows.Media.Effects
 
 #Disable Warning BC42353
 #Disable Warning BC42104
@@ -51,7 +55,7 @@ Public Class osPrefs_GUI
 
     Private Function SetVisTargets() As UIElement()
         Return {prefContainer, osPrefsContentContainer,
-            osTitleCover, osContentContainer}
+            osTitleCover, osBottomContentContainer, osBottomContent}
     End Function
 
     Public Sub SetCloseMonitor(objAwaitClose As TaskCompletionSource(Of Boolean))
@@ -95,6 +99,7 @@ Public Class osPrefs_GUI
                      SWP_NOMOVE Or SWP_NOSIZE Or SWP_NOACTIVATE)
 
         Me.Topmost = True
+
     End Sub
 
     Private Async Sub osPrefsBtnClk_SavePrefs(sender As Object, e As RoutedEventArgs) Handles osPrefsBtn_Save.Click
@@ -104,32 +109,22 @@ Public Class osPrefs_GUI
             If chkDoSave = isYes Then
                 Await objTask_InitSpin
                 Await TriggerPrefSave()
-            Else
-                DisposeLoadSpinner()
             End If
         End If
     End Sub
 
     Private Sub InitLoadSpinner()
         Dim uiScheduler = TaskScheduler.FromCurrentSynchronizationContext()
-        Dim uiTaskFactory = New TaskFactory(uiScheduler)
 
         Dim objTask_InitLoadSpinner As New Task(
             Sub()
                 objTask_InitSpin = InitializeLoadSpinner(uiScheduler)
             End Sub)
 
-        objTask_InitLoadSpinner.Start(uiScheduler)
-
-        'Await PrepDispatcher().InvokeAsync(
-        '    Sub()
-        '        Dim objTask_InitLoadSpinner As New Task(
-        '            Sub()
-        '                objTask_InitSpin = InitializeLoadSpinner(uiScheduler)
-        '            End Sub)
-
-        '        objTask_InitLoadSpinner.Start(uiScheduler)
-        '    End Sub, DispatcherPriority.Background)
+        Dim objTask_PrepLoadSpinner = Task.Run(
+            Sub()
+                objTask_InitLoadSpinner.Start(uiScheduler)
+            End Sub)
     End Sub
 
     Private Async Function InitializeLoadSpinner(objTaskSchedule As TaskScheduler) As Task(Of Boolean)
@@ -137,21 +132,64 @@ Public Class osPrefs_GUI
             Sub()
                 objLoadSpinner = New osControls.osLoadSpinner With {
                     .SpinnerSize = 50, .StrokeThickness = 18, .IsSpinning = False,
-                    .SpinnerBrush = GenerateLoadSpinColor(LoadColor_Spinner)
+                    .SpinnerBrush = GenerateLoadSpinBrush(LoadColor_Spinner, True),
+                    .Margin = New Thickness(6, 4, 6, 0)
                 }
 
-                osSpinLoadMsg = ComposeLoadMsgElement()
+                osSpinLoadMsg = New TextBlock With {
+                    .Name = "txtSpinLoadMsg", .Text = "Please Wait", .FontSize = 18, .Opacity = 1,
+                    .Foreground = GenerateLoadSpinBrush(LoadColor_MsgText).FreezeReturn(),
+                    .Margin = New Thickness(0, 8, 0, 2), .Padding = New Thickness(0, 4, 1, 4),
+                    .HorizontalAlignment = HorizontalAlignment.Stretch,
+                    .FontFamily = New FontFamily("Segoe UI Black"),
+                    .FontWeight = FontWeights.Bold
+                }
+
+                RenderOptions.SetBitmapScalingMode(osSpinLoadMsg, BitmapScalingMode.HighQuality)
+
+                TextOptions.SetTextRenderingMode(osSpinLoadMsg, TextRenderingMode.ClearType)
+                TextOptions.SetTextFormattingMode(osSpinLoadMsg, TextFormattingMode.Ideal)
+
+                Dim txtLoadMsg_Glow As New osEffect_Glow() With {
+                    .Fade = 1.0, .GlowStrength = 1.75,
+                    .VerticalGlow = -2.0, .Thickness = 0.58,
+                    .GlowColor = GenerateLoadSpinColor(LoadColor_MsgTextGlow)
+                }
+
+                PrepEffectBinding(txtLoadMsg_Glow)
+                osSpinLoadMsg.Effect = txtLoadMsg_Glow
+
+                osSpinLoadMsgText = New Border() With {
+                     .Name = "osSpinLoadMsgText",
+                    .HorizontalAlignment = HorizontalAlignment.Center,
+                    .VerticalAlignment = VerticalAlignment.Center,
+                    .Child = osSpinLoadMsg, .Opacity = 0,
+                    .Padding = New Thickness(0)
+                }
+
+                RenderOptions.SetBitmapScalingMode(osSpinLoadMsgText, BitmapScalingMode.HighQuality)
+
+                TextOptions.SetTextRenderingMode(osSpinLoadMsgText, TextRenderingMode.ClearType)
+                TextOptions.SetTextFormattingMode(osSpinLoadMsgText, TextFormattingMode.Ideal)
+
+                Dim txtLoadMsg_Stroke As New osEffect_Stroke() With {
+                    .Thickness = 0.875, .Spread = 4.75,
+                    .Fade = 1.0, .StrokeStrength = 0.85,
+                    .StrokeColor = GenerateLoadSpinColor(LoadColor_MsgTextStroke)
+                }
+
+                PrepEffectBinding(txtLoadMsg_Stroke)
+                osSpinLoadMsgText.Effect = txtLoadMsg_Stroke
 
                 Dim objTask_InitLoadMsg = InitLoadMsgFadeVis()
             End Sub,
             Sub()
                 osSpinLoadContainer = New Grid With {
                     .Name = "osSpinLoadContainer",
-                    .IsHitTestVisible = True,
                     .Visibility = Visibility.Visible, .Opacity = 0,
-                    .Background = GenerateLoadSpinColor(LoadColor_Container),
+                    .VerticalAlignment = VerticalAlignment.Stretch,
                     .HorizontalAlignment = HorizontalAlignment.Stretch,
-                    .VerticalAlignment = VerticalAlignment.Stretch
+                    .Background = GenerateLoadSpinBrush(LoadColor_Container)
                 }
 
                 Grid.SetRow(osSpinLoadContainer, 0)
@@ -161,27 +199,35 @@ Public Class osPrefs_GUI
             End Sub,
             Sub()
                 objLoadSpinContent = New StackPanel With {
-                    .Orientation = Orientation.Vertical,
+                    .Orientation = Orientation.Vertical, .MinWidth = 82,
                     .HorizontalAlignment = HorizontalAlignment.Stretch,
-                    .VerticalAlignment = VerticalAlignment.Stretch,
-                    .Margin = New Thickness(8, 4, 8, 2),
-                    .MinWidth = 82
+                    .VerticalAlignment = VerticalAlignment.Stretch
                 }
 
                 objLoadSpinContainer = New Border With {
-                    .Background = GenerateLoadSpinColor(LoadColor_SpinContainer),
-                    .BorderBrush = GenerateLoadSpinColor(LoadColor_SpinContainerBorder),
+                    .Name = "objLoadSpinContainer",
+                    .Background = GenerateLoadSpinBrush(LoadColor_SpinContainer),
+                    .BorderBrush = GenerateLoadSpinBrush(LoadColor_SpinContainerBorder),
                     .HorizontalAlignment = HorizontalAlignment.Center, .VerticalAlignment = VerticalAlignment.Center,
-                    .Margin = New Thickness(0, 0, 0, 20), .Padding = New Thickness(4, 8, 4, 4), .Opacity = 0,
-                    .CornerRadius = New CornerRadius(8), .BorderThickness = New Thickness(8)
+                    .Margin = New Thickness(0, 0, 0, 20), .Opacity = 0, .CornerRadius = New CornerRadius(8),
+                    .BorderThickness = New Thickness(8), .Padding = New Thickness(4, 8, 4, 6),
+                    .CacheMode = New BitmapCache(1.0), .Width = 136
                 }
+
+                Dim SpinContentBrdrGlow As New osEffect_Glow() With {
+                    .Fade = 1, .GlowStrength = 3.35, .VerticalGlow = 10,
+                    .GlowColor = GenerateLoadSpinColor(LoadColor_SpinContainerBorderGlow),
+                    .Thickness = 1.775, .TexelSize = New Point(0.0031, 0.0031)
+                }
+
+                objLoadSpinContainer.Effect = SpinContentBrdrGlow
             End Sub,
             Sub()
                 GenVis_ShowLoadOverlay()
             End Sub,
             Sub()
                 objLoadSpinContent.Children.Add(objLoadSpinner)
-                objLoadSpinContent.Children.Add(osSpinLoadMsg)
+                objLoadSpinContent.Children.Add(osSpinLoadMsgText)
 
                 objLoadSpinContainer.Child = objLoadSpinContent
                 osSpinLoadContainer.Children.Add(objLoadSpinContainer)
@@ -208,32 +254,28 @@ Public Class osPrefs_GUI
         Return True
     End Function
 
-    Private Function ComposeLoadMsgElement() As TextBlock
-        Dim a As New TextBlock With {
-            .Text = "Please Wait", .FontSize = 16,
-            .Foreground = Brushes.White, .Opacity = 0,
-            .Margin = New Thickness(0, 8, 0, 0),
-             .SnapsToDevicePixels = True,
-            .HorizontalAlignment = HorizontalAlignment.Center
-        }
-
-        TextOptions.SetTextRenderingMode(a, TextRenderingMode.ClearType)
-
-        Dim glower As New osEffectManager.osEffect_Glow() With {
-            .Thickness = 0.75,
-            .Fade = 1,
-            .GlowStrength = 0.25,
-            .GlowColor = Color.FromArgb(&HA1, &HC1, &HD, &HD)
-        }
-
-        AddHandler a.SizeChanged, Sub(sender, e)
-                                      glower.TexelSize = New Size(a.ActualWidth, a.ActualHeight)
-                                  End Sub
-
-        a.Effect = glower
-
-        Return a
+    Private Function GenEffectBinding(Optional isHeight As Boolean = False) As Binding
+        Return New Binding(
+            $"Actual{If(isHeight, "Height", "Width")}") With {
+                .Source = osSpinLoadMsg
+            }
     End Function
+
+    Private Sub PrepEffectBinding(ByRef objEffect As DependencyObject)
+        Dim isStroke = TypeOf objEffect Is osEffect_Stroke
+
+        With New MultiBinding()
+            .Converter = CType(Me.Resources("TexelSizeConverter"), IMultiValueConverter)
+
+            .Bindings.Add(GenEffectBinding())
+            .Bindings.Add(GenEffectBinding(True))
+
+            Dim propEffect = If(isStroke, osEffect_Stroke.
+                TexelSizeProperty, osEffect_Glow.TexelSizeProperty)
+
+            BindingOperations.SetBinding(objEffect, propEffect, .GetObj())
+        End With
+    End Sub
 
     Private Function UpdateLoadSpinMsg() As Task
         Return ValidateDispatch(
@@ -246,7 +288,7 @@ Public Class osPrefs_GUI
         Return New DoubleAnimation() With {
             .From = If(isFadeIn, 0, 1), .[To] = If(isFadeIn, 1, 0),
             .FillBehavior = FillBehavior.HoldEnd,
-            .Duration = SetVisDuration(115),
+            .Duration = SetVisDuration(225),
             .EasingFunction = New QuadraticEase() With {
                 .EasingMode = EasingMode.EaseIn
             }
@@ -257,7 +299,7 @@ Public Class osPrefs_GUI
         Return New DoubleAnimation() With {
             .From = 0, .[To] = 1,
             .FillBehavior = FillBehavior.HoldEnd,
-            .Duration = SetVisDuration(175),
+            .Duration = SetVisDuration(225),
             .EasingFunction = New ExponentialEase With {
                 .EasingMode = EasingMode.EaseIn,
                     .Exponent = 3.8
@@ -271,12 +313,12 @@ Public Class osPrefs_GUI
                            PrepLoadMsgFadeDisplayVis())
 
         Dim evtVisOverlayMsg_FadeOut As EventHandler =
-                Sub()
-                    RemoveHandler objVisLoadMsg_FadeOut.Completed, evtVisOverlayMsg_FadeOut
+            Sub()
+                RemoveHandler objVisLoadMsg_FadeOut.Completed, evtVisOverlayMsg_FadeOut
 
-                    osSpinLoadMsg.Text = "Complete"
-                    objVisLoadMsg_FadeIn.Begin(osSpinLoadMsg)
-                End Sub
+                osSpinLoadMsg.Text = "Complete"
+                objVisLoadMsg_FadeIn.Begin(osSpinLoadMsg)
+            End Sub
 
         AddHandler objVisLoadMsg_FadeOut.Completed, evtVisOverlayMsg_FadeOut
     End Function
@@ -287,8 +329,8 @@ Public Class osPrefs_GUI
         objFadeVisData = New Storyboard()
         objFadeVisData.Children.Add(objVisLoadMsgFade)
 
-        Storyboard.SetTarget(objVisLoadMsgFade, osSpinLoadMsg)
-        Storyboard.SetTargetProperty(objVisLoadMsgFade, New PropertyPath(TextBlock.OpacityProperty))
+        Storyboard.SetTarget(objVisLoadMsgFade, osSpinLoadMsgText)
+        Storyboard.SetTargetProperty(objVisLoadMsgFade, New PropertyPath(Border.OpacityProperty))
 
         Return Task.CompletedTask
     End Function
@@ -299,8 +341,8 @@ Public Class osPrefs_GUI
         objVisLoadMsg_Display = New Storyboard()
         objVisLoadMsg_Display.Children.Add(objVisLoadMsgFade)
 
-        Storyboard.SetTarget(objVisLoadMsgFade, osSpinLoadMsg)
-        Storyboard.SetTargetProperty(objVisLoadMsgFade, New PropertyPath(TextBlock.OpacityProperty))
+        Storyboard.SetTarget(objVisLoadMsgFade, osSpinLoadMsgText)
+        Storyboard.SetTargetProperty(objVisLoadMsgFade, New PropertyPath(Border.OpacityProperty))
 
         Dim evtVisOverlayMsg_Display As EventHandler =
                Async Sub()
@@ -317,16 +359,20 @@ Public Class osPrefs_GUI
     Public Function TriggerLoadSpinVisuals(visTrigger As TriggerLoadSpinVis) As Task
         Select Case visTrigger
             Case TriggerVis_Display
-                osPrefsContentContainer.Children.Add(osSpinLoadContainer)
+                InputUI_Prevent()
 
+                osPrefsContentContainer.Children.Add(osSpinLoadContainer)
                 objLoadSpinDisplayMonitor.ResetAndInitTask()
 
+                GetVisual_ContentBlur().Begin()
                 objVis_ShowLoadSpin.Begin(osSpinLoadContainer)
+
                 Return objLoadSpinDisplayMonitor.Task
             Case TriggerVis_DisplayMsg
                 objLoadSpinDispMsgMonitor.ResetAndInitTask()
 
                 objVisLoadMsg_Display.Begin(osSpinLoadMsg)
+
                 Return objLoadSpinDispMsgMonitor.Task
             Case TriggerVis_DisplaySpinner
                 objLoadSpinMonitor.ResetAndInitTask()
@@ -339,33 +385,33 @@ Public Class osPrefs_GUI
     End Function
 
     Public Async Function ComposeLoadOverlay() As Task
-        InputUI_Prevent()
-
         Await TriggerLoadSpinVisuals(TriggerVis_Display)
 
         Await Task.Delay(75)
         Await TriggerLoadSpinVisuals(TriggerVis_DisplayMsg)
-        Await Task.Delay(75)
+
+        Await Task.Delay(115)
         Await TriggerLoadSpinVisuals(TriggerVis_DisplaySpinner)
-
-
     End Function
 
-    Private Function ComposeShowContentVis(Optional isContainer As Boolean = True) As DoubleAnimation
-        Dim valVisDur = If(isContainer, 325, 325)
-
+    Private Function ComposeShowContentVis() As DoubleAnimation
         Return New DoubleAnimation() With {
             .From = 0, .[To] = 1, .FillBehavior = FillBehavior.HoldEnd,
-            .Duration = SetVisDuration(valVisDur),
+            .Duration = SetVisDuration(325),
             .EasingFunction = New QuadraticEase() With {
                 .EasingMode = EasingMode.EaseIn
             }
         }
     End Function
 
+    Private Function GetVisual_ContentBlur(Optional isUnBlur As Boolean = False) As Storyboard
+        Return TryCast(Me.Resources(If(isUnBlur, "osPrefsVis_ContentUnBlur",
+                                    "osPrefsVis_ContentBlur")), Storyboard)
+    End Function
+
     Public Sub GenVis_ShowLoadOverlay()
         Dim objVisShowLoad = ComposeShowContentVis()
-        Dim objVisShowLoadContent = ComposeShowContentVis(False)
+        Dim objVisShowLoadContent = ComposeShowContentVis()
 
         objVis_ShowLoadSpin = New Storyboard()
 
@@ -383,6 +429,9 @@ Public Class osPrefs_GUI
             Async Sub()
                 RemoveHandler objVis_ShowLoadSpin.Completed, evtDispComplete
 
+                osPrefsContentBrdr.CacheMode = New BitmapCache(1.0)
+                osBottomContainer.CacheMode = New BitmapCache(1.0)
+
                 Await Task.Delay(115)
                 objLoadSpinDisplayMonitor.SetResult(True)
             End Sub
@@ -391,61 +440,144 @@ Public Class osPrefs_GUI
     End Sub
 
     Public Function GenVis_CloseLoadOverlay() As DoubleAnimation
-        Dim objVis_Overlay As New DoubleAnimation() With {
+        Return New DoubleAnimation() With {
             .[To] = 0, .Duration = SetVisDuration(375),
             .EasingFunction = New QuadraticEase() With {
                 .EasingMode = EasingMode.EaseIn
             }
         }
-
-        Dim evtVisOverlay As EventHandler =
-            Sub()
-                RemoveHandler objVis_Overlay.Completed, evtVisOverlay
-
-                objLoadSpinContainer.Visibility = Visibility.Collapsed
-                osPrefsContentContainer.Children.Remove(osSpinLoadContainer)
-
-                DisposeLoadSpinner()
-            End Sub
-
-        AddHandler objVis_Overlay.Completed, evtVisOverlay
-
-        Return objVis_Overlay
     End Function
 
-    Private Sub DisposeLoadSpinner()
-        osSpinLoadContainer.Children.Clear()
+    Private Sub TerminateVisData(ByRef objVisData As Storyboard)
+        With objVisData
+            Try
+                .Stop()
+            Catch ex As Exception : End Try
 
-        objLoadSpinContent = Nothing
-        objLoadSpinner = Nothing
-        objLoadSpinContainer = Nothing
-        osSpinLoadContainer = Nothing
+            If .Children.Count > 0 Then
+                .Children.Clear()
+            End If
+        End With
 
-        objVisLoadMsg_FadeIn = Nothing
-        objVisLoadMsg_FadeOut = Nothing
-
-        osSpinLoadMsg = Nothing
-
-        objVis_ShowLoadSpin.Stop()
-        objVis_ShowLoadSpin.Children.Clear()
-        objVis_ShowLoadSpin = Nothing
+        objVisData = Nothing
     End Sub
 
+    Private Sub TerminateMonitor(ByRef objMonitor As TaskCompletionSource(Of Boolean))
+        objMonitor.ResetTask()
+    End Sub
+
+    Public Function GenerateTerminateTasks(typeTerminate As TerminateUiType) As Task
+        Dim objTaskSchedule = TaskScheduler.FromCurrentSynchronizationContext()
+
+        Dim idxTasks_DestroyAll = FetchTerminateData(typeTerminate)
+        Dim UiData_DestroyAll = idxTasks_DestroyAll.Select(
+            Function(objTaskDestroy)
+                Dim objTerminateTask = CreateTask(objTaskDestroy)
+                objTerminateTask.Start(objTaskSchedule)
+
+                Return objTerminateTask
+            End Function)
+
+        Return Task.WhenAll(UiData_DestroyAll)
+    End Function
+
+    Public Function FetchTerminateData(typeTerminate As TerminateUiType) As Action()
+        Dim idxTerminateTasks As Action()
+
+        Select Case typeTerminate
+            Case TerminateUi_Visuals
+                idxTerminateTasks = {
+                    Sub() TerminateVisData(objVis_ShowLoadSpin), Sub() TerminateVisData(objVis_HideOverlay),
+                    Sub() TerminateVisData(objVisLoadMsg_Display), Sub() TerminateVisData(objVisLoadMsg_FadeIn),
+                    Sub() TerminateVisData(objVisLoadMsg_FadeOut)
+                }
+            Case TerminateUi_Monitors
+                idxTerminateTasks = {
+                    Sub() TerminateMonitor(objLoadSpinMonitor), Sub() TerminateMonitor(objLoadSpinCompleteMonitor),
+                    Sub() TerminateMonitor(objLoadSpinDisplayMonitor), Sub() TerminateMonitor(objLoadSpinDispMsgMonitor)
+                }
+            Case TerminateUi_Objects
+                idxTerminateTasks = {
+                    Sub() TerminateObject(objLoadSpinContainer), Sub() TerminateObject(osSpinLoadContainer),
+                    Sub() TerminateObject(objLoadSpinContent), Sub() TerminateObject(osSpinLoadMsg),
+                    Sub() TerminateObject(osSpinLoadMsgText), Sub() TerminateObject(objLoadSpinner)
+                }
+        End Select
+
+        Return idxTerminateTasks
+    End Function
+
+    Private Sub TerminateObject(objUI As FrameworkElement)
+        Select Case True
+            Case TypeOf objUI Is Border
+                Select Case objUI.Name
+                    Case "objLoadSpinContainer"
+                        objLoadSpinContainer = Nothing
+                    Case "osSpinLoadMsgText"
+                        osSpinLoadMsgText = Nothing
+                End Select
+            Case TypeOf objUI Is Grid
+                osSpinLoadContainer.Children.Clear()
+                osSpinLoadContainer = Nothing
+            Case TypeOf objUI Is StackPanel
+                objLoadSpinContent = Nothing
+            Case TypeOf objUI Is TextBlock
+                osSpinLoadMsg = Nothing
+            Case TypeOf objUI Is osControls.osLoadSpinner
+                objLoadSpinner = Nothing
+        End Select
+    End Sub
+
+    Public Function GetUiObjects() As List(Of FrameworkElement)
+        Return New List(Of FrameworkElement) From {
+            osSpinLoadContainer, objLoadSpinContainer,
+            objLoadSpinContent, objLoadSpinner,
+            osSpinLoadMsg, osSpinLoadMsgText
+        }
+    End Function
+
+    Private Async Function RecapMemory() As Task
+        Await Task.Delay(65)
+
+        RecaptureResources()
+        Await Task.Delay(175)
+    End Function
+
+    Private Async Function DisposeLoadSpinner() As Task
+        objTerminateMonitor.ResetAndInitTask()
+
+        objTask_InitSpin.SafeDispose()
+
+        Await PrepDispatcher().InvokeAsync(
+           Async Function()
+               Await Task.WhenAll(GenerateTerminateTasks(TerminateUi_Visuals),
+                                  GenerateTerminateTasks(TerminateUi_Monitors),
+                                  GenerateTerminateTasks(TerminateUi_Objects))
+
+               Await RecapMemory()
+               objTerminateMonitor.SetResult(True)
+           End Function, DispatcherPriority.SystemIdle)
+
+        Await objTerminateMonitor.Task
+        objTerminateMonitor.ResetTask()
+
+        InitLoadSpinner()
+    End Function
+
     Public Function ComposeLoadCompleteVis() As DoubleAnimation
-        Dim objLoadCompVis As New DoubleAnimation() With {
-            .From = 0, .To = 100, .FillBehavior = FillBehavior.HoldEnd,
-            .Duration = SetVisDuration(1325),
-            .EasingFunction = New QuadraticEase With {
-                .EasingMode = EasingMode.EaseInOut
+        Return New DoubleAnimation() With {
+            .From = 20, .To = 100, .FillBehavior = FillBehavior.HoldEnd,
+            .Duration = SetVisDuration(1025),
+            .EasingFunction = New ExponentialEase With {
+                .EasingMode = EasingMode.EaseInOut,
+                .Exponent = 2.75
             }
         }
-
-        Return objLoadCompVis
     End Function
 
     Private Function ComposeLoadCompleteColorVis() As ColorAnimation
         Return New ColorAnimation(
-            GenerateLoadSpinColor(LoadColor_SpinnerLoadComplete).Color, SetVisDuration(1325)) With {
+            GenerateLoadSpinBrush(LoadColor_SpinnerLoadComplete).Color, SetVisDuration(1025)) With {
                 .FillBehavior = FillBehavior.HoldEnd,
                 .EasingFunction = New QuadraticEase With {
                     .EasingMode = EasingMode.EaseInOut
@@ -453,31 +585,21 @@ Public Class osPrefs_GUI
             }
     End Function
 
-    Private Function ComposeLoadCompleteStrokeVis() As DoubleAnimation
-        Return New DoubleAnimation() With {
-                .FillBehavior = FillBehavior.HoldEnd,
-                .AutoReverse = True,
-                .EasingFunction = New QuadraticEase With {
-                    .EasingMode = EasingMode.EaseInOut
-                }
-            }
+    Public Async Function TriggerLoadComplete(isN As Boolean) As Task
+        Await UpdateLoadSpinMsg()
+        Await objLoadSpinner.TriggerLoadSpinComplete()
+
+        Await HideOverlay()
     End Function
-
-    Private Sub PrepSpinLoadCompleteColorData(objLoadSpinnerBrush As Path)
-        Dim objLoadSpinnerBrushColor = TryCast(objLoadSpinnerBrush.Stroke, SolidColorBrush)
-
-        objLoadSpinnerBrushColor = objLoadSpinnerBrushColor.CloneCurrentValue()
-        objLoadSpinnerBrush.Stroke = objLoadSpinnerBrushColor
-    End Sub
 
     Public Async Function TriggerLoadComplete() As Task
         Dim objLoadSpinBrush = objLoadSpinner.GetSpinnerBrush()
-        PrepSpinLoadCompleteColorData(objLoadSpinBrush)
 
         Dim objLoadComplete = ComposeLoadCompleteVis()
         Dim objLoadCompleteColor = ComposeLoadCompleteColorVis()
 
         Dim objVis_CloseLoadOverlay = New Storyboard()
+
         objVis_CloseLoadOverlay.Children.Add(objLoadComplete)
         objVis_CloseLoadOverlay.Children.Add(objLoadCompleteColor)
 
@@ -496,20 +618,46 @@ Public Class osPrefs_GUI
         objLoadSpinner.IsSpinning = False
 
         Await UpdateLoadSpinMsg()
+        Await objLoadSpinner.LoadSmoothMonitor.Task
+
         objVis_CloseLoadOverlay.Begin(objLoadSpinner)
     End Function
 
+    Private Sub ComposeHideOverlayVis()
+        Dim visFadeOut = GenVis_CloseLoadOverlay()
+
+        objVis_HideOverlay = New Storyboard()
+        objVis_HideOverlay.Children.Add(visFadeOut)
+
+        Storyboard.SetTarget(visFadeOut, osSpinLoadContainer)
+        Storyboard.SetTargetProperty(visFadeOut, GetPropPath(True))
+
+        Dim evtVisHideOverlay As EventHandler = Nothing
+        evtVisHideOverlay =
+          Async Sub()
+              RemoveHandler objVis_HideOverlay.Completed, evtVisHideOverlay
+
+              objLoadSpinContainer.Visibility = Visibility.Collapsed
+              osPrefsContentContainer.Children.Remove(osSpinLoadContainer)
+
+              Await DisposeLoadSpinner()
+          End Sub
+
+        AddHandler objVis_HideOverlay.Completed, evtVisHideOverlay
+
+        osPrefsContentBrdr.CacheMode = Nothing
+        osBottomContainer.CacheMode = Nothing
+    End Sub
+
     Private Sub HideOverlay_UI()
-        SyncLock objLoadSpinLock
-            If objLoadSpinContainer Is Nothing Then Return
+        If objLoadSpinContainer Is Nothing Then Return
+        ComposeHideOverlayVis()
 
-            Dim visFadeOut = GenVis_CloseLoadOverlay()
+        GetVisual_ContentBlur(True).Begin()
+        objVis_HideOverlay.Begin(osSpinLoadContainer)
 
-            osSpinLoadContainer.BeginAnimation(Grid.OpacityProperty, visFadeOut)
-
-            SetSaveState(PrefSaveState.Prefs_Saved)
-            InputUI_Allow()
-        End SyncLock
+        SetSaveState(PrefSaveState.Prefs_Saved)
+        InputUI_Allow()
     End Sub
 
     Private objTask_LoadSpinComplete As TaskCompletionSource(Of Boolean)
@@ -520,11 +668,12 @@ Public Class osPrefs_GUI
         objTask_LoadSpinComplete.ResetAndInitTask()
         Await PrepDispatcher().InvokeAsync(
             Async Function()
+                Await Task.Delay(115)
                 Await taskReload()
-            End Function, DispatcherPriority.Background)
+            End Function, DispatcherPriority.SystemIdle)
 
         Await objTask_LoadSpinComplete.Task
-        Await TriggerLoadComplete()
+        Await TriggerLoadComplete(True)
     End Function
 
     Private Async Function TriggerPrefSave(Optional closeOnSave As Boolean = False) As Task
@@ -542,31 +691,118 @@ Public Class osPrefs_GUI
             NextDouble() * (TaskDur_Max - TaskDur_Min))
     End Function
 
-    Private Async Function ReloadPrefs() As Task
-        Await osPrefDataIdx.SavePrefsFileAsync()
+    Public Function GenTaskDuration(isShowDuration As Boolean) As Double
+        Dim rndTaskDur As New Random()
+
+        Dim valMin = TaskDur_Min / 2
+        Dim valMax = TaskDur_Max / 2
+
+        Return (valMin) + (rndTaskDur.
+            NextDouble() * (valMax - valMin))
+    End Function
+
+    Public Async Function DestoryAll() As Task
+        'Dim idxTasks_DestroyAll As Task() = {
+        '    DestroyUI(osPopupMenu), DestroyUI(osPopupMenuOverlay),
+        '    DestroyUI(osTrayMenu), DestroyUI(osGui_AutoPass),
+        '    osHandler_AutoCast.StopAutoCastAsync()
+        '}
 
         Await PrepDispatcher().InvokeAsync(
             Async Function()
-                Await osHandler_AutoCast.StopAutoCastAsync()
+                Await Task.WhenAll(
+                    DestroyUI(osPopupMenu), DestroyUI(osPopupMenuOverlay),
+                    DestroyUI(osTrayMenu), DestroyUI(osGui_AutoPass),
+                    osHandler_AutoCast.StopAutoCastAsync())
+            End Function, DispatcherPriority.Background)
+    End Function
+
+    Private Sub TerminateUI(uiWin As Window)
+        Select Case True
+            Case TypeOf uiWin Is osPopupMenu_GUI
+                _osPopupMenu = Nothing
+            Case TypeOf uiWin Is osPopupMenuOverlay_GUI
+                _osPopupMenuOverlay = Nothing
+            Case TypeOf uiWin Is osTrayMenu_GUI
+                _osTrayMenu = Nothing
+            Case TypeOf uiWin Is progUI_AutoPass
+                _autoPass = Nothing
+        End Select
+    End Sub
+
+    Private Async Function DestroyUI(uiWin As Window) As Task
+        If uiWin Is Nothing Then Return
+
+        Await uiWin.Dispatcher.InvokeAsync(
+            Sub()
+                With uiWin
+                    .DataContext = Nothing
+                    .Content = Nothing
+
+                    .Close()
+                End With
+
+                TerminateUI(uiWin)
+            End Sub, DispatcherPriority.Background)
+    End Function
+
+    Public Async Function ReloadData_Prefs() As Task
+        Await osPrefData.Data.ClearPrefData()
+
+        Await osPrefData.Data.PreparePrefData()
+        Await osPrefData.Data.ApplyPrefs()
+    End Function
+
+    Public Async Function ReloadUI_PopupMenu() As Task
+        _osPopupMenuOverlay = New osPopupMenuOverlay_GUI
+        _osPopupMenu = New osPopupMenu_GUI
+
+        osPopupMenu.PrepPopupMenu()
+
+        Await osPopupMenuOverlay.PrepPopupMenuOverlay()
+        Await osPopupMenu.InitPopupMenuVis()
+    End Function
+
+    Public Async Function ReloadUI_TrayMenu() As Task
+        _osTrayMenu = New osTrayMenu_GUI
+        Await osTrayMenu.PrepTrayMenuInit()
+    End Function
+
+    Public Async Function ReloadUI_AutoCast() As Task
+        Await osHandler_AutoCast.StartAutoCastAsync()
+        Await Task.Delay(GenTaskDuration(True))
+    End Function
+
+    Public Function ReloadUI_AutoPass() As Task
+        osHandler_UI._autoPass = osHandler_UI.PrepUI_AutoPass()
+        osHandler_UI.osGui_AutoPass.PrepAutoPass()
+
+        Return Task.CompletedTask
+    End Function
+
+    Private Async Function ReloadPrefs() As Task
+        Await osPrefDataIdx.SavePrefsFileAsync()
+        Await ReloadData_Prefs()
+
+        Await PrepDispatcher().InvokeAsync(
+            Async Function()
+                Await DestoryAll()
 
                 Await Task.Delay(GenTaskDuration())
-                Await osHandler_AutoCast.StartAutoCastAsync()
-                Await Task.Delay(GenTaskDuration())
+
+                Await ReloadUI_PopupMenu()
+                Await ReloadUI_TrayMenu()
+
+                Await Task.Delay(GenTaskDuration(True))
+
+                Await ReloadUI_AutoPass()
+                Await ReloadUI_AutoCast()
             End Function, DispatcherPriority.SystemIdle).Task.Unwrap()
 
-        'Await Task.Run(
-        '    Async Function()
-        '        Await osHandler_AutoCast.StopAutoCastAsync()
-
-        '        Await Task.Delay(GenTaskDuration())
-        '        Await osHandler_AutoCast.StartAutoCastAsync()
-        '        Await Task.Delay(GenTaskDuration())
-        '    End Function)
+        objTask_LoadSpinComplete.SetResult(True)
 
         ActivatePrefTracker(True)
         RefreshVisQuality()
-
-        objTask_LoadSpinComplete.SetResult(True)
     End Function
 
     Private Sub RefreshVisQuality()
@@ -599,21 +835,13 @@ Public Class osPrefs_GUI
             Case Prefs_Saved
                 Await osPrefs_InitClose()
             Case Prefs_NotSaved
-                '   InitLoadSpinner()
-
                 Select Case GetResponse(PromptType.Prefs_Close)
                     Case isYes
                         Await objTask_InitSpin
                         Await TriggerPrefSave(True)
                     Case isNo
-                        objTask_InitSpin = Nothing
-                        DisposeLoadSpinner()
-
                         RevertPrefSettings()
                     Case isCancel
-                        objTask_InitSpin = Nothing
-                        DisposeLoadSpinner()
-
                         Exit Sub
                 End Select
         End Select
@@ -665,26 +893,29 @@ Partial Public Class osPrefs_GUI
     Private TaskDur_Min As Double = 2225
     Private TaskDur_Max As Double = 2750
 
+    Private objTerminateMonitor As TaskCompletionSource(Of Boolean) = Nothing
     Private objLoadSpinMonitor As TaskCompletionSource(Of Boolean)
+    Private objLoadSpinCompleteMonitor As TaskCompletionSource(Of Boolean)
     Private objLoadSpinDisplayMonitor As TaskCompletionSource(Of Boolean)
     Private objLoadSpinDispMsgMonitor As TaskCompletionSource(Of Boolean)
 
     Private objLoadSpinContainer As Border
     Private osSpinLoadContainer As Grid
     Private objLoadSpinContent As StackPanel
-    Private objTask_InitSpin As Task(Of Boolean)
     Private objLoadSpinner As osControls.osLoadSpinner
+    Private osSpinLoadMsg As TextBlock
+    Private osSpinLoadMsgText As Border
 
+    Private objTask_InitSpin As Task(Of Boolean)
     Private objVis_ShowLoadSpinContent As Storyboard = Nothing
     Private objVis_ShowLoadSpin As Storyboard = Nothing
+    Private objVis_HideOverlay As Storyboard = Nothing
 
     Private objVisLoadMsg_Display As Storyboard = Nothing
 
     Private objVisLoadMsg_FadeIn As Storyboard = Nothing
     Private objVisLoadMsg_FadeOut As Storyboard = Nothing
 
-    Private osSpinLoadMsg As TextBlock
-    Private osSpinLoadMsgText As Border
 
     Private ReadOnly objLoadSpinLock As New Object()
 
@@ -725,10 +956,21 @@ Partial Public Class osPrefs_GUI
         End Get
     End Property
 
+    Public ReadOnly Property osBottomContent As Grid
+        Get
+            Return Me.BottomContent
+        End Get
+    End Property
 
-    Public ReadOnly Property osContentContainer As Grid
+    Public ReadOnly Property osBottomContainer As Border
         Get
             Return Me.BottomContainer
+        End Get
+    End Property
+
+    Public ReadOnly Property osBottomContentContainer As Border
+        Get
+            Return Me.BottomContentContainer
         End Get
     End Property
 
@@ -738,27 +980,21 @@ Partial Public Class osPrefs_GUI
         End Get
     End Property
 
+    Public ReadOnly Property osPrefsContentBrdr As Border
+        Get
+            Return Me.BottomContentContainer
+        End Get
+    End Property
+
     Public ReadOnly Property osTitleCover As Border
         Get
             Return Me.osPrefsTitlePanel
         End Get
     End Property
 
-    Public ReadOnly Property osScaleRender As ScaleTransform
-        Get
-            Return Me.osPrefsOutlineRender
-        End Get
-    End Property
-
     Private ReadOnly Property osPrefDataIdx As osPrefData.osPrefIndex
         Get
             Return osPrefData.Data.objOsPrefIdx
-        End Get
-    End Property
-
-    Private ReadOnly Property osVisDataArray As IEnumerable(Of DoubleAnimationUsingKeyFrames)
-        Get
-            Return VisDataObject.Children.OfType(Of DoubleAnimationUsingKeyFrames)
         End Get
     End Property
 
@@ -821,34 +1057,26 @@ Partial Public Class osPrefs_GUI
         Return New Duration(TimeSpan.FromMilliseconds(valDur))
     End Function
 
-    Private Function SetVisKeyTime(valDur As Double) As osKeyTime
-        Return osKeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(valDur))
-    End Function
-
-    Private Function SetVisAttr() As PropertyPath
-        Return New PropertyPath("(TextBlock.Foreground).(SolidColorBrush.Color)")
-    End Function
-
-    Private Function ComposeFrame_Start(valColorData As osColor) As ColorKeyFrame
-        Return New EasingColorKeyFrame(valColorData, SetVisKeyTime(0))
-    End Function
-
-    Private Function ComposeFrame_End(valColorData As osColor) As ColorKeyFrame
-        Return New EasingColorKeyFrame(valColorData, SetVisKeyTime(75), SetVisEasing())
-    End Function
-
     Private Function SetVisEasing() As IEasingFunction
         Return New QuadraticEase With {
             .EasingMode = EasingMode.EaseIn
         }
     End Function
 
+    Private Function SetColor(strColor As String) As osColor
+        Return CType(ColorConverter.ConvertFromString(strColor), osColor)
+    End Function
+
     Private Function CalcRGB(vR As Byte, vG As Byte, vB As Byte, Optional vA As Byte = 255) As osColor
         Return Color.FromArgb(vA, vR, vG, vB)
     End Function
 
-    Private Function GenColor(vR As Byte, vG As Byte, vB As Byte, Optional vA As Byte = 255) As SolidColorBrush
+    Private Function GenBrushColor(vR As Byte, vG As Byte, vB As Byte, Optional vA As Byte = 255) As SolidColorBrush
         Return New SolidColorBrush(Color.FromArgb(vA, vR, vG, vB)).FreezeReturn()
+    End Function
+
+    Private Function GenColor(isRGB As Boolean, vR As Byte, vG As Byte, vB As Byte, Optional vA As Byte = 255) As osColor
+        Return Color.FromArgb(vA, vR, vG, vB)
     End Function
 
     Private Function GetPropPath(isGrid As Boolean) As PropertyPath
@@ -859,26 +1087,45 @@ Partial Public Class osPrefs_GUI
         End If
     End Function
 
-    Private Function GenerateLoadSpinColor(objLoadSpinColors As LoadSpinColors) As SolidColorBrush
+    Private Function GenerateLoadSpinColor(objLoadSpinColors As LoadSpinColors) As osColor
+        Select Case objLoadSpinColors
+            Case LoadColor_MsgTextGlow
+                Return GenColor(True, 255, 255, 255, 105)
+            Case LoadColor_MsgTextStroke
+                Return GenColor(True, 255, 255, 255, 80)
+            Case LoadColor_SpinContainerBorderGlow
+                Return GenColor(True, 181, 181, 181, 118)
+        End Select
+    End Function
+
+    Private Function GenerateLoadSpinBrush(objLoadSpinColors As LoadSpinColors, Optional noFreeze As Boolean = False) As SolidColorBrush
         Dim objOut_Color As SolidColorBrush
 
         Select Case objLoadSpinColors
             Case LoadColor_Spinner
-                objOut_Color = GenColor(80, 15, 15)
+                objOut_Color = GenBrushColor(80, 15, 15)
             Case LoadColor_SpinContainer
-                objOut_Color = GenColor(26, 26, 26, 240)
+                objOut_Color = GenBrushColor(26, 26, 26, 240)
             Case LoadColor_Container
-                objOut_Color = GenColor(10, 10, 10, 115)
+                objOut_Color = GenBrushColor(0, 0, 0, 138)
             Case LoadColor_SpinContainerBorder
-                objOut_Color = GenColor(18, 18, 18)
+                objOut_Color = GenBrushColor(13, 13, 13)
             Case LoadColor_SpinnerLoadComplete
-                objOut_Color = GenColor(57, 128, 57)
+                objOut_Color = GenBrushColor(57, 128, 57)
+            Case LoadColor_MsgText
+                objOut_Color = GenBrushColor(0, 0, 0)
+            Case LoadColor_SpinContentContainer
+                objOut_Color = GenBrushColor(26, 26, 26, 240)
         End Select
 
-        Return objOut_Color.Clone()
+        Return If(noFreeze, objOut_Color.Clone(),
+            objOut_Color.Clone().FreezeReturn())
     End Function
 
     Private Sub YieldVisuals() : End Sub
+
+    Private visPriority As DispatcherPriority =
+        DispatcherPriority.Render
 
     <DllImport("user32.dll")>
     Private Shared Function SetWindowPos(hWnd As IntPtr, hWndInsertAfter As IntPtr, X As Integer,

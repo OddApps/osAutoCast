@@ -21,78 +21,14 @@
         <Setter Property="Background" Value="#FF3C3C3C" />
         <Setter Property="BorderThickness" Value="8" />
         <Setter Property="CornerRadius" Value="12" />
-        <Setter Property="Margin" Value="2" />
+        <Setter Property="Margin" Value="0" />
         <Setter Property="RenderTransformOrigin" Value="0.5,0.5" />
     </Style>
-	
-    <DataTemplate x:Key="osEffectText" DataType="{x:Type sys:String}">
-        <Border><Border.Effect>
-            <osEffects:osEffect_Stroke x:Name="btnStroke" Thickness="{StaticResource osEffect_StrokeThickness}"
-                Spread="{StaticResource osEffect_StrokeSpread}" Fade="{StaticResource osEffect_StrokeFade}"
-                StrokeColor="{StaticResource osEffect_StrokeColor}"
-                StrokeStrength="{StaticResource osEffect_Stroke}">
-                <osEffects:osEffect_Stroke.TexelSize>
-                    <MultiBinding Converter="{StaticResource TexelSizeConverter}">
-                            <Binding ElementName="btnContent" Path="ActualWidth" />
-                            <Binding ElementName="btnContent" Path="ActualHeight" />
-                    </MultiBinding>
-                </osEffects:osEffect_Stroke.TexelSize>
-            </osEffects:osEffect_Stroke></Border.Effect>
-            <TextBlock x:Name="btnContent" Text="{Binding}" Padding="{StaticResource osBtn_TextPadding}"
-                HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" SnapsToDevicePixels="True"
-                LineStackingStrategy="BlockLineHeight" FontSize="{StaticResource osBtn_FontSize}" 
-                LineHeight="{StaticResource osBtn_FontSize}" FontWeight="{StaticResource osBtn_FontWeight}" 
-                Foreground="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}">
-                <TextBlock.Effect>
-                    <osEffects:osEffect_Glow x:Name="btnGlow" Thickness="{StaticResource osEffect_GlowThickness}"
-                        Fade="{StaticResource osEffect_GlowFade}"
-                        GlowColor="{StaticResource osEffect_GlowColor}" GlowStrength="{StaticResource osEffect_GlowRadius}">
-                        <osEffects:osEffect_Glow.TexelSize>
-                            <MultiBinding Converter="{StaticResource TexelSizeConverter}">
-                                <Binding ElementName="btnContent" Path="ActualWidth" />
-                                <Binding ElementName="btnContent" Path="ActualHeight" />
-                            </MultiBinding>
-                        </osEffects:osEffect_Glow.TexelSize>
-                    </osEffects:osEffect_Glow>                    
-                </TextBlock.Effect>
-            </TextBlock>
-        </Border>
-        <DataTemplate.Triggers>
-            <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=Button}}" Value="True">
-                <DataTrigger.EnterActions>                    
-                    <BeginStoryboard>
-                        <Storyboard>
-                            <DoubleAnimation Storyboard.TargetName="btnGlow"
-                                             Storyboard.TargetProperty="Fade"
-                                             To="1" Duration="0:0:0.25" />
-                            <DoubleAnimation Storyboard.TargetName="btnStroke"
-                                             Storyboard.TargetProperty="Fade"
-                                             To="1" Duration="0:0:0.25" />
-                        </Storyboard>
-                    </BeginStoryboard>
-                </DataTrigger.EnterActions>
-                <DataTrigger.ExitActions>
-                    <BeginStoryboard>
-                        <Storyboard>
-                            <DoubleAnimation Storyboard.TargetName="btnGlow"
-                                             Storyboard.TargetProperty="Fade"
-                                             To="0" Duration="0:0:0.35" />
-                            <DoubleAnimation Storyboard.TargetName="btnStroke"
-                                             Storyboard.TargetProperty="Fade"
-                                             To="0" Duration="0:0:0.35" />
-                        </Storyboard>
-                    </BeginStoryboard>
-                </DataTrigger.ExitActions>
-            </DataTrigger>
-        </DataTemplate.Triggers>
-    </DataTemplate>
 
     <DataTemplate x:Key="osEffectPrefsText" DataType="{x:Type sys:String}">
         <Border Padding="0,0,7,0">
             <Border.Effect>
-                <osEffects:osEffect_Stroke x:Name="btnPrefsStroke" Thickness="{StaticResource osEffect_PrefStrokeThickness}"
-										   Spread="{StaticResource osEffect_PrefStrokeSpread}" Fade="{StaticResource osEffect_PrefStrokeFade}" 
-										   StrokeColor="{StaticResource osEffect_PrefStrokeColor}" StrokeStrength="{StaticResource osEffect_PrefStroke}">
+                <osEffects:osEffect_Stroke x:Name="btnPrefsStroke" Thickness="{StaticResource osEffect_PrefStrokeThickness}" Spread="{StaticResource osEffect_PrefStrokeSpread}" Fade="{StaticResource osEffect_PrefStrokeFade}" StrokeColor="{StaticResource osEffect_PrefStrokeColor}" StrokeStrength="{StaticResource osEffect_PrefStroke}">
                     <osEffects:osEffect_Stroke.TexelSize>
                         <MultiBinding Converter="{StaticResource TexelSizeConverter}">
                             <Binding ElementName="btnPrefsContent" Path="ActualWidth" />
@@ -101,13 +37,9 @@
                     </osEffects:osEffect_Stroke.TexelSize>
                 </osEffects:osEffect_Stroke>
             </Border.Effect>
-            <TextBlock x:Name="btnPrefsContent" Text="X" SnapsToDevicePixels="True" 
-					   FontWeight="Bold" TextOptions.TextRenderingMode="ClearType" 
-					   Foreground="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}">
+            <TextBlock x:Name="btnPrefsContent" Text="X" SnapsToDevicePixels="True" FontWeight="Bold" TextOptions.TextRenderingMode="ClearType" Foreground="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}">
                 <TextBlock.Effect>
-                    <osEffects:osEffect_Glow x:Name="btnPrefsGlow"
-											 Thickness="{StaticResource osEffect_PrefGlowThickness}" Fade="{StaticResource osEffect_PrefGlowFade}"
-											 GlowColor="{StaticResource osEffect_PrefGlowColor}" GlowStrength="{StaticResource osEffect_PrefGlowRadius}">
+                    <osEffects:osEffect_Glow x:Name="btnPrefsGlow" Thickness="{StaticResource osEffect_PrefGlowThickness}" Fade="{StaticResource osEffect_PrefGlowFade}" GlowColor="{StaticResource osEffect_PrefGlowColor}" GlowStrength="{StaticResource osEffect_PrefGlowRadius}">
                         <osEffects:osEffect_Glow.TexelSize>
                             <MultiBinding Converter="{StaticResource TexelSizeConverter}">
                                 <Binding ElementName="btnPrefsContent" Path="ActualWidth" />
@@ -244,7 +176,6 @@
         <Setter Property="FontSize" Value="18" />
         <Setter Property="FontWeight" Value="Bold" />
         <Setter Property="Padding" Value="0,8" />
-        <Setter Property="UseLayoutRounding" Value="True" />
         <Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="{x:Type Button}">

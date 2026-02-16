@@ -27,7 +27,7 @@
                                                TextOptions.TextFormattingMode="Ideal" TextOptions.TextRenderingMode="ClearType" />    
                                 </Grid>
                                 <osLoadProg:osLoadingProgressBar x:Name="uiLoad_ProgressBar"
-								    RenderOptions.BitmapScalingMode="LowQuality"
+								    RenderOptions.BitmapScalingMode="LowQuality" CacheMode="BitmapCache"
 								    Style="{StaticResource LoadingProgressStyle}" />
                             </StackPanel>
                         </Border>

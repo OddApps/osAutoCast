@@ -42,7 +42,7 @@ Public Module osLoadTaskLib
     Public Async Function LoadTask_PrefsLoad(objTaskAbort As CancellationToken) As Task
         Await ProcessLoadSequence(SetLoadDelays(Load_PrefPrep),
                                   SetLoadSequence(Function() osPefs.Data.PreparePrefData(),
-                                                  Function() osPefs.Data.ApplyPrefs(True)))
+                                                  Function() osPefs.Data.ApplyPrefs()))
     End Function
 
     Public Async Function LoadTask_LoadMenus(objTaskAbort As CancellationToken) As Task

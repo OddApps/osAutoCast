@@ -56,6 +56,8 @@ Public Class osLoader_UI
     End Function
 
     Public Async Function ProvisionApp() As Task
+        MakeWindowClickThrough()
+
         osLoadTaskLib.objLoadUI = Me
         objProcessLoadStages = InitLoadHandler()
 
@@ -77,9 +79,6 @@ Public Class osLoader_UI
         CoreDataLib.InputMonSvc = New InputMonitorService()
     End Sub
 
-    Private Sub osLoader_UI_Loaded(sender As Object, e As RoutedEventArgs) Handles Me.Loaded
-        MakeWindowClickThrough()
-    End Sub
 End Class
 
 Partial Class osLoader_UI

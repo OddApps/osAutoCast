@@ -1068,16 +1068,26 @@ Namespace osControls
     Partial Public Class osLoadSpinner
         Inherits UserControl
 
+        Private chkLoadSpinComplete As TaskCompletionSource(Of Boolean) = Nothing
         Private chkLoadSpinStart As TaskCompletionSource(Of Boolean) = Nothing
 
+        Public LoadSmoothMonitor As TaskCompletionSource(Of Boolean) = Nothing
+
         Private visLoadSpinner As Storyboard
+        Private visLoadSpinnerEase As Storyboard
+
         Private visLoadSpinner_Start As Storyboard
+        Private visLoadSpinner_Complete As Storyboard
+
+        Private evtLoadStart As EventHandler
 
         Public Sub New()
             InitializeComponent()
 
             AddHandler Me.Loaded, AddressOf InitLoadSpinner
             AddHandler Me.Unloaded, AddressOf DisposeLoadSpinner
+
+            LoadSmooth = False
         End Sub
 
         Public Shared ReadOnly LoadProgressProperty As DependencyProperty = DependencyProperty.
@@ -1098,6 +1108,14 @@ Namespace osControls
 
             If objOsLoadSpinner IsNot Nothing Then
                 objOsLoadSpinner.SetLoadProgress()
+            End If
+        End Sub
+
+        Private Sub SetLoadProgress()
+            ProgressPath.Data = DrawProgress(LoadProgress)
+
+            If LoadProgress = 100 Then
+                LoadSpin_Complete()
             End If
         End Sub
 
@@ -1122,8 +1140,9 @@ Namespace osControls
                     If .IsSpinning Then
                         .TriggerSpinStart()
                     Else
-                        .LoadSpin_Stop()
-                        .LoadProgress = 0
+                        If Not .LoadSmooth Then
+                            .LoadSpin_Stop()
+                        End If
                     End If
                 End With
             End If
@@ -1168,33 +1187,42 @@ Namespace osControls
             End Set
         End Property
 
+        Private _loadSmooth As Boolean = False
+        Public Property LoadSmooth As Boolean
+            Get
+                Return _loadSmooth
+            End Get
+            Set(ByVal doSmooth As Boolean)
+                _loadSmooth = doSmooth
+            End Set
+        End Property
+
         Public Function GetSpinnerBrush() As Path
-            Return Me.ProgressPath
+            With Me.ProgressPath
+                Dim objLoadSpinBrush = TryCast(.Stroke, SolidColorBrush)
+
+                objLoadSpinBrush = objLoadSpinBrush.CloneCurrentValue()
+                .Stroke = objLoadSpinBrush
+
+                Return .GetObj()
+            End With
         End Function
 
-        Private Sub SetLoadProgress()
-            ProgressPath.Data = BuildArcGeometry(LoadProgress)
-
-            If LoadProgress = 100 Then
-                LoadSpin_Complete()
-            End If
-        End Sub
-
         Public Sub SetLoadSpinStartMonitor(ByRef objLoadSpinMonitor As TaskCompletionSource(Of Boolean))
+            LoadSmooth = True
             chkLoadSpinStart = objLoadSpinMonitor
         End Sub
 
         Private Sub InitLoadSpinner(sender As Object, e As RoutedEventArgs)
             If Not IsLoaded Then Return
 
-            visLoadSpinner = GetVisual_LoadSpin()
-
-            visLoadSpinner_Start = GetVisual_LoadStart(GetLoadSpinner(sender))
+            visLoadSpinner_Start =
+                GetVisual_LoadStart(GetLoadSpinner(sender))
             SetLoadStartEvent()
 
-            FreezeBrushes()
+            PrepVisual_LoadSpinComplete()
 
-            RenderOptions.SetCachingHint(SpinnerRoot, CachingHint.Cache)
+            FreezeBrushes()
         End Sub
 
         Private Function GetLoadSpinner(sObj As Object) As osLoadSpinner
@@ -1202,33 +1230,19 @@ Namespace osControls
         End Function
 
         Private Sub TriggerSpinStart()
-            visLoadSpinner_Start.Begin(Me, True)
-        End Sub
-
-        Public Sub TriggerLoadComplete(objOsLoadSpinner As osLoadSpinner)
-            Dim objLoadCompVis As New DoubleAnimation() With {
-                .From = 0, .To = 100, .FillBehavior = FillBehavior.HoldEnd,
-                .Duration = TimeSpan.FromSeconds(1.15),
-                .EasingFunction = New QuadraticEase With {
-                    .EasingMode = EasingMode.EaseInOut
-                }
-            }
-
-            objOsLoadSpinner.BeginAnimation(
-                osLoadSpinner.LoadProgressProperty, objLoadCompVis)
+            PrepDispatcher().Invoke(
+                Sub()
+                    visLoadSpinner_Start.Begin(Me, True)
+                End Sub, DispatcherPriority.Render)
         End Sub
 
         Private Sub DisposeLoadSpinner(sender As Object, e As RoutedEventArgs)
             LoadSpin_Stop()
         End Sub
 
-        'Private Function GetVisual_LoadSpin() As Storyboard
-        '    Return TryCast(Me.Resources("osLoadVis_Spin"), Storyboard)
-        'End Function
-
-        Private Function GetVisual_LoadSpin() As Storyboard
+        Private Function GetVisual_LoadSpin(startAngle As Double) As Storyboard
             Dim objLoadSpinVis As New DoubleAnimation() With {
-                .From = 0, .To = 360,
+                .From = startAngle, .To = startAngle + 360,
                 .Duration = TimeSpan.FromSeconds(1),
                 .RepeatBehavior = RepeatBehavior.Forever
             }
@@ -1240,49 +1254,124 @@ Namespace osControls
             objLoadSpinVisOutline.Children.Add(objLoadSpinVis)
 
             Storyboard.SetTargetName(objLoadSpinVis, "SpinnerRotate")
-            Storyboard.SetTargetProperty(objLoadSpinVis, New PropertyPath(RotateTransform.AngleProperty))
-            Storyboard.SetDesiredFrameRate(objLoadSpinVis, 30)
+            Storyboard.SetTargetProperty(objLoadSpinVis, GetPropPath(True))
 
-            Return objLoadSpinVisOutline
+            Return objLoadSpinVisOutline.Clone()
+        End Function
+
+        Public Function ComposeLoadCompleteVis() As DoubleAnimation
+            Return New DoubleAnimation() With {
+            .From = 20, .To = 100, .FillBehavior = FillBehavior.HoldEnd,
+            .Duration = SetVisDuration(1025),
+            .EasingFunction = New ExponentialEase With {
+                .EasingMode = EasingMode.EaseInOut,
+                .Exponent = 2.75
+            }
+        }
+        End Function
+
+        Public Sub PrepVisual_LoadSpinComplete()
+            Dim objLoadSpinBrush = Me.GetSpinnerBrush()
+
+            Dim objLoadComplete = ComposeLoadCompleteVis()
+            Dim objLoadCompleteColor = ComposeLoadCompleteColorVis()
+
+            visLoadSpinner_Complete = New Storyboard()
+
+            visLoadSpinner_Complete.Children.Add(objLoadComplete)
+            visLoadSpinner_Complete.Children.Add(objLoadCompleteColor)
+
+            Storyboard.SetTarget(objLoadComplete, Me)
+            Storyboard.SetTargetProperty(objLoadComplete, New PropertyPath(osLoadSpinner.LoadProgressProperty))
+
+            Storyboard.SetTarget(objLoadCompleteColor, objLoadSpinBrush)
+            Storyboard.SetTargetProperty(objLoadCompleteColor, New PropertyPath("(Shape.Stroke).(SolidColorBrush.Color)"))
+
+            AddHandler visLoadSpinner_Complete.Completed,
+                Async Sub()
+                    Await Task.Delay(750)
+                    chkLoadSpinComplete.SetResult(True)
+                End Sub
+        End Sub
+
+        Private Function ComposeLoadCompleteColorVis() As ColorAnimation
+            Return New ColorAnimation(Color.FromArgb(255, 57, 128, 57), SetVisDuration(1025)) With {
+                .FillBehavior = FillBehavior.HoldEnd,
+                .EasingFunction = New QuadraticEase With {
+                    .EasingMode = EasingMode.EaseInOut
+                }
+            }
+        End Function
+
+        Private Function ComposeVisual_LoadSpinEase() As DoubleAnimation
+            Return New DoubleAnimation() With {
+                .From = 0, .To = 45, .FillBehavior = FillBehavior.HoldEnd,
+                .Duration = TimeSpan.FromMilliseconds(265),
+                .EasingFunction = New QuadraticEase With {
+                    .EasingMode = EasingMode.EaseIn
+                }
+            }
+        End Function
+
+        Private Function SetVisDuration(valDur As Double) As Duration
+            Return New Duration(TimeSpan.FromMilliseconds(valDur))
+        End Function
+
+        Private Function ComposeVisual_LoadStart() As DoubleAnimation
+            Return New DoubleAnimation() With {
+                .From = 0, .To = 20, .FillBehavior = FillBehavior.HoldEnd,
+                .Duration = TimeSpan.FromMilliseconds(235),
+                .EasingFunction = New QuadraticEase With {
+                    .EasingMode = EasingMode.EaseIn
+                }
+            }
         End Function
 
         Private Function GetVisual_LoadStart(objOsLoadSpinner As osLoadSpinner) As Storyboard
-            Dim objLoadStartVis As New DoubleAnimation() With {
-                .From = 0, .To = 20, .FillBehavior = FillBehavior.HoldEnd,
-                .Duration = TimeSpan.FromMilliseconds(235),
-                .EasingFunction = New ExponentialEase With {
-                    .EasingMode = EasingMode.EaseIn,
-                    .Exponent = 3.8
-                }
-            }
+            Dim objLoadStartVis = ComposeVisual_LoadStart()
+            Dim objLoadEaseVis = ComposeVisual_LoadSpinEase()
 
-            Dim objVisLoadSpinner_Start As New Storyboard()
-            objVisLoadSpinner_Start.Children.Add(objLoadStartVis)
+            With New Storyboard()
+                .Children.Add(objLoadStartVis)
+                .Children.Add(objLoadEaseVis)
 
-            Storyboard.SetTarget(objLoadStartVis, objOsLoadSpinner)
-            Storyboard.SetTargetProperty(objLoadStartVis, New PropertyPath(
-                                         osLoadSpinner.LoadProgressProperty))
+                Storyboard.SetTarget(objLoadStartVis, objOsLoadSpinner)
+                Storyboard.SetTargetProperty(objLoadStartVis, GetPropPath(False))
 
-            Return objVisLoadSpinner_Start
+                Storyboard.SetTargetName(objLoadEaseVis, "SpinnerRotate")
+                Storyboard.SetTargetProperty(objLoadEaseVis, GetPropPath(True))
+
+                Return .Clone()
+            End With
+        End Function
+
+        Private Function GetPropPath(isSpin As Boolean) As PropertyPath
+            If isSpin Then
+                Return New PropertyPath(RotateTransform.AngleProperty)
+            Else
+                Return New PropertyPath(osLoadSpinner.LoadProgressProperty)
+            End If
         End Function
 
         Private Sub SetLoadStartEvent()
-            Dim evtLoadStart As EventHandler = Nothing
+            evtLoadStart = Nothing
             evtLoadStart =
-                Sub()
-                    RemoveHandler visLoadSpinner_Start.Completed, evtLoadStart
-                    If chkLoadSpinStart IsNot Nothing Then
-                        chkLoadSpinStart.SetResult(True)
-                    End If
+             Async Sub()
+                 RemoveHandler visLoadSpinner_Start.Completed, evtLoadStart
 
-                    LoadSpin_Start()
-                End Sub
+                 Await LoadSpin_Init()
+
+                 If chkLoadSpinStart IsNot Nothing Then
+                     Await Task.Delay(225)
+                     chkLoadSpinStart.SetResult(True)
+                 End If
+             End Sub
 
             AddHandler visLoadSpinner_Start.Completed, evtLoadStart
         End Sub
 
         Private Function GetVisual_LoadComplete() As Storyboard
-            Return TryCast(Me.Resources("osLoadVis_Complete"), Storyboard)
+            Return TryCast(Me.Resources("osLoadSpinVis_Complete"), Storyboard)
         End Function
 
         Private Sub FreezeBrushes()
@@ -1305,17 +1394,93 @@ Namespace osControls
         End Sub
 
         Private Sub LoadSpin_Start()
-            ' If visLoadSpinner IsNot Nothing Then
             visLoadSpinner.Begin(Me, True)
         End Sub
+
+        Private Async Function LoadSpin_Init() As Task
+            Await PrepDispatcher().InvokeAsync(
+                Sub()
+                    visLoadSpinner = GetVisual_LoadSpin(SpinnerRotate.Angle)
+                    LoadSpin_Start()
+                End Sub, DispatcherPriority.Render)
+        End Function
+
+        Public Async Function TriggerLoadSpinComplete() As Task
+            IsSpinning = False
+
+            If visLoadSpinner IsNot Nothing Then
+                visLoadSpinner.Stop(Me)
+            End If
+
+            If LoadSmooth Then
+                LoadSmoothMonitor.ResetAndInitTask()
+                Dim objVis_ResetLoadSpin = ComposeResetVis()
+
+                AddHandler objVis_ResetLoadSpin.Completed,
+                    Sub()
+                        SpinnerRotate.Angle = 0
+                        LoadSmoothMonitor.SetResult(True)
+                    End Sub
+
+                objVis_ResetLoadSpin.Begin(Me, True)
+
+                Await LoadSmoothMonitor.Task
+
+                chkLoadSpinComplete.ResetAndInitTask()
+                visLoadSpinner_Complete.Begin(Me, True)
+
+                Await chkLoadSpinComplete.Task
+            Else
+                SpinnerRotate.Angle = 0
+            End If
+        End Function
 
         Private Sub LoadSpin_Stop()
             If visLoadSpinner IsNot Nothing Then
                 visLoadSpinner.Stop(Me)
             End If
 
-            SpinnerRotate.Angle = 0
+            If LoadSmooth Then
+                LoadSmoothMonitor.ResetAndInitTask()
+
+                Dim objVis_ResetLoadSpin = ComposeResetVis()
+
+                AddHandler objVis_ResetLoadSpin.Completed,
+                    Sub()
+                        SpinnerRotate.Angle = 0
+                        LoadSmoothMonitor.SetResult(True)
+                    End Sub
+
+                objVis_ResetLoadSpin.Begin(Me, True)
+            Else
+                SpinnerRotate.Angle = 0
+            End If
         End Sub
+
+        Private Function ComposeResetVis() As Storyboard
+            Dim valSpin As Double = SpinnerRotate.Angle
+
+            Dim validateSpin = valSpin Mod 360
+            If validateSpin < 0 Then validateSpin += 360
+
+            Dim durRemaining = If(validateSpin = 0, 0, 360 - validateSpin)
+            Dim durReset = durRemaining / 360.0
+
+            Dim objResetSpinVis As New DoubleAnimation() With {
+                .From = valSpin, .To = valSpin + durRemaining,
+                .Duration = TimeSpan.FromSeconds(Math.Max(durReset, 0.0001)),
+                .FillBehavior = FillBehavior.HoldEnd, .EasingFunction = Nothing
+            }
+
+            With New Storyboard()
+                .Children.Add(objResetSpinVis)
+
+                Storyboard.SetTargetName(objResetSpinVis, "SpinnerRotate")
+                Storyboard.SetTargetProperty(objResetSpinVis, GetPropPath(True))
+
+                Return .GetObj()
+            End With
+        End Function
 
         Private Sub LoadSpin_Complete()
             Dim visLoadSpinnerComplete = GetVisual_LoadComplete()
@@ -1325,14 +1490,17 @@ Namespace osControls
             End If
         End Sub
 
-        Private Function BuildArcGeometry(progressValue As Double) As Geometry
+        Private Function DrawProgress(progressValue As Double) As Geometry
             Dim progVal = Math.Max(0.0, Math.Min(100.0, progressValue))
             If progVal <= 0 Then Return Nothing
 
-            Dim w As Double = 100.0 : Dim h As Double = 100.0
-            Dim cx = w / 2.0 : Dim cy = h / 2.0
+            Dim w As Double = 100.0
+            Dim h As Double = 100.0
+            Dim cx = w / 2.0
+            Dim cy = h / 2.0
 
-            Dim strokeThick = StrokeThickness
+            ' IMPORTANT: use a constant thickness so the geometry stays stable
+            Dim strokeThick As Double = 18.0
 
             Dim rx = Math.Max(0.0, (w - strokeThick) / 2.0)
             Dim ry = Math.Max(0.0, (h - strokeThick) / 2.0)

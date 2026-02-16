@@ -204,6 +204,19 @@ Namespace osPrefLib
             End Set
         End Property
 
+        Private Shared _MainOpts_acProgB As Integer
+        Public Property MainOpts_acProgB As Integer
+            Get
+                Return _MainOpts_acProgB
+            End Get
+            Set(value As Integer)
+                If _MainOpts_acProgB = value Then Return
+                _MainOpts_acProgB = value
+                OnPropertyChanged(NameOf(MainOpts_acProgB))
+            End Set
+        End Property
+
+
         Private Shared _GenOpts_VisualQuality As String
         Public Property GenOpts_VisualQuality As String
             Get
@@ -294,6 +307,11 @@ Namespace osPrefLib
             SetPreference(GetPrefDetails(prefType), pVal)
         End Sub
 
+        Public Function ClearPrefData() As Task
+            objOsPrefIdx = Nothing
+            Return Task.CompletedTask
+        End Function
+
         Public Async Function PreparePrefData() As Task
             objOsPrefIdx = Await BuildPrefIndexAsync()
         End Function
@@ -340,64 +358,25 @@ Namespace osPrefLib
             Return pRecIdxObj
         End Function
 
-        Public Async Function ApplyPrefs(Optional token As CancellationToken = Nothing,
-                                 Optional progress As IProgress(Of Integer) = Nothing) As Task
-
-            Dim maxConcurrency As Integer = Math.Max(1, Environment.ProcessorCount - 1)
-            Dim sem As New SemaphoreSlim(maxConcurrency, maxConcurrency)
-            Dim tasks As New List(Of Task)()
-
-            Try
-                For Each pRec In objOsPrefIdx.PrefRecords
-                    For Each pRecData In pRec.RecordData
-                        token.ThrowIfCancellationRequested()
-                        Await sem.WaitAsync(token).ConfigureAwait(False)
-
-                        Dim taskr = Task.Run(Sub()
-                                                 Try
-                                                     ApplySetting(osPreferenceLib.Data, pRec, pRecData)
-
-                                                     progress?.Report(1) ' you can aggregate on caller side
-                                                 Finally
-                                                     sem.Release()
-                                                 End Try
-                                             End Sub, token)
-
-                        tasks.Add(taskr)
-                    Next
-                Next
-
-                Await Task.WhenAll(tasks).ConfigureAwait(False)
-
-            Finally
-                sem.Dispose()
-
-                prefsSet = True
-            End Try
-        End Function
-
-        Public Async Function ApplyPrefs(isN As Boolean, Optional token As CancellationToken = Nothing, Optional progress As IProgress(Of Integer) = Nothing) As Task
-            If token = Nothing Then token = CancellationToken.None
-
+        Public Async Function ApplyPrefs(Optional token As CancellationToken = Nothing, Optional progress As IProgress(Of Integer) = Nothing) As Task
             Dim changes As New List(Of Action)
 
             For Each pRec In objOsPrefIdx.PrefRecords
                 For Each pRecData In pRec.RecordData
-                    token.ThrowIfCancellationRequested()
-
                     Dim rec = pRec
                     Dim data = pRecData
 
-                    changes.Add(Sub()
-                                    ApplySetting2(osPreferenceLib.Data, rec, data)
-                                    progress?.Report(1)
-                                End Sub)
+                    changes.Add(
+                        Sub()
+                            ApplySetting(osPreferenceLib.Data, rec, data)
+                            progress?.Report(1)
+                        End Sub)
                 Next
             Next
 
             For Each apply In changes
-                token.ThrowIfCancellationRequested()
-                Await PrepDispatcher().InvokeAsync(apply, DispatcherPriority.Background)
+                Await PrepDispatcher().InvokeAsync(
+                    apply, DispatcherPriority.Background)
             Next
 
             prefsSet = True
@@ -406,7 +385,7 @@ Namespace osPrefLib
         Private Shared ReadOnly _propCache As New Concurrent.ConcurrentDictionary(Of String, PropertyInfo)
         Private Const osBindFlags As BindingFlags = BindingFlags.Public Or BindingFlags.Instance
 
-        Private Sub ApplySetting2(target As Object, pRecord As osPrefRecord, pRecData As PrefDataRecord)
+        Private Sub ApplySetting(target As Object, pRecord As osPrefRecord, pRecData As PrefDataRecord)
             If target Is Nothing Then Return
 
             Dim propName = FetchPrefVar(pRecord.RecordType, pRecData.PrefName)
@@ -414,39 +393,19 @@ Namespace osPrefLib
 
             Dim key = target.GetType().FullName & "|" & propName
 
-            Dim prop = _propCache.GetOrAdd(key,
-                                           Function()
-                                               Return target.GetType().GetProperty(propName, osBindFlags)
-                                           End Function)
+            Dim prop = _propCache.GetOrAdd(
+                key, Function()
+                         Return target.GetType().GetProperty(propName, osBindFlags)
+                     End Function)
 
             If prop Is Nothing OrElse Not prop.CanWrite Then Return
 
             Dim targetType = Nullable.GetUnderlyingType(prop.PropertyType)
             If targetType Is Nothing Then targetType = prop.PropertyType
 
-            Dim converted = Convert.ChangeType(pRecData.PrefVal, targetType, CultureInfo.InvariantCulture)
+            Dim converted = Convert.ChangeType(
+                pRecData.PrefVal, targetType, CultureInfo.InvariantCulture)
 
-            prop.SetValue(target, converted)
-        End Sub
-
-        Private Function BuildSettingChange(pRecord As osPrefRecord, pRecData As PrefDataRecord) As Action
-
-            Return Sub()
-                       ApplySetting(osPreferenceLib.Data, pRecord, pRecData)
-                   End Sub
-        End Function
-
-        Private Sub ApplySetting(target As Object, pRecord As osPrefRecord, pRecData As PrefDataRecord)
-
-            Dim prop = target.GetType().GetProperty(FetchPrefVar(pRecord.RecordType, pRecData.PrefName), osBindFlags)
-            If prop Is Nothing OrElse Not prop.CanWrite Then Return
-
-            Dim targetType = Nullable.GetUnderlyingType(prop.PropertyType)
-            If targetType Is Nothing Then
-                targetType = prop.PropertyType
-            End If
-
-            Dim converted = Convert.ChangeType(pRecData.PrefVal, targetType)
             prop.SetValue(target, converted)
         End Sub
 
@@ -519,6 +478,7 @@ Namespace osPrefLib
         Public Class osPrefIndex
 
             Public Class osPref_StoreRecord
+
                 Public Property pType As String
                 Public Property pName As String
 
@@ -552,66 +512,6 @@ Namespace osPrefLib
                 Me.PrefRecords.Add(New osPrefRecord(pRecType, pRecord.ToArray()))
             End Sub
 
-            Public Function GetBindingValue(pBind As osPrefBind) As Object
-                If pBind.Source Is Nothing OrElse pBind.Path Is Nothing Then
-                    Return Nothing
-                End If
-
-                Dim sourceObj As Object = pBind.Source
-                Dim propName As String = pBind.Path.Path
-
-                Dim propInfo As PropertyInfo =
-        sourceObj.GetType().GetProperty(propName,
-            BindingFlags.Public Or BindingFlags.Instance)
-
-                If propInfo Is Nothing Then Return Nothing
-
-                Return propInfo.GetValue(sourceObj)
-            End Function
-
-            Public Function GenPrefObj(pBind As Binding) As osPref_StoreRecord
-                If pBind.Path Is Nothing Then Return Nothing
-
-                Dim path As String = pBind.Path.Path
-                Dim strArray As String() = path.Split("_"c)
-
-                Return New osPref_StoreRecord(
-        strArray(0),
-        strArray(1),
-        GetBindingValue(pBind)
-    )
-            End Function
-
-            Public Function FetchPref(pRecType As PrefType, pName As String) As String
-                Return PrefRecords.
-                    FirstOrDefault(Function(pRec) pRec.RecordType =
-                    pRecType).RecordData.
-                    FirstOrDefault(Function(recData)
-                                       Return recData.PrefName.ToLower() = pName.ToLower()
-                                   End Function).PrefVal
-            End Function
-
-            Public Sub SavePref(pType As String, pName As String, pNewVal As String)
-                With GetRecordData(RetrieveRecord(pType), pName)
-                    .PrefVal = pNewVal
-                End With
-            End Sub
-
-            Private Function RetrieveRecord(pType As PrefType) As osPrefRecord
-                Return PrefRecords.
-                    FirstOrDefault(Function(r)
-                                       Return r.RecordType = pType
-                                   End Function)
-            End Function
-
-            Private Function GetRecordData(pRecord As osPrefRecord, pName As String) As PrefDataRecord
-                Return pRecord.RecordData.FirstOrDefault(
-                    Function(d)
-                        Return String.Equals(d.PrefName, pName,
-                                             StringComparison.OrdinalIgnoreCase)
-                    End Function)
-            End Function
-
             Public Async Function SavePrefsFileAsync() As Task
                 Try
                     Using pWriter As New osWriter(CoreDataLib.osPrefFile, False)
@@ -639,31 +539,9 @@ Namespace osPrefLib
                 Await objPrefWriter.WriteLineAsync($"-{GetPrefType(pRecord.RecordType)}|").ConfigureAwait(False)
             End Function
 
-            Public Sub SavePrefsFile()
-                Using pWriter As New osWriter(CoreDataLib.osPrefFile, False)
-                    pWriter.WriteLine("PrefCatalog_")
-
-                    For Each prefRec As osPrefRecord In Me.PrefRecords
-                        WritePrefRecords(prefRec, pWriter)
-                    Next
-
-                    pWriter.WriteLine("_PrefCatalog")
-                End Using
-            End Sub
-
             Private Function GetPrefType(objPref As PrefType) As String
                 Return objPref.ToString().Replace("Pref_", "")
             End Function
-
-            Private Sub WritePrefRecords(pRecord As osPrefRecord, ByRef objPrefWriter As StreamWriter)
-                objPrefWriter.WriteLine($"|{GetPrefType(pRecord.RecordType)}-")
-
-                For Each prefRec In pRecord.RecordData
-                    objPrefWriter.WriteLine(FormatPrefData(prefRec))
-                Next
-
-                objPrefWriter.WriteLine($"-{GetPrefType(pRecord.RecordType)}|")
-            End Sub
 
             Private Function FormatPrefData(prefRec As PrefDataRecord) As String
                 Return $"{prefRec.PrefName}:{prefRec.PrefVal}"
