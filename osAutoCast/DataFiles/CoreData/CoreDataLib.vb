@@ -41,7 +41,7 @@ Public NotInheritable Class CoreDataLib
     End Function
 
     Private Shared ReadOnly isDebug As Boolean = False
-    Public Shared ReadOnly UtilizeTestShader As Boolean = True
+    Public Shared ReadOnly UtilizeTestShader As Boolean = False
 
     Public Shared osTrayIcon As Forms.NotifyIcon
 
